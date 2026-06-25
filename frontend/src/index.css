@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #F4F6F8;
+    --panel: #ffffff;
+    --ink: #1E293B;
+    --ink-muted: #64748B;
+    --ink-faint: #94A3B8;
+    --line: #E2E8F0;
+    --brand: #2E7D32;
+    --brand-light: #4CAF50;
+    --brand-lighter: #81C784;
+    --brand-dark: #1B5E20;
+    --terracotta: #DC2626;
+    --terracotta-light: #FEE2E2;
+    --gold: #D97706;
+    --gold-light: #FEF3C7;
+  }
+
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(46, 125, 50, 0.15);
+    color: #1B5E20;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl border border-ink-line/60 shadow-card transition-all duration-200;
+  }
+  .card-hover {
+    @apply card hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+  .card-active {
+    @apply card ring-2 ring-brand-800/15 shadow-card-active border-brand-800;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+  .btn-primary {
+    @apply btn bg-brand-800 text-white hover:bg-brand-900 shadow-button hover:shadow-button-hover;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-ink border border-ink-line/70 hover:bg-surface-50 hover:border-ink-line shadow-button;
+  }
+  .btn-outline {
+    @apply btn bg-white text-brand-800 border border-brand-200/60 hover:bg-brand-50 shadow-button;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider;
+  }
+  .badge-green {
+    @apply badge bg-brand-50 text-brand-800 border border-brand-200/50;
+  }
+  .badge-red {
+    @apply badge bg-red-50 text-red-600 border border-red-200/50;
+  }
+  .badge-gray {
+    @apply badge bg-surface-100 text-ink-muted border border-ink-line/60;
+  }
+  .section-header {
+    @apply flex items-center gap-3;
+  }
+  .section-header-bar {
+    @apply w-1 h-6 rounded-full bg-brand-800;
+  }
+  .section-title {
+    @apply text-sm font-bold text-ink tracking-wider uppercase;
+  }
+  .input {
+    @apply w-full rounded-lg border border-ink-line/80 bg-white px-3 py-2 text-sm text-ink outline-none transition-all placeholder:text-ink-faint/60 focus:border-brand-800 focus:ring-2 focus:ring-brand-800/10;
+  }
+  .select {
+    @apply rounded-lg border border-ink-line/80 bg-white px-3 py-2 text-sm text-ink outline-none transition-all focus:border-brand-800 focus:ring-2 focus:ring-brand-800/10;
+  }
+}
+
+@layer utilities {
+  .scroll-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 9999px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+}
