@@ -403,6 +403,9 @@ async def download_template(template_key: str):
         cell2.border = thin_border
         cell2.alignment = Alignment(vertical="center")
 
+        if f['type'] == 'DATE':
+            cell2.number_format = 'YYYY-MM-DD'
+
         allowed = f.get('allowed', [])
         if allowed:
             formula = register_list(allowed)

@@ -492,7 +492,7 @@ def safe_default_for_required(tdef: dict):
 	if type_name == "DECIMAL":
 		return "0"
 	if type_name == "DATE":
-		return "1800-01-01"
+		return "1900-01-01"
 	if type_name == "TEXT":
 		return "SIN DATO"
 	return "SIN DATO"
