@@ -269,7 +269,7 @@ def _compliance_level(value_str: str, meta: str) -> str:
     return "neutral"
 
 
-# ── Excel helpers ────────────────────────────────────────────────────────────
+# ── Excel: write-optimized generation ────────────────────────────────────────
 
 _EXCEL_HEADER_FILL = PatternFill("solid", fgColor="1B5E20")
 _EXCEL_HEADER_FONT = Font(bold=True, color="FFFFFF", size=10, name="Calibri")
@@ -286,131 +286,105 @@ _EXCEL_SI_FONT = Font(size=10, name="Calibri", bold=True, color="166534")
 _EXCEL_NO_FONT = Font(size=10, name="Calibri", color="94A3B8")
 
 
-def _excel_header_row(ws, row: int, values: list[str], fill=None):
-    fill = fill or _EXCEL_HEADER_FILL
-    for ci, v in enumerate(values, start=1):
-        c = ws.cell(row=row, column=ci, value=v)
-        c.font = _EXCEL_HEADER_FONT
-        c.fill = fill
-        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        c.border = _EXCEL_THIN_BORDER
-
-
 def _clean_display(name: str) -> str:
-    """Convert internal column name to human-readable header."""
     n = name.replace("_", " ").strip()
     return n.title() if len(n) < 30 else n
 
 
-def _compliance_level(value_str: str, meta: str) -> str:
-    """Return 'bueno', 'aceptable', 'critico', or 'neutral'."""
-    try:
-        v = float(str(value_str).replace("%", "").replace(",", "."))
-    except (ValueError, AttributeError):
-        return "neutral"
-    if "50" in meta and "30" in meta:
-        if v > 50: return "bueno"
-        if v >= 30: return "aceptable"
-        return "critico"
-    if "60" in meta and "40" in meta:
-        if v > 60: return "bueno"
-        if v >= 40: return "aceptable"
-        return "critico"
-    if "60" in meta:
-        return "bueno" if v > 60 else "critico"
-    return "neutral"
+def _find_id_col(cols: list[str], *patterns: str) -> str:
+    for pat in patterns:
+        pn = re.sub(r"\s+", "", pat.upper())
+        for c in cols:
+            if re.sub(r"\s+", "", c.upper()) == pn:
+                return c
+            if pn in re.sub(r"\s+", "", c.upper()):
+                return c
+    return cols[0]
 
 
-def _write_sheet_fast(ws, headers: list[str], rows: list[list],
-                      eval_idxs: set = set(), fill=None):
-    """Write a sheet with minimal overhead. No auto-width scan for speed."""
-    from itertools import chain
-    ncols = len(headers)
-    nrows = len(rows)
+def _write_wo_sheet(ws, headers: list[str], rows: list[list],
+                    flag_col_idx: int | None = None, fill=None):
+    """Write a sheet in write-only mode using append. Very fast."""
+    from openpyxl.cell.cell import Cell
 
-    # Header
-    hf = _EXCEL_HEADER_FONT
-    hfill = fill or _EXCEL_HEADER_FILL
     tb = _EXCEL_THIN_BORDER
-    for ci, h in enumerate(headers, start=1):
-        c = ws.cell(row=1, column=ci, value=h)
-        c.font = hf; c.fill = hfill; c.border = tb
-        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    al = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    hfill = fill or _EXCEL_HEADER_FILL
 
-    # Data rows
+    # Header row — styled Cell objects
+    hcells = []
+    for h in headers:
+        c = Cell(ws, value=h)
+        c.font = _EXCEL_HEADER_FONT; c.fill = hfill; c.border = tb; c.alignment = al
+        hcells.append(c)
+    ws.append(hcells)
+
+    # Data rows — plain values for speed, Cell only for the flag column
     df = _EXCEL_DATA_FONT
-    si_f = _EXCEL_SI_FONT
-    no_f = _EXCEL_NO_FONT
-    for ri, vals in enumerate(rows, start=2):
-        for ci, v in enumerate(vals, start=1):
-            c = ws.cell(row=ri, column=ci, value=v)
-            c.font = df; c.border = tb
-            if ci in eval_idxs:
-                vs = str(v).strip()
-                if vs == "SI":
-                    c.font = si_f
-                elif vs == "NO":
-                    c.font = no_f
+    si_font = _EXCEL_SI_FONT
+    no_font = _EXCEL_NO_FONT
+    for vals in rows:
+        if flag_col_idx is not None:
+            row = []
+            for ci, v in enumerate(vals):
+                if ci == flag_col_idx:
+                    c = Cell(ws, value=v)
+                    c.border = tb
+                    vs = str(v).strip()
+                    if vs == "SI":
+                        c.font = si_font
+                    elif vs == "NO":
+                        c.font = no_font
+                    else:
+                        c.font = df
+                    row.append(c)
+                else:
+                    row.append(v)
+            ws.append(row)
+        else:
+            ws.append(vals)
 
-    # Auto-filter
-    if nrows:
-        last_col = get_column_letter(ncols)
-        ws.auto_filter.ref = f"A1:{last_col}{nrows + 1}"
-
-    # Fixed column widths (no scan for speed)
-    for ci in range(1, ncols + 1):
-        hlen = len(str(headers[ci - 1]))
-        ws.column_dimensions[get_column_letter(ci)].width = min(max(hlen + 3, 10), 50)
-
-    ws.freeze_panes = "A2"
+    # Column widths
+    for ci, h in enumerate(headers, start=1):
+        w = len(str(h)) + 3
+        ws.column_dimensions[get_column_letter(ci)].width = min(max(w, 10), 50)
 
 
-def _indicator_sheet_data(patients: pd.DataFrame, data_cols: list[str],
-                          flag_col: str, denom_col: str | None, cumple: bool):
+def _indicator_sheet_data(patients: pd.DataFrame, id_cols: list[str],
+                          flag_col: str, denom_col: str | None,
+                          cumple: bool):
     """Return (headers, rows) for a cumple/no-cumple indicator sheet."""
     if cumple:
         mask = patients.get(flag_col, "") == "SI"
     elif denom_col:
-        # No cumple = in denominator but flag != "SI"
         mask = (patients.get(denom_col, "") == "SI") & (patients.get(flag_col, "") != "SI")
     else:
-        # All patients, not meeting the flag
         mask = patients.get(flag_col, "") != "SI"
-
     subset = patients[mask]
-    cols = data_cols + [flag_col]
+    cols = id_cols + [flag_col]
     rows = [[row.get(c, "") for c in cols] for _, row in subset.iterrows()]
     return rows, cols
 
 
 def build_evaluation_excel(indicators: pd.DataFrame, patients: pd.DataFrame) -> io.BytesIO:
-    """Generate a professional styled Excel workbook with drill-down sheets."""
-    from itertools import chain
+    """Generate Excel with Dashboard, full Pacientes sheet, and per-indicator
+    cumple/no-cumple sheets (minimal columns for speed). Uses write-only mode."""
+    from openpyxl.cell.cell import Cell
 
-    wb = Workbook()
+    wb = Workbook(write_only=True)
 
     eval_cols = [c for c in patients.columns if c.startswith("_")]
     data_cols = [c for c in patients.columns if not c.startswith("_")]
-    display_cols = data_cols + eval_cols
-    eval_idxs = set(i + 1 for i, c in enumerate(display_cols) if c in eval_cols)
 
-    # Pre-build all patient rows once
+    # Identify key patient columns
+    doc_col = _find_id_col(data_cols, "DOCUMENTO", "DOC", "IDENTIFICACION", "NUMERO DE DOCUMENTO")
+    name_col = _find_id_col(data_cols, "NOMBRE", "NOMBRE DEL PACIENTE", "PACIENTE", "APELLIDOS")
+    age_col = _find_id_col(data_cols, "EDAD", "AGE")
+    id_cols = [doc_col, name_col, age_col]
+
+    display_cols = data_cols + eval_cols
     patient_rows = [[row.get(c, "") for c in display_cols] for _, row in patients.iterrows()]
 
-    # ── Sheet 1: Dashboard ──
-    ws = wb.active
-    ws.title = "Dashboard"
-
-    ws.merge_cells("A1:F1")
-    ws.cell(row=1, column=1, value="Evaluación de Indicadores — Riesgo Cardiovascular").font = _EXCEL_TITLE_FONT
-
-    ws.merge_cells("A2:F2")
-    ws.cell(row=2, column=1,
-            value=f"Total: {len(patients)} pacientes  |  {len(indicators)} indicadores  |  {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-           ).font = _EXCEL_SUBTITLE_FONT
-    ws.row_dimensions[2].height = 20
-
-    ind_headers = ["Indicador", "Numerador", "Denominador", "Cumplimiento", "Estado", "Meta"]
     level_fills = {
         "bueno": PatternFill("solid", fgColor="DCFCE7"),
         "aceptable": PatternFill("solid", fgColor="FEF3C7"),
@@ -423,9 +397,30 @@ def build_evaluation_excel(indicators: pd.DataFrame, patients: pd.DataFrame) -> 
     level_labels = {
         "bueno": "✓ Cumple meta", "aceptable": "! En alerta", "critico": "✗ Crítico",
     }
+    tb = _EXCEL_THIN_BORDER
 
-    _excel_header_row(ws, 4, ind_headers, fill=_EXCEL_HEADER_FILL)
-    for ri, (_, ind) in enumerate(indicators.iterrows(), start=5):
+    # ── Sheet 1: Dashboard ──
+    ws = wb.create_sheet(title="Dashboard")
+
+    c = Cell(ws, value="Evaluación de Indicadores — Riesgo Cardiovascular")
+    c.font = _EXCEL_TITLE_FONT
+    ws.append([c])
+
+    c = Cell(ws, value=f"Total: {len(patients)} pacientes  |  {len(indicators)} indicadores  |  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    c.font = _EXCEL_SUBTITLE_FONT
+    ws.append([c])
+    ws.append([])
+
+    ind_headers = ["Indicador", "Numerador", "Denominador", "Cumplimiento", "Estado", "Meta"]
+    hcells = []
+    al = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    for h in ind_headers:
+        c = Cell(ws, value=h)
+        c.font = _EXCEL_HEADER_FONT; c.fill = _EXCEL_HEADER_FILL; c.border = tb; c.alignment = al
+        hcells.append(c)
+    ws.append(hcells)
+
+    for _, ind in indicators.iterrows():
         level = _compliance_level(ind["CUMPLIMIENTO"], ind["META"])
         fill = level_fills.get(level, level_fills["neutral"])
         color = level_colors.get(level, "475569")
@@ -433,29 +428,53 @@ def build_evaluation_excel(indicators: pd.DataFrame, patients: pd.DataFrame) -> 
             ind["INDICADOR"], ind["NUMERADOR"], ind["DENOMINADOR"],
             ind["CUMPLIMIENTO"], level_labels.get(level, ""), ind["META"],
         ]
+        row = []
         for ci, v in enumerate(vals, start=1):
-            c = ws.cell(row=ri, column=ci, value=v)
+            c = Cell(ws, value=v)
             sz = 14 if ci == 4 else 10
             c.font = Font(size=sz, name="Calibri", bold=(ci == 4), color=color)
-            c.fill = fill; c.border = _EXCEL_THIN_BORDER
-            if ci == 4:
-                c.alignment = Alignment(horizontal="center")
+            c.fill = fill; c.border = tb
+            row.append(c)
+        ws.append(row)
 
-    ws.column_dimensions["A"].width = 42
-    ws.column_dimensions["B"].width = 14
-    ws.column_dimensions["C"].width = 14
-    ws.column_dimensions["D"].width = 16
-    ws.column_dimensions["E"].width = 18
-    ws.column_dimensions["F"].width = 50
-    ws.freeze_panes = "A5"
+    for col, w in zip("ABCDEF", [42, 14, 14, 16, 18, 50]):
+        ws.column_dimensions[col].width = w
 
-    # ── Sheet 2: Pacientes ──
-    ws2 = wb.create_sheet(title="Pacientes")
-    _write_sheet_fast(ws2, [_clean_display(c) for c in display_cols],
-                      patient_rows, eval_idxs=eval_idxs)
+    # ── Sheet 2: Pacientes (full columns) ──
+    ws_p = wb.create_sheet(title="Pacientes")
+    hcells = []
+    for h in display_cols:
+        c = Cell(ws_p, value=h)
+        c.font = _EXCEL_HEADER_FONT; c.fill = _EXCEL_HEADER_FILL; c.border = tb
+        hcells.append(c)
+    ws_p.append(hcells)
 
-    # ── Per-indicator sheets: cumple + no cumple ──
-    # (flag_col, denom_col, short_label_for_no)
+    # Build eval column index set for styling
+    eval_name_set = set(eval_cols)
+    for vals in patient_rows:
+        row = []
+        for ci, v in enumerate(vals):
+            col_name = display_cols[ci]
+            if col_name in eval_name_set:
+                c = Cell(ws_p, value=v)
+                c.border = tb
+                vs = str(v).strip()
+                if vs == "SI":
+                    c.font = _EXCEL_SI_FONT
+                elif vs == "NO":
+                    c.font = _EXCEL_NO_FONT
+                else:
+                    c.font = _EXCEL_DATA_FONT
+                row.append(c)
+            else:
+                row.append(v)
+        ws_p.append(row)
+
+    for ci, h in enumerate(display_cols, start=1):
+        w = len(str(h)) + 3
+        ws_p.column_dimensions[get_column_letter(ci)].width = min(max(w, 10), 50)
+
+    # ── Per-indicator sheets: cumple + no cumple (minimal columns) ──
     indicator_defs = [
         ("_DM_CONTROLADO", "_TIENE_DM", "DM Controlado"),
         ("_PA_140_90",     None,        "PA <140-90"),
@@ -468,19 +487,19 @@ def build_evaluation_excel(indicators: pd.DataFrame, patients: pd.DataFrame) -> 
     red_fill = PatternFill("solid", fgColor="991B1B")
 
     for flag_col, denom_col, label in indicator_defs:
-        # Cumple sheet
-        rows_c, cols_c = _indicator_sheet_data(patients, data_cols, flag_col, denom_col, cumple=True)
-        if rows_c:
-            ws_c = wb.create_sheet(title=label[:31])  # Excel 31 char limit
-            hdr_c = [_clean_display(c) for c in cols_c]
-            _write_sheet_fast(ws_c, hdr_c, rows_c, fill=green_fill)
+        for cumple, prefix, hfill in [
+            (True, "", green_fill),
+            (False, "No ", red_fill),
+        ]:
+            rows, cols = _indicator_sheet_data(patients, id_cols, flag_col, denom_col, cumple)
+            if not rows:
+                continue
+            title = f"{prefix}{label}"[:31]
+            ws_ind = wb.create_sheet(title=title)
 
-        # No cumple sheet
-        rows_nc, cols_nc = _indicator_sheet_data(patients, data_cols, flag_col, denom_col, cumple=False)
-        if rows_nc:
-            ws_nc = wb.create_sheet(title=f"No {label}"[:31])
-            hdr_nc = [_clean_display(c) for c in cols_nc]
-            _write_sheet_fast(ws_nc, hdr_nc, rows_nc, fill=red_fill)
+            headers = [_clean_display(c) for c in cols]
+            flag_idx = len(id_cols)  # flag is the last column
+            _write_wo_sheet(ws_ind, headers, rows, flag_col_idx=flag_idx, fill=hfill)
 
     buf = io.BytesIO()
     wb.save(buf)
