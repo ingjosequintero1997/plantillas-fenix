@@ -27,8 +27,7 @@ export default function EvaluationDashboard({
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [filterIndicator, setFilterIndicator] = useState('all')
-  const [filterCumple, setFilterCumple] = useState('all') // 'all' | 'si' | 'no'
+  const [filterKey, setFilterKey] = useState('all') // 'all' | 'col::si' | 'col::no'
   const [downloading, setDownloading] = useState(false)
 
   React.useEffect(() => {
@@ -100,20 +99,10 @@ export default function EvaluationDashboard({
   }, [data])
 
   const filteredPatients = useMemo(() => {
-    if (filterIndicator === 'all') return patientsWithFlags
-    const colMap = {
-      'Diabéticos controlados': '_DM_CONTROLADO',
-      'Control PA < 140/90': '_PA_140_90',
-      'Control PA < 150/90': '_PA_150_90',
-      'Captación HTA 18-69 subsidiado': '_HTA_CAPTADO',
-      'Captación DM 18-69 subsidiado': '_DM_CAPTADO',
-    }
-    const col = colMap[filterIndicator]
-    if (!col) return patientsWithFlags
-    if (filterCumple === 'si') return patientsWithFlags.filter((p) => p[col] === 'SI')
-    if (filterCumple === 'no') return patientsWithFlags.filter((p) => p[col] === 'NO')
-    return patientsWithFlags
-  }, [patientsWithFlags, filterIndicator, filterCumple])
+    if (filterKey === 'all') return patientsWithFlags
+    const [col, val] = filterKey.split('::')
+    return patientsWithFlags.filter((p) => p[col] === val)
+  }, [patientsWithFlags, filterKey])
 
   const handleDownloadExcel = async () => {
     try {
@@ -331,33 +320,38 @@ export default function EvaluationDashboard({
             <h3 className="section-title">Pacientes evaluados</h3>
             <span className="badge-gray">{filteredPatients.length} pacientes</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-[0.5rem] font-semibold text-ink-muted uppercase tracking-wider">Indicador:</span>
-              <select value={filterIndicator} onChange={(e) => { setFilterIndicator(e.target.value); setFilterCumple('all') }}
-                className="select text-xs py-1.5 px-2 w-auto">
-                <option value="all">Todos</option>
-                {data.indicators.map((ind) => (
-                  <option key={ind.INDICADOR} value={ind.INDICADOR}>{ind.INDICADOR}</option>
-                ))}
-              </select>
-            </div>
-            {filterIndicator !== 'all' && (
-              <div className="flex rounded-lg border border-ink-line/60 overflow-hidden text-xs font-semibold">
-                <button onClick={() => setFilterCumple('si')}
-                  className={`px-3 py-1.5 transition-colors ${
-                    filterCumple === 'si' ? 'bg-green-600 text-white' : 'bg-white text-ink-muted hover:bg-green-50'
-                  }`}>Cumplen</button>
-                <button onClick={() => setFilterCumple('no')}
-                  className={`px-3 py-1.5 transition-colors ${
-                    filterCumple === 'no' ? 'bg-red-600 text-white' : 'bg-white text-ink-muted hover:bg-red-50'
-                  }`}>No cumplen</button>
-                <button onClick={() => setFilterCumple('all')}
-                  className={`px-3 py-1.5 transition-colors ${
-                    filterCumple === 'all' ? 'bg-gray-600 text-white' : 'bg-white text-ink-muted hover:bg-gray-100'
-                  }`}>Todos</button>
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <span className="text-[0.5rem] font-semibold text-ink-muted uppercase tracking-wider">Filtrar:</span>
+            <select value={filterKey} onChange={(e) => setFilterKey(e.target.value)}
+              className="select text-xs py-1.5 px-2 w-auto max-w-[260px]">
+              <option value="all">Todos los pacientes</option>
+              <optgroup label="── Cumplen ──">
+                {data.indicators.map((ind) => {
+                  const colMap = {
+                    'Diabéticos controlados': '_DM_CONTROLADO',
+                    'Control PA < 140/90': '_PA_140_90',
+                    'Control PA < 150/90': '_PA_150_90',
+                    'Captación HTA 18-69 subsidiado': '_HTA_CAPTADO',
+                    'Captación DM 18-69 subsidiado': '_DM_CAPTADO',
+                  }
+                  const col = colMap[ind.INDICADOR]
+                  return col ? <option key={`${col}::si`} value={`${col}::si`}>✓ {ind.INDICADOR}</option> : null
+                })}
+              </optgroup>
+              <optgroup label="── No cumplen ──">
+                {data.indicators.map((ind) => {
+                  const colMap = {
+                    'Diabéticos controlados': '_DM_CONTROLADO',
+                    'Control PA < 140/90': '_PA_140_90',
+                    'Control PA < 150/90': '_PA_150_90',
+                    'Captación HTA 18-69 subsidiado': '_HTA_CAPTADO',
+                    'Captación DM 18-69 subsidiado': '_DM_CAPTADO',
+                  }
+                  const col = colMap[ind.INDICADOR]
+                  return col ? <option key={`${col}::no`} value={`${col}::no`}>✗ {ind.INDICADOR}</option> : null
+                })}
+              </optgroup>
+            </select>
           </div>
         </div>
 
