@@ -339,8 +339,11 @@ async def evaluate_endpoint(payload: dict, format: str = Query(default="json")):
 	ct = payload.get('corrected_text', '')
 	template_names = payload.get('template_names', [])
 	template_key = payload.get('template_key', 'rcv')
-	if not ct.strip():
-		raise HTTPException(status_code=400, detail="Se requiere corrected_text")
+	if not ct or not ct.strip():
+		raise HTTPException(
+			status_code=400,
+			detail="No hay datos corregidos para evaluar. Primero carga y valida un archivo."
+		)
 
 	try:
 		from io import StringIO

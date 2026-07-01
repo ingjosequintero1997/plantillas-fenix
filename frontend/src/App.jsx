@@ -4,7 +4,7 @@ import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
 import StatsCard from './components/StatsCard'
 import EvaluationDashboard from './components/EvaluationDashboard'
-import { exportFile, fetchTemplates, revalidateData, uploadFile, evaluateData, DOWNLOAD_TEMPLATE_URL } from './api'
+import { exportFile, fetchTemplates, revalidateData, uploadFile, DOWNLOAD_TEMPLATE_URL } from './api'
 
 export default function App() {
   const [mapping, setMapping] = useState({})
@@ -159,17 +159,9 @@ export default function App() {
     }
   }
 
-  const handleEvaluate = async () => {
-    if (!correctedText) return
-    setEvaluating(true); setError('')
-    try {
-      await evaluateData(correctedText, templateNames, selectedTemplate, 'json')
-      setShowEvaluation(true)
-    } catch (e) {
-      setError(e.message || 'Error generando evaluación')
-    } finally {
-      setEvaluating(false)
-    }
+  const handleEvaluate = () => {
+    if (!correctedText || !correctedText.trim()) return
+    setShowEvaluation(true)
   }
 
   const handleReset = () => {
