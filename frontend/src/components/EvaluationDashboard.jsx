@@ -5,13 +5,19 @@ import {
 } from 'recharts'
 import { evaluateData } from '../api'
 
-const INDICATOR_COL_MAP = {
-  'Diabéticos controlados': '_DM_CONTROLADO',
-  'Control PA < 140/90': '_PA_140_90',
-  'Control PA < 150/90': '_PA_150_90',
-  'Captación HTA 18-69 subsidiado': '_HTA_CAPTADO',
-  'Captación DM 18-69 subsidiado': '_DM_CAPTADO',
-}
+const FILTERS = [
+  { value: 'all', label: 'Todos los pacientes' },
+  { value: '_DM_CONTROLADO::SI', label: '✓ Diabéticos controlados' },
+  { value: '_DM_CONTROLADO::NO', label: '✗ No diabéticos controlados' },
+  { value: '_PA_140_90::SI', label: '✓ Control PA < 140/90' },
+  { value: '_PA_140_90::NO', label: '✗ No control PA < 140/90' },
+  { value: '_PA_150_90::SI', label: '✓ Control PA < 150/90' },
+  { value: '_PA_150_90::NO', label: '✗ No control PA < 150/90' },
+  { value: '_HTA_CAPTADO::SI', label: '✓ Captación HTA 18-69 subsidiado' },
+  { value: '_HTA_CAPTADO::NO', label: '✗ No captación HTA 18-69 subsidiado' },
+  { value: '_DM_CAPTADO::SI', label: '✓ Captación DM 18-69 subsidiado' },
+  { value: '_DM_CAPTADO::NO', label: '✗ No captación DM 18-69 subsidiado' },
+]
 
 const META_LABELS = {
   'Bueno > 50% | Aceptable 30-50% | Crítico < 30%': { bueno: 50, aceptable: 30 },
@@ -331,20 +337,16 @@ export default function EvaluationDashboard({
           <div className="flex items-center gap-2">
             <span className="text-[0.5rem] font-semibold text-ink-muted uppercase tracking-wider">Filtrar:</span>
             <select value={filterKey} onChange={(e) => setFilterKey(e.target.value)}
-              className="select text-xs py-1.5 px-2 w-auto max-w-[260px]">
+              className="select text-xs py-1.5 px-2 w-auto max-w-[300px]">
               <option value="all">Todos los pacientes</option>
-              <optgroup label="── Cumplen ──">
-                {data.indicators.map((ind) => {
-                  const col = INDICATOR_COL_MAP[ind.INDICADOR]
-                  return col ? <option key={`${col}::SI`} value={`${col}::SI`}>✓ {ind.INDICADOR}</option> : null
-                })}
-              </optgroup>
-              <optgroup label="── No cumplen ──">
-                {data.indicators.map((ind) => {
-                  const col = INDICATOR_COL_MAP[ind.INDICADOR]
-                  return col ? <option key={`${col}::NO`} value={`${col}::NO`}>✗ {ind.INDICADOR}</option> : null
-                })}
-              </optgroup>
+              <option disabled>── Cumplen ──</option>
+              {FILTERS.filter(f => f.value.endsWith('::SI')).map(f => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+              <option disabled>── No cumplen ──</option>
+              {FILTERS.filter(f => f.value.endsWith('::NO')).map(f => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
             </select>
           </div>
         </div>
