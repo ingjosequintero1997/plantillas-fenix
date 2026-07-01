@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Cell, LabelList,
+  Cell,
 } from 'recharts'
 import { evaluateData } from '../api'
 
@@ -44,12 +44,20 @@ export default function EvaluationDashboard({
     })()
   }, [correctedText, templateNames, selectedTemplate])
 
+  const SHORT_LABELS = {
+    'Diabéticos controlados': 'DM controlado',
+    'Control PA < 140/90': 'PA <140/90',
+    'Control PA < 150/90': 'PA <150/90',
+    'Captación HTA 18-69 subsidiado': 'Capt. HTA',
+    'Captación DM 18-69 subsidiado': 'Capt. DM',
+  }
+
   const chartData = useMemo(() => {
     if (!data) return []
     return data.indicators.map((ind) => {
       const raw = parseFloat(String(ind.CUMPLIMIENTO).replace('%', '').replace(',', '.'))
       return {
-        name: ind.INDICADOR.length > 30 ? ind.INDICADOR.slice(0, 30) + '…' : ind.INDICADOR,
+        name: SHORT_LABELS[ind.INDICADOR] || ind.INDICADOR,
         fullName: ind.INDICADOR,
         value: isNaN(raw) ? 0 : raw,
         meta: ind.META,
@@ -221,11 +229,11 @@ export default function EvaluationDashboard({
             <div className="section-header-bar" />
             <h3 className="section-title">Cumplimiento por indicador</h3>
           </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} height={50} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 40, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
+              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} width={90} />
               <Tooltip
                 formatter={(value, _, props) => [
                   `${value.toFixed(1)}% (${props.payload.numerador}/${props.payload.denominador})`,
@@ -233,7 +241,7 @@ export default function EvaluationDashboard({
                 ]}
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E2E8F0' }}
               />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20} label={{ position: 'right', fontSize: 11, fontWeight: 700, formatter: (v) => `${v.toFixed(1)}%` }}>
                 {chartData.map((entry) => {
                   const level = getLevel(entry.value, entry.meta)
                   const fillMap = { bueno: '#22C55E', aceptable: '#F59E0B', critico: '#EF4444', neutral: '#94A3B8' }
