@@ -4,6 +4,7 @@ import {
   Cell,
 } from 'recharts'
 import { evaluateData } from '../api'
+import { generateExcel } from '../excelGenerator'
 
 const FILTERS = [
   { value: 'all', label: 'Todos los pacientes' },
@@ -121,7 +122,7 @@ export default function EvaluationDashboard({
   const handleDownloadExcel = async () => {
     try {
       setDownloading(true)
-      const blob = await evaluateData(correctedText, templateNames, selectedTemplate, 'xlsx')
+      const blob = generateExcel(data)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -129,7 +130,7 @@ export default function EvaluationDashboard({
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
-      setError(e.message || 'Error al descargar Excel')
+      setError(e.message || 'Error al generar Excel')
     } finally {
       setDownloading(false)
     }
