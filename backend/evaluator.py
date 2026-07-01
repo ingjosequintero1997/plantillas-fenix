@@ -232,11 +232,15 @@ def _evaluate_generic(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 def evaluate(df: pd.DataFrame, template_key: str, today: datetime | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Evaluate indicators for the given corrected data.
-    Returns (indicators_df, patients_df).
+    Only RCV template has defined indicators.
     """
     if template_key == "rcv":
         return _evaluate_rcv(df, today)
-    return _evaluate_generic(df)
+    available = {"rcv"}
+    raise ValueError(
+        f"La plantilla '{template_key}' no tiene indicadores definidos. "
+        f"Plantillas con indicadores: {', '.join(sorted(available))}"
+    )
 
 
 def build_evaluation_excel(indicators: pd.DataFrame, patients: pd.DataFrame) -> io.BytesIO:
