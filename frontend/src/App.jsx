@@ -3,6 +3,7 @@ import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
 import StatsCard from './components/StatsCard'
+import EvaluationDashboard from './components/EvaluationDashboard'
 import { exportFile, fetchTemplates, revalidateData, uploadFile, evaluateData, DOWNLOAD_TEMPLATE_URL } from './api'
 
 export default function App() {
@@ -142,6 +143,7 @@ export default function App() {
   }
 
   const [evaluating, setEvaluating] = useState(false)
+  const [showEvaluation, setShowEvaluation] = useState(false)
 
   const handleExport = async () => {
     try {
@@ -161,13 +163,8 @@ export default function App() {
     if (!correctedText) return
     setEvaluating(true); setError('')
     try {
-      const blob = await evaluateData(correctedText, templateNames, selectedTemplate)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `evaluacion_${selectedTemplate}_${new Date().toISOString().slice(0, 10)}.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
+      await evaluateData(correctedText, templateNames, selectedTemplate, 'json')
+      setShowEvaluation(true)
     } catch (e) {
       setError(e.message || 'Error generando evaluación')
     } finally {
@@ -180,7 +177,7 @@ export default function App() {
     setRawText(''); setSelectedFileName(''); setBatchResults([])
     setTemplateNames([]); setLoading(false); setReprocessing(false)
     setProgress(0); setError(''); setAuditQuery(''); setAuditStatus('all')
-    setMappingStats(null); setStructureValidation(null)
+    setMappingStats(null); setStructureValidation(null); setShowEvaluation(false)
   }
 
   return (
@@ -359,7 +356,7 @@ export default function App() {
         )}
 
         {/* ─── Stats + Actions ─── */}
-        {summary && (
+        {summary && !showEvaluation && (
           <div className="space-y-5 animate-fade-in-up">
             <div className="grid gap-4 md:grid-cols-4">
               <StatsCard label="Registros" value={summary.total} color="neutral" />
@@ -399,7 +396,7 @@ export default function App() {
         )}
 
         {/* ─── Estructura y mapeo ─── */}
-        {(mappingStats || structureValidation) && (
+        {(mappingStats || structureValidation) && !showEvaluation && (
           <section className="card p-5 animate-fade-in-up">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="section-header">
@@ -451,7 +448,7 @@ export default function App() {
         )}
 
         {/* ─── Archivos procesados ─── */}
-        {batchResults.length > 0 && (
+        {batchResults.length > 0 && !showEvaluation && (
           <div className="card p-5 space-y-4 animate-fade-in-up">
             <div className="flex items-center justify-between">
               <div className="section-header">
@@ -494,7 +491,7 @@ export default function App() {
         )}
 
         {/* ─── Mapeo de columnas ─── */}
-        {Object.keys(mapping).length > 0 && (
+        {Object.keys(mapping).length > 0 && !showEvaluation && (
           <div className="card p-5 space-y-4 animate-fade-in-up">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-lg bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
@@ -510,8 +507,18 @@ export default function App() {
           </div>
         )}
 
+        {/* ─── Dashboard de evaluación ─── */}
+        {showEvaluation && (
+          <EvaluationDashboard
+            correctedText={correctedText}
+            templateNames={templateNames}
+            selectedTemplate={selectedTemplate}
+            onClose={() => setShowEvaluation(false)}
+          />
+        )}
+
         {/* ─── Vista previa + Auditoría ─── */}
-        {correctedText && (
+        {correctedText && !showEvaluation && (
           <div className="space-y-5">
             <div className="card p-5 space-y-4 animate-fade-in-up">
               <div className="flex items-center gap-3">

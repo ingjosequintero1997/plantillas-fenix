@@ -243,79 +243,212 @@ def evaluate(df: pd.DataFrame, template_key: str, today: datetime | None = None)
     )
 
 
+def _compliance_level(value_str: str, meta: str) -> str:
+    """Return 'bueno', 'aceptable', 'critico', or 'neutral'."""
+    try:
+        v = float(str(value_str).replace("%", "").replace(",", "."))
+    except (ValueError, AttributeError):
+        return "neutral"
+    # Meta con tres niveles: Bueno > X | Aceptable X-Y | Crítico < Y
+    if "50" in meta and "30" in meta:
+        if v > 50: return "bueno"
+        if v >= 30: return "aceptable"
+        return "critico"
+    if "60" in meta and "40" in meta:
+        if v > 60: return "bueno"
+        if v >= 40: return "aceptable"
+        return "critico"
+    # Meta simple: > X%
+    if "60" in meta:
+        return "bueno" if v > 60 else "critico"
+    return "neutral"
+
+
 def build_evaluation_excel(indicators: pd.DataFrame, patients: pd.DataFrame) -> io.BytesIO:
-    """Generate a styled Excel workbook with two sheets."""
+    """Generate a professional styled Excel workbook with drill-down sheets."""
     wb = Workbook()
 
-    # ── Sheet 1: Indicators ──
-    ws1 = wb.active
-    ws1.title = "Indicadores"
-
-    header_fill = PatternFill("solid", fgColor="1B5E20")
+    # ── Shared styles ──
+    header_fill_green = PatternFill("solid", fgColor="1B5E20")
+    header_fill_amber = PatternFill("solid", fgColor="92400E")
     header_font = Font(bold=True, color="FFFFFF", size=10, name="Calibri")
+    title_font = Font(bold=True, size=14, name="Calibri", color="1B5E20")
+    subtitle_font = Font(size=10, name="Calibri", color="64748B")
     data_font = Font(size=10, name="Calibri")
+    si_font = Font(size=10, name="Calibri", bold=True, color="166534")
+    no_font = Font(size=10, name="Calibri", color="94A3B8")
     thin_border = Border(
-        left=Side(style="thin", color="BDBDBD"),
-        right=Side(style="thin", color="BDBDBD"),
-        top=Side(style="thin", color="BDBDBD"),
-        bottom=Side(style="thin", color="BDBDBD"),
+        left=Side(style="thin", color="D0D5DD"),
+        right=Side(style="thin", color="D0D5DD"),
+        top=Side(style="thin", color="D0D5DD"),
+        bottom=Side(style="thin", color="D0D5DD"),
     )
 
-    ind_cols = list(indicators.columns)
-    for ci, col_name in enumerate(ind_cols, start=1):
-        cell = ws1.cell(row=1, column=ci, value=col_name)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        cell.border = thin_border
+    level_fills = {
+        "bueno": PatternFill("solid", fgColor="DCFCE7"),
+        "aceptable": PatternFill("solid", fgColor="FEF3C7"),
+        "critico": PatternFill("solid", fgColor="FEE2E2"),
+        "neutral": PatternFill("solid", fgColor="F8FAFC"),
+    }
+    level_fonts = {
+        "bueno": Font(bold=True, size=10, name="Calibri", color="166534"),
+        "aceptable": Font(bold=True, size=10, name="Calibri", color="92400E"),
+        "critico": Font(bold=True, size=10, name="Calibri", color="991B1B"),
+        "neutral": Font(size=10, name="Calibri", color="64748B"),
+    }
+    level_badges = {
+        "bueno": "✓ META",
+        "aceptable": "! ALERTA",
+        "critico": "✗ CRÍTICO",
+    }
 
-    for ri, row in indicators.iterrows():
-        for ci, col_name in enumerate(ind_cols, start=1):
-            val = row[col_name]
-            cell = ws1.cell(row=ri + 2, column=ci, value=val)
-            cell.font = data_font
-            cell.border = thin_border
-            cell.alignment = Alignment(vertical="center", wrap_text=True)
-
-    ws1.column_dimensions["A"].width = 38
-    ws1.column_dimensions["B"].width = 55
-    ws1.column_dimensions["C"].width = 14
-    ws1.column_dimensions["D"].width = 14
-    ws1.column_dimensions["E"].width = 42
-    ws1.column_dimensions["F"].width = 16
-    ws1.freeze_panes = "A2"
-
-    # ── Sheet 2: Patients ──
-    ws2 = wb.create_sheet(title="Pacientes")
-
-    # Determine evaluation columns to suffix
     eval_cols = [c for c in patients.columns if c.startswith("_")]
-    display_cols = [c for c in patients.columns if not c.startswith("_")] + eval_cols
+    data_cols = [c for c in patients.columns if not c.startswith("_")]
+    display_cols = data_cols + eval_cols
 
+    indicator_sheets = {
+        "DM Controlado": ("_DM_CONTROLADO", "Pacientes con DM y HbA1c < 7% en últimos 6 meses"),
+        "PA <140-90": ("_PA_140_90", "Pacientes con PA < 140/90 mmHg en último semestre"),
+        "PA <150-90": ("_PA_150_90", "Pacientes con PA < 150/90 mmHg en último semestre"),
+        "Captación HTA": ("_HTA_CAPTADO", "Pacientes 18-69 subsidiado con Dx HTA"),
+        "Captación DM": ("_DM_CAPTADO", "Pacientes 18-69 subsidiado con Dx DM"),
+    }
+
+    # ── Sheet 1: Dashboard ──
+    ws = wb.active
+    ws.title = "Dashboard"
+
+    # Title
+    ws.merge_cells("A1:F1")
+    title_cell = ws.cell(row=1, column=1, value="Evaluación de Indicadores RCV")
+    title_cell.font = title_font
+    ws.cell(row=2, column=1, value=f"Total de pacientes evaluados: {len(patients)}").font = subtitle_font
+    ws.row_dimensions[1].height = 28
+
+    # Indicator cards (3x2 grid)
+    card_row = 4
+    for idx, (_, row) in enumerate(indicators.iterrows()):
+        col_offset = (idx % 2) * 3 + 1
+        r = card_row + (idx // 2) * 6
+
+        level = _compliance_level(row["CUMPLIMIENTO"], row["META"])
+        badge = level_badges.get(level, "")
+        fill_card = level_fills.get(level, level_fills["neutral"])
+        font_card = level_fonts.get(level, level_fonts["neutral"])
+
+        # Card background (fill merged area)
+        for dr in range(5):
+            for dc in range(3):
+                c = ws.cell(row=r + dr, column=col_offset + dc)
+                c.fill = fill_card
+                c.border = thin_border
+
+        # Indicator name
+        c = ws.cell(row=r, column=col_offset, value=row["INDICADOR"])
+        c.font = Font(bold=True, size=9, name="Calibri", color="64748B")
+        ws.merge_cells(start_row=r, start_column=col_offset, end_row=r, end_column=col_offset + 2)
+
+        # Compliance %
+        c = ws.cell(row=r + 1, column=col_offset, value=row["CUMPLIMIENTO"])
+        c.font = Font(bold=True, size=22, name="Calibri", color=font_card.color)
+        ws.merge_cells(start_row=r + 1, start_column=col_offset, end_row=r + 1, end_column=col_offset + 1)
+
+        # Badge
+        c = ws.cell(row=r + 1, column=col_offset + 2, value=badge)
+        c.font = Font(bold=True, size=9, name="Calibri", color=font_card.color)
+        c.alignment = Alignment(horizontal="right", vertical="center")
+
+        # Ratio
+        c = ws.cell(row=r + 2, column=col_offset, value=f"{row['NUMERADOR']} / {row['DENOMINADOR']} pacientes")
+        c.font = Font(size=9, name="Calibri", color="64748B")
+        ws.merge_cells(start_row=r + 2, start_column=col_offset, end_row=r + 2, end_column=col_offset + 2)
+
+        # Meta text
+        c = ws.cell(row=r + 3, column=col_offset, value=row["META"])
+        c.font = Font(size=8, name="Calibri", color="94A3B8")
+        ws.merge_cells(start_row=r + 3, start_column=col_offset, end_row=r + 3, end_column=col_offset + 2)
+
+    ws.column_dimensions["A"].width = 16
+    ws.column_dimensions["B"].width = 16
+    ws.column_dimensions["C"].width = 16
+    ws.column_dimensions["D"].width = 16
+    ws.column_dimensions["E"].width = 16
+    ws.column_dimensions["F"].width = 16
+
+    # ── Sheet 2: Pacientes (with auto-filter) ──
+    ws2 = wb.create_sheet(title="Pacientes")
     for ci, col_name in enumerate(display_cols, start=1):
-        display_name = col_name.lstrip("_")
+        display_name = col_name.replace("_", " ").strip()
         cell = ws2.cell(row=1, column=ci, value=display_name)
-        cell.font = header_font
-        cell.fill = header_fill
+        cell.font = header_fill_green
+        cell.font = Font(bold=True, color="FFFFFF", size=10, name="Calibri")
+        cell.fill = header_fill_green
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = thin_border
 
     for ri, row in patients.iterrows():
         for ci, col_name in enumerate(display_cols, start=1):
-            val = row[col_name] if col_name in patients.columns else ""
+            val = row.get(col_name, "")
             cell = ws2.cell(row=ri + 2, column=ci, value=val)
             cell.font = data_font
             cell.border = thin_border
+            # Color SI/NO in eval columns
+            if col_name in eval_cols:
+                if val == "SI":
+                    cell.font = si_font
+                elif val == "NO":
+                    cell.font = no_font
+
+    # Auto-filter on all columns
+    if len(patients) > 0:
+        last_col = get_column_letter(len(display_cols))
+        ws2.auto_filter.ref = f"A1:{last_col}{len(patients) + 1}"
 
     # Auto-width
     for ci, col_name in enumerate(display_cols, start=1):
-        max_len = len(col_name.lstrip("_"))
+        max_len = len(col_name.replace("_", " ").strip())
         for ri in range(min(100, len(patients))):
             val = patients.iloc[ri].get(col_name, "")
             max_len = max(max_len, len(str(val)))
         ws2.column_dimensions[get_column_letter(ci)].width = min(max_len + 3, 50)
-
     ws2.freeze_panes = "A2"
+
+    # ── Per-indicator sheets (drill-down) ──
+    for sheet_name, (flag_col, description) in indicator_sheets.items():
+        ws_detail = wb.create_sheet(title=sheet_name)
+
+        # Header row
+        detail_cols = data_cols + [flag_col]
+        for ci, col_name in enumerate(detail_cols, start=1):
+            display_name = col_name.replace("_", " ").strip()
+            cell = ws_detail.cell(row=1, column=ci, value=display_name)
+            cell.font = Font(bold=True, color="FFFFFF", size=10, name="Calibri")
+            cell.fill = header_fill_amber
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = thin_border
+
+        # Filter patients where flag = SI
+        matching = patients[patients.get(flag_col, "") == "SI"]
+        for ri, row in matching.iterrows():
+            for ci, col_name in enumerate(detail_cols, start=1):
+                val = row.get(col_name, "")
+                cell = ws_detail.cell(row=ri + 2, column=ci, value=val)
+                cell.font = data_font
+                cell.border = thin_border
+
+        # Auto-filter
+        if len(matching) > 0:
+            last_col = get_column_letter(len(detail_cols))
+            ws_detail.auto_filter.ref = f"A1:{last_col}{len(matching) + 1}"
+
+        # Auto-width
+        for ci, col_name in enumerate(detail_cols, start=1):
+            max_len = len(col_name.replace("_", " ").strip())
+            for ri in range(min(100, len(matching))):
+                val = matching.iloc[ri].get(col_name, "") if ri < len(matching) else ""
+                max_len = max(max_len, len(str(val)))
+            ws_detail.column_dimensions[get_column_letter(ci)].width = min(max_len + 3, 50)
+        ws_detail.freeze_panes = "A2"
 
     buf = io.BytesIO()
     wb.save(buf)

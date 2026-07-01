@@ -335,7 +335,7 @@ async def export_file(payload: dict):
 	)
 
 @app.post("/evaluate")
-async def evaluate_endpoint(payload: dict):
+async def evaluate_endpoint(payload: dict, format: str = Query(default="json")):
 	ct = payload.get('corrected_text', '')
 	template_names = payload.get('template_names', [])
 	template_key = payload.get('template_key', 'rcv')
@@ -363,14 +363,27 @@ async def evaluate_endpoint(payload: dict):
 
 	indicators, patients = evaluate(df, template_key)
 
-	filename = payload.get('filename', f'evaluacion_{template_key}_{datetime.now().strftime("%Y%m%d")}.xlsx')
-	buf = build_evaluation_excel(indicators, patients)
+	if format == "xlsx":
+		filename = payload.get('filename', f'evaluacion_{template_key}_{datetime.now().strftime("%Y%m%d")}.xlsx')
+		buf = build_evaluation_excel(indicators, patients)
+		return StreamingResponse(
+			buf,
+			media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename={filename}"},
+		)
 
-	return StreamingResponse(
-		buf,
-		media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		headers={"Content-Disposition": f"attachment; filename={filename}"},
-	)
+	# JSON response for dashboard
+	eval_cols = [c for c in patients.columns if c.startswith("_")]
+	data_cols = [c for c in patients.columns if not c.startswith("_")]
+
+	return {
+		"indicators": indicators.replace({pd.NA: None}).to_dict(orient="records"),
+		"patients": patients.replace({pd.NA: None}).to_dict(orient="records"),
+		"eval_columns": eval_cols,
+		"data_columns": data_cols,
+		"total_patients": len(patients),
+		"template_key": template_key,
+	}
 
 @app.get("/download-template/{template_key}")
 async def download_template(template_key: str):

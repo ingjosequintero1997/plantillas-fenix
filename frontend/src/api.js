@@ -69,14 +69,15 @@ export async function exportFile(corrected_text, filename = 'export_corrigido.tx
   return resp.blob()
 }
 
-export async function evaluateData(corrected_text, template_names, templateKey) {
-  const resp = await fetch(`${API_BASE}/evaluate`, {
+export async function evaluateData(corrected_text, template_names, templateKey, format = 'json') {
+  const resp = await fetch(`${API_BASE}/evaluate?format=${format}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ corrected_text, template_names, template_key: templateKey || 'rcv' }),
   })
   if (!resp.ok) throw new Error(await resp.text())
-  return resp.blob()
+  if (format === 'xlsx') return resp.blob()
+  return resp.json()
 }
 
 export async function revalidateData(raw_text, mapping, templateKey) {
