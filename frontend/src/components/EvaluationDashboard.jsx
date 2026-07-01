@@ -52,6 +52,14 @@ export default function EvaluationDashboard({
     'Captación DM 18-69 subsidiado': 'Capt. DM',
   }
 
+  const DENOM_LABELS = {
+    'Diabéticos controlados': 'pacientes con DM',
+    'Control PA < 140/90': 'pacientes totales',
+    'Control PA < 150/90': 'pacientes totales',
+    'Captación HTA 18-69 subsidiado': 'pacientes subsidiados 18-69',
+    'Captación DM 18-69 subsidiado': 'pacientes subsidiados 18-69',
+  }
+
   const chartData = useMemo(() => {
     if (!data) return []
     return data.indicators.map((ind) => {
@@ -59,6 +67,7 @@ export default function EvaluationDashboard({
       return {
         name: SHORT_LABELS[ind.INDICADOR] || ind.INDICADOR,
         fullName: ind.INDICADOR,
+        denomLabel: DENOM_LABELS[ind.INDICADOR] || 'pacientes',
         value: isNaN(raw) ? 0 : raw,
         meta: ind.META,
         numerador: ind.NUMERADOR,
@@ -146,7 +155,8 @@ export default function EvaluationDashboard({
 
   if (!data) return null
 
-  const totalEvalCols = data.eval_columns.filter((c) => c !== '_POBLACION_HTA' && c !== '_POBLACION_DM')
+  const EVAL_COL_ORDER = ['_DM_CONTROLADO', '_PA_140_90', '_PA_150_90', '_HTA_CAPTADO', '_DM_CAPTADO']
+  const totalEvalCols = EVAL_COL_ORDER.filter((c) => data.eval_columns.includes(c))
 
   return (
     <div className="space-y-5 animate-fade-in-up">
@@ -213,6 +223,9 @@ export default function EvaluationDashboard({
                 <span className="text-xs text-ink-muted">
                   {item.numerador}/{item.denominador}
                 </span>
+              </div>
+              <div className="text-[0.5rem] text-ink-faint font-medium uppercase tracking-wider">
+                {item.numerador} de {item.denominador} {item.denomLabel}
               </div>
               <div className="h-2 w-full rounded-full bg-ink-line/40 overflow-hidden">
                 <div className={`h-full rounded-full ${c.bar} transition-all duration-700 ease-out`}
@@ -334,9 +347,15 @@ export default function EvaluationDashboard({
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">#</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Documento</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Nombre completo</th>
-                {data.eval_columns.filter((c) => c !== '_POBLACION_HTA' && c !== '_POBLACION_DM').map((col) => (
-                  <th key={col} className="px-3 py-2.5 text-center font-bold uppercase tracking-wider text-ink-muted">
-                    {col.replace('_', ' ').trim()}
+                {[
+                  { key: '_DM_CONTROLADO', label: 'DM controlado' },
+                  { key: '_PA_140_90', label: 'PA < 140/90' },
+                  { key: '_PA_150_90', label: 'PA < 150/90' },
+                  { key: '_HTA_CAPTADO', label: 'Captación HTA' },
+                  { key: '_DM_CAPTADO', label: 'Captación DM' },
+                ].filter((c) => data.eval_columns.includes(c.key)).map((col) => (
+                  <th key={col.key} className="px-3 py-2.5 text-center font-bold uppercase tracking-wider text-ink-muted">
+                    {col.label}
                   </th>
                 ))}
               </tr>
