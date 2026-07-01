@@ -4,15 +4,18 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import io
 import re
+from datetime import datetime
 from pydantic import BaseModel
 try:
 	from .utils import fuzzy_map, normalize_text
 	from .templates_registry import get_template_by_key, list_templates_meta
 	from .validators import validate_and_correct
+	from .evaluator import evaluate, build_evaluation_excel
 except ImportError:
 	from utils import fuzzy_map, normalize_text
 	from templates_registry import get_template_by_key, list_templates_meta
 	from validators import validate_and_correct
+	from evaluator import evaluate, build_evaluation_excel
 
 import os
 
@@ -329,6 +332,44 @@ async def export_file(payload: dict):
 		io.BytesIO(ct_normalized.encode('utf-8')),
 		media_type='text/plain; charset=utf-8',
 		headers={"Content-Disposition": f"attachment; filename={filename}"}
+	)
+
+@app.post("/evaluate")
+async def evaluate_endpoint(payload: dict):
+	ct = payload.get('corrected_text', '')
+	template_names = payload.get('template_names', [])
+	template_key = payload.get('template_key', 'rcv')
+	if not ct.strip():
+		raise HTTPException(status_code=400, detail="Se requiere corrected_text")
+
+	try:
+		from io import StringIO
+		df = pd.read_csv(StringIO(ct), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+		df = df.fillna('').astype(str)
+	except Exception as e:
+		raise HTTPException(status_code=400, detail=f"Error al parsear datos: {e}")
+
+	if df.empty:
+		raise HTTPException(status_code=400, detail="No hay datos para evaluar")
+
+	# Asignar nombres de columna según template
+	if template_names and len(df.columns) == len(template_names):
+		df.columns = template_names
+	else:
+		meta = get_template_by_key(template_key)
+		tmpl_names = [t['name'] for t in meta['template']]
+		if len(df.columns) == len(tmpl_names):
+			df.columns = tmpl_names
+
+	indicators, patients = evaluate(df, template_key)
+
+	filename = payload.get('filename', f'evaluacion_{template_key}_{datetime.now().strftime("%Y%m%d")}.xlsx')
+	buf = build_evaluation_excel(indicators, patients)
+
+	return StreamingResponse(
+		buf,
+		media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		headers={"Content-Disposition": f"attachment; filename={filename}"},
 	)
 
 @app.get("/download-template/{template_key}")

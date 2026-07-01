@@ -3,7 +3,7 @@ import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
 import StatsCard from './components/StatsCard'
-import { exportFile, fetchTemplates, revalidateData, uploadFile, DOWNLOAD_TEMPLATE_URL } from './api'
+import { exportFile, fetchTemplates, revalidateData, uploadFile, evaluateData, DOWNLOAD_TEMPLATE_URL } from './api'
 
 export default function App() {
   const [mapping, setMapping] = useState({})
@@ -141,6 +141,8 @@ export default function App() {
     }
   }
 
+  const [evaluating, setEvaluating] = useState(false)
+
   const handleExport = async () => {
     try {
       const blob = await exportFile(correctedText)
@@ -152,6 +154,24 @@ export default function App() {
       URL.revokeObjectURL(url)
     } catch (e) {
       setError(e.message || 'Error exportando archivo')
+    }
+  }
+
+  const handleEvaluate = async () => {
+    if (!correctedText) return
+    setEvaluating(true); setError('')
+    try {
+      const blob = await evaluateData(correctedText, templateNames, selectedTemplate)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `evaluacion_${selectedTemplate}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e.message || 'Error generando evaluación')
+    } finally {
+      setEvaluating(false)
     }
   }
 
@@ -359,6 +379,12 @@ export default function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Exportar archivo final
+              </button>
+              <button onClick={handleEvaluate} disabled={!canExport || evaluating} className="btn-accent">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                {evaluating ? 'Evaluando...' : 'Evaluación de indicadores'}
               </button>
               <button onClick={handleReset} className="btn-secondary">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
