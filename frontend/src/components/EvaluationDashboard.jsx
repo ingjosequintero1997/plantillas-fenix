@@ -77,6 +77,14 @@ export default function EvaluationDashboard({
       for (const col of data.eval_columns) {
         row[col] = p[col] ?? 'NO'
       }
+      // Build full name from available name fields
+      const n1 = p['NOMBRE_1'] || p['PRIMER NOMBRE'] || ''
+      const n2 = p['NOMBRE_2'] || p['SEGUNDO NOMBRE'] || ''
+      const a1 = p['APELLIDO_1'] || p['PRIMER APELLIDO'] || ''
+      const a2 = p['APELLIDO_2'] || p['SEGUNDO APELLIDO'] || ''
+      const parts = [n1, n2, a1, a2].filter(Boolean)
+      row._nombreCompleto = parts.join(' ') || '—'
+      row._documento = p['NUMERO DE IDENTIFICACIÓN'] || p['NUMERO DE DOCUMENTO'] || p['IDENTIFICACION'] || ''
       return row
     })
   }, [data])
@@ -324,7 +332,8 @@ export default function EvaluationDashboard({
             <thead className="sticky top-0 z-10">
               <tr className="bg-surface-50 border-b border-ink-line">
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">#</th>
-                <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Id</th>
+                <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Documento</th>
+                <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Nombre completo</th>
                 {data.eval_columns.filter((c) => c !== '_POBLACION_HTA' && c !== '_POBLACION_DM').map((col) => (
                   <th key={col} className="px-3 py-2.5 text-center font-bold uppercase tracking-wider text-ink-muted">
                     {col.replace('_', ' ').trim()}
@@ -336,7 +345,8 @@ export default function EvaluationDashboard({
               {filteredPatients.slice(0, 200).map((p) => (
                 <tr key={p._index} className="border-b border-surface-100 hover:bg-brand-50/20 transition-colors">
                   <td className="px-3 py-2 font-semibold text-ink-muted">{p._index}</td>
-                  <td className="px-3 py-2 font-mono text-ink">{p['NUMERO DE IDENTIFICACIÓN'] || p._index}</td>
+                  <td className="px-3 py-2 font-mono text-ink font-semibold">{p._documento || '—'}</td>
+                  <td className="px-3 py-2 text-ink font-medium whitespace-nowrap">{p._nombreCompleto}</td>
                   {totalEvalCols.map((col) => {
                     const val = p[col]
                     const isSi = val === 'SI'
