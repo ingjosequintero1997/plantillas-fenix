@@ -5,6 +5,14 @@ import {
 } from 'recharts'
 import { evaluateData } from '../api'
 
+const INDICATOR_COL_MAP = {
+  'Diabéticos controlados': '_DM_CONTROLADO',
+  'Control PA < 140/90': '_PA_140_90',
+  'Control PA < 150/90': '_PA_150_90',
+  'Captación HTA 18-69 subsidiado': '_HTA_CAPTADO',
+  'Captación DM 18-69 subsidiado': '_DM_CAPTADO',
+}
+
 const META_LABELS = {
   'Bueno > 50% | Aceptable 30-50% | Crítico < 30%': { bueno: 50, aceptable: 30 },
   'Bueno > 60% | Aceptable 40-60% | Crítico < 40%': { bueno: 60, aceptable: 40 },
@@ -101,7 +109,7 @@ export default function EvaluationDashboard({
   const filteredPatients = useMemo(() => {
     if (filterKey === 'all') return patientsWithFlags
     const [col, val] = filterKey.split('::')
-    return patientsWithFlags.filter((p) => p[col] === val)
+    return patientsWithFlags.filter((p) => String(p[col]).toUpperCase() === val)
   }, [patientsWithFlags, filterKey])
 
   const handleDownloadExcel = async () => {
@@ -327,28 +335,14 @@ export default function EvaluationDashboard({
               <option value="all">Todos los pacientes</option>
               <optgroup label="── Cumplen ──">
                 {data.indicators.map((ind) => {
-                  const colMap = {
-                    'Diabéticos controlados': '_DM_CONTROLADO',
-                    'Control PA < 140/90': '_PA_140_90',
-                    'Control PA < 150/90': '_PA_150_90',
-                    'Captación HTA 18-69 subsidiado': '_HTA_CAPTADO',
-                    'Captación DM 18-69 subsidiado': '_DM_CAPTADO',
-                  }
-                  const col = colMap[ind.INDICADOR]
-                  return col ? <option key={`${col}::si`} value={`${col}::si`}>✓ {ind.INDICADOR}</option> : null
+                  const col = INDICATOR_COL_MAP[ind.INDICADOR]
+                  return col ? <option key={`${col}::SI`} value={`${col}::SI`}>✓ {ind.INDICADOR}</option> : null
                 })}
               </optgroup>
               <optgroup label="── No cumplen ──">
                 {data.indicators.map((ind) => {
-                  const colMap = {
-                    'Diabéticos controlados': '_DM_CONTROLADO',
-                    'Control PA < 140/90': '_PA_140_90',
-                    'Control PA < 150/90': '_PA_150_90',
-                    'Captación HTA 18-69 subsidiado': '_HTA_CAPTADO',
-                    'Captación DM 18-69 subsidiado': '_DM_CAPTADO',
-                  }
-                  const col = colMap[ind.INDICADOR]
-                  return col ? <option key={`${col}::no`} value={`${col}::no`}>✗ {ind.INDICADOR}</option> : null
+                  const col = INDICATOR_COL_MAP[ind.INDICADOR]
+                  return col ? <option key={`${col}::NO`} value={`${col}::NO`}>✗ {ind.INDICADOR}</option> : null
                 })}
               </optgroup>
             </select>
