@@ -28,6 +28,7 @@ export default function EvaluationDashboard({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filterIndicator, setFilterIndicator] = useState('all')
+  const [filterCumple, setFilterCumple] = useState('all') // 'all' | 'si' | 'no'
   const [downloading, setDownloading] = useState(false)
 
   React.useEffect(() => {
@@ -109,8 +110,10 @@ export default function EvaluationDashboard({
     }
     const col = colMap[filterIndicator]
     if (!col) return patientsWithFlags
-    return patientsWithFlags.filter((p) => p[col] === 'SI')
-  }, [patientsWithFlags, filterIndicator])
+    if (filterCumple === 'si') return patientsWithFlags.filter((p) => p[col] === 'SI')
+    if (filterCumple === 'no') return patientsWithFlags.filter((p) => p[col] === 'NO')
+    return patientsWithFlags
+  }, [patientsWithFlags, filterIndicator, filterCumple])
 
   const handleDownloadExcel = async () => {
     try {
@@ -328,15 +331,33 @@ export default function EvaluationDashboard({
             <h3 className="section-title">Pacientes evaluados</h3>
             <span className="badge-gray">{filteredPatients.length} pacientes</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[0.5rem] font-semibold text-ink-muted uppercase tracking-wider">Filtrar por:</span>
-            <select value={filterIndicator} onChange={(e) => setFilterIndicator(e.target.value)}
-              className="select text-xs py-1.5 px-2 w-auto">
-              <option value="all">Todos</option>
-              {data.indicators.map((ind) => (
-                <option key={ind.INDICADOR} value={ind.INDICADOR}>{ind.INDICADOR}</option>
-              ))}
-            </select>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[0.5rem] font-semibold text-ink-muted uppercase tracking-wider">Indicador:</span>
+              <select value={filterIndicator} onChange={(e) => { setFilterIndicator(e.target.value); setFilterCumple('all') }}
+                className="select text-xs py-1.5 px-2 w-auto">
+                <option value="all">Todos</option>
+                {data.indicators.map((ind) => (
+                  <option key={ind.INDICADOR} value={ind.INDICADOR}>{ind.INDICADOR}</option>
+                ))}
+              </select>
+            </div>
+            {filterIndicator !== 'all' && (
+              <div className="flex rounded-lg border border-ink-line/60 overflow-hidden text-xs font-semibold">
+                <button onClick={() => setFilterCumple('si')}
+                  className={`px-3 py-1.5 transition-colors ${
+                    filterCumple === 'si' ? 'bg-green-600 text-white' : 'bg-white text-ink-muted hover:bg-green-50'
+                  }`}>Cumplen</button>
+                <button onClick={() => setFilterCumple('no')}
+                  className={`px-3 py-1.5 transition-colors ${
+                    filterCumple === 'no' ? 'bg-red-600 text-white' : 'bg-white text-ink-muted hover:bg-red-50'
+                  }`}>No cumplen</button>
+                <button onClick={() => setFilterCumple('all')}
+                  className={`px-3 py-1.5 transition-colors ${
+                    filterCumple === 'all' ? 'bg-gray-600 text-white' : 'bg-white text-ink-muted hover:bg-gray-100'
+                  }`}>Todos</button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -391,7 +412,7 @@ export default function EvaluationDashboard({
           )}
           {filteredPatients.length === 0 && (
             <div className="p-8 text-center text-sm text-ink-muted">
-              No hay pacientes que cumplan este filtro.
+              No hay pacientes con este filtro.
             </div>
           )}
         </div>
