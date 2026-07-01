@@ -77,13 +77,13 @@ export function generateExcel(data) {
       }
       if (filtered.length === 0) continue
 
-      const sheetName = `${prefix}${indName}`.slice(0, 31)
+      const safeName = `${prefix}${indName}`.replace(/[\/\\\?\*\[\]\:]/g, '').slice(0, 31)
       const sheetCols = [...foundIdCols, flagCol]
       const sheetRows = patientRows(filtered, sheetCols)
       sheetRows.unshift(sheetCols)
       const ws = XLSX.utils.aoa_to_sheet(sheetRows)
       ws['!cols'] = sheetCols.map(h => ({ wch: Math.min(Math.max(h.length + 3, 12), 50) }))
-      XLSX.utils.book_append_sheet(wb, ws, sheetName)
+      XLSX.utils.book_append_sheet(wb, ws, safeName)
     }
   }
 
