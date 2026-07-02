@@ -206,32 +206,32 @@ export default function AuditoriaExport({ onClose }) {
   }
 
   const barColor = (val) => {
-    if (val >= 80) return 'bg-green-500'
+    if (val >= 80) return 'bg-brand-600'
     if (val >= 60) return 'bg-amber-500'
     return 'bg-red-500'
   }
 
   return (
     <div className="card overflow-hidden relative animate-fade-in-up">
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-50/40 via-white to-white pointer-events-none" />
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-violet-600 via-violet-400 to-violet-300" />
+      <div className="absolute inset-0 bg-gradient-to-br from-brand-50/60 via-white to-white pointer-events-none" />
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand-700 via-brand-500 to-brand-300" />
 
       {/* Header */}
-      <div className="relative px-7 py-6 flex items-center justify-between flex-wrap gap-4">
+      <div className="relative px-8 py-7 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 bg-violet-50 rounded-full px-3 py-1 mb-2 ring-1 ring-violet-200/50">
-            <div className="w-2 h-2 rounded-full bg-violet-600" />
-            <span className="text-[0.55rem] font-bold text-violet-800 tracking-[0.15em] uppercase">Auditoría</span>
+          <div className="inline-flex items-center gap-1.5 bg-brand-50 rounded-full px-3 py-1 mb-3 ring-1 ring-brand-200/50">
+            <div className="w-2 h-2 rounded-full bg-brand-700" />
+            <span className="text-[0.55rem] font-bold text-brand-800 tracking-[0.15em] uppercase">Auditoría</span>
           </div>
           <h2 className="text-xl font-extrabold text-ink tracking-tight">
-            Exportar a Excel organizado
+            Exportación estructurada a Excel
           </h2>
-          <p className="text-xs text-ink-muted mt-1 max-w-lg">
-            Carga el TXT del sistema de validación, selecciona la plantilla y descarga un Excel con los datos organizados en cada variable correspondiente.
+          <p className="text-sm text-ink-muted/90 mt-1.5 max-w-lg leading-relaxed">
+            Importe el archivo TXT generado por el sistema de validación, seleccione la plantilla de destino y obtenga un libro de Excel con los datos organizados por cada variable del registro.
           </p>
         </div>
         <button onClick={onClose}
-          className="btn bg-white text-ink border border-ink-line/70 hover:bg-surface-50 shadow-button shrink-0">
+          className="btn bg-white text-ink border border-ink-line/70 hover:bg-surface-50 hover:border-ink-line shadow-button shrink-0">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -240,29 +240,37 @@ export default function AuditoriaExport({ onClose }) {
       </div>
 
       {/* Body */}
-      <div className="relative px-7 pb-7 space-y-5">
+      <div className="relative px-8 pb-8 space-y-5">
         {/* Step 1: Select template */}
-        <div className="rounded-xl border border-ink-line/60 p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-[0.5rem] font-bold flex items-center justify-center shrink-0">1</span>
-            <span className="text-sm font-bold text-ink">Seleccionar plantilla</span>
+        <div className="rounded-xl border border-ink-line/60 bg-white p-5 space-y-3 transition-shadow hover:shadow-panel-hover">
+          <div className="flex items-center gap-3">
+            <span className="w-7 h-7 rounded-full bg-brand-100 text-brand-800 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40">1</span>
+            <div>
+              <span className="text-sm font-bold text-ink">Seleccionar plantilla</span>
+              <p className="text-[0.55rem] text-ink-muted font-medium tracking-wider uppercase mt-0.5">Paso 1</p>
+            </div>
           </div>
-          <select value={selectedKey} onChange={e => setSelectedKey(e.target.value)}
-            className="select w-full max-w-sm">
-            <option value="">— Selecciona —</option>
-            {templates.map(t => (
-              <option key={t.key} value={t.key}>{t.label}</option>
-            ))}
-          </select>
+          <div className="pl-10">
+            <select value={selectedKey} onChange={e => setSelectedKey(e.target.value)}
+              className="select w-full max-w-sm">
+              <option value="">— Selecciona —</option>
+              {templates.map(t => (
+                <option key={t.key} value={t.key}>{t.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Step 2: Upload file */}
-        <div className="rounded-xl border border-ink-line/60 p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-[0.5rem] font-bold flex items-center justify-center shrink-0">2</span>
-            <span className="text-sm font-bold text-ink">Cargar archivo TXT</span>
+        <div className="rounded-xl border border-ink-line/60 bg-white p-5 space-y-3 transition-shadow hover:shadow-panel-hover">
+          <div className="flex items-center gap-3">
+            <span className="w-7 h-7 rounded-full bg-brand-100 text-brand-800 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40">2</span>
+            <div>
+              <span className="text-sm font-bold text-ink">Cargar archivo TXT</span>
+              <p className="text-[0.55rem] text-ink-muted font-medium tracking-wider uppercase mt-0.5">Paso 2</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="pl-10 flex items-center gap-3 flex-wrap">
             <button onClick={() => inputRef.current?.click()}
               className="btn-outline text-xs">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -273,85 +281,90 @@ export default function AuditoriaExport({ onClose }) {
             <input ref={inputRef} type="file" accept=".txt" hidden
               onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setResult(null); setEvalData(null); setError('') } }} />
             {file && (
-              <span className="text-xs text-ink-muted flex items-center gap-2">
-                <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <span className="text-xs text-ink-muted flex items-center gap-2 bg-brand-50/50 rounded-lg px-3 py-1.5 border border-brand-100/60">
+                <svg className="w-4 h-4 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 {file.name} ({formatBytes(file.size)})
               </span>
             )}
           </div>
-          <div className="text-[0.5rem] text-ink-faint font-medium uppercase tracking-wider">
-            Formatos aceptados: .txt (pipe separado | )
+          <div className="pl-10 text-[0.5rem] text-ink-faint font-medium uppercase tracking-wider">
+            Formatos aceptados: .txt (separado por pipe | )
           </div>
         </div>
 
         {/* Step 3: Process & export */}
-        <div className="rounded-xl border border-ink-line/60 p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-[0.5rem] font-bold flex items-center justify-center shrink-0">3</span>
-            <span className="text-sm font-bold text-ink">Procesar y exportar</span>
+        <div className="rounded-xl border border-ink-line/60 bg-white p-5 space-y-3 transition-shadow hover:shadow-panel-hover">
+          <div className="flex items-center gap-3">
+            <span className="w-7 h-7 rounded-full bg-brand-100 text-brand-800 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40">3</span>
+            <div>
+              <span className="text-sm font-bold text-ink">Procesar y exportar</span>
+              <p className="text-[0.55rem] text-ink-muted font-medium tracking-wider uppercase mt-0.5">Paso 3</p>
+            </div>
           </div>
 
-          {loading && (
-            <div className="flex items-center gap-3 text-xs text-ink-muted">
-              <svg className="w-4 h-4 text-violet-600 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Procesando... {progress}%
-            </div>
-          )}
-
-          {!loading && (
-            <div className="flex items-center gap-3 flex-wrap">
-              <button onClick={handleProcess} disabled={!file || !selectedKey}
-                className="btn-primary text-xs">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <div className="pl-10">
+            {loading && (
+              <div className="flex items-center gap-3 text-xs text-ink-muted bg-brand-50/50 rounded-lg px-4 py-3 border border-brand-100/60">
+                <svg className="w-4 h-4 text-brand-700 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                Procesar
-              </button>
-              {result && (
-                <button onClick={handleDownloadOrganized}
-                  className="btn bg-violet-600 text-white hover:bg-violet-700 shadow-button hover:shadow-button-hover text-xs">
+                Procesando… <span className="font-semibold">{progress}%</span>
+              </div>
+            )}
+
+            {!loading && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <button onClick={handleProcess} disabled={!file || !selectedKey}
+                  className="btn-primary text-xs">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Descargar Excel organizado
+                  Procesar
                 </button>
-              )}
-            </div>
-          )}
+                {result && (
+                  <button onClick={handleDownloadOrganized}
+                    className="btn bg-brand-700 text-white hover:bg-brand-800 shadow-button hover:shadow-button-hover text-xs">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Descargar Excel organizado
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Result summary */}
         {result?.summary && (
-          <div className="rounded-xl border border-ink-line/60 bg-surface-50/70 p-4 text-xs text-ink grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
+          <div className="rounded-xl border border-brand-100/80 bg-gradient-to-br from-brand-50/60 to-white p-5 text-xs text-ink grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
+            <div className="space-y-0.5">
               <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Registros</span>
-              <div className="font-bold text-lg">{result.summary.total}</div>
+              <div className="font-bold text-xl text-brand-900">{result.summary.total}</div>
             </div>
-            <div>
+            <div className="space-y-0.5">
               <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Errores</span>
-              <div className={`font-bold text-lg ${result.summary.errors > 0 ? 'text-red-600' : 'text-green-600'}`}>{result.summary.errors}</div>
+              <div className={`font-bold text-xl ${result.summary.errors > 0 ? 'text-red-600' : 'text-brand-900'}`}>{result.summary.errors}</div>
             </div>
-            <div>
+            <div className="space-y-0.5">
               <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Corregidos</span>
-              <div className="font-bold text-lg text-amber-600">{result.summary.corrected}</div>
+              <div className="font-bold text-xl text-amber-600">{result.summary.corrected}</div>
             </div>
-            <div>
+            <div className="space-y-0.5">
               <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Calidad</span>
-              <div className="font-bold text-lg text-brand-700">{result.summary.quality_percent}%</div>
+              <div className="font-bold text-xl text-brand-700">{result.summary.quality_percent}%</div>
             </div>
           </div>
         )}
 
         {/* Evaluation button (solo RCV) */}
         {result && selectedKey === 'rcv' && !evalLoading && !evalData && (
-          <div className="flex justify-center">
+          <div className="flex justify-center pt-2">
             <button onClick={handleEvaluate}
-              className="btn-accent text-sm px-8 py-3">
+              className="btn bg-brand-700 text-white hover:bg-brand-800 shadow-button hover:shadow-button-hover text-sm px-8 py-3">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
@@ -361,31 +374,37 @@ export default function AuditoriaExport({ onClose }) {
         )}
 
         {evalLoading && (
-          <div className="flex items-center justify-center gap-3 text-sm text-ink-muted bg-brand-50 rounded-xl px-5 py-4 border border-brand-200/50">
+          <div className="flex items-center justify-center gap-3 text-sm text-ink-muted bg-brand-50/80 rounded-xl px-5 py-4 border border-brand-200/50 animate-fade-in">
             <svg className="w-5 h-5 text-brand-700 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            Evaluando indicadores...
+            Evaluando indicadores…
           </div>
         )}
 
         {error && (
-          <div className="rounded-xl border border-red-200/80 bg-red-50/80 p-3 text-xs text-red-600 flex items-start gap-2">
-            <span className="font-medium">{error}</span>
+          <div className="rounded-xl border border-red-200/80 bg-gradient-to-br from-red-50/80 to-white p-4 text-xs text-red-700 flex items-start gap-2 animate-fade-in">
+            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{error}</span>
           </div>
         )}
 
         {/* ─── Evaluation Dashboard (inline) ─── */}
         {evalData && (
-          <div className="space-y-5 pt-4 border-t-2 border-brand-200/60">
-            <div className="flex items-center justify-between">
+          <div className="space-y-5 pt-5 animate-fade-in-up">
+            <div className="flex items-center justify-between flex-wrap gap-3 bg-gradient-to-br from-brand-50/60 to-white rounded-xl px-5 py-4 border border-brand-100/80">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-6 rounded-full bg-amber-600" />
-                <h3 className="text-base font-bold text-ink tracking-tight">Evaluación de indicadores RCV</h3>
+                <div className="w-2 h-8 rounded-full bg-brand-700" />
+                <div>
+                  <h3 className="text-base font-bold text-ink tracking-tight">Evaluación de indicadores RCV</h3>
+                  <p className="text-[0.55rem] text-ink-muted font-medium uppercase tracking-wider mt-0.5">Resumen de cumplimiento</p>
+                </div>
               </div>
               <button onClick={handleDownloadEval}
-                className="btn bg-amber-600 text-white hover:bg-amber-700 shadow-button text-xs">
+                className="btn bg-brand-700 text-white hover:bg-brand-800 shadow-button hover:shadow-button-hover text-xs">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -400,15 +419,15 @@ export default function AuditoriaExport({ onClose }) {
                 const metaConfig = META_LABELS[ind.META]
                 const isGood = metaConfig ? val >= metaConfig.bueno : false
                 return (
-                  <div key={ind.INDICADOR} className="rounded-xl border border-ink-line/60 bg-white p-4 text-center">
-                    <div className="text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted mb-1.5">{SHORT_LABELS[ind.INDICADOR] || ind.INDICADOR}</div>
-                    <div className={`text-2xl font-extrabold ${isGood ? 'text-green-600' : 'text-red-500'}`}>
+                  <div key={ind.INDICADOR} className="rounded-xl border border-ink-line/60 bg-white p-4 text-center transition-shadow hover:shadow-panel-hover">
+                    <div className="text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted mb-2">{SHORT_LABELS[ind.INDICADOR] || ind.INDICADOR}</div>
+                    <div className={`text-2xl font-extrabold ${isGood ? 'text-brand-700' : 'text-red-500'}`}>
                       {isNaN(val) ? '—' : `${val.toFixed(1)}%`}
                     </div>
-                    <div className="mt-2 h-1.5 w-full bg-surface-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all ${barColor(val)}`} style={{ width: `${Math.min(val, 100)}%` }} />
+                    <div className="mt-2.5 h-1.5 w-full bg-surface-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-500 ${barColor(val)}`} style={{ width: `${Math.min(val, 100)}%` }} />
                     </div>
-                    <div className="mt-1 text-[0.45rem] text-ink-muted font-medium">
+                    <div className="mt-1.5 text-[0.45rem] text-ink-muted font-medium">
                       {ind.NUMERADOR}/{ind.DENOMINADOR}
                     </div>
                   </div>
@@ -417,8 +436,8 @@ export default function AuditoriaExport({ onClose }) {
             </div>
 
             {/* Patient filter & table */}
-            <div className="rounded-xl border border-ink-line/60 overflow-hidden bg-white">
-              <div className="p-4 border-b border-ink-line/60 bg-surface-50/50 flex items-center gap-3 flex-wrap">
+            <div className="rounded-xl border border-ink-line/60 overflow-hidden bg-white transition-shadow hover:shadow-panel-hover">
+              <div className="p-4 border-b border-ink-line/60 bg-brand-50/30 flex items-center gap-3 flex-wrap">
                 <span className="text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Filtrar pacientes:</span>
                 <select value={filterKey} onChange={(e) => { setFilterKey(e.target.value); setPatientPage(1) }}
                   className="select text-xs max-w-xs">
@@ -434,18 +453,18 @@ export default function AuditoriaExport({ onClose }) {
               <div className="overflow-x-auto max-h-80 overflow-y-auto scroll-thin">
                 <table className="min-w-full text-xs">
                   <thead>
-                    <tr className="bg-surface-50 border-b border-ink-line/60">
-                      <th className="px-3 py-2 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">#</th>
-                      <th className="px-3 py-2 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Documento</th>
-                      <th className="px-3 py-2 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Nombre</th>
+                    <tr className="bg-brand-50/20 border-b border-ink-line/60">
+                      <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">#</th>
+                      <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Documento</th>
+                      <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Nombre</th>
                       {evalData.eval_columns.map(col => (
-                        <th key={col} className="px-3 py-2 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">{col}</th>
+                        <th key={col} className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">{col}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedPatients.map(p => (
-                      <tr key={p._index} className="border-b border-surface-100 hover:bg-brand-50/20 transition-colors">
+                      <tr key={p._index} className="border-b border-surface-100 hover:bg-brand-50/20 transition-colors duration-150">
                         <td className="px-3 py-2 text-ink-muted font-semibold">{p._index}</td>
                         <td className="px-3 py-2 font-mono text-ink">{p._documento}</td>
                         <td className="px-3 py-2 text-ink">{p._nombreCompleto}</td>
@@ -454,7 +473,7 @@ export default function AuditoriaExport({ onClose }) {
                           return (
                             <td key={col} className="px-3 py-2 text-center">
                               <span className={`inline-block w-5 h-5 rounded-full text-[0.4rem] font-bold flex items-center justify-center ${
-                                v === 'SI' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                                v === 'SI' ? 'bg-brand-100 text-brand-800' : 'bg-red-100 text-red-600'
                               }`}>
                                 {v === 'SI' ? '✓' : '✗'}
                               </span>
@@ -465,13 +484,13 @@ export default function AuditoriaExport({ onClose }) {
                     ))}
                     {paginatedPatients.length === 0 && (
                       <tr>
-                        <td colSpan={3 + evalData.eval_columns.length} className="px-3 py-6 text-center text-ink-muted text-xs">No hay pacientes con este filtro</td>
+                        <td colSpan={3 + evalData.eval_columns.length} className="px-3 py-8 text-center text-ink-muted text-xs">No hay pacientes con este filtro</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
-              <div className="p-3 border-t border-ink-line/60 bg-surface-50/50">
+              <div className="p-3 border-t border-ink-line/60 bg-brand-50/20">
                 <Pagination page={patientPage} totalPages={patientTotalPages} onChange={setPatientPage} />
               </div>
             </div>
