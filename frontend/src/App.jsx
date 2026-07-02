@@ -251,9 +251,12 @@ export default function App() {
         {/* ─── Módulos ─── */}
         <section className="animate-fade-in-up">
           <div className="flex items-center justify-between gap-4 mb-5">
-            <div>
-              <h2 className="text-sm font-bold text-ink tracking-wider uppercase">Módulos de plantilla</h2>
-              <p className="text-xs text-ink-muted/80 mt-0.5">Selecciona uno para comenzar</p>
+            <div className="section-header">
+              <div className="section-header-bar" />
+              <div>
+                <h2 className="text-base font-bold text-ink tracking-tight">Módulos de plantilla</h2>
+                <p className="text-xs text-ink-muted/70 mt-0.5">Elige el módulo correspondiente a los datos que deseas procesar</p>
+              </div>
             </div>
             <span className="badge-gray shrink-0">{templates.length} disponible{templates.length !== 1 ? 's' : ''}</span>
           </div>
