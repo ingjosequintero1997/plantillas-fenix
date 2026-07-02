@@ -41,3 +41,6 @@ debug_columns.py
 debug2.py
 generar_pruebas.py
 
+
+.vercel
+.env*

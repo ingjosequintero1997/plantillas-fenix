@@ -319,9 +319,49 @@ export default function App() {
               )
             })}
           </div>
+
+          {/* ─── Módulo Auditoría (independiente) ─── */}
+          <div className="relative transition-all duration-200 overflow-hidden card-hover border-ink-line/60 mt-4" style={{ animationDelay: '300ms' }}>
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 opacity-60" />
+            <button onClick={() => setShowAuditoria(!showAuditoria)}
+              className="w-full text-left p-5">
+              {showAuditoria && (
+                <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-amber-600 flex items-center justify-center shadow-sm">
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all text-sm font-bold bg-amber-100 text-amber-700">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="text-[0.5rem] font-bold text-amber-700 tracking-[0.15em] uppercase block leading-none mb-0.5">Módulo</span>
+                  <span className="text-sm font-bold text-ink">Auditoría Excel</span>
+                </div>
+              </div>
+              <p className="text-xs text-ink-muted leading-relaxed mb-4">
+                Carga el archivo TXT del sistema de validación, selecciona la plantilla mapeada y descarga un Excel organizado con los datos.
+              </p>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/50">
+                  TXT → Excel
+                </span>
+              </div>
+            </button>
+          </div>
         </section>
 
-        {/* ─── Drop zone ─── */}
+        {/* ─── Auditoría Export (módulo independiente) ─── */}
+        {showAuditoria && (
+          <AuditoriaExport onClose={() => setShowAuditoria(false)} />
+        )}
+
+        {/* ─── Contenido principal (oculto durante Auditoría) ─── */}
+        {!showAuditoria && (<>
         <div className="card p-6 md:p-8 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <DragDrop onFile={handleFile} />
         </div>
@@ -395,12 +435,6 @@ export default function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
                 Limpiar
-              </button>
-              <button onClick={() => setShowAuditoria(true)} className="btn-outline">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Auditoría Excel
               </button>
             </div>
           </div>
@@ -528,13 +562,8 @@ export default function App() {
           />
         )}
 
-        {/* ─── Auditoría Export ─── */}
-        {showAuditoria && (
-          <AuditoriaExport onClose={() => setShowAuditoria(false)} />
-        )}
-
         {/* ─── Vista previa + Auditoría ─── */}
-        {correctedText && !showEvaluation && (
+        {correctedText && !showEvaluation && !showAuditoria && (
           <div className="space-y-5">
             <div className="card p-5 space-y-4 animate-fade-in-up">
               <div className="flex items-center gap-3">
@@ -628,6 +657,7 @@ export default function App() {
             </div>
           </div>
         )}
+        </>)}
       </div>
     </div>
   )

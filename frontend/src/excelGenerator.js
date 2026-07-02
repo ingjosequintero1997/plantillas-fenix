@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 const COL_MAP = {
   'Diabéticos controlados': '_DM_CONTROLADO',
@@ -21,37 +21,197 @@ function clean(v) {
   return String(v)
 }
 
-function patientRows(patients, cols) {
-  return patients.map(p => cols.map(c => clean(p[c])))
+const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B5E20' } }
+const HEADER_FONT = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10, name: 'Calibri' }
+const ALT_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F4F0' } }
+const BORDER = {
+  top: { style: 'thin', color: { argb: 'FFBDBDBD' } },
+  left: { style: 'thin', color: { argb: 'FFBDBDBD' } },
+  bottom: { style: 'thin', color: { argb: 'FFBDBDBD' } },
+  right: { style: 'thin', color: { argb: 'FFBDBDBD' } },
+}
+const TITLE_FONT = { bold: true, size: 16, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }
+const SUBTITLE_FONT = { size: 11, color: { argb: 'FF4A5568' }, name: 'Calibri', italic: true }
+
+function styleHeader(cell) {
+  cell.fill = HEADER_FILL
+  cell.font = HEADER_FONT
+  cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+  cell.border = BORDER
 }
 
-export function generateExcel(data) {
-  const { indicators, patients, data_columns, eval_columns } = data
-  const wb = XLSX.utils.book_new()
+function styleData(cell, alt) {
+  cell.font = { size: 10, name: 'Calibri', color: { argb: 'FF2D3748' } }
+  cell.alignment = { vertical: 'middle', wrapText: true }
+  cell.border = BORDER
+  if (alt) cell.fill = ALT_FILL
+}
 
+async function generateDashboard(ws, data) {
+  const { indicators, patients } = data
+
+  ws.mergeCells(1, 1, 1, 7)
+  const title = ws.getCell('A1')
+  title.value = 'Evaluación de Indicadores — Riesgo Cardiovascular'
+  title.font = { ...TITLE_FONT, size: 18 }
+  title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B5E20' } }
+  title.alignment = { vertical: 'middle', horizontal: 'center' }
+  title.border = BORDER
+  ws.getRow(1).height = 40
+
+  ws.mergeCells(2, 1, 2, 7)
+  const sub = ws.getCell('A2')
+  sub.value = `Total: ${patients.length} pacientes  |  ${indicators.length} indicadores  |  Generado: ${new Date().toLocaleDateString('es-CO')}`
+  sub.font = SUBTITLE_FONT
+  sub.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F0E8' } }
+  sub.alignment = { vertical: 'middle', horizontal: 'center' }
+  sub.border = BORDER
+  ws.getRow(2).height = 28
+
+  const headers = ['Indicador', 'Numerador', 'Denominador', 'Cumplimiento', 'Resultado', 'Meta']
+  const headerRow = ws.getRow(4)
+  headers.forEach((h, i) => {
+    const cell = headerRow.getCell(i + 1)
+    cell.value = h
+    styleHeader(cell)
+  })
+  headerRow.height = 24
+
+  indicators.forEach((ind, idx) => {
+    const row = ws.getRow(5 + idx)
+    const alt = idx % 2 === 1
+    const cumplimiento = parseFloat(String(ind.CUMPLIMIENTO).replace('%', '').replace(',', '.'))
+    const isGood = cumplimiento >= (ind.META || 80)
+
+    const cells = [ind.INDICADOR, ind.NUMERADOR, ind.DENOMINADOR, ind.CUMPLIMIENTO, '', ind.META]
+    cells.forEach((v, i) => {
+      const cell = row.getCell(i + 1)
+      cell.value = v
+      styleData(cell, alt)
+    })
+
+    const statusCell = row.getCell(5)
+    statusCell.value = isGood ? 'CUMPLE' : 'NO CUMPLE'
+    statusCell.font = {
+      bold: true, size: 10, name: 'Calibri',
+      color: { argb: isGood ? 'FF1B5E20' : 'FFC53030' },
+    }
+    statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isGood ? 'FFE8F5E9' : 'FFFDE8E8' } }
+
+    row.height = 22
+  })
+
+  ws.getColumn(1).width = 44
+  ws.getColumn(2).width = 14
+  ws.getColumn(3).width = 16
+  ws.getColumn(4).width = 16
+  ws.getColumn(5).width = 16
+  ws.getColumn(6).width = 50
+}
+
+async function generatePacientes(ws, data) {
+  const { patients, data_columns, eval_columns } = data
   const evalCols = eval_columns.filter(c => c.startsWith('_'))
   const allCols = [...data_columns, ...evalCols]
 
-  // ── Dashboard ──
-  const dashData = [['Evaluación de Indicadores — Riesgo Cardiovascular']]
-  dashData.push([`Total: ${patients.length} pacientes  |  ${indicators.length} indicadores`])
-  dashData.push([])
-  dashData.push(['Indicador', 'Numerador', 'Denominador', 'Cumplimiento', 'Estado', 'Meta'])
-  for (const ind of indicators) {
-    dashData.push([ind.INDICADOR, ind.NUMERADOR, ind.DENOMINADOR, ind.CUMPLIMIENTO, '', ind.META])
+  const headerRow = ws.getRow(1)
+  allCols.forEach((h, i) => {
+    const cell = headerRow.getCell(i + 1)
+    cell.value = h
+    styleHeader(cell)
+  })
+  headerRow.height = 24
+
+  patients.forEach((p, idx) => {
+    const row = ws.getRow(2 + idx)
+    const alt = idx % 2 === 1
+    allCols.forEach((col, ci) => {
+      const cell = row.getCell(ci + 1)
+      cell.value = clean(p[col])
+      styleData(cell, alt)
+      if (col.startsWith('_') && clean(p[col]).toUpperCase() === 'SI') {
+        cell.font = { bold: true, size: 10, name: 'Calibri', color: { argb: 'FF1B5E20' } }
+      }
+    })
+    row.height = 20
+  })
+
+  ws.getColumns().forEach((col, i) => {
+    const maxLen = Math.max(
+      allCols[i] ? allCols[i].length : 10,
+      ...patients.map(p => String(p[allCols[i]] || '').length)
+    )
+    col.width = Math.min(Math.max(maxLen + 3, 10), 60)
+  })
+}
+
+async function generateIndicatorSheet(ws, patients, indName, flagCol, cumple, denomCol, foundIdCols) {
+  const isCumple = cumple === 'SI'
+  let filtered
+  if (isCumple) {
+    filtered = patients.filter(p => clean(p[flagCol]) === 'SI')
+  } else if (denomCol) {
+    filtered = patients.filter(p => clean(p[denomCol]) === 'SI' && clean(p[flagCol]) !== 'SI')
+  } else {
+    filtered = patients.filter(p => clean(p[flagCol]) !== 'SI')
   }
-  const wsDash = XLSX.utils.aoa_to_sheet(dashData)
-  wsDash['!cols'] = [{ wch: 42 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 50 }]
-  XLSX.utils.book_append_sheet(wb, wsDash, 'Dashboard')
 
-  // ── Pacientes ──
-  const rows = patientRows(patients, allCols)
-  rows.unshift(allCols)
-  const wsPat = XLSX.utils.aoa_to_sheet(rows)
-  wsPat['!cols'] = allCols.map(h => ({ wch: Math.min(Math.max(h.length + 3, 10), 50) }))
-  XLSX.utils.book_append_sheet(wb, wsPat, 'Pacientes')
+  if (filtered.length === 0) return
 
-  // ── Per-indicator sheets ──
+  const sheetCols = [...foundIdCols, flagCol]
+  const theme = isCumple
+    ? { fill: 'FF1B5E20', label: 'CUMPLE' }
+    : { fill: 'FFC53030', label: 'NO CUMPLE' }
+
+  const headerRow = ws.getRow(1)
+  sheetCols.forEach((h, i) => {
+    const cell = headerRow.getCell(i + 1)
+    cell.value = h
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: theme.fill } }
+    cell.font = HEADER_FONT
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+    cell.border = BORDER
+  })
+  headerRow.height = 24
+
+  filtered.forEach((p, idx) => {
+    const row = ws.getRow(2 + idx)
+    const alt = idx % 2 === 1
+    sheetCols.forEach((col, ci) => {
+      const cell = row.getCell(ci + 1)
+      const val = col === flagCol ? (isCumple ? 'SI' : clean(p[col])) : clean(p[col])
+      cell.value = val
+      styleData(cell, alt)
+      if (col === flagCol && isCumple) {
+        cell.font = { bold: true, size: 10, name: 'Calibri', color: { argb: 'FF1B5E20' } }
+      }
+    })
+    row.height = 20
+  })
+
+  ws.getColumns().forEach((col, i) => {
+    const maxLen = Math.max(
+      sheetCols[i] ? sheetCols[i].length : 10,
+      ...filtered.map(p => String(p[sheetCols[i]] || '').length)
+    )
+    col.width = Math.min(Math.max(maxLen + 3, 12), 50)
+  })
+}
+
+export async function generateExcel(data) {
+  const { indicators, patients, data_columns, eval_columns } = data
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'FÉNIX - Validador de Plantillas PYM'
+  wb.created = new Date()
+
+  const wsDash = wb.addWorksheet('Dashboard', { properties: { tabColor: { argb: 'FF1B5E20' } } })
+  await generateDashboard(wsDash, data)
+
+  const evalCols = eval_columns.filter(c => c.startsWith('_'))
+  const allCols = [...data_columns, ...evalCols]
+  const wsPat = wb.addWorksheet('Pacientes', { properties: { tabColor: { argb: 'FF2E7D32' } } })
+  await generatePacientes(wsPat, data)
+
   const idCols = ['DOCUMENTO', 'NOMBRE', 'EDAD']
   const findCol = (name) => {
     const n = name.replace(/\s+/g, '').toUpperCase()
@@ -67,26 +227,14 @@ export function generateExcel(data) {
   for (const [indName, flagCol] of Object.entries(COL_MAP)) {
     for (const [cumple, prefix] of [['SI', ''], ['NO', 'No ']]) {
       const denomCol = DENOM_COL[flagCol]
-      let filtered
-      if (cumple === 'SI') {
-        filtered = patients.filter(p => clean(p[flagCol]) === 'SI')
-      } else if (denomCol) {
-        filtered = patients.filter(p => clean(p[denomCol]) === 'SI' && clean(p[flagCol]) !== 'SI')
-      } else {
-        filtered = patients.filter(p => clean(p[flagCol]) !== 'SI')
-      }
-      if (filtered.length === 0) continue
-
       const safeName = `${prefix}${indName}`.replace(/[\/\\\?\*\[\]\:]/g, '').slice(0, 31)
-      const sheetCols = [...foundIdCols, flagCol]
-      const sheetRows = patientRows(filtered, sheetCols)
-      sheetRows.unshift(sheetCols)
-      const ws = XLSX.utils.aoa_to_sheet(sheetRows)
-      ws['!cols'] = sheetCols.map(h => ({ wch: Math.min(Math.max(h.length + 3, 12), 50) }))
-      XLSX.utils.book_append_sheet(wb, ws, safeName)
+      const isCumple = cumple === 'SI'
+      const tabColor = isCumple ? 'FF1B5E20' : 'FFC53030'
+      const ws = wb.addWorksheet(safeName, { properties: { tabColor: { argb: tabColor } } })
+      await generateIndicatorSheet(ws, patients, indName, flagCol, cumple, denomCol, foundIdCols)
     }
   }
 
-  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+  const buf = await wb.xlsx.writeBuffer()
   return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 }

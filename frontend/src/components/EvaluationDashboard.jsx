@@ -133,7 +133,7 @@ export default function EvaluationDashboard({
   const handleDownloadExcel = async () => {
     try {
       setDownloading(true)
-      const blob = generateExcel(data)
+      const blob = await generateExcel(data)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url

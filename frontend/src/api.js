@@ -1,4 +1,5 @@
-const rawBase = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const rawBase = import.meta.env.VITE_API_BASE || (isLocalhost ? 'http://localhost:8000' : '/api')
 const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase
 
 export const DOWNLOAD_TEMPLATE_URL = (key) => `${API_BASE}/download-template/${key}`
