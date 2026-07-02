@@ -1,13 +1,22 @@
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-const rawBase = import.meta.env.VITE_API_BASE || (isLocalhost ? 'http://localhost:8000' : '/api')
+const rawBase = (import.meta.env.VITE_API_BASE || (isLocalhost ? 'http://localhost:8000' : '/api')).trim()
 const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase
 
 export const DOWNLOAD_TEMPLATE_URL = (key) => `${API_BASE}/download-template/${key}`
 
+async function apiFetch(url, options = {}) {
+  const resp = await fetch(url, options)
+  const text = await resp.text()
+  if (!resp.ok) throw new Error(text)
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(`Respuesta inválida desde ${url}: ${text.slice(0, 200)}`)
+  }
+}
+
 export async function fetchTemplates() {
-  const resp = await fetch(`${API_BASE}/templates`)
-  if (!resp.ok) throw new Error(await resp.text())
-  const data = await resp.json()
+  const data = await apiFetch(`${API_BASE}/templates`)
   return data.templates || []
 }
 
@@ -51,11 +60,11 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
         if (xhr.status >= 200 && xhr.status < 300) resolve(data)
         else reject(new Error(parseApiError(data, xhr.responseText)))
       } catch {
-        reject(new Error(xhr.responseText || 'Respuesta inválida'))
+        reject(new Error(`Respuesta inválida desde ${API_BASE}/upload: ${(xhr.responseText || '').slice(0, 200)}`))
       }
     }
 
-    xhr.onerror = () => reject(new Error('Error de red'))
+    xhr.onerror = () => reject(new Error('Error de red al conectar con el servidor'))
     xhr.send(form)
   })
 }
@@ -71,22 +80,26 @@ export async function exportFile(corrected_text, filename = 'export_corrigido.tx
 }
 
 export async function evaluateData(corrected_text, template_names, templateKey, format = 'json') {
-  const resp = await fetch(`${API_BASE}/evaluate?format=${format}`, {
+  const url = `${API_BASE}/evaluate?format=${format}`
+  const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ corrected_text, template_names, template_key: templateKey || 'rcv' }),
   })
-  if (!resp.ok) throw new Error(await resp.text())
-  if (format === 'xlsx') return resp.blob()
-  return resp.json()
+  const text = await resp.text()
+  if (!resp.ok) throw new Error(text)
+  if (format === 'xlsx') return new Blob([text], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(`Respuesta inválida desde ${url}: ${text.slice(0, 200)}`)
+  }
 }
 
 export async function revalidateData(raw_text, mapping, templateKey) {
-  const resp = await fetch(`${API_BASE}/revalidate`, {
+  return apiFetch(`${API_BASE}/revalidate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ raw_text, mapping, template_key: templateKey || 'rcv' }),
   })
-  if (!resp.ok) throw new Error(await resp.text())
-  return resp.json()
 }

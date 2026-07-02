@@ -4,6 +4,12 @@ import { generateExcel } from '../excelGenerator'
 import ExcelJS from 'exceljs'
 import Pagination from './Pagination'
 
+const META_LABELS = {
+  'Bueno > 50% | Aceptable 30-50% | Crítico < 30%': { bueno: 50, aceptable: 30 },
+  'Bueno > 60% | Aceptable 40-60% | Crítico < 40%': { bueno: 60, aceptable: 40 },
+  '> 60%': { bueno: 60, aceptable: 60 },
+}
+
 const PATIENTS_PER_PAGE = 50
 
 export default function AuditoriaExport({ onClose }) {
@@ -118,7 +124,8 @@ export default function AuditoriaExport({ onClose }) {
         row.height = 20
       })
 
-      ws.getColumns().forEach((col, i) => {
+      columns.forEach((_h, i) => {
+        const col = ws.getColumn(i + 1)
         const maxLen = Math.max(
           columns[i] ? columns[i].length : 10,
           ...patients.map(p => String(p[columns[i]] || '').length)
@@ -390,7 +397,8 @@ export default function AuditoriaExport({ onClose }) {
             <div className="grid gap-3 md:grid-cols-5">
               {evalData.indicators.map((ind) => {
                 const val = parseFloat(String(ind.CUMPLIMIENTO).replace('%', '').replace(',', '.'))
-                const isGood = val >= (ind.META || 80)
+                const metaConfig = META_LABELS[ind.META]
+                const isGood = metaConfig ? val >= metaConfig.bueno : false
                 return (
                   <div key={ind.INDICADOR} className="rounded-xl border border-ink-line/60 bg-white p-4 text-center">
                     <div className="text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted mb-1.5">{SHORT_LABELS[ind.INDICADOR] || ind.INDICADOR}</div>

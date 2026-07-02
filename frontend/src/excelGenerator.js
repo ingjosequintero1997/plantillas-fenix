@@ -21,6 +21,27 @@ function clean(v) {
   return String(v)
 }
 
+const META_LABELS = {
+  'Bueno > 50% | Aceptable 30-50% | Crítico < 30%': { bueno: 50, aceptable: 30 },
+  'Bueno > 60% | Aceptable 40-60% | Crítico < 40%': { bueno: 60, aceptable: 40 },
+  '> 60%': { bueno: 60, aceptable: 60 },
+}
+
+function enrichPatients(patients, data_columns) {
+  return patients.map(p => {
+    const n1 = p['NOMBRE_1'] || p['PRIMER NOMBRE'] || ''
+    const n2 = p['NOMBRE_2'] || p['SEGUNDO NOMBRE'] || ''
+    const a1 = p['APELLIDO_1'] || p['PRIMER APELLIDO'] || ''
+    const a2 = p['APELLIDO_2'] || p['SEGUNDO APELLIDO'] || ''
+    const parts = [n1, n2, a1, a2].filter(Boolean)
+    return {
+      ...p,
+      _documento: String(p['NUMERO DE IDENTIFICACIÓN'] || p['NUMERO DE DOCUMENTO'] || p['IDENTIFICACION'] || ''),
+      _nombreCompleto: parts.join(' ') || '—',
+    }
+  })
+}
+
 const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B5E20' } }
 const HEADER_FONT = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10, name: 'Calibri' }
 const ALT_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F4F0' } }
@@ -81,7 +102,8 @@ async function generateDashboard(ws, data) {
     const row = ws.getRow(5 + idx)
     const alt = idx % 2 === 1
     const cumplimiento = parseFloat(String(ind.CUMPLIMIENTO).replace('%', '').replace(',', '.'))
-    const isGood = cumplimiento >= (ind.META || 80)
+    const metaConfig = META_LABELS[ind.META]
+    const isGood = metaConfig ? cumplimiento >= metaConfig.bueno : false
 
     const cells = [ind.INDICADOR, ind.NUMERADOR, ind.DENOMINADOR, ind.CUMPLIMIENTO, '', ind.META]
     cells.forEach((v, i) => {
@@ -136,7 +158,8 @@ async function generatePacientes(ws, data) {
     row.height = 20
   })
 
-  ws.getColumns().forEach((col, i) => {
+  allCols.forEach((_h, i) => {
+    const col = ws.getColumn(i + 1)
     const maxLen = Math.max(
       allCols[i] ? allCols[i].length : 10,
       ...patients.map(p => String(p[allCols[i]] || '').length)
@@ -145,7 +168,7 @@ async function generatePacientes(ws, data) {
   })
 }
 
-async function generateIndicatorSheet(ws, patients, indName, flagCol, cumple, denomCol, foundIdCols) {
+async function generateIndicatorSheet(ws, patients, flagCol, cumple, denomCol) {
   const isCumple = cumple === 'SI'
   let filtered
   if (isCumple) {
@@ -158,13 +181,14 @@ async function generateIndicatorSheet(ws, patients, indName, flagCol, cumple, de
 
   if (filtered.length === 0) return
 
-  const sheetCols = [...foundIdCols, flagCol]
+  const sheetCols = ['_documento', '_nombreCompleto', flagCol]
+  const sheetHeaders = ['DOCUMENTO', 'NOMBRE COMPLETO', flagCol]
   const theme = isCumple
     ? { fill: 'FF1B5E20', label: 'CUMPLE' }
     : { fill: 'FFC53030', label: 'NO CUMPLE' }
 
   const headerRow = ws.getRow(1)
-  sheetCols.forEach((h, i) => {
+  sheetHeaders.forEach((h, i) => {
     const cell = headerRow.getCell(i + 1)
     cell.value = h
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: theme.fill } }
@@ -189,9 +213,10 @@ async function generateIndicatorSheet(ws, patients, indName, flagCol, cumple, de
     row.height = 20
   })
 
-  ws.getColumns().forEach((col, i) => {
+  sheetCols.forEach((_h, i) => {
+    const col = ws.getColumn(i + 1)
     const maxLen = Math.max(
-      sheetCols[i] ? sheetCols[i].length : 10,
+      sheetHeaders[i] ? sheetHeaders[i].length : 10,
       ...filtered.map(p => String(p[sheetCols[i]] || '').length)
     )
     col.width = Math.min(Math.max(maxLen + 3, 12), 50)
@@ -199,30 +224,19 @@ async function generateIndicatorSheet(ws, patients, indName, flagCol, cumple, de
 }
 
 export async function generateExcel(data) {
-  const { indicators, patients, data_columns, eval_columns } = data
+  const { indicators, patients: rawPatients, data_columns, eval_columns } = data
+  const patients = enrichPatients(rawPatients, data_columns)
   const wb = new ExcelJS.Workbook()
   wb.creator = 'FÉNIX - Validador de Plantillas PYM'
   wb.created = new Date()
 
   const wsDash = wb.addWorksheet('Dashboard', { properties: { tabColor: { argb: 'FF1B5E20' } } })
-  await generateDashboard(wsDash, data)
+  await generateDashboard(wsDash, { ...data, patients })
 
   const evalCols = eval_columns.filter(c => c.startsWith('_'))
   const allCols = [...data_columns, ...evalCols]
   const wsPat = wb.addWorksheet('Pacientes', { properties: { tabColor: { argb: 'FF2E7D32' } } })
-  await generatePacientes(wsPat, data)
-
-  const idCols = ['DOCUMENTO', 'NOMBRE', 'EDAD']
-  const findCol = (name) => {
-    const n = name.replace(/\s+/g, '').toUpperCase()
-    return data_columns.find(c => c.replace(/\s+/g, '').toUpperCase() === n) ||
-           data_columns.find(c => c.replace(/\s+/g, '').toUpperCase().includes(n)) ||
-           data_columns[0]
-  }
-  const docCol = findCol('DOCUMENTO')
-  const nameCol = findCol('NOMBRE')
-  const ageCol = findCol('EDAD')
-  const foundIdCols = [docCol, nameCol, ageCol]
+  await generatePacientes(wsPat, { ...data, patients })
 
   for (const [indName, flagCol] of Object.entries(COL_MAP)) {
     for (const [cumple, prefix] of [['SI', ''], ['NO', 'No ']]) {
@@ -231,7 +245,7 @@ export async function generateExcel(data) {
       const isCumple = cumple === 'SI'
       const tabColor = isCumple ? 'FF1B5E20' : 'FFC53030'
       const ws = wb.addWorksheet(safeName, { properties: { tabColor: { argb: tabColor } } })
-      await generateIndicatorSheet(ws, patients, indName, flagCol, cumple, denomCol, foundIdCols)
+      await generateIndicatorSheet(ws, patients, flagCol, cumple, denomCol)
     }
   }
 
