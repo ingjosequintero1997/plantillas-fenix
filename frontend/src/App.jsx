@@ -186,10 +186,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-[#F5F3EF]">
 
       {/* ─── Header ─── */}
-      <header className="bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 shadow-lg shadow-brand-900/20">
+      <header className="bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 shadow-lg shadow-brand-900/15">
         <div className="mx-auto max-w-[1200px] px-5 md:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
@@ -204,15 +204,15 @@ export default function App() {
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-white font-extrabold text-base tracking-wider">FÉNIX</span>
-                    <span className="text-white/40 text-[0.55rem] font-medium uppercase tracking-[0.2em]">Indicadores</span>
+                    <span className="text-white/40 text-[0.55rem] font-medium uppercase tracking-[0.2em]">Validador</span>
                   </div>
-                  <span className="text-white/40 text-[0.5rem] font-light leading-tight block">
+                  <span className="text-white/35 text-[0.5rem] font-light leading-tight block">
                     Asociación de Cabildos Indígenas del Cesar y La Guajira
                   </span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {selectedTemplateMeta && (
                 <span className="hidden md:inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1 text-white/70 text-[0.5rem] font-semibold tracking-wider uppercase ring-1 ring-white/10">
                   <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
@@ -221,7 +221,7 @@ export default function App() {
               )}
               <label className="flex items-center gap-1.5 cursor-pointer group">
                 <input type="checkbox" checked={strictMode} onChange={(e) => setStrictMode(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-white/30 bg-white/10 text-brand-500 accent-brand-500 focus:ring-0 cursor-pointer" />
+                  className="h-3.5 w-3.5 rounded border-white/30 bg-white/10 text-brand-500 accent-brand-500 focus:ring-0 cursor-pointer transition-all" />
                 <span className="text-[0.5rem] font-semibold text-white/40 tracking-wider uppercase group-hover:text-white/60 transition-colors">Estricto</span>
               </label>
             </div>
@@ -229,55 +229,52 @@ export default function App() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1200px] px-5 md:px-8 py-8 md:py-10 space-y-6">
+      <div className="mx-auto max-w-[1200px] px-5 md:px-8 py-8 md:py-12 space-y-8">
 
         {/* ─── Hero ─── */}
-        <section className="card overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-50/40 via-white to-white pointer-events-none" />
-          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand-800 via-brand-500 to-brand-400" />
-          <div className="relative px-7 md:px-10 py-8 md:py-10">
-            <div className="inline-flex items-center gap-1.5 bg-brand-50 rounded-full px-3 py-1 mb-4 ring-1 ring-brand-200/50">
-              <div className="w-2 h-2 rounded-full bg-brand-800" />
-              <span className="text-[0.55rem] font-bold text-brand-800 tracking-[0.15em] uppercase">Indicadores Fénix</span>
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-50/60 via-white to-white shadow-sm">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-800 via-brand-500 to-brand-300 rounded-r-sm" />
+          <div className="relative px-8 md:px-12 py-10 md:py-12">
+            <div className="inline-flex items-center gap-1.5 bg-brand-100/70 rounded-full px-3 py-1 mb-4 ring-1 ring-brand-200/50">
+              <div className="w-2 h-2 rounded-full bg-brand-700" />
+              <span className="text-[0.55rem] font-bold text-brand-800 tracking-[0.15em] uppercase">Bienvenido</span>
             </div>
-            <h1 className="text-[clamp(1.6rem,4.5vw,2.8rem)] font-extrabold text-ink tracking-tight leading-none">
-              Generador y validador<br />de plantillas PYM
+            <h1 className="text-[clamp(1.8rem,5vw,3rem)] font-extrabold text-ink tracking-tight leading-[1.1]">
+              Genera y valida tus<br />plantillas de indicadores
             </h1>
-            <p className="text-sm text-ink-muted mt-3 max-w-xl font-normal leading-relaxed">
-              Carga tu archivo Excel o TXT, selecciona el módulo correspondiente y genera la plantilla estandarizada con validación automática.
+            <p className="text-sm text-ink-muted/90 mt-3 max-w-xl font-normal leading-relaxed">
+              Selecciona un módulo, carga tu archivo y obtén los datos organizados, validados y listos para usar.
             </p>
           </div>
         </section>
 
         {/* ─── Módulos ─── */}
         <section className="animate-fade-in-up">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div className="section-header">
-              <div className="section-header-bar" />
-              <h2 className="section-title">Módulos de plantilla</h2>
+          <div className="flex items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 className="text-sm font-bold text-ink tracking-wider uppercase">Módulos de plantilla</h2>
+              <p className="text-xs text-ink-muted/80 mt-0.5">Selecciona uno para comenzar</p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="h-px w-8 bg-ink-line hidden md:block" />
-              <span className="badge-gray">{templates.length} disponible{templates.length !== 1 ? 's' : ''}</span>
-            </div>
+            <span className="badge-gray shrink-0">{templates.length} disponible{templates.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {templates.map((item, idx) => {
               const isSelected = selectedTemplate === item.key
               const num = String(idx + 1).padStart(2, '0')
               const accent = [
-                { bar: 'from-brand-800 via-brand-500 to-brand-400', dot: 'bg-brand-800', tag: 'bg-brand-100 text-brand-800' },
-                { bar: 'from-rose-600 via-rose-400 to-rose-300', dot: 'bg-rose-600', tag: 'bg-rose-100 text-rose-700' },
-                { bar: 'from-violet-600 via-violet-400 to-violet-300', dot: 'bg-violet-600', tag: 'bg-violet-100 text-violet-700' },
-                { bar: 'from-amber-600 via-amber-400 to-amber-300', dot: 'bg-amber-600', tag: 'bg-amber-100 text-amber-700' },
-                { bar: 'from-cyan-600 via-cyan-400 to-cyan-300', dot: 'bg-cyan-600', tag: 'bg-cyan-100 text-cyan-700' },
-              ][idx] || { bar: 'from-brand-800 via-brand-500 to-brand-400', dot: 'bg-brand-800', tag: 'bg-brand-100 text-brand-800' }
+                { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800', border: 'border-brand-300/40', light: 'bg-brand-50' },
+                { dot: 'bg-rose-600', tag: 'bg-rose-100 text-rose-700', border: 'border-rose-300/40', light: 'bg-rose-50' },
+                { dot: 'bg-amber-600', tag: 'bg-amber-100 text-amber-700', border: 'border-amber-300/40', light: 'bg-amber-50' },
+                { dot: 'bg-sky-600', tag: 'bg-sky-100 text-sky-700', border: 'border-sky-300/40', light: 'bg-sky-50' },
+                { dot: 'bg-violet-600', tag: 'bg-violet-100 text-violet-700', border: 'border-violet-300/40', light: 'bg-violet-50' },
+              ][idx] || { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800', border: 'border-brand-300/40', light: 'bg-brand-50' }
               const short = { rcv: 'RCV', gestante: 'GEST', citologia: 'CITO', mamografia: 'MAMO', penta: 'PENTA' }[item.key] || item.key.toUpperCase()
               return (
-                <div key={item.key} className={`relative transition-all duration-200 overflow-hidden ${
-                  isSelected ? 'card-active' : 'card-hover border-ink-line/60'
+                <div key={item.key} className={`relative transition-all duration-200 rounded-2xl bg-white border ${
+                  isSelected
+                    ? 'ring-2 ring-brand-800/15 shadow-md border-brand-800/30'
+                    : 'border-ink-line/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-ink-line/70'
                 }`}>
-                  <div className={`absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r ${accent.bar} opacity-60`} />
                   <button onClick={() => {
                     setSelectedTemplate(item.key); setCurrentTemplateLabel(item.label)
                     setTemplateNames([]); setMapping({}); setSummary(null); setLogs([]); setCorrectedText('')
@@ -291,16 +288,16 @@ export default function App() {
                     )}
                     <div className="flex items-center gap-3 mb-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all text-sm font-bold ${
-                        isSelected ? `${accent.dot} text-white shadow-sm` : 'bg-brand-50 text-brand-800'
+                        isSelected ? `${accent.dot} text-white shadow-sm` : `${accent.light} text-brand-800`
                       }`}>
                         {num}
                       </div>
                       <div>
-                        <span className="text-[0.5rem] font-bold text-brand-700 tracking-[0.15em] uppercase block leading-none mb-0.5">Plantilla</span>
+                        <span className="text-[0.5rem] font-bold text-ink-muted tracking-[0.15em] uppercase block leading-none mb-0.5">Plantilla</span>
                         <span className="text-sm font-bold text-ink">{item.label}</span>
                       </div>
                     </div>
-                    <p className="text-xs text-ink-muted leading-relaxed mb-4">{item.description}</p>
+                    <p className="text-xs text-ink-muted/80 leading-relaxed mb-4">{item.description}</p>
                     <div className="flex items-center gap-3">
                       <span className="badge-green">{item.fields} variables</span>
                       <span className={`text-[0.5rem] font-bold tracking-wider rounded-md px-2 py-0.5 ${accent.tag}`}>{short}</span>
@@ -308,11 +305,11 @@ export default function App() {
                   </button>
                   <div className="px-5 pb-4 pt-0 border-t border-ink-line/30">
                     <a href={DOWNLOAD_TEMPLATE_URL(item.key)}
-                      className="inline-flex items-center gap-1.5 text-[0.55rem] font-semibold text-brand-800 hover:text-brand-600 transition-colors">
+                      className="inline-flex items-center gap-1.5 text-[0.55rem] font-semibold text-brand-700 hover:text-brand-600 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Descargar plantilla Excel
+                      Descargar plantilla
                     </a>
                   </div>
                 </div>
@@ -320,9 +317,13 @@ export default function App() {
             })}
           </div>
 
-          {/* ─── Módulo Auditoría (independiente) ─── */}
-          <div className="relative transition-all duration-200 overflow-hidden card-hover border-ink-line/60 mt-4" style={{ animationDelay: '300ms' }}>
-            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 opacity-60" />
+          {/* ─── Módulo Auditoría ─── */}
+          <div className={`relative transition-all duration-200 rounded-2xl bg-white border mt-5 ${
+            showAuditoria
+              ? 'ring-2 ring-amber-500/15 shadow-md border-amber-400/30'
+              : 'border-ink-line/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-ink-line/70'
+          }`}>
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-500/60 via-amber-400/60 to-amber-300/60 rounded-t-2xl" />
             <button onClick={() => setShowAuditoria(!showAuditoria)}
               className="w-full text-left p-5">
               {showAuditoria && (
@@ -343,8 +344,8 @@ export default function App() {
                   <span className="text-sm font-bold text-ink">Auditoría Excel</span>
                 </div>
               </div>
-              <p className="text-xs text-ink-muted leading-relaxed mb-4">
-                Carga el archivo TXT del sistema de validación, selecciona la plantilla mapeada y descarga un Excel organizado con los datos.
+              <p className="text-xs text-ink-muted/80 leading-relaxed mb-4">
+                Toma el archivo TXT del sistema de validación, selecciona la plantilla y genera un Excel profesional con los datos organizados.
               </p>
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/50">
@@ -355,20 +356,20 @@ export default function App() {
           </div>
         </section>
 
-        {/* ─── Auditoría Export (módulo independiente) ─── */}
+        {/* ─── Auditoría Export ─── */}
         {showAuditoria && (
           <AuditoriaExport onClose={() => setShowAuditoria(false)} />
         )}
 
-        {/* ─── Contenido principal (oculto durante Auditoría) ─── */}
+        {/* ─── Contenido principal ─── */}
         {!showAuditoria && (<>
-        <div className="card p-6 md:p-8 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <DragDrop onFile={handleFile} />
         </div>
 
         {/* ─── Error ─── */}
         {error && (
-          <div className="animate-slide-down rounded-xl border border-red-200/80 bg-red-50/80 p-4 text-sm text-red-600 flex items-start gap-3 shadow-sm">
+          <div className="animate-slide-down rounded-2xl border border-red-200/80 bg-red-50/80 p-4 text-sm text-red-600 flex items-start gap-3 shadow-sm">
             <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
               <svg className="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -380,7 +381,7 @@ export default function App() {
 
         {/* ─── Loading ─── */}
         {loading && (
-          <div className="card p-5 animate-fade-in-up">
+          <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 animate-fade-in-up">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <svg className="w-5 h-5 text-brand-800 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -394,7 +395,7 @@ export default function App() {
               </div>
               <span className="text-lg font-bold text-brand-800">{progress}%</span>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-100">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-ink-line/40">
               <div className="h-full rounded-full bg-gradient-to-r from-brand-800 to-brand-500 transition-all duration-500 ease-out shadow-sm shadow-brand-200" style={{ width: `${progress}%` }} />
             </div>
           </div>
@@ -420,21 +421,21 @@ export default function App() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Exportar archivo final
+                Exportar resultado
               </button>
               {selectedTemplate === 'rcv' && (
-                <button onClick={handleEvaluate} disabled={!canExport || evaluating} className="btn-accent">
+                <button onClick={handleEvaluate} disabled={!canExport || evaluating} className="btn bg-brand-700 text-white hover:bg-brand-800 shadow-sm hover:shadow-md">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  {evaluating ? 'Evaluando...' : 'Evaluación de indicadores'}
+                  {evaluating ? 'Evaluando...' : 'Indicadores'}
                 </button>
               )}
               <button onClick={handleReset} className="btn-secondary">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Limpiar
+                Nuevo inicio
               </button>
             </div>
           </div>
@@ -442,7 +443,7 @@ export default function App() {
 
         {/* ─── Estructura y mapeo ─── */}
         {(mappingStats || structureValidation) && !showEvaluation && (
-          <section className="card p-5 animate-fade-in-up">
+          <section className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 animate-fade-in-up">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="section-header">
                 <div className="section-header-bar" />
@@ -458,7 +459,7 @@ export default function App() {
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               {structureValidation && (
-                <div className="rounded-lg border border-ink-line/60 bg-surface-50/70 p-4 text-xs text-ink space-y-1.5">
+                <div className="rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-4 text-xs text-ink space-y-1.5">
                   {[
                     ['Columnas en archivo', structureValidation.input_columns],
                     ['Columnas plantilla', structureValidation.template_columns],
@@ -473,13 +474,13 @@ export default function App() {
                 </div>
               )}
               {mappingStats && (
-                <div className="rounded-lg border border-ink-line/60 bg-surface-50/70 p-4 text-xs text-ink space-y-1.5">
+                <div className="rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-4 text-xs text-ink space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="text-ink-muted">Encabezados mapeados</span>
                     <span className="font-semibold">{mappingStats.mapped_headers} / {mappingStats.total_headers}</span>
                   </div>
                   <div className="pt-1">
-                    <span className="text-ink-faint text-[0.5rem] font-medium uppercase tracking-wider">No mapeados:</span>
+                    <span className="text-ink-faint text-[0.5rem] font-medium uppercase tracking-wider">Sin mapear:</span>
                     <div className="mt-0.5 max-h-12 overflow-auto text-[0.6rem] text-ink-muted scroll-thin">
                       {(mappingStats.unmapped_headers || []).length === 0 ? (
                         <span className="text-brand-700 font-medium">Ninguno</span>
@@ -494,7 +495,7 @@ export default function App() {
 
         {/* ─── Archivos procesados ─── */}
         {batchResults.length > 0 && !showEvaluation && (
-          <div className="card p-5 space-y-4 animate-fade-in-up">
+          <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 space-y-4 animate-fade-in-up">
             <div className="flex items-center justify-between">
               <div className="section-header">
                 <div className="section-header-bar" />
@@ -505,13 +506,13 @@ export default function App() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {batchResults.map((item) => (
                 <button key={item.fileName} onClick={() => selectBatchItem(item)}
-                  className={`relative text-left transition-all duration-200 ${
+                  className={`relative text-left transition-all duration-200 rounded-2xl ${
                     selectedFileName === item.fileName
-                      ? 'card-active p-4'
-                      : 'card-hover border-ink-line/60 p-4'
+                      ? 'ring-2 ring-brand-800/15 shadow-md border border-brand-800/30 p-4 bg-white'
+                      : 'border border-ink-line/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-ink-line/70 p-4 bg-white'
                   }`}>
                   <div className="flex items-center gap-2.5 mb-2">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                       selectedFileName === item.fileName ? 'bg-brand-800 text-white' : 'bg-brand-50 text-brand-800'
                     }`}>
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -537,14 +538,14 @@ export default function App() {
 
         {/* ─── Mapeo de columnas ─── */}
         {Object.keys(mapping).length > 0 && !showEvaluation && (
-          <div className="card p-5 space-y-4 animate-fade-in-up">
+          <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 space-y-4 animate-fade-in-up">
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
+              <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                 <span className="text-white text-[0.5rem] font-bold">03</span>
               </div>
               <div>
                 <h2 className="text-sm font-bold text-ink">Mapeo de columnas</h2>
-                <p className="text-xs text-ink-muted">Ajusta las columnas y presiona "Validar y ajustar".</p>
+                <p className="text-xs text-ink-muted/80">Ajusta la correspondencia entre columnas y presiona "Validar y ajustar".</p>
               </div>
             </div>
             <MappingEditor mapping={mapping} templateNames={templateNames}
@@ -565,23 +566,23 @@ export default function App() {
         {/* ─── Vista previa + Auditoría ─── */}
         {correctedText && !showEvaluation && !showAuditoria && (
           <div className="space-y-5">
-            <div className="card p-5 space-y-4 animate-fade-in-up">
+            <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 space-y-4 animate-fade-in-up">
               <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
+                <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                   <span className="text-white text-[0.5rem] font-bold">04</span>
                 </div>
                 <div>
                   <h2 className="text-sm font-bold text-ink">Vista previa validada</h2>
-                  {selectedFileName && <p className="text-xs text-ink-muted">Archivo activo: {selectedFileName}</p>}
+                  {selectedFileName && <p className="text-xs text-ink-muted/80">Archivo activo: {selectedFileName}</p>}
                 </div>
               </div>
               <DataGridTable corrected_text={correctedText} templateColumns={templateNames} logs={logs} />
             </div>
 
-            <div className="card p-5 space-y-4 animate-fade-in-up">
+            <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 space-y-4 animate-fade-in-up">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
+                  <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                     <span className="text-white text-[0.5rem] font-bold">05</span>
                   </div>
                   <h2 className="text-sm font-bold text-ink">Auditoría de cambios</h2>
@@ -590,25 +591,25 @@ export default function App() {
               </div>
 
               {logs.length === 0 && (
-                <div className="rounded-lg border border-brand-200/60 bg-brand-50/50 p-4 text-sm text-ink flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
+                <div className="rounded-xl border border-brand-200/60 bg-brand-50/60 p-4 text-sm text-ink flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-brand-100/80 flex items-center justify-center shrink-0">
                     <svg className="w-3.5 h-3.5 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <span className="font-medium">No se detectaron cambios ni errores para este archivo.</span>
+                  <span className="font-medium">Todo en orden. No se detectaron cambios ni errores.</span>
                 </div>
               )}
 
               {logs.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex flex-col gap-2 rounded-xl border border-ink-line/60 bg-surface-50/70 p-3 md:flex-row md:items-center">
+                  <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-3 md:flex-row md:items-center">
                     <div className="relative flex-1 md:max-w-xs">
                       <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                       <input value={auditQuery} onChange={(e) => { setAuditQuery(e.target.value); setAuditPage(1) }}
-                        placeholder="Buscar por fila, variable o valor"
+                        placeholder="Buscar…"
                         className="input pl-9" />
                     </div>
                     <select value={auditStatus} onChange={(e) => { setAuditStatus(e.target.value); setAuditPage(1) }}
@@ -618,10 +619,10 @@ export default function App() {
                       <option value="error">Errores</option>
                     </select>
                   </div>
-                  <div className="max-h-[520px] overflow-auto rounded-xl border border-ink-line/60 bg-white scroll-thin">
+                  <div className="max-h-[520px] overflow-auto rounded-xl border border-ink-line/50 bg-white scroll-thin shadow-sm">
                     <table className="min-w-full">
                       <thead>
-                        <tr className="bg-surface-50 border-b border-ink-line">
+                        <tr className="bg-[#F8F7F4] border-b border-ink-line/50">
                           <th className="px-4 py-3 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Fila</th>
                           <th className="px-4 py-3 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Variable</th>
                           <th className="px-4 py-3 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Original</th>

@@ -68,7 +68,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 rounded-xl border border-ink-line/60 bg-surface-50/50 p-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-3 md:flex-row md:items-center md:justify-between">
         <div className="text-sm font-bold text-ink">
           Registros: <span className="text-ink-muted font-semibold">{rows.length}</span>
           <span className="mx-2 text-ink-line">·</span>
@@ -88,7 +88,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/60 bg-white p-2 scroll-thin">
+        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 bg-white p-2 scroll-thin shadow-sm">
           {filteredIndexes.length === 0 && (
             <div className="p-4 text-sm text-ink-muted text-center">No hay registros para el filtro aplicado.</div>
           )}
@@ -101,8 +101,8 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
                   onClick={() => setSelectedRow(idx)}
                   className={`w-full rounded-xl border p-3 text-left transition-all duration-150 ${
                     safeSelected === idx
-                      ? 'card-active p-3'
-                      : 'border-ink-line/60 bg-white hover:border-ink-line hover:shadow-sm'
+                      ? 'ring-2 ring-brand-800/15 shadow-md border-brand-800/30'
+                      : 'border-ink-line/50 bg-white hover:border-ink-line/70 hover:shadow-sm'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -116,8 +116,8 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
           </div>
         </div>
 
-        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/60 bg-white p-3 md:p-4 scroll-thin">
-          <div className="mb-3 flex items-center justify-between gap-3 sticky top-0 bg-white pb-2 border-b border-ink-line/60">
+        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 bg-white p-3 md:p-4 scroll-thin shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3 sticky top-0 bg-white pb-2 border-b border-ink-line/50">
             <h3 className="text-sm font-bold text-ink">Registro {safeSelected + 1}</h3>
             <span className={`text-[0.45rem] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 ${rowStatus(safeSelected).cls}`}>
               {rowStatus(safeSelected).label}

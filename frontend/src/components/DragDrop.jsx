@@ -20,7 +20,7 @@ export default function DragDrop({ onFile }) {
         onDragLeave={()=>setHover(false)}
         onDrop={(e)=>{e.preventDefault(); setHover(false); emitFiles(e.dataTransfer.files)}}
         onClick={() => inputRef.current?.click()}
-        className={`relative overflow-hidden p-10 md:p-14 text-center transition-all duration-300 cursor-pointer rounded-xl border-2 border-dashed ${
+        className={`relative overflow-hidden p-10 md:p-14 text-center transition-all duration-300 cursor-pointer rounded-2xl border-2 border-dashed ${
           hover
             ? 'border-brand-800 bg-brand-50/60 border-solid shadow-sm shadow-brand-200/50'
             : 'border-ink-line bg-white hover:border-brand-400 hover:bg-brand-50/30'
@@ -39,11 +39,11 @@ export default function DragDrop({ onFile }) {
             </svg>
           </div>
           <div className="text-xl md:text-2xl font-bold text-ink">Sube tus archivos</div>
-          <div className="mt-1.5 text-sm text-ink-muted">Arrastra y suelta o haz clic para seleccionar</div>
+          <div className="mt-1.5 text-sm text-ink-muted/80">Arrastra el archivo o haz clic para seleccionar</div>
           <div className="mt-4 inline-flex items-center gap-2 badge-gray text-[0.5rem]">
             .txt &middot; .xlsx &middot; .xls
           </div>
-          <div className="mt-2 text-[0.55rem] text-ink-faint">Procesa, valida y exporta TXT delimitado por |.</div>
+          <div className="mt-2 text-[0.55rem] text-ink-faint">Se procesa y se genera TXT delimitado por |.</div>
         </div>
         <input
           ref={inputRef}

@@ -4,12 +4,12 @@
 
 @layer base {
   :root {
-    --bg: #F4F6F8;
+    --bg: #F5F3EF;
     --panel: #ffffff;
     --ink: #1E293B;
-    --ink-muted: #64748B;
+    --ink-muted: #5B6A82;
     --ink-faint: #94A3B8;
-    --line: #E2E8F0;
+    --line: #E5E2DC;
     --brand: #2E7D32;
     --brand-light: #4CAF50;
     --brand-lighter: #81C784;
@@ -34,35 +34,38 @@
   }
 
   ::selection {
-    background-color: rgba(46, 125, 50, 0.15);
+    background-color: rgba(46, 125, 50, 0.18);
     color: #1B5E20;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl border border-ink-line/60 shadow-card transition-all duration-200;
+    @apply bg-white rounded-2xl border border-ink-line/50 shadow-sm transition-all duration-200;
   }
   .card-hover {
-    @apply card hover:shadow-card-hover hover:-translate-y-0.5;
+    @apply card hover:shadow-md hover:-translate-y-0.5 hover:border-ink-line/70;
   }
   .card-active {
-    @apply card ring-2 ring-brand-800/15 shadow-card-active border-brand-800;
+    @apply card ring-2 ring-brand-800/15 shadow-md border-brand-800/30;
+  }
+  .card-soft {
+    @apply bg-white/70 backdrop-blur-sm rounded-2xl border border-ink-line/40 shadow-sm;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
   }
   .btn-primary {
-    @apply btn bg-brand-800 text-white hover:bg-brand-900 shadow-button hover:shadow-button-hover;
+    @apply btn bg-brand-800 text-white hover:bg-brand-900 shadow-sm hover:shadow-md;
   }
   .btn-secondary {
-    @apply btn bg-white text-ink border border-ink-line/70 hover:bg-surface-50 hover:border-ink-line shadow-button;
+    @apply btn bg-white text-ink border border-ink-line/70 hover:bg-surface-50 hover:border-ink-line/90 shadow-sm;
   }
   .btn-outline {
-    @apply btn bg-white text-brand-800 border border-brand-200/60 hover:bg-brand-50 shadow-button;
+    @apply btn bg-white text-brand-800 border border-brand-200/60 hover:bg-brand-50 shadow-sm;
   }
   .btn-accent {
-    @apply btn bg-amber-500 text-white hover:bg-amber-600 shadow-button hover:shadow-button-hover;
+    @apply btn bg-amber-500 text-white hover:bg-amber-600 shadow-sm hover:shadow-md;
   }
   .badge {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider;
@@ -80,16 +83,16 @@
     @apply flex items-center gap-3;
   }
   .section-header-bar {
-    @apply w-1 h-6 rounded-full bg-brand-800;
+    @apply w-1 h-6 rounded-full bg-brand-700;
   }
   .section-title {
     @apply text-sm font-bold text-ink tracking-wider uppercase;
   }
   .input {
-    @apply w-full rounded-lg border border-ink-line/80 bg-white px-3 py-2 text-sm text-ink outline-none transition-all placeholder:text-ink-faint/60 focus:border-brand-800 focus:ring-2 focus:ring-brand-800/10;
+    @apply w-full rounded-xl border border-ink-line/70 bg-white px-3 py-2 text-sm text-ink outline-none transition-all placeholder:text-ink-faint/50 focus:border-brand-800/50 focus:ring-2 focus:ring-brand-800/10;
   }
   .select {
-    @apply rounded-lg border border-ink-line/80 bg-white px-3 py-2 text-sm text-ink outline-none transition-all focus:border-brand-800 focus:ring-2 focus:ring-brand-800/10;
+    @apply rounded-xl border border-ink-line/70 bg-white px-3 py-2 text-sm text-ink outline-none transition-all focus:border-brand-800/50 focus:ring-2 focus:ring-brand-800/10;
   }
   .pagination-btn {
     @apply inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-semibold text-ink-muted bg-white border border-ink-line/60 hover:bg-surface-50 hover:text-ink transition-all disabled:opacity-30 disabled:cursor-not-allowed;
@@ -108,11 +111,11 @@
     background: transparent;
   }
   .scroll-thin::-webkit-scrollbar-thumb {
-    background: #CBD5E1;
+    background: #C8C5BE;
     border-radius: 9999px;
   }
   .scroll-thin::-webkit-scrollbar-thumb:hover {
-    background: #94A3B8;
+    background: #A8A59E;
   }
 
   @keyframes spin {
