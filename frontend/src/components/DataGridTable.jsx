@@ -1,4 +1,7 @@
 import React, { useMemo, useState } from 'react'
+import Pagination from './Pagination'
+
+const PER_PAGE = 40
 
 function buildLogMap(logs) {
   const map = {}
@@ -23,6 +26,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
 
   const [search, setSearch] = useState('')
   const [selectedRow, setSelectedRow] = useState(0)
+  const [page, setPage] = useState(1)
   const logMap = buildLogMap(logs || [])
 
   const filteredIndexes = useMemo(() => {
@@ -33,6 +37,13 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
       .filter(({ row }) => row.join(' ').toLowerCase().includes(q))
       .map(({ idx }) => idx)
   }, [rows, search])
+
+  const paginatedIndexes = useMemo(() => {
+    const start = (page - 1) * PER_PAGE
+    return filteredIndexes.slice(start, start + PER_PAGE)
+  }, [filteredIndexes, page])
+
+  const totalPages = Math.ceil(filteredIndexes.length / PER_PAGE)
 
   const safeSelected = filteredIndexes.includes(selectedRow)
     ? selectedRow
@@ -69,7 +80,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
           </svg>
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             placeholder="Buscar en vista previa"
             className="input pl-9"
           />
@@ -82,7 +93,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
             <div className="p-4 text-sm text-ink-muted text-center">No hay registros para el filtro aplicado.</div>
           )}
           <div className="space-y-2">
-            {filteredIndexes.map((idx) => {
+            {paginatedIndexes.map((idx) => {
               const status = rowStatus(idx)
               return (
                 <button
@@ -132,6 +143,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
           </div>
         </div>
       </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
     </div>
   )
 }

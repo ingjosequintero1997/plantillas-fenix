@@ -5,6 +5,9 @@ import {
 } from 'recharts'
 import { evaluateData } from '../api'
 import { generateExcel } from '../excelGenerator'
+import Pagination from './Pagination'
+
+const PATIENTS_PER_PAGE = 50
 
 const FILTERS = [
   { value: 'all', label: 'Todos los pacientes' },
@@ -43,6 +46,7 @@ export default function EvaluationDashboard({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filterKey, setFilterKey] = useState('all') // 'all' | 'col::si' | 'col::no'
+  const [patientPage, setPatientPage] = useState(1)
   const [downloading, setDownloading] = useState(false)
 
   React.useEffect(() => {
@@ -118,6 +122,13 @@ export default function EvaluationDashboard({
     const [col, val] = filterKey.split('::')
     return patientsWithFlags.filter((p) => String(p[col]).toUpperCase() === val)
   }, [patientsWithFlags, filterKey])
+
+  const paginatedPatients = useMemo(() => {
+    const start = (patientPage - 1) * PATIENTS_PER_PAGE
+    return filteredPatients.slice(start, start + PATIENTS_PER_PAGE)
+  }, [filteredPatients, patientPage])
+
+  const patientTotalPages = Math.ceil(filteredPatients.length / PATIENTS_PER_PAGE)
 
   const handleDownloadExcel = async () => {
     try {
@@ -337,7 +348,7 @@ export default function EvaluationDashboard({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[0.5rem] font-semibold text-ink-muted uppercase tracking-wider">Filtrar:</span>
-            <select value={filterKey} onChange={(e) => setFilterKey(e.target.value)}
+            <select value={filterKey} onChange={(e) => { setFilterKey(e.target.value); setPatientPage(1) }}
               className="select text-xs py-1.5 px-2 w-auto max-w-[300px]">
               <option value="all">Todos los pacientes</option>
               <option disabled>── Cumplen ──</option>
@@ -373,7 +384,7 @@ export default function EvaluationDashboard({
               </tr>
             </thead>
             <tbody>
-              {filteredPatients.slice(0, 200).map((p) => (
+              {paginatedPatients.map((p) => (
                 <tr key={p._index} className="border-b border-surface-100 hover:bg-brand-50/20 transition-colors">
                   <td className="px-3 py-2 font-semibold text-ink-muted">{p._index}</td>
                   <td className="px-3 py-2 font-mono text-ink font-semibold">{p._documento || '—'}</td>
@@ -396,11 +407,7 @@ export default function EvaluationDashboard({
               ))}
             </tbody>
           </table>
-          {filteredPatients.length > 200 && (
-            <div className="p-3 text-center text-xs text-ink-muted border-t border-ink-line/60 bg-surface-50/70">
-              Mostrando 200 de {filteredPatients.length} pacientes
-            </div>
-          )}
+          <Pagination page={patientPage} totalPages={patientTotalPages} onChange={setPatientPage} />
           {filteredPatients.length === 0 && (
             <div className="p-8 text-center text-sm text-ink-muted">
               No hay pacientes con este filtro.
