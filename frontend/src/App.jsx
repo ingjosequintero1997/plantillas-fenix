@@ -204,9 +204,9 @@ export default function App() {
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-white font-extrabold text-base tracking-wider">FÉNIX</span>
-                    <span className="text-white/60 text-[0.55rem] font-medium uppercase tracking-[0.2em]">Validador</span>
+                    <span className="text-white/60 text-[0.65rem] font-medium uppercase tracking-[0.2em]">Validador</span>
                   </div>
-                  <span className="text-white/50 text-[0.5rem] font-light leading-tight block">
+                  <span className="text-white/50 text-[0.6rem] font-light leading-tight block">
                     Asociación de Cabildos Indígenas del Cesar y La Guajira
                   </span>
                 </div>
