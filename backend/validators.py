@@ -601,8 +601,11 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			elif tdef["type"] == "SET":
 				corrected_set = normalize_set(val, tdef.get("allowed", []), col)
 				if corrected_set is None:
+					# No se encontró un match confiable: preservar el valor
+					# original para no reemplazar con una opción incoherente
+					# (ej: "SOBREPESO" → "BAJO PESO (<18.5)")
+					corrected = orig_val if orig_val and orig_val.strip() else "SIN DATO"
 					status = "corrected"
-					corrected = safe_default_for_required(tdef)
 				else:
 					corrected = corrected_set
 					if orig_val is not None and normalize_text(orig_val) != normalize_text(corrected):
