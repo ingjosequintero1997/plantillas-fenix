@@ -410,6 +410,20 @@ def normalize_set(v, allowed, field_name=None):
 			if compact == normalize_text(alias_value).replace(" ", ""):
 				return canonical
 
+	# Match por subcadena/prefijo: si el input normalizado es prefijo de
+	# exactamente un valor permitido, es match de alta confianza sin alterar
+	# la coherencia del dato (ej: "SOBREPESO" → "SOBREPESO (25.0-29.9)").
+	contained = []
+	for i, orig in enumerate(original_allowed):
+		norm = normalized_allowed[i].replace(" ", "")
+		if len(compact) >= 3 and (norm.startswith(compact) or compact.startswith(norm)):
+			contained.append(orig)
+	if len(contained) == 1:
+		return contained[0]
+	if len(contained) > 1:
+		contained.sort(key=lambda x: -len(x))
+		return contained[0]
+
 	# Fuzzy para errores de digitación leves (ej: CONTRIBUTIBO -> CONTRIBUTIVO).
 	best = None
 	best_score = 0.0
