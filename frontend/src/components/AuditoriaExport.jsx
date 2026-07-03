@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { uploadFile, fetchTemplates, evaluateData } from '../api'
 import { generateExcel } from '../excelGenerator'
 import ExcelJS from 'exceljs'
@@ -10,6 +10,7 @@ const META_LABELS = {
   '> 60%': { bueno: 60, aceptable: 60 },
 }
 
+const LOGS_PER_PAGE = 50
 const PATIENTS_PER_PAGE = 50
 
 export default function AuditoriaExport({ onClose }) {
@@ -24,6 +25,8 @@ export default function AuditoriaExport({ onClose }) {
   const [evalLoading, setEvalLoading] = useState(false)
   const [filterKey, setFilterKey] = useState('all')
   const [patientPage, setPatientPage] = useState(1)
+  const [logPage, setLogPage] = useState(1)
+  const [logFilter, setLogFilter] = useState('all')
   const inputRef = useRef()
 
   useState(() => {
@@ -42,6 +45,7 @@ export default function AuditoriaExport({ onClose }) {
       })
       const rawText = data.corrected_text || ''
       const templateNames = data.template_names || []
+      const logs = data.logs_sample || []
       const df = []
       const lines = rawText.split('\n').filter(Boolean)
       for (const line of lines) {
@@ -57,7 +61,9 @@ export default function AuditoriaExport({ onClose }) {
         templateNames,
         summary: data.summary,
         fileName: file.name,
+        logs,
       })
+      setLogPage(1); setLogFilter('all')
     } catch (e) {
       setError(e.message || 'Error al procesar archivo')
     } finally {
@@ -166,6 +172,18 @@ export default function AuditoriaExport({ onClose }) {
     if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`
     return `${(b / 1048576).toFixed(1)} MB`
   }
+
+  const filteredLogs = useMemo(() => {
+    if (!result?.logs) return []
+    let items = result.logs
+    if (logFilter === 'corrected') items = items.filter(l => l.status === 'corrected')
+    else if (logFilter === 'error') items = items.filter(l => l.status === 'error')
+    else if (logFilter === 'ok') items = items.filter(l => l.status === 'ok')
+    return items
+  }, [result?.logs, logFilter])
+
+  const totalLogPages = Math.ceil(filteredLogs.length / LOGS_PER_PAGE)
+  const paginatedLogs = filteredLogs.slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE)
 
   const patientsWithFlags = (() => {
     if (!evalData) return []
@@ -338,25 +356,110 @@ export default function AuditoriaExport({ onClose }) {
           </div>
         </div>
 
-        {/* Result summary */}
+        {/* Result summary + detailed audit log */}
         {result?.summary && (
-          <div className="rounded-xl border border-brand-100/80 bg-gradient-to-br from-brand-50/60 to-white p-5 text-xs text-ink grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
-            <div className="space-y-0.5">
-              <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Registros</span>
-              <div className="font-bold text-xl text-brand-900">{result.summary.total}</div>
+          <div className="space-y-4 animate-fade-in-up">
+            <div className="rounded-xl border border-brand-100/80 bg-gradient-to-br from-brand-50/60 to-white p-5 text-xs text-ink grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-0.5">
+                <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Registros</span>
+                <div className="font-bold text-xl text-brand-900">{result.summary.total}</div>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Errores</span>
+                <div className={`font-bold text-xl ${result.summary.errors > 0 ? 'text-red-600' : 'text-brand-900'}`}>{result.summary.errors}</div>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Corregidos</span>
+                <div className="font-bold text-xl text-amber-600">{result.summary.corrected}</div>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Calidad</span>
+                <div className="font-bold text-xl text-brand-700">{result.summary.quality_percent}%</div>
+              </div>
             </div>
-            <div className="space-y-0.5">
-              <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Errores</span>
-              <div className={`font-bold text-xl ${result.summary.errors > 0 ? 'text-red-600' : 'text-brand-900'}`}>{result.summary.errors}</div>
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Corregidos</span>
-              <div className="font-bold text-xl text-amber-600">{result.summary.corrected}</div>
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Calidad</span>
-              <div className="font-bold text-xl text-brand-700">{result.summary.quality_percent}%</div>
-            </div>
+
+            {/* Detailed audit log */}
+            {result.logs && result.logs.length > 0 && (
+              <div className="rounded-xl border border-ink-line/60 overflow-hidden bg-white transition-shadow hover:shadow-panel-hover">
+                <div className="p-4 border-b border-ink-line/60 bg-brand-50/30 flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <span className="text-xs font-bold text-ink">Bitácora de cambios</span>
+                  </div>
+                  <select value={logFilter} onChange={(e) => { setLogFilter(e.target.value); setLogPage(1) }}
+                    className="select text-xs max-w-[140px]">
+                    <option value="all">Todos ({result.logs.length})</option>
+                    <option value="corrected">Corregidos ({result.logs.filter(l => l.status === 'corrected').length})</option>
+                    <option value="error">Errores ({result.logs.filter(l => l.status === 'error').length})</option>
+                    <option value="ok">Sin cambios ({result.logs.filter(l => l.status === 'ok').length})</option>
+                  </select>
+                  <span className="text-[0.5rem] text-ink-muted font-medium ml-auto">
+                    {filteredLogs.length} registros
+                  </span>
+                </div>
+                <div className="overflow-x-auto max-h-96 overflow-y-auto scroll-thin">
+                  <table className="min-w-full text-xs">
+                    <thead>
+                      <tr className="bg-ink-line/20 border-b border-ink-line/60">
+                        <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-12">Fila</th>
+                        <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Variable</th>
+                        <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Dato original</th>
+                        <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-10"></th>
+                        <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Dato ajustado</th>
+                        <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-20">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedLogs.map((log, i) => {
+                        const isError = log.status === 'error'
+                        const isCorrected = log.status === 'corrected'
+                        const rowClass = isError ? 'bg-red-50/40' : isCorrected ? 'bg-amber-50/40' : ''
+                        return (
+                          <tr key={`${log.row}-${log.column}-${i}`} className={`border-b border-surface-100 hover:bg-brand-50/20 transition-colors duration-150 ${rowClass}`}>
+                            <td className="px-3 py-2 text-ink-muted font-semibold whitespace-nowrap">{log.row}</td>
+                            <td className="px-3 py-2 text-ink font-medium max-w-[200px] truncate" title={log.column}>{log.column}</td>
+                            <td className="px-3 py-2">
+                              <span className={`inline-block font-mono text-xs px-2 py-0.5 rounded ${isError || isCorrected ? 'bg-red-50 text-red-700 line-through decoration-red-400' : 'text-ink'}`}>
+                                {log.original || '(vacío)'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <svg className="w-3.5 h-3.5 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className={`inline-block font-mono text-xs px-2 py-0.5 rounded ${isError ? 'bg-red-100 text-red-800 font-bold' : isCorrected ? 'bg-amber-100 text-amber-800 font-bold' : 'text-ink'}`}>
+                                {log.corrected || '(vacío)'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`inline-flex items-center gap-1 text-[0.4rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                isError ? 'bg-red-100 text-red-700' : isCorrected ? 'bg-amber-100 text-amber-700' : 'bg-brand-100 text-brand-700'
+                              }`}>
+                                {isError ? 'Error' : isCorrected ? 'Ajustado' : 'OK'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      {paginatedLogs.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-8 text-center text-ink-muted text-xs">No hay cambios con este filtro</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {totalLogPages > 1 && (
+                  <div className="p-3 border-t border-ink-line/60 bg-brand-50/20">
+                    <Pagination page={logPage} totalPages={totalLogPages} onChange={setLogPage} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
