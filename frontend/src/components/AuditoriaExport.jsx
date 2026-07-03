@@ -64,7 +64,7 @@ export default function AuditoriaExport({ onClose }) {
         fileName: file.name,
         logs,
       })
-      setLogPage(1); setLogFilter('all')
+      setLogPage(1); setLogFilter('all'); setExpandedVar(null)
     } catch (e) {
       setError(e.message || 'Error al procesar archivo')
     } finally {
@@ -174,33 +174,42 @@ export default function AuditoriaExport({ onClose }) {
     return `${(b / 1048576).toFixed(1)} MB`
   }
 
-  const varGroups = useMemo(() => {
-    if (!result?.logs) return []
-    const groups = {}
+  const varList = useMemo(() => {
+    if (!result?.columns || !result?.logs) return []
+    const logMap = {}
     for (const log of result.logs) {
-      const col = log.column
-      if (!groups[col]) groups[col] = { column: col, total: 0, corrected: 0, errors: 0, ok: 0, entries: [] }
-      groups[col].total++
-      groups[col][log.status === 'corrected' ? 'corrected' : log.status === 'error' ? 'errors' : 'ok']++
-      groups[col].entries.push(log)
+      if (!logMap[log.column]) logMap[log.column] = { corrected: 0, errors: 0, ok: 0, total: 0, entries: [] }
+      logMap[log.column].total++
+      logMap[log.column][log.status === 'corrected' ? 'corrected' : log.status === 'error' ? 'errors' : 'ok']++
+      logMap[log.column].entries.push(log)
     }
-    return Object.values(groups).sort((a, b) => (b.corrected + b.errors) - (a.corrected + a.errors))
-  }, [result?.logs])
+    return result.columns.map(col => ({
+      column: col,
+      total: logMap[col]?.total ?? 0,
+      corrected: logMap[col]?.corrected ?? 0,
+      errors: logMap[col]?.errors ?? 0,
+      ok: logMap[col]?.ok ?? 0,
+      entries: logMap[col]?.entries ?? [],
+    }))
+  }, [result?.columns, result?.logs])
 
-  const filteredVarGroups = useMemo(() => {
-    if (logFilter === 'all') return varGroups
-    if (logFilter === 'corrected') return varGroups.filter(g => g.corrected > 0)
-    if (logFilter === 'error') return varGroups.filter(g => g.errors > 0)
-    if (logFilter === 'ok') return varGroups.filter(g => g.ok > 0 && g.corrected === 0 && g.errors === 0)
-    return varGroups
-  }, [varGroups, logFilter])
+  const filteredVarList = useMemo(() => {
+    if (logFilter === 'all') return varList
+    if (logFilter === 'corrected') return varList.filter(g => g.corrected > 0)
+    if (logFilter === 'error') return varList.filter(g => g.errors > 0)
+    if (logFilter === 'ok') return varList.filter(g => g.ok > 0 && g.corrected === 0 && g.errors === 0)
+    return varList
+  }, [varList, logFilter])
 
-  // Detail entries for the expanded variable + pagination
+  const totalVarPages = Math.ceil(filteredVarList.length / LOGS_PER_PAGE)
+  const paginatedVarList = filteredVarList.slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE)
+
+  // Detail entries for the expanded variable
   const expandedEntries = useMemo(() => {
     if (!expandedVar) return []
-    const group = varGroups.find(g => g.column === expandedVar)
+    const group = varList.find(g => g.column === expandedVar)
     return group ? group.entries : []
-  }, [expandedVar, varGroups])
+  }, [expandedVar, varList])
 
   const totalDetailPages = Math.ceil(expandedEntries.length / LOGS_PER_PAGE)
   const paginatedDetail = expandedEntries.slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE)
@@ -399,22 +408,25 @@ export default function AuditoriaExport({ onClose }) {
             </div>
 
             {/* Audit log por variable */}
-            {result.logs && varGroups.length > 0 && (
+            {result.logs && varList.length > 0 && (
               <div className="rounded-xl border border-ink-line/60 overflow-hidden bg-white transition-shadow hover:shadow-panel-hover">
                 <div className="p-4 border-b border-ink-line/60 bg-brand-50/30 flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
-                    <span className="text-xs font-bold text-ink">Variables ({varGroups.length})</span>
+                    <span className="text-xs font-bold text-ink">Todas las variables</span>
+                    <span className="text-[0.5rem] text-ink-muted font-medium">{varList.length} columnas</span>
                   </div>
-                  <select value={logFilter} onChange={(e) => { setLogFilter(e.target.value); setExpandedVar(null); setLogPage(1) }}
-                    className="select text-xs max-w-[160px]">
-                    <option value="all">Todas</option>
-                    <option value="corrected">Con ajustes ({varGroups.filter(g => g.corrected > 0).length})</option>
-                    <option value="error">Con errores ({varGroups.filter(g => g.errors > 0).length})</option>
-                    <option value="ok">Sin cambios ({varGroups.filter(g => g.ok > 0 && g.corrected === 0 && g.errors === 0).length})</option>
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select value={logFilter} onChange={(e) => { setLogFilter(e.target.value); setExpandedVar(null); setLogPage(1) }}
+                      className="select text-xs max-w-[160px]">
+                      <option value="all">Todas</option>
+                      <option value="corrected">Con ajustes ({varList.filter(g => g.corrected > 0).length})</option>
+                      <option value="error">Con errores ({varList.filter(g => g.errors > 0).length})</option>
+                      <option value="ok">Sin cambios ({varList.filter(g => g.ok > 0 && g.corrected === 0 && g.errors === 0).length})</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="overflow-x-auto scroll-thin">
                   <table className="min-w-full text-xs">
@@ -430,7 +442,7 @@ export default function AuditoriaExport({ onClose }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredVarGroups.map(g => {
+                      {paginatedVarList.map(g => {
                         const isExpanded = expandedVar === g.column
                         const hasProblems = g.errors > 0 || g.corrected > 0
                         return (
@@ -461,7 +473,7 @@ export default function AuditoriaExport({ onClose }) {
                           </tr>
                         )
                       })}
-                      {filteredVarGroups.length === 0 && (
+                      {paginatedVarList.length === 0 && (
                         <tr>
                           <td colSpan={7} className="px-3 py-8 text-center text-ink-muted text-xs">No hay variables con este filtro</td>
                         </tr>
@@ -469,6 +481,11 @@ export default function AuditoriaExport({ onClose }) {
                     </tbody>
                   </table>
                 </div>
+                {totalVarPages > 1 && (
+                  <div className="p-3 border-t border-ink-line/60 bg-brand-50/20">
+                    <Pagination page={logPage} totalPages={totalVarPages} onChange={setLogPage} />
+                  </div>
+                )}
 
                 {/* Expandable detail per variable */}
                 {expandedVar && (
