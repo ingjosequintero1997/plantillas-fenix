@@ -27,6 +27,7 @@ export default function AuditoriaExport({ onClose }) {
   const [patientPage, setPatientPage] = useState(1)
   const [logPage, setLogPage] = useState(1)
   const [logFilter, setLogFilter] = useState('all')
+  const [expandedVar, setExpandedVar] = useState(null)
   const inputRef = useRef()
 
   useState(() => {
@@ -173,17 +174,36 @@ export default function AuditoriaExport({ onClose }) {
     return `${(b / 1048576).toFixed(1)} MB`
   }
 
-  const filteredLogs = useMemo(() => {
+  const varGroups = useMemo(() => {
     if (!result?.logs) return []
-    let items = result.logs
-    if (logFilter === 'corrected') items = items.filter(l => l.status === 'corrected')
-    else if (logFilter === 'error') items = items.filter(l => l.status === 'error')
-    else if (logFilter === 'ok') items = items.filter(l => l.status === 'ok')
-    return items
-  }, [result?.logs, logFilter])
+    const groups = {}
+    for (const log of result.logs) {
+      const col = log.column
+      if (!groups[col]) groups[col] = { column: col, total: 0, corrected: 0, errors: 0, ok: 0, entries: [] }
+      groups[col].total++
+      groups[col][log.status === 'corrected' ? 'corrected' : log.status === 'error' ? 'errors' : 'ok']++
+      groups[col].entries.push(log)
+    }
+    return Object.values(groups).sort((a, b) => (b.corrected + b.errors) - (a.corrected + a.errors))
+  }, [result?.logs])
 
-  const totalLogPages = Math.ceil(filteredLogs.length / LOGS_PER_PAGE)
-  const paginatedLogs = filteredLogs.slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE)
+  const filteredVarGroups = useMemo(() => {
+    if (logFilter === 'all') return varGroups
+    if (logFilter === 'corrected') return varGroups.filter(g => g.corrected > 0)
+    if (logFilter === 'error') return varGroups.filter(g => g.errors > 0)
+    if (logFilter === 'ok') return varGroups.filter(g => g.ok > 0 && g.corrected === 0 && g.errors === 0)
+    return varGroups
+  }, [varGroups, logFilter])
+
+  // Detail entries for the expanded variable + pagination
+  const expandedEntries = useMemo(() => {
+    if (!expandedVar) return []
+    const group = varGroups.find(g => g.column === expandedVar)
+    return group ? group.entries : []
+  }, [expandedVar, varGroups])
+
+  const totalDetailPages = Math.ceil(expandedEntries.length / LOGS_PER_PAGE)
+  const paginatedDetail = expandedEntries.slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE)
 
   const patientsWithFlags = (() => {
     if (!evalData) return []
@@ -378,84 +398,137 @@ export default function AuditoriaExport({ onClose }) {
               </div>
             </div>
 
-            {/* Detailed audit log */}
-            {result.logs && result.logs.length > 0 && (
+            {/* Audit log por variable */}
+            {result.logs && varGroups.length > 0 && (
               <div className="rounded-xl border border-ink-line/60 overflow-hidden bg-white transition-shadow hover:shadow-panel-hover">
                 <div className="p-4 border-b border-ink-line/60 bg-brand-50/30 flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
-                    <span className="text-xs font-bold text-ink">Bitácora de cambios</span>
+                    <span className="text-xs font-bold text-ink">Variables ({varGroups.length})</span>
                   </div>
-                  <select value={logFilter} onChange={(e) => { setLogFilter(e.target.value); setLogPage(1) }}
-                    className="select text-xs max-w-[140px]">
-                    <option value="all">Todos ({result.logs.length})</option>
-                    <option value="corrected">Corregidos ({result.logs.filter(l => l.status === 'corrected').length})</option>
-                    <option value="error">Errores ({result.logs.filter(l => l.status === 'error').length})</option>
-                    <option value="ok">Sin cambios ({result.logs.filter(l => l.status === 'ok').length})</option>
+                  <select value={logFilter} onChange={(e) => { setLogFilter(e.target.value); setExpandedVar(null); setLogPage(1) }}
+                    className="select text-xs max-w-[160px]">
+                    <option value="all">Todas</option>
+                    <option value="corrected">Con ajustes ({varGroups.filter(g => g.corrected > 0).length})</option>
+                    <option value="error">Con errores ({varGroups.filter(g => g.errors > 0).length})</option>
+                    <option value="ok">Sin cambios ({varGroups.filter(g => g.ok > 0 && g.corrected === 0 && g.errors === 0).length})</option>
                   </select>
-                  <span className="text-[0.5rem] text-ink-muted font-medium ml-auto">
-                    {filteredLogs.length} registros
-                  </span>
                 </div>
-                <div className="overflow-x-auto max-h-96 overflow-y-auto scroll-thin">
+                <div className="overflow-x-auto scroll-thin">
                   <table className="min-w-full text-xs">
                     <thead>
                       <tr className="bg-ink-line/20 border-b border-ink-line/60">
-                        <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-12">Fila</th>
+                        <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-8"></th>
                         <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Variable</th>
-                        <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Dato original</th>
-                        <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-10"></th>
-                        <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Dato ajustado</th>
-                        <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-20">Estado</th>
+                        <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-14">Total</th>
+                        <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-14">Ajustes</th>
+                        <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-14">Errores</th>
+                        <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-14">OK</th>
+                        <th className="px-3 py-2.5 text-right text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-20">Estado</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedLogs.map((log, i) => {
-                        const isError = log.status === 'error'
-                        const isCorrected = log.status === 'corrected'
-                        const rowClass = isError ? 'bg-red-50/40' : isCorrected ? 'bg-amber-50/40' : ''
+                      {filteredVarGroups.map(g => {
+                        const isExpanded = expandedVar === g.column
+                        const hasProblems = g.errors > 0 || g.corrected > 0
                         return (
-                          <tr key={`${log.row}-${log.column}-${i}`} className={`border-b border-surface-100 hover:bg-brand-50/20 transition-colors duration-150 ${rowClass}`}>
-                            <td className="px-3 py-2 text-ink-muted font-semibold whitespace-nowrap">{log.row}</td>
-                            <td className="px-3 py-2 text-ink font-medium max-w-[200px] truncate" title={log.column}>{log.column}</td>
-                            <td className="px-3 py-2">
-                              <span className={`inline-block font-mono text-xs px-2 py-0.5 rounded ${isError || isCorrected ? 'bg-red-50 text-red-700 line-through decoration-red-400' : 'text-ink'}`}>
-                                {log.original || '(vacío)'}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <svg className="w-3.5 h-3.5 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                          <tr key={g.column}
+                            onClick={() => setExpandedVar(isExpanded ? null : g.column)}
+                            className={`border-b border-surface-100 cursor-pointer transition-colors duration-150 hover:bg-brand-50/20 ${isExpanded ? 'bg-brand-50/30' : ''}`}>
+                            <td className="px-3 py-2.5 text-ink-muted">
+                              <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                               </svg>
                             </td>
-                            <td className="px-3 py-2">
-                              <span className={`inline-block font-mono text-xs px-2 py-0.5 rounded ${isError ? 'bg-red-100 text-red-800 font-bold' : isCorrected ? 'bg-amber-100 text-amber-800 font-bold' : 'text-ink'}`}>
-                                {log.corrected || '(vacío)'}
-                              </span>
+                            <td className="px-3 py-2.5 text-ink font-medium">{g.column}</td>
+                            <td className="px-3 py-2.5 text-center text-ink-muted">{g.total}</td>
+                            <td className="px-3 py-2.5 text-center">
+                              <span className={`font-semibold ${g.corrected > 0 ? 'text-amber-600' : 'text-ink-muted'}`}>{g.corrected}</span>
                             </td>
-                            <td className="px-3 py-2 text-center">
+                            <td className="px-3 py-2.5 text-center">
+                              <span className={`font-semibold ${g.errors > 0 ? 'text-red-600' : 'text-ink-muted'}`}>{g.errors}</span>
+                            </td>
+                            <td className="px-3 py-2.5 text-center text-ink-muted">{g.ok}</td>
+                            <td className="px-3 py-2.5 text-right">
                               <span className={`inline-flex items-center gap-1 text-[0.4rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                                isError ? 'bg-red-100 text-red-700' : isCorrected ? 'bg-amber-100 text-amber-700' : 'bg-brand-100 text-brand-700'
+                                g.errors > 0 ? 'bg-red-100 text-red-700' : g.corrected > 0 ? 'bg-amber-100 text-amber-700' : 'bg-brand-100 text-brand-700'
                               }`}>
-                                {isError ? 'Error' : isCorrected ? 'Ajustado' : 'OK'}
+                                {g.errors > 0 ? 'Error' : g.corrected > 0 ? 'Ajustado' : 'OK'}
                               </span>
                             </td>
                           </tr>
                         )
                       })}
-                      {paginatedLogs.length === 0 && (
+                      {filteredVarGroups.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="px-3 py-8 text-center text-ink-muted text-xs">No hay cambios con este filtro</td>
+                          <td colSpan={7} className="px-3 py-8 text-center text-ink-muted text-xs">No hay variables con este filtro</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
-                {totalLogPages > 1 && (
-                  <div className="p-3 border-t border-ink-line/60 bg-brand-50/20">
-                    <Pagination page={logPage} totalPages={totalLogPages} onChange={setLogPage} />
+
+                {/* Expandable detail per variable */}
+                {expandedVar && (
+                  <div className="border-t border-ink-line/60 bg-ink-line/5 animate-fade-in">
+                    <div className="px-4 py-2 border-b border-ink-line/40 flex items-center gap-2">
+                      <span className="text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Detalle:</span>
+                      <span className="text-xs font-semibold text-ink">{expandedVar}</span>
+                      <span className="text-xs text-ink-muted ml-auto">{expandedEntries.length} registros</span>
+                    </div>
+                    <div className="overflow-x-auto max-h-64 overflow-y-auto scroll-thin">
+                      <table className="min-w-full text-xs">
+                        <thead>
+                          <tr className="bg-white/60 border-b border-ink-line/40">
+                            <th className="px-3 py-2 text-left text-[0.4rem] font-bold uppercase tracking-wider text-ink-muted w-12">Fila</th>
+                            <th className="px-3 py-2 text-left text-[0.4rem] font-bold uppercase tracking-wider text-ink-muted">Original</th>
+                            <th className="px-3 py-2 text-center text-[0.4rem] font-bold uppercase tracking-wider text-ink-muted w-8"></th>
+                            <th className="px-3 py-2 text-left text-[0.4rem] font-bold uppercase tracking-wider text-ink-muted">Ajustado</th>
+                            <th className="px-3 py-2 text-center text-[0.4rem] font-bold uppercase tracking-wider text-ink-muted w-16">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedDetail.map((log, i) => {
+                            const isError = log.status === 'error'
+                            const isCorrected = log.status === 'corrected'
+                            return (
+                              <tr key={`${log.row}-${i}`} className={`border-b border-surface-100 ${isError ? 'bg-red-50/30' : isCorrected ? 'bg-amber-50/30' : ''}`}>
+                                <td className="px-3 py-1.5 text-ink-muted font-semibold whitespace-nowrap">{log.row}</td>
+                                <td className="px-3 py-1.5">
+                                  <span className={`inline-block font-mono text-[0.5rem] px-1.5 py-0.5 rounded ${isError || isCorrected ? 'bg-red-50 text-red-700 line-through decoration-red-400' : 'text-ink'}`}>
+                                    {log.original || '(vacío)'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-1.5 text-center">
+                                  <svg className="w-3 h-3 mx-auto text-ink-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                  </svg>
+                                </td>
+                                <td className="px-3 py-1.5">
+                                  <span className={`inline-block font-mono text-[0.5rem] px-1.5 py-0.5 rounded ${isError ? 'bg-red-100 text-red-800 font-bold' : isCorrected ? 'bg-amber-100 text-amber-800 font-bold' : 'text-ink'}`}>
+                                    {log.corrected || '(vacío)'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-1.5 text-center">
+                                  <span className={`inline-flex items-center gap-1 text-[0.35rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                                    isError ? 'bg-red-100 text-red-700' : isCorrected ? 'bg-amber-100 text-amber-700' : 'bg-brand-100 text-brand-700'
+                                  }`}>
+                                    {isError ? 'Error' : isCorrected ? 'Ajustado' : 'OK'}
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {totalDetailPages > 1 && (
+                      <div className="p-3 border-t border-ink-line/40 bg-white/60">
+                        <Pagination page={logPage} totalPages={totalDetailPages} onChange={setLogPage} />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
