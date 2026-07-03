@@ -578,8 +578,10 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 					corrected = safe_default_for_required(tdef)
 				else:
 					corrected = str(corrected_int)
-					if orig_val is not None and corrected != orig_val.strip():
-						status = "corrected"
+					if orig_val is not None:
+						orig_int = to_int_safe(orig_val)
+						if orig_int is None or corrected_int != orig_int:
+							status = "corrected"
 
 			elif tdef["type"] == "DECIMAL":
 				corrected_dec = correct_decimal_by_field(col, val)
@@ -588,8 +590,10 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 					corrected = safe_default_for_required(tdef)
 				else:
 					corrected = format_decimal(corrected_dec)
-					if orig_val is not None and corrected != orig_val.strip():
-						status = "corrected"
+					if orig_val is not None:
+						orig_dec = to_decimal_safe(orig_val)
+						if orig_dec is None or abs(corrected_dec - orig_dec) >= 0.0001:
+							status = "corrected"
 
 			elif tdef["type"] == "DATE":
 				corrected_date = to_date_iso(val)
