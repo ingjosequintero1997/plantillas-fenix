@@ -168,7 +168,7 @@ RAW_FIELDS: list[tuple[str, str]] = [
     ("NUMERO TOTAL DE CONTROLES PRENATALES", "INT"),
     ("ULTIMO CONTROL PRENATAL", "DATE"),
     ("EDAD GESTACIONAL ACTUAL", "INT"),
-    ("PESO ACTUAL", "INT"),
+    ("PESO ACTUAL", "DECIMAL"),
     ("TALLA ACTUAL", "DECIMAL"),
     ("IMC", "DECIMAL"),
     ("TA ACTUAL", "INT"),
