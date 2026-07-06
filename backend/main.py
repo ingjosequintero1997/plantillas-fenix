@@ -208,6 +208,9 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 	corrected_df, logs, stats = validate_and_correct(df, mapping, active_template)
 	# Asegurar que no hay NaN antes de exportar
 	corrected_df = corrected_df.fillna("SIN DATO").astype(str)
+	# Reemplazar saltos de linea en celdas para no romper el formato pipe-delimited
+	for col in corrected_df.columns:
+		corrected_df[col] = corrected_df[col].str.replace(r'[\r\n]+', ' ', regex=True)
 	buf = io.StringIO()
 	corrected_df.to_csv(buf, sep='|', index=False, header=False, na_rep='SIN DATO')
 	corrected_text = buf.getvalue()
