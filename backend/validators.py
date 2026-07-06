@@ -563,10 +563,8 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 				if raw_val in (None, "None", "", "nan", "NAN"):
 					corrected = "SIN DATO"
 					status = "corrected"
-				elif re.match(r"^\d+$", raw_val.replace(" ", "")):
-					corrected = "SIN DATO"
-					status = "corrected"
 				else:
+					# Solo quitar timestamps accidentales (ej: "NOMBRE 14:30:00"), no números válidos
 					corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", raw_val)
 					if orig_val is not None and corrected != orig_val.strip():
 						status = "corrected"
