@@ -11,7 +11,7 @@ async function apiFetch(url, options = {}) {
   try {
     return JSON.parse(text)
   } catch {
-    throw new Error(`Respuesta inválida desde ${url}: ${text.slice(0, 200)}`)
+    throw new Error(`Respuesta inválida desde ${url}`)
   }
 }
 
@@ -21,15 +21,15 @@ export async function fetchTemplates() {
 }
 
 function parseApiError(data, fallback) {
-  if (!data) return fallback || 'Error no controlado'
+  if (!data) return fallback || 'Error inesperado'
   if (typeof data === 'string') return data
   if (typeof data.detail === 'string') return data.detail
   if (typeof data.detail === 'object' && data.detail !== null) {
-    const message = data.detail.message || 'Error de validacion'
+    const message = data.detail.message || 'Error de validación'
     const reasons = Array.isArray(data.detail.reasons) ? data.detail.reasons : []
     return reasons.length > 0 ? `${message} ${reasons.join(' ')}` : message
   }
-  return fallback || 'Error no controlado'
+  return fallback || 'Error inesperado'
 }
 
 export function uploadFile(file, templateKey, onProgress, options = {}) {
@@ -60,11 +60,11 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
         if (xhr.status >= 200 && xhr.status < 300) resolve(data)
         else reject(new Error(parseApiError(data, xhr.responseText)))
       } catch {
-        reject(new Error(`Respuesta inválida desde ${API_BASE}/upload: ${(xhr.responseText || '').slice(0, 200)}`))
+        reject(new Error(`Respuesta inválida desde ${API_BASE}/upload`))
       }
     }
 
-    xhr.onerror = () => reject(new Error('Error de red al conectar con el servidor'))
+    xhr.onerror = () => reject(new Error('Error de conexión'))
     xhr.send(form)
   })
 }
@@ -92,7 +92,7 @@ export async function evaluateData(corrected_text, template_names, templateKey, 
   try {
     return JSON.parse(text)
   } catch {
-    throw new Error(`Respuesta inválida desde ${url}: ${text.slice(0, 200)}`)
+    throw new Error(`Respuesta inválida desde ${url}`)
   }
 }
 

@@ -48,7 +48,7 @@ export default function App() {
           }
         }
       } catch (e) {
-        setError(e.message || 'No fue posible cargar los modulos de plantillas')
+        setError(e.message || 'Error al cargar plantillas')
       }
     }
     loadTemplates()
@@ -135,7 +135,7 @@ export default function App() {
         await processSingleFile(file, files.length === 1)
       }
     } catch (e) {
-      setError(e.message || 'Error procesando archivo')
+      setError(e.message || 'Error al procesar archivo')
     } finally {
       setLoading(false); setProgress(100)
     }
@@ -148,7 +148,7 @@ export default function App() {
       const data = await revalidateData(rawText, mapping, selectedTemplate)
       applyResponse(data)
     } catch (e) {
-      setError(e.message || 'Error reprocesando archivo')
+      setError(e.message || 'Error al revalidar')
     } finally {
       setReprocessing(false)
     }
@@ -168,7 +168,7 @@ export default function App() {
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
-      setError(e.message || 'Error exportando archivo')
+      setError(e.message || 'Error al exportar')
     }
   }
 
@@ -204,7 +204,7 @@ export default function App() {
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-white font-extrabold text-base tracking-wider">FÉNIX</span>
-                    <span className="text-white/60 text-[0.65rem] font-medium uppercase tracking-[0.2em]">Validador</span>
+                    <span className="text-white/60 text-[0.65rem] font-medium uppercase tracking-[0.2em]">Validación de plantillas</span>
                   </div>
                   <span className="text-white/50 text-[0.6rem] font-light leading-tight block">
                     Asociación de Cabildos Indígenas del Cesar y La Guajira
@@ -240,10 +240,10 @@ export default function App() {
               <span className="text-[0.55rem] font-bold text-brand-800 tracking-[0.15em] uppercase">Bienvenido</span>
             </div>
             <h1 className="text-[clamp(1.8rem,5vw,3rem)] font-extrabold text-ink tracking-tight leading-[1.1]">
-              Genera y valida tus<br />plantillas de indicadores
+              Valida tus plantillas<br />de indicadores
             </h1>
             <p className="text-sm text-ink-muted/90 mt-3 max-w-xl font-normal leading-relaxed">
-              Selecciona un módulo, carga tu archivo y obtén los datos organizados, validados y listos para usar.
+              Carga tu archivo, selecciona la plantilla y obtén los datos listos al instante.
             </p>
           </div>
         </section>
@@ -254,8 +254,8 @@ export default function App() {
             <div className="section-header">
               <div className="section-header-bar" />
               <div>
-                <h2 className="text-base font-bold text-ink tracking-tight">Módulos de plantilla</h2>
-                <p className="text-xs text-ink-muted/70 mt-0.5">Elige el módulo correspondiente a los datos que deseas procesar</p>
+                <h2 className="text-base font-bold text-ink tracking-tight">Plantillas</h2>
+                <p className="text-xs text-ink-muted/70 mt-0.5">Selecciona la plantilla según los datos a procesar</p>
               </div>
             </div>
             <span className="badge-gray shrink-0">{templates.length} disponible{templates.length !== 1 ? 's' : ''}</span>
@@ -348,7 +348,7 @@ export default function App() {
                 </div>
               </div>
               <p className="text-xs text-ink-muted/80 leading-relaxed mb-4">
-                Toma el archivo TXT del sistema de validación, selecciona la plantilla y genera un Excel profesional con los datos organizados.
+                Convierte archivos TXT en un libro Excel ordenado por variables.
               </p>
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/50">
@@ -392,7 +392,7 @@ export default function App() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 <div>
-                  <span className="text-sm font-bold text-ink">Procesando archivo</span>
+                  <span className="text-sm font-bold text-ink">Procesando…</span>
                   {selectedFileName && <span className="text-xs text-ink-muted block leading-tight">{selectedFileName}</span>}
                 </div>
               </div>
@@ -418,13 +418,13 @@ export default function App() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                {reprocessing ? 'Validando...' : 'Validar y ajustar'}
+                {reprocessing ? 'Validando...' : 'Validar'}
               </button>
               <button onClick={handleExport} disabled={!canExport} className="btn-outline">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Exportar resultado
+                Exportar TXT
               </button>
               {selectedTemplate === 'rcv' && (
                 <button onClick={handleEvaluate} disabled={!canExport || evaluating} className="btn bg-brand-700 text-white hover:bg-brand-800 shadow-sm hover:shadow-md">
@@ -438,7 +438,7 @@ export default function App() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Nuevo inicio
+                Reiniciar
               </button>
             </div>
           </div>
@@ -464,10 +464,10 @@ export default function App() {
               {structureValidation && (
                 <div className="rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-4 text-xs text-ink space-y-1.5">
                   {[
-                    ['Columnas en archivo', structureValidation.input_columns],
+                    ['Columnas archivo', structureValidation.input_columns],
                     ['Columnas plantilla', structureValidation.template_columns],
                     ['Diferencia', structureValidation.column_diff],
-                    ['Filas procesadas', structureValidation.row_count],
+                    ['Registros procesados', structureValidation.row_count],
                   ].map(([label, val]) => (
                     <div key={label} className="flex justify-between items-center">
                       <span className="text-ink-muted">{label}</span>
@@ -483,10 +483,10 @@ export default function App() {
                     <span className="font-semibold">{mappingStats.mapped_headers} / {mappingStats.total_headers}</span>
                   </div>
                   <div className="pt-1">
-                    <span className="text-ink-faint text-[0.5rem] font-medium uppercase tracking-wider">Sin mapear:</span>
+                    <span className="text-ink-faint text-[0.5rem] font-medium uppercase tracking-wider">Sin mapear</span>
                     <div className="mt-0.5 max-h-12 overflow-auto text-[0.6rem] text-ink-muted scroll-thin">
                       {(mappingStats.unmapped_headers || []).length === 0 ? (
-                        <span className="text-brand-700 font-medium">Ninguno</span>
+                        <span className="text-brand-700 font-medium">—</span>
                       ) : (mappingStats.unmapped_headers || []).join(', ')}
                     </div>
                   </div>
@@ -504,7 +504,7 @@ export default function App() {
                 <div className="section-header-bar" />
                 <h2 className="section-title">Archivos procesados</h2>
               </div>
-              <span className="badge-gray">{batchResults.length} archivo(s)</span>
+              <span className="badge-gray">{batchResults.length} archivo{batchResults.length !== 1 ? 's' : ''}</span>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {batchResults.map((item) => (
@@ -548,7 +548,7 @@ export default function App() {
               </div>
               <div>
                 <h2 className="text-sm font-bold text-ink">Mapeo de columnas</h2>
-                <p className="text-xs text-ink-muted/80">Ajusta la correspondencia entre columnas y presiona "Validar y ajustar".</p>
+                <p className="text-xs text-ink-muted/80">Asigna las columnas del archivo a las de la plantilla.</p>
               </div>
             </div>
             <MappingEditor mapping={mapping} templateNames={templateNames}
@@ -575,7 +575,7 @@ export default function App() {
                   <span className="text-white text-[0.5rem] font-bold">04</span>
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-ink">Vista previa validada</h2>
+                  <h2 className="text-sm font-bold text-ink">Vista previa</h2>
                   {selectedFileName && <p className="text-xs text-ink-muted/80">Archivo activo: {selectedFileName}</p>}
                 </div>
               </div>
@@ -588,9 +588,9 @@ export default function App() {
                   <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                     <span className="text-white text-[0.5rem] font-bold">05</span>
                   </div>
-                  <h2 className="text-sm font-bold text-ink">Auditoría de cambios</h2>
+                    <h2 className="text-sm font-bold text-ink">Bitácora de cambios</h2>
                 </div>
-                <span className="badge-gray">{logs.length} novedad{logs.length !== 1 ? 'es' : ''}</span>
+                <span className="badge-gray">{logs.length} cambio{logs.length !== 1 ? 's' : ''}</span>
               </div>
 
               {logs.length === 0 && (
@@ -600,7 +600,7 @@ export default function App() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <span className="font-medium">Todo en orden. No se detectaron cambios ni errores.</span>
+                  <span className="font-medium">Todo correcto. Sin cambios ni errores.</span>
                 </div>
               )}
 
@@ -617,7 +617,7 @@ export default function App() {
                     </div>
                     <select value={auditStatus} onChange={(e) => { setAuditStatus(e.target.value); setAuditPage(1) }}
                       className="select md:w-44">
-                      <option value="all">Todos los estados</option>
+                      <option value="all">Todos</option>
                       <option value="corrected">Corregidos</option>
                       <option value="error">Errores</option>
                     </select>

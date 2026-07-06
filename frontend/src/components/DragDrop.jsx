@@ -38,12 +38,12 @@ export default function DragDrop({ onFile }) {
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
           </div>
-          <div className="text-xl md:text-2xl font-bold text-ink">Sube tus archivos</div>
-          <div className="mt-1.5 text-sm text-ink-muted/80">Arrastra el archivo o haz clic para seleccionar</div>
+          <div className="text-xl md:text-2xl font-bold text-ink">Cargar archivos</div>
+          <div className="mt-1.5 text-sm text-ink-muted/80">Arrastra o haz clic para seleccionar</div>
           <div className="mt-4 inline-flex items-center gap-2 badge-gray text-[0.5rem]">
             .txt &middot; .xlsx &middot; .xls
           </div>
-          <div className="mt-2 text-[0.55rem] text-ink-faint">Se procesa y se genera TXT delimitado por |.</div>
+          <div className="mt-2 text-[0.55rem] text-ink-faint">Se procesa y genera TXT delimitado por |</div>
         </div>
         <input
           ref={inputRef}

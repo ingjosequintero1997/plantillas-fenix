@@ -10,7 +10,7 @@ import Pagination from './Pagination'
 const PATIENTS_PER_PAGE = 50
 
 const FILTERS = [
-  { value: 'all', label: 'Todos los pacientes' },
+  { value: 'all', label: 'Todos' },
   { value: '_DM_CONTROLADO::SI', label: '✓ Diabéticos controlados' },
   { value: '_DM_CONTROLADO::NO', label: '✗ No diabéticos controlados' },
   { value: '_PA_140_90::SI', label: '✓ Control PA < 140/90' },
@@ -56,7 +56,7 @@ export default function EvaluationDashboard({
         const result = await evaluateData(correctedText, templateNames, selectedTemplate, 'json')
         setData(result)
       } catch (e) {
-        setError(e.message || 'Error al obtener evaluación')
+        setError(e.message || 'Error al evaluar')
       } finally {
         setLoading(false)
       }
@@ -202,7 +202,7 @@ export default function EvaluationDashboard({
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              {downloading ? 'Descargando…' : 'Descargar Excel'}
+              {downloading ? 'Descargando…' : 'Excel'}
             </button>
             <button onClick={onClose}
               className="btn bg-white text-ink border border-ink-line/70 hover:bg-surface-50 shadow-button">
@@ -266,7 +266,7 @@ export default function EvaluationDashboard({
         <div className="md:col-span-2 card p-5">
           <div className="section-header mb-4">
             <div className="section-header-bar" />
-            <h3 className="section-title">Cumplimiento por indicador</h3>
+            <h3 className="section-title">Indicadores</h3>
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 40, left: 0, bottom: 5 }}>
@@ -300,7 +300,7 @@ export default function EvaluationDashboard({
         <div className="md:col-span-3 card p-5">
           <div className="section-header mb-4">
             <div className="section-header-bar" />
-            <h3 className="section-title">Resumen de evaluación</h3>
+            <h3 className="section-title">Resultados</h3>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {data.indicators.map((ind) => {
@@ -343,14 +343,14 @@ export default function EvaluationDashboard({
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="section-header">
             <div className="section-header-bar" />
-            <h3 className="section-title">Pacientes evaluados</h3>
+            <h3 className="section-title">Pacientes</h3>
             <span className="badge-gray">{filteredPatients.length} pacientes</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[0.5rem] font-semibold text-ink-muted uppercase tracking-wider">Filtrar:</span>
             <select value={filterKey} onChange={(e) => { setFilterKey(e.target.value); setPatientPage(1) }}
               className="select text-xs py-1.5 px-2 w-auto max-w-[300px]">
-              <option value="all">Todos los pacientes</option>
+              <option value="all">Todos</option>
               <option disabled>── Cumplen ──</option>
               {FILTERS.filter(f => f.value.endsWith('::SI')).map(f => (
                 <option key={f.value} value={f.value}>{f.label}</option>
@@ -369,7 +369,7 @@ export default function EvaluationDashboard({
               <tr className="bg-surface-50 border-b border-ink-line">
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">#</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Documento</th>
-                <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Nombre completo</th>
+                <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Nombre</th>
                 {[
                   { key: '_DM_CONTROLADO', label: 'DM controlado' },
                   { key: '_PA_140_90', label: 'PA < 140/90' },
@@ -410,7 +410,7 @@ export default function EvaluationDashboard({
           <Pagination page={patientPage} totalPages={patientTotalPages} onChange={setPatientPage} />
           {filteredPatients.length === 0 && (
             <div className="p-8 text-center text-sm text-ink-muted">
-              No hay pacientes con este filtro.
+              Sin resultados
             </div>
           )}
         </div>

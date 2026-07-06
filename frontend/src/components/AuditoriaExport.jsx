@@ -79,7 +79,7 @@ export default function AuditoriaExport({ onClose }) {
       const evaluation = await evaluateData(result.correctedText, result.templateNames, selectedKey, 'json')
       setEvalData(evaluation)
     } catch (e) {
-      setError(e.message || 'Error al evaluar indicadores')
+      setError(e.message || 'Error al evaluar')
     } finally {
       setEvalLoading(false)
     }
@@ -271,10 +271,10 @@ export default function AuditoriaExport({ onClose }) {
             <span className="text-[0.55rem] font-bold text-brand-800 tracking-[0.15em] uppercase">Auditoría</span>
           </div>
           <h2 className="text-xl font-extrabold text-ink tracking-tight">
-            Exportación estructurada a Excel
+            Exportación a Excel
           </h2>
           <p className="text-sm text-ink-muted/90 mt-1.5 max-w-lg leading-relaxed">
-            Importe el archivo TXT generado por el sistema de validación, seleccione la plantilla de destino y obtenga un libro de Excel con los datos organizados por cada variable del registro.
+            Convierte archivos TXT en un libro Excel, ordenado por las variables de la plantilla.
           </p>
         </div>
         <button onClick={onClose}
@@ -337,7 +337,7 @@ export default function AuditoriaExport({ onClose }) {
             )}
           </div>
           <div className="pl-10 text-[0.5rem] text-ink-faint font-medium uppercase tracking-wider">
-            Formatos aceptados: .txt (separado por pipe | )
+            Solo archivos .txt (separador pipe |)
           </div>
         </div>
 
@@ -346,7 +346,7 @@ export default function AuditoriaExport({ onClose }) {
           <div className="flex items-center gap-3">
             <span className="w-7 h-7 rounded-full bg-brand-100 text-brand-800 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40">3</span>
             <div>
-              <span className="text-sm font-bold text-ink">Procesar y exportar</span>
+              <span className="text-sm font-bold text-ink">Generar Excel</span>
               <p className="text-[0.55rem] text-ink-muted font-medium tracking-wider uppercase mt-0.5">Paso 3</p>
             </div>
           </div>
@@ -377,7 +377,7 @@ export default function AuditoriaExport({ onClose }) {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Descargar Excel organizado
+                    Descargar Excel
                   </button>
                 )}
               </div>
@@ -415,7 +415,7 @@ export default function AuditoriaExport({ onClose }) {
                     <svg className="w-4 h-4 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
-                    <span className="text-xs font-bold text-ink">Todas las variables</span>
+                    <span className="text-xs font-bold text-ink">Variables</span>
                     <span className="text-[0.5rem] text-ink-muted font-medium">{varList.length} columnas</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -491,7 +491,6 @@ export default function AuditoriaExport({ onClose }) {
                 {expandedVar && (
                   <div className="border-t border-ink-line/60 bg-ink-line/5 animate-fade-in">
                     <div className="px-4 py-2 border-b border-ink-line/40 flex items-center gap-2">
-                      <span className="text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Detalle:</span>
                       <span className="text-xs font-semibold text-ink">{expandedVar}</span>
                       <span className="text-xs text-ink-muted ml-auto">{expandedEntries.length} registros</span>
                     </div>
@@ -515,7 +514,7 @@ export default function AuditoriaExport({ onClose }) {
                                 <td className="px-3 py-1.5 text-ink-muted font-semibold whitespace-nowrap">{log.row}</td>
                                 <td className="px-3 py-1.5">
                                   <span className={`inline-block font-mono text-[0.5rem] px-1.5 py-0.5 rounded ${isError || isCorrected ? 'bg-red-50 text-red-700 line-through decoration-red-400' : 'text-ink'}`}>
-                                    {log.original || '(vacío)'}
+                                    {log.original || '—'}
                                   </span>
                                 </td>
                                 <td className="px-3 py-1.5 text-center">
@@ -525,7 +524,7 @@ export default function AuditoriaExport({ onClose }) {
                                 </td>
                                 <td className="px-3 py-1.5">
                                   <span className={`inline-block font-mono text-[0.5rem] px-1.5 py-0.5 rounded ${isError ? 'bg-red-100 text-red-800 font-bold' : isCorrected ? 'bg-amber-100 text-amber-800 font-bold' : 'text-ink'}`}>
-                                    {log.corrected || '(vacío)'}
+                                    {log.corrected || '—'}
                                   </span>
                                 </td>
                                 <td className="px-3 py-1.5 text-center">
@@ -561,7 +560,7 @@ export default function AuditoriaExport({ onClose }) {
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              Evaluación de indicadores
+               Evaluar indicadores
             </button>
           </div>
         )}
@@ -572,7 +571,7 @@ export default function AuditoriaExport({ onClose }) {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            Evaluando indicadores…
+            Evaluando…
           </div>
         )}
 
@@ -593,7 +592,7 @@ export default function AuditoriaExport({ onClose }) {
                 <div className="w-2 h-8 rounded-full bg-brand-700" />
                 <div>
                   <h3 className="text-base font-bold text-ink tracking-tight">Evaluación de indicadores RCV</h3>
-                  <p className="text-[0.55rem] text-ink-muted font-medium uppercase tracking-wider mt-0.5">Resumen de cumplimiento</p>
+                  <p className="text-[0.55rem] text-ink-muted font-medium uppercase tracking-wider mt-0.5">Cumplimiento</p>
                 </div>
               </div>
               <button onClick={handleDownloadEval}
@@ -601,7 +600,7 @@ export default function AuditoriaExport({ onClose }) {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Descargar Excel evaluación
+                Descargar Excel
               </button>
             </div>
 
@@ -631,7 +630,7 @@ export default function AuditoriaExport({ onClose }) {
             {/* Patient filter & table */}
             <div className="rounded-xl border border-ink-line/60 overflow-hidden bg-white transition-shadow hover:shadow-panel-hover">
               <div className="p-4 border-b border-ink-line/60 bg-brand-50/30 flex items-center gap-3 flex-wrap">
-                <span className="text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Filtrar pacientes:</span>
+                <span className="text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Filtrar</span>
                 <select value={filterKey} onChange={(e) => { setFilterKey(e.target.value); setPatientPage(1) }}
                   className="select text-xs max-w-xs">
                   <option value="all">Todos ({evalData.total_patients || filteredPatients.length})</option>
@@ -677,7 +676,7 @@ export default function AuditoriaExport({ onClose }) {
                     ))}
                     {paginatedPatients.length === 0 && (
                       <tr>
-                        <td colSpan={3 + evalData.eval_columns.length} className="px-3 py-8 text-center text-ink-muted text-xs">No hay pacientes con este filtro</td>
+                        <td colSpan={3 + evalData.eval_columns.length} className="px-3 py-8 text-center text-ink-muted text-xs">Sin resultados</td>
                       </tr>
                     )}
                   </tbody>

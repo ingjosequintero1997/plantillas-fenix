@@ -18,7 +18,7 @@ export default function MappingEditor({ mapping, templateNames, onChange }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar columna de origen o destino"
+          placeholder="Buscar columna origen o destino"
           className="input pl-9"
         />
       </div>

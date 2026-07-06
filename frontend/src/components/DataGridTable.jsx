@@ -54,7 +54,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
   const rowStatus = (rowIndex) => {
     const rowLogs = logMap[rowIndex + 1] || {}
     const statuses = Object.values(rowLogs)
-    if (statuses.includes('error')) return { label: 'Con errores', cls: 'badge-red' }
+    if (statuses.includes('error')) return { label: 'Errores', cls: 'badge-red' }
     if (statuses.includes('corrected')) return { label: 'Corregido', cls: 'badge-green' }
     return { label: 'Correcto', cls: 'badge-gray' }
   }
@@ -69,10 +69,10 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-3 md:flex-row md:items-center md:justify-between">
-        <div className="text-sm font-bold text-ink">
-          Registros: <span className="text-ink-muted font-semibold">{rows.length}</span>
-          <span className="mx-2 text-ink-line">·</span>
-          Mostrando: <span className="text-ink-muted font-semibold">{filteredIndexes.length}</span>
+          <div className="text-sm font-bold text-ink">
+            Registros: <span className="text-ink-muted font-semibold">{rows.length}</span>
+            <span className="mx-2 text-ink-line">·</span>
+            Visibles: <span className="text-ink-muted font-semibold">{filteredIndexes.length}</span>
         </div>
         <div className="relative md:w-80">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -81,7 +81,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Buscar en vista previa"
+            placeholder="Buscar en los datos"
             className="input pl-9"
           />
         </div>
@@ -90,7 +90,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 bg-white p-2 scroll-thin shadow-sm">
           {filteredIndexes.length === 0 && (
-            <div className="p-4 text-sm text-ink-muted text-center">No hay registros para el filtro aplicado.</div>
+            <div className="p-4 text-sm text-ink-muted text-center">Sin resultados para este filtro</div>
           )}
           <div className="space-y-2">
             {paginatedIndexes.map((idx) => {
