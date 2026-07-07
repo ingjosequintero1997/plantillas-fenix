@@ -9,6 +9,17 @@ import Pagination from './Pagination'
 
 const PATIENTS_PER_PAGE = 50
 
+const ChartTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null
+  const d = payload[0].payload
+  return (
+    <div className="bg-white dark:bg-[#333337] border border-ink-line/50 dark:border-[#666669]/50 rounded-xl px-3 py-2 shadow-lg dark:shadow-black/40 text-xs">
+      <p className="font-bold text-ink">{d.fullName}</p>
+      <p className="text-ink-muted">{payload[0].value?.toFixed(1)}% ({d.numerador}/{d.denominador})</p>
+    </div>
+  )
+}
+
 const FILTERS = [
   { value: 'all', label: 'Todos' },
   { value: '_DM_CONTROLADO::SI', label: '✓ Diabéticos controlados' },
@@ -181,7 +192,7 @@ export default function EvaluationDashboard({
 
       {/* ─── Header ─── */}
       <div className="card overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-50/40 via-white to-white dark:from-amber-950/30 dark:via-[#1E1C1A] dark:to-[#1E1C1A] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-50/40 via-white to-white dark:from-amber-950/30 dark:via-[#333337] dark:to-[#333337] pointer-events-none" />
         <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-600 via-amber-500 to-amber-400" />
         <div className="relative px-7 py-6 flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -198,14 +209,14 @@ export default function EvaluationDashboard({
           </div>
           <div className="flex items-center gap-2">
             <button onClick={handleDownloadExcel} disabled={downloading}
-              className="btn bg-amber-500 text-white hover:bg-amber-600 shadow-button hover:shadow-button-hover">
+              className="btn bg-amber-500 dark:bg-amber-600 text-white hover:bg-amber-600 dark:hover:bg-amber-500 shadow-button dark:shadow-black/30 hover:shadow-button-hover">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               {downloading ? 'Descargando…' : 'Excel'}
             </button>
             <button onClick={onClose}
-              className="btn bg-white text-ink border border-ink-line/70 hover:bg-surface-50 shadow-button">
+              className="btn bg-white dark:bg-[#333337] text-ink border border-ink-line/70 dark:border-[#666669] hover:bg-surface-50 dark:hover:bg-[#3D3D40] shadow-button dark:shadow-black/20">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -273,13 +284,7 @@ export default function EvaluationDashboard({
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
               <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} width={90} />
-              <Tooltip
-                formatter={(value, _, props) => [
-                  `${value.toFixed(1)}% (${props.payload.numerador}/${props.payload.denominador})`,
-                  props.payload.fullName,
-                ]}
-                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E2E8F0' }}
-              />
+              <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20} label={{ position: 'right', fontSize: 11, fontWeight: 700, formatter: (v) => `${v.toFixed(1)}%` }}>
                 {chartData.map((entry) => {
                   const level = getLevel(entry.value, entry.meta)
@@ -306,13 +311,13 @@ export default function EvaluationDashboard({
             {data.indicators.map((ind) => {
               const level = getLevel(String(ind.CUMPLIMIENTO).replace('%', ''), ind.META)
               const badgeMap = {
-                bueno: 'bg-green-100 text-green-700 border-green-200',
+                bueno: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800/50',
                 aceptable: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50',
-                critico: 'bg-red-100 text-red-700 border-red-200',
-                neutral: 'bg-gray-100 text-gray-700 border-gray-200',
+                critico: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800/50',
+                neutral: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700/50',
               }
               return (
-                <div key={ind.INDICADOR} className="rounded-lg border border-ink-line/60 dark:border-[#3A3632]/60 bg-surface-50/70 dark:bg-[#22201E]/70 p-3">
+                <div key={ind.INDICADOR} className="rounded-lg border border-ink-line/60 dark:border-[#666669]/60 bg-surface-50/70 dark:bg-[#2C2C2F]/70 p-3">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <span className="text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted leading-tight">
                       {ind.INDICADOR}
@@ -363,10 +368,10 @@ export default function EvaluationDashboard({
           </div>
         </div>
 
-        <div className="overflow-auto rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 bg-white dark:bg-[#1E1C1A] scroll-thin max-h-[500px]">
+        <div className="overflow-auto rounded-xl border border-ink-line/60 dark:border-[#666669]/60 bg-white dark:bg-[#333337] scroll-thin max-h-[500px]">
           <table className="min-w-full text-xs">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-surface-50 dark:bg-[#22201E] border-b border-ink-line dark:border-[#3A3632]">
+              <tr className="bg-surface-50 dark:bg-[#2C2C2F] border-b border-ink-line dark:border-[#666669]">
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">#</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Documento</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Nombre</th>
@@ -385,7 +390,7 @@ export default function EvaluationDashboard({
             </thead>
             <tbody>
               {paginatedPatients.map((p) => (
-                <tr key={p._index} className="border-b border-surface-100 dark:border-[#3A3632]/50 hover:bg-brand-50/20 dark:hover:bg-brand-900/20 transition-colors">
+                <tr key={p._index} className="border-b border-surface-100 dark:border-[#666669]/50 hover:bg-brand-50/20 dark:hover:bg-brand-900/20 transition-colors">
                   <td className="px-3 py-2 font-semibold text-ink-muted">{p._index}</td>
                   <td className="px-3 py-2 font-mono text-ink font-semibold">{p._documento || '—'}</td>
                   <td className="px-3 py-2 text-ink font-medium whitespace-nowrap">{p._nombreCompleto}</td>
@@ -395,9 +400,9 @@ export default function EvaluationDashboard({
                     return (
                       <td key={col} className="px-3 py-2 text-center">
                         <span className={`inline-flex items-center gap-1 text-[0.45rem] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 ${
-                          isSi ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+                          isSi ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-800/30 dark:text-gray-500'
                         }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isSi ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full ${isSi ? 'bg-green-500 dark:bg-green-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
                           {val}
                         </span>
                       </td>

@@ -6,7 +6,7 @@ export default function Pagination({ page, totalPages, onChange }) {
   for (let i = start; i <= end; i++) pages.push(i)
 
   return (
-    <div className="flex items-center justify-between gap-3 pt-3 border-t border-ink-line/40 dark:border-[#3A3632]/40">
+    <div className="flex items-center justify-between gap-3 pt-3 border-t border-ink-line/40 dark:border-[#666669]/40">
       <span className="text-[0.5rem] text-ink-muted font-medium">
         Página {page} de {totalPages}
       </span>

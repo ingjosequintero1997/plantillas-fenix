@@ -23,7 +23,7 @@ export default function DragDrop({ onFile }) {
         className={`relative overflow-hidden p-10 md:p-14 text-center transition-all duration-300 cursor-pointer rounded-2xl border-2 border-dashed ${
           hover
             ? 'border-brand-800 bg-brand-50/60 dark:bg-brand-900/40 border-solid shadow-sm dark:shadow-black/40 shadow-brand-200/50 dark:shadow-brand-900/30'
-            : 'border-ink-line dark:border-[#3A3632] bg-white dark:bg-[#1E1C1A] hover:border-brand-400 dark:hover:border-brand-600 hover:bg-brand-50/30 dark:hover:bg-brand-900/20'
+            : 'border-ink-line dark:border-[#666669] bg-white dark:bg-[#333337] hover:border-brand-400 dark:hover:border-brand-600 hover:bg-brand-50/30 dark:hover:bg-brand-900/20'
         }`}
       >
         <div className="relative">
