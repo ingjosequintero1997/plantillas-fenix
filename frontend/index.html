@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <script>if(localStorage.getItem('darkMode')==='true'||matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('dark')</script>
+    <script>(function(){var d=localStorage.getItem('darkMode')==='true'||matchMedia('(prefers-color-scheme:dark)').matches;if(!d)return;document.documentElement.classList.add('dark');var s=document.createElement('style');s.textContent='html.dark,html.dark body,html.dark *{color:#fff!important;font-weight:600!important}html.dark .badge-green{color:#a5d6a7!important;font-weight:700!important}html.dark .badge-red{color:#f87171!important;font-weight:700!important}html.dark .text-ink-muted{color:#d4d0c8!important}html.dark .text-ink-faint{color:#a8a49c!important}html.dark .text-brand-500,html.dark .text-brand-600,html.dark .text-brand-700,html.dark .text-brand-800,html.dark .text-brand-900{color:#81c784!important}html.dark .text-red-500,html.dark .text-red-600,html.dark .text-red-700,html.dark .text-red-400{color:#f87171!important}html.dark .text-amber-600,html.dark .text-amber-700,html.dark .text-amber-800,html.dark .text-amber-400,html.dark .text-amber-300{color:#fbbf24!important}';document.head.appendChild(s)})();</script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
