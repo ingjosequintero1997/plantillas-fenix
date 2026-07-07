@@ -256,7 +256,7 @@ export default function App() {
           <div className="relative px-8 md:px-12 py-10 md:py-12">
             <div className="inline-flex items-center gap-1.5 bg-brand-100/70 dark:bg-brand-900/40 rounded-full px-3 py-1 mb-4 ring-1 ring-brand-200/50 dark:ring-brand-700/40">
               <div className="w-2 h-2 rounded-full bg-brand-700" />
-              <span className="text-[0.55rem] font-bold text-brand-800 tracking-[0.15em] uppercase">Bienvenido</span>
+              <span className="text-[0.55rem] font-bold text-brand-800 dark:text-brand-200 tracking-[0.15em] uppercase">Bienvenido</span>
             </div>
             <h1 className="text-[clamp(1.8rem,5vw,3rem)] font-extrabold text-ink tracking-tight leading-[1.1]">
               Valida tus plantillas<br />de indicadores
@@ -284,12 +284,12 @@ export default function App() {
               const isSelected = selectedTemplate === item.key
               const num = String(idx + 1).padStart(2, '0')
               const accent = [
-                { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800', border: 'border-brand-300/40', light: 'bg-brand-50' },
-                { dot: 'bg-rose-600', tag: 'bg-rose-100 text-rose-700', border: 'border-rose-300/40', light: 'bg-rose-50' },
-                { dot: 'bg-amber-600', tag: 'bg-amber-100 text-amber-700', border: 'border-amber-300/40', light: 'bg-amber-50' },
-                { dot: 'bg-sky-600', tag: 'bg-sky-100 text-sky-700', border: 'border-sky-300/40', light: 'bg-sky-50' },
-                { dot: 'bg-violet-600', tag: 'bg-violet-100 text-violet-700', border: 'border-violet-300/40', light: 'bg-violet-50' },
-              ][idx] || { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800', border: 'border-brand-300/40', light: 'bg-brand-50' }
+                { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200', border: 'border-brand-300/40 dark:border-brand-700/40', light: 'bg-brand-50 dark:bg-brand-900/30' },
+                { dot: 'bg-rose-600', tag: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300', border: 'border-rose-300/40 dark:border-rose-700/40', light: 'bg-rose-50 dark:bg-rose-900/30' },
+                { dot: 'bg-amber-600', tag: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', border: 'border-amber-300/40 dark:border-amber-700/40', light: 'bg-amber-50 dark:bg-amber-900/30' },
+                { dot: 'bg-sky-600', tag: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300', border: 'border-sky-300/40 dark:border-sky-700/40', light: 'bg-sky-50 dark:bg-sky-900/30' },
+                { dot: 'bg-violet-600', tag: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', border: 'border-violet-300/40 dark:border-violet-700/40', light: 'bg-violet-50 dark:bg-violet-900/30' },
+              ][idx] || { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200', border: 'border-brand-300/40 dark:border-brand-700/40', light: 'bg-brand-50 dark:bg-brand-900/30' }
               const short = { rcv: 'RCV', gestante: 'GEST', citologia: 'CITO', mamografia: 'MAMO', penta: 'PENTA' }[item.key] || item.key.toUpperCase()
               return (
                 <div key={item.key} className={`relative transition-all duration-200 rounded-2xl bg-white dark:bg-[#1E1C1A] border ${
@@ -310,7 +310,7 @@ export default function App() {
                     )}
                     <div className="flex items-center gap-3 mb-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all text-sm font-bold ${
-                        isSelected ? `${accent.dot} text-white shadow-sm` : `${accent.light} text-brand-800`
+                        isSelected ? `${accent.dot} text-white shadow-sm` : `${accent.light} text-brand-800 dark:text-brand-200`
                       }`}>
                         {num}
                       </div>
@@ -327,7 +327,7 @@ export default function App() {
                   </button>
                   <div className="px-5 pb-4 pt-0 border-t border-ink-line/30">
                     <a href={DOWNLOAD_TEMPLATE_URL(item.key)}
-                      className="inline-flex items-center gap-1.5 text-[0.55rem] font-semibold text-brand-700 hover:text-brand-600 transition-colors">
+                      className="inline-flex items-center gap-1.5 text-[0.55rem] font-semibold text-brand-700 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
@@ -356,13 +356,13 @@ export default function App() {
                 </div>
               )}
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all text-sm font-bold bg-amber-100 text-amber-700">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all text-sm font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div>
-                  <span className="text-[0.5rem] font-bold text-amber-700 tracking-[0.15em] uppercase block leading-none mb-0.5">Módulo</span>
+                  <span className="text-[0.5rem] font-bold text-amber-700 dark:text-amber-300 tracking-[0.15em] uppercase block leading-none mb-0.5">Módulo</span>
                   <span className="text-sm font-bold text-ink">Auditoría Excel</span>
                 </div>
               </div>
@@ -370,7 +370,7 @@ export default function App() {
                 Convierte archivos TXT en un libro Excel ordenado por variables.
               </p>
               <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/50">
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200/50 dark:border-amber-700/40">
                   TXT → Excel
                 </span>
               </div>
@@ -406,7 +406,7 @@ export default function App() {
           <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 animate-fade-in-up">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-brand-800 animate-spin" fill="none" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-brand-800 dark:text-brand-300 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
@@ -505,7 +505,7 @@ export default function App() {
                     <span className="text-ink-faint text-[0.5rem] font-medium uppercase tracking-wider">Sin mapear</span>
                     <div className="mt-0.5 max-h-12 overflow-auto text-[0.6rem] text-ink-muted scroll-thin">
                       {(mappingStats.unmapped_headers || []).length === 0 ? (
-                        <span className="text-brand-700 font-medium">—</span>
+                        <span className="text-brand-700 dark:text-brand-300 font-medium">—</span>
                       ) : (mappingStats.unmapped_headers || []).join(', ')}
                     </div>
                   </div>
@@ -535,7 +535,7 @@ export default function App() {
                   }`}>
                   <div className="flex items-center gap-2.5 mb-2">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                      selectedFileName === item.fileName ? 'bg-brand-800 text-white' : 'bg-brand-50 text-brand-800'
+                      selectedFileName === item.fileName ? 'bg-brand-800 text-white' : 'bg-brand-50 text-brand-800 dark:bg-brand-900/30 dark:text-brand-200'
                     }`}>
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -562,7 +562,7 @@ export default function App() {
         {Object.keys(mapping).length > 0 && !showEvaluation && (
           <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 space-y-4 animate-fade-in-up">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
+              <div className="w-8 h-8 rounded-xl bg-brand-800 dark:bg-brand-600 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                 <span className="text-white text-[0.5rem] font-bold">03</span>
               </div>
               <div>
@@ -590,7 +590,7 @@ export default function App() {
           <div className="space-y-5">
             <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 space-y-4 animate-fade-in-up">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
+                <div className="w-8 h-8 rounded-xl bg-brand-800 dark:bg-brand-600 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                   <span className="text-white text-[0.5rem] font-bold">04</span>
                 </div>
                 <div>
@@ -604,7 +604,7 @@ export default function App() {
             <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 space-y-4 animate-fade-in-up">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
+                  <div className="w-8 h-8 rounded-xl bg-brand-800 dark:bg-brand-600 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                     <span className="text-white text-[0.5rem] font-bold">05</span>
                   </div>
                     <h2 className="text-sm font-bold text-ink">Bitácora de cambios</h2>

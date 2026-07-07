@@ -307,7 +307,7 @@ export default function EvaluationDashboard({
               const level = getLevel(String(ind.CUMPLIMIENTO).replace('%', ''), ind.META)
               const badgeMap = {
                 bueno: 'bg-green-100 text-green-700 border-green-200',
-                aceptable: 'bg-amber-100 text-amber-700 border-amber-200',
+                aceptable: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50',
                 critico: 'bg-red-100 text-red-700 border-red-200',
                 neutral: 'bg-gray-100 text-gray-700 border-gray-200',
               }
