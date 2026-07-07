@@ -25,7 +25,7 @@ export default function MappingEditor({ mapping, templateNames, onChange }) {
 
       <div className="max-h-[420px] space-y-2 overflow-auto pr-1 scroll-thin">
       {entries.map((orig)=>(
-        <div key={orig} className="animate-fade-in flex flex-col gap-2 rounded-xl border border-ink-line/60 bg-white p-3 md:flex-row md:items-center md:gap-3 hover:border-brand-300/50 transition-colors">
+        <div key={orig} className="animate-fade-in flex flex-col gap-2 rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 bg-white dark:bg-[#1E1C1A] p-3 md:flex-row md:items-center md:gap-3 hover:border-brand-300/50 dark:hover:border-brand-600/50 transition-colors">
           <div className="md:w-72 truncate text-sm font-semibold text-ink">{orig}</div>
           <select
             value={mapping[orig] || ''}

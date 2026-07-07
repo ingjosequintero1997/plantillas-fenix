@@ -181,11 +181,11 @@ export default function EvaluationDashboard({
 
       {/* ─── Header ─── */}
       <div className="card overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-50/40 via-white to-white pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-50/40 via-white to-white dark:from-amber-950/30 dark:via-[#1E1C1A] dark:to-[#1E1C1A] pointer-events-none" />
         <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-600 via-amber-500 to-amber-400" />
         <div className="relative px-7 py-6 flex items-center justify-between flex-wrap gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 bg-amber-50 rounded-full px-3 py-1 mb-2 ring-1 ring-amber-200/50">
+            <div className="inline-flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/40 rounded-full px-3 py-1 mb-2 ring-1 ring-amber-200/50 dark:ring-amber-700/40">
               <div className="w-2 h-2 rounded-full bg-amber-600" />
               <span className="text-[0.55rem] font-bold text-amber-800 tracking-[0.15em] uppercase">Dashboard</span>
             </div>
@@ -220,10 +220,10 @@ export default function EvaluationDashboard({
         {chartData.map((item) => {
           const level = getLevel(item.value, item.meta)
           const colors = {
-            bueno: { bg: 'bg-green-50 border-green-200/60', text: 'text-green-700', bar: 'bg-green-500', dot: 'bg-green-500' },
-            aceptable: { bg: 'bg-amber-50 border-amber-200/60', text: 'text-amber-700', bar: 'bg-amber-500', dot: 'bg-amber-500' },
-            critico: { bg: 'bg-red-50 border-red-200/60', text: 'text-red-700', bar: 'bg-red-500', dot: 'bg-red-500' },
-            neutral: { bg: 'bg-gray-50 border-gray-200/60', text: 'text-gray-700', bar: 'bg-gray-400', dot: 'bg-gray-400' },
+            bueno: { bg: 'bg-green-50 border-green-200/60 dark:bg-green-950/30 dark:border-green-800/50', text: 'text-green-700 dark:text-green-400', bar: 'bg-green-500', dot: 'bg-green-500' },
+            aceptable: { bg: 'bg-amber-50 border-amber-200/60 dark:bg-amber-950/30 dark:border-amber-800/50', text: 'text-amber-700 dark:text-amber-400', bar: 'bg-amber-500', dot: 'bg-amber-500' },
+            critico: { bg: 'bg-red-50 border-red-200/60 dark:bg-red-950/30 dark:border-red-800/50', text: 'text-red-700 dark:text-red-400', bar: 'bg-red-500', dot: 'bg-red-500' },
+            neutral: { bg: 'bg-gray-50 border-gray-200/60 dark:bg-gray-800/30 dark:border-gray-700/50', text: 'text-gray-700 dark:text-gray-400', bar: 'bg-gray-400', dot: 'bg-gray-400' },
           }
           const c = colors[level]
           return (
@@ -312,7 +312,7 @@ export default function EvaluationDashboard({
                 neutral: 'bg-gray-100 text-gray-700 border-gray-200',
               }
               return (
-                <div key={ind.INDICADOR} className="rounded-lg border border-ink-line/60 bg-surface-50/70 p-3">
+                <div key={ind.INDICADOR} className="rounded-lg border border-ink-line/60 dark:border-[#3A3632]/60 bg-surface-50/70 dark:bg-[#22201E]/70 p-3">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <span className="text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted leading-tight">
                       {ind.INDICADOR}
@@ -363,10 +363,10 @@ export default function EvaluationDashboard({
           </div>
         </div>
 
-        <div className="overflow-auto rounded-xl border border-ink-line/60 bg-white scroll-thin max-h-[500px]">
+        <div className="overflow-auto rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 bg-white dark:bg-[#1E1C1A] scroll-thin max-h-[500px]">
           <table className="min-w-full text-xs">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-surface-50 border-b border-ink-line">
+              <tr className="bg-surface-50 dark:bg-[#22201E] border-b border-ink-line dark:border-[#3A3632]">
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">#</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Documento</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Nombre</th>
@@ -385,7 +385,7 @@ export default function EvaluationDashboard({
             </thead>
             <tbody>
               {paginatedPatients.map((p) => (
-                <tr key={p._index} className="border-b border-surface-100 hover:bg-brand-50/20 transition-colors">
+                <tr key={p._index} className="border-b border-surface-100 dark:border-[#3A3632]/50 hover:bg-brand-50/20 dark:hover:bg-brand-900/20 transition-colors">
                   <td className="px-3 py-2 font-semibold text-ink-muted">{p._index}</td>
                   <td className="px-3 py-2 font-mono text-ink font-semibold">{p._documento || '—'}</td>
                   <td className="px-3 py-2 text-ink font-medium whitespace-nowrap">{p._nombreCompleto}</td>

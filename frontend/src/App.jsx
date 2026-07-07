@@ -11,6 +11,13 @@ import { exportFile, fetchTemplates, revalidateData, uploadFile, DOWNLOAD_TEMPLA
 const AUDIT_PER_PAGE = 50
 
 export default function App() {
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true')
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+    localStorage.setItem('darkMode', darkMode)
+  }, [darkMode])
+
   const [mapping, setMapping] = useState({})
   const [summary, setSummary] = useState(null)
   const [logs, setLogs] = useState([])
@@ -186,7 +193,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F3EF]">
+    <div className="min-h-screen bg-[#F5F3EF] dark:bg-[#12110F]">
 
       {/* ─── Header ─── */}
       <header className="bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 shadow-lg shadow-brand-900/15">
@@ -212,7 +219,19 @@ export default function App() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setDarkMode(!darkMode)}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center ring-1 ring-white/10 transition-all" title={darkMode ? 'Modo claro' : 'Modo oscuro'}>
+                {darkMode ? (
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
               {selectedTemplateMeta && (
                 <span className="hidden md:inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1 text-white/70 text-[0.5rem] font-semibold tracking-wider uppercase ring-1 ring-white/10">
                   <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
@@ -232,10 +251,10 @@ export default function App() {
       <div className="mx-auto max-w-[1200px] px-5 md:px-8 py-8 md:py-12 space-y-8">
 
         {/* ─── Hero ─── */}
-        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-50/60 via-white to-white shadow-sm">
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-50/60 via-white to-white dark:from-brand-950/50 dark:via-[#1E1C1A] dark:to-[#1E1C1A] shadow-sm">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-800 via-brand-500 to-brand-300 rounded-r-sm" />
           <div className="relative px-8 md:px-12 py-10 md:py-12">
-            <div className="inline-flex items-center gap-1.5 bg-brand-100/70 rounded-full px-3 py-1 mb-4 ring-1 ring-brand-200/50">
+            <div className="inline-flex items-center gap-1.5 bg-brand-100/70 dark:bg-brand-900/40 rounded-full px-3 py-1 mb-4 ring-1 ring-brand-200/50 dark:ring-brand-700/40">
               <div className="w-2 h-2 rounded-full bg-brand-700" />
               <span className="text-[0.55rem] font-bold text-brand-800 tracking-[0.15em] uppercase">Bienvenido</span>
             </div>
@@ -273,10 +292,10 @@ export default function App() {
               ][idx] || { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800', border: 'border-brand-300/40', light: 'bg-brand-50' }
               const short = { rcv: 'RCV', gestante: 'GEST', citologia: 'CITO', mamografia: 'MAMO', penta: 'PENTA' }[item.key] || item.key.toUpperCase()
               return (
-                <div key={item.key} className={`relative transition-all duration-200 rounded-2xl bg-white border ${
+                <div key={item.key} className={`relative transition-all duration-200 rounded-2xl bg-white dark:bg-[#1E1C1A] border ${
                   isSelected
-                    ? 'ring-2 ring-brand-800/15 shadow-md border-brand-800/30'
-                    : 'border-ink-line/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-ink-line/70'
+                    ? 'ring-2 ring-brand-800/15 dark:ring-brand-500/20 shadow-md dark:shadow-black/40 border-brand-800/30 dark:border-brand-500/30'
+                    : 'border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 hover:shadow-md dark:hover:shadow-black/50 hover:-translate-y-0.5 hover:border-ink-line/70 dark:hover:border-[#3A3632]'
                 }`}>
                   <button onClick={() => {
                     setSelectedTemplate(item.key); setCurrentTemplateLabel(item.label)
@@ -321,10 +340,10 @@ export default function App() {
           </div>
 
           {/* ─── Módulo Auditoría ─── */}
-          <div className={`relative transition-all duration-200 rounded-2xl bg-white border mt-5 ${
+          <div className={`relative transition-all duration-200 rounded-2xl bg-white dark:bg-[#1E1C1A] border mt-5 ${
             showAuditoria
-              ? 'ring-2 ring-amber-500/15 shadow-md border-amber-400/30'
-              : 'border-ink-line/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-ink-line/70'
+              ? 'ring-2 ring-amber-500/15 dark:ring-amber-500/20 shadow-md dark:shadow-black/40 border-amber-400/30'
+              : 'border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 hover:shadow-md dark:hover:shadow-black/50 hover:-translate-y-0.5 hover:border-ink-line/70 dark:hover:border-[#3A3632]'
           }`}>
             <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-500/60 via-amber-400/60 to-amber-300/60 rounded-t-2xl" />
             <button onClick={() => setShowAuditoria(!showAuditoria)}
@@ -372,7 +391,7 @@ export default function App() {
 
         {/* ─── Error ─── */}
         {error && (
-          <div className="animate-slide-down rounded-2xl border border-red-200/80 bg-red-50/80 p-4 text-sm text-red-600 flex items-start gap-3 shadow-sm">
+          <div className="animate-slide-down rounded-2xl border border-red-200/80 dark:border-red-800/50 bg-red-50/80 dark:bg-red-950/40 p-4 text-sm text-red-600 dark:text-red-400 flex items-start gap-3 shadow-sm">
             <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
               <svg className="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -384,7 +403,7 @@ export default function App() {
 
         {/* ─── Loading ─── */}
         {loading && (
-          <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 animate-fade-in-up">
+          <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 animate-fade-in-up">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <svg className="w-5 h-5 text-brand-800 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -446,7 +465,7 @@ export default function App() {
 
         {/* ─── Estructura y mapeo ─── */}
         {(mappingStats || structureValidation) && !showEvaluation && (
-          <section className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 animate-fade-in-up">
+          <section className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 animate-fade-in-up">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="section-header">
                 <div className="section-header-bar" />
@@ -462,7 +481,7 @@ export default function App() {
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               {structureValidation && (
-                <div className="rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-4 text-xs text-ink space-y-1.5">
+                <div className="rounded-xl border border-ink-line/50 dark:border-[#3A3632]/50 bg-[#F8F7F4] dark:bg-[#181715] p-4 text-xs text-ink space-y-1.5">
                   {[
                     ['Columnas archivo', structureValidation.input_columns],
                     ['Columnas plantilla', structureValidation.template_columns],
@@ -477,7 +496,7 @@ export default function App() {
                 </div>
               )}
               {mappingStats && (
-                <div className="rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-4 text-xs text-ink space-y-1.5">
+                <div className="rounded-xl border border-ink-line/50 dark:border-[#3A3632]/50 bg-[#F8F7F4] dark:bg-[#181715] p-4 text-xs text-ink space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="text-ink-muted">Encabezados mapeados</span>
                     <span className="font-semibold">{mappingStats.mapped_headers} / {mappingStats.total_headers}</span>
@@ -498,7 +517,7 @@ export default function App() {
 
         {/* ─── Archivos procesados ─── */}
         {batchResults.length > 0 && !showEvaluation && (
-          <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 space-y-4 animate-fade-in-up">
+          <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 space-y-4 animate-fade-in-up">
             <div className="flex items-center justify-between">
               <div className="section-header">
                 <div className="section-header-bar" />
@@ -511,8 +530,8 @@ export default function App() {
                 <button key={item.fileName} onClick={() => selectBatchItem(item)}
                   className={`relative text-left transition-all duration-200 rounded-2xl ${
                     selectedFileName === item.fileName
-                      ? 'ring-2 ring-brand-800/15 shadow-md border border-brand-800/30 p-4 bg-white'
-                      : 'border border-ink-line/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-ink-line/70 p-4 bg-white'
+                      ? 'ring-2 ring-brand-800/15 shadow-md border border-brand-800/30 p-4 bg-white dark:bg-[#2A2724] dark:ring-brand-500/20 dark:shadow-black/40 dark:border-brand-500/30'
+                      : 'border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 hover:shadow-md dark:hover:shadow-black/50 hover:-translate-y-0.5 hover:border-ink-line/70 dark:hover:border-[#3A3632] p-4 bg-white dark:bg-[#1E1C1A]'
                   }`}>
                   <div className="flex items-center gap-2.5 mb-2">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
@@ -541,7 +560,7 @@ export default function App() {
 
         {/* ─── Mapeo de columnas ─── */}
         {Object.keys(mapping).length > 0 && !showEvaluation && (
-          <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 space-y-4 animate-fade-in-up">
+          <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 space-y-4 animate-fade-in-up">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                 <span className="text-white text-[0.5rem] font-bold">03</span>
@@ -569,7 +588,7 @@ export default function App() {
         {/* ─── Vista previa + Auditoría ─── */}
         {correctedText && !showEvaluation && !showAuditoria && (
           <div className="space-y-5">
-            <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 space-y-4 animate-fade-in-up">
+            <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 space-y-4 animate-fade-in-up">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
                   <span className="text-white text-[0.5rem] font-bold">04</span>
@@ -582,7 +601,7 @@ export default function App() {
               <DataGridTable corrected_text={correctedText} templateColumns={templateNames} logs={logs} />
             </div>
 
-            <div className="rounded-2xl bg-white border border-ink-line/50 shadow-sm p-5 space-y-4 animate-fade-in-up">
+            <div className="rounded-2xl bg-white dark:bg-[#1E1C1A] border border-ink-line/50 dark:border-[#3A3632]/50 shadow-sm dark:shadow-black/30 p-5 space-y-4 animate-fade-in-up">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-brand-800 flex items-center justify-center shrink-0 shadow-sm shadow-brand-900/20">
@@ -594,9 +613,9 @@ export default function App() {
               </div>
 
               {logs.length === 0 && (
-                <div className="rounded-xl border border-brand-200/60 bg-brand-50/60 p-4 text-sm text-ink flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-full bg-brand-100/80 flex items-center justify-center shrink-0">
-                    <svg className="w-3.5 h-3.5 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <div className="rounded-xl border border-brand-200/60 dark:border-brand-700/40 bg-brand-50/60 dark:bg-brand-900/30 p-4 text-sm text-ink flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-brand-100/80 dark:bg-brand-800/50 flex items-center justify-center shrink-0">
+                    <svg className="w-3.5 h-3.5 text-brand-700 dark:text-brand-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -606,7 +625,7 @@ export default function App() {
 
               {logs.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-3 md:flex-row md:items-center">
+                  <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 dark:border-[#3A3632]/50 bg-[#F8F7F4] dark:bg-[#181715] p-3 md:flex-row md:items-center">
                     <div className="relative flex-1 md:max-w-xs">
                       <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -622,10 +641,10 @@ export default function App() {
                       <option value="error">Errores</option>
                     </select>
                   </div>
-                  <div className="max-h-[520px] overflow-auto rounded-xl border border-ink-line/50 bg-white scroll-thin shadow-sm">
+                  <div className="max-h-[520px] overflow-auto rounded-xl border border-ink-line/50 dark:border-[#3A3632]/50 bg-white dark:bg-[#1E1C1A] scroll-thin shadow-sm dark:shadow-black/30">
                     <table className="min-w-full">
                       <thead>
-                        <tr className="bg-[#F8F7F4] border-b border-ink-line/50">
+                        <tr className="bg-[#F8F7F4] dark:bg-[#181715] border-b border-ink-line/50 dark:border-[#3A3632]/50">
                           <th className="px-4 py-3 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Fila</th>
                           <th className="px-4 py-3 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Variable</th>
                           <th className="px-4 py-3 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Original</th>
@@ -635,7 +654,7 @@ export default function App() {
                       </thead>
                       <tbody>
                         {paginatedLogs.map((log, index) => (
-                          <tr key={`${log.row}-${log.column}-${index}`} className="border-b border-surface-100 align-top hover:bg-brand-50/20 transition-colors">
+                          <tr key={`${log.row}-${log.column}-${index}`} className="border-b border-surface-100 dark:border-[#3A3632]/50 align-top hover:bg-brand-50/20 dark:hover:bg-brand-900/20 transition-colors">
                             <td className="px-4 py-2.5 text-xs font-semibold text-ink-muted">{log.row}</td>
                             <td className="px-4 py-2.5 text-xs font-semibold text-ink">{log.column}</td>
                             <td className="px-4 py-2.5 text-xs text-ink-muted break-words max-w-[200px] font-mono">{String(log.original ?? '—') || '—'}</td>
@@ -643,10 +662,10 @@ export default function App() {
                             <td className="px-4 py-2.5 text-xs">
                               <span className={`inline-flex items-center gap-1.5 text-[0.45rem] font-bold uppercase tracking-wider rounded-full px-2.5 py-1 ${
                                 log.status === 'error'
-                                  ? 'bg-red-50 text-red-600 border border-red-200/50'
-                                  : 'bg-brand-50 text-brand-800 border border-brand-200/50'
+                                  ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-700/40'
+                                  : 'bg-brand-50 dark:bg-brand-900/30 text-brand-800 dark:text-brand-200 border border-brand-200/50 dark:border-brand-700/40'
                               }`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${log.status === 'error' ? 'bg-red-500' : 'bg-brand-800'}`} />
+                                <span className={`w-1.5 h-1.5 rounded-full ${log.status === 'error' ? 'bg-red-500' : 'bg-brand-800 dark:bg-brand-400'}`} />
                                 {log.status === 'error' ? 'Error' : 'Corregido'}
                               </span>
                             </td>

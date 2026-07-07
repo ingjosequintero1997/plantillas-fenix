@@ -22,15 +22,15 @@ export default function DragDrop({ onFile }) {
         onClick={() => inputRef.current?.click()}
         className={`relative overflow-hidden p-10 md:p-14 text-center transition-all duration-300 cursor-pointer rounded-2xl border-2 border-dashed ${
           hover
-            ? 'border-brand-800 bg-brand-50/60 border-solid shadow-sm shadow-brand-200/50'
-            : 'border-ink-line bg-white hover:border-brand-400 hover:bg-brand-50/30'
+            ? 'border-brand-800 bg-brand-50/60 dark:bg-brand-900/40 border-solid shadow-sm dark:shadow-black/40 shadow-brand-200/50 dark:shadow-brand-900/30'
+            : 'border-ink-line dark:border-[#3A3632] bg-white dark:bg-[#1E1C1A] hover:border-brand-400 dark:hover:border-brand-600 hover:bg-brand-50/30 dark:hover:bg-brand-900/20'
         }`}
       >
         <div className="relative">
           <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border-2 transition-all ${
-            hover
-              ? 'border-brand-800 bg-brand-100 text-brand-800 shadow-sm shadow-brand-200/50'
-              : 'border-brand-200/50 bg-brand-50 text-brand-700'
+          hover
+            ? 'border-brand-800 bg-brand-100 dark:bg-brand-800/50 text-brand-800 dark:text-brand-200 shadow-sm dark:shadow-black/40'
+            : 'border-brand-200/50 dark:border-brand-700/40 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
           }`}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

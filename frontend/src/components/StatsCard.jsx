@@ -11,7 +11,7 @@ export default function StatsCard({ label, value, color = 'neutral' }) {
   const c = COLOR_MAP[color] || COLOR_MAP.neutral
 
   return (
-    <div className="rounded-2xl border border-ink-line/50 bg-white p-4 md:p-5 shadow-sm" style={{ borderLeft: `3px solid ${c.border}` }}>
+    <div className="rounded-2xl border border-ink-line/50 dark:border-[#3A3632]/50 bg-white dark:bg-[#1E1C1A] p-4 md:p-5 shadow-sm dark:shadow-black/30" style={{ borderLeft: `3px solid ${c.border}` }}>
       <div className="text-[0.55rem] font-bold uppercase tracking-[0.15em] text-ink-muted">{label}</div>
       <div className="text-2xl md:text-3xl font-extrabold text-ink leading-tight mt-1">{value}</div>
     </div>

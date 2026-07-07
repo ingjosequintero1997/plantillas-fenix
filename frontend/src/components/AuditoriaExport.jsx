@@ -260,13 +260,13 @@ export default function AuditoriaExport({ onClose }) {
 
   return (
     <div className="card overflow-hidden relative animate-fade-in-up">
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-50/60 via-white to-white pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-brand-50/60 via-white to-white dark:from-brand-950/30 dark:via-[#1E1C1A] dark:to-[#1E1C1A] pointer-events-none" />
       <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand-700 via-brand-500 to-brand-300" />
 
       {/* Header */}
       <div className="relative px-8 py-7 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 bg-brand-50 rounded-full px-3 py-1 mb-3 ring-1 ring-brand-200/50">
+          <div className="inline-flex items-center gap-1.5 bg-brand-50 dark:bg-brand-900/40 rounded-full px-3 py-1 mb-3 ring-1 ring-brand-200/50 dark:ring-brand-700/40">
             <div className="w-2 h-2 rounded-full bg-brand-700" />
             <span className="text-[0.55rem] font-bold text-brand-800 tracking-[0.15em] uppercase">Auditoría</span>
           </div>
@@ -289,9 +289,9 @@ export default function AuditoriaExport({ onClose }) {
       {/* Body */}
       <div className="relative px-8 pb-8 space-y-5">
         {/* Step 1: Select template */}
-        <div className="rounded-xl border border-ink-line/60 bg-white p-5 space-y-3 transition-shadow hover:shadow-panel-hover">
+        <div className="rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 bg-white dark:bg-[#1E1C1A] p-5 space-y-3 transition-shadow hover:shadow-panel-hover dark:hover:shadow-black/50">
           <div className="flex items-center gap-3">
-            <span className="w-7 h-7 rounded-full bg-brand-100 text-brand-800 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40">1</span>
+            <span className="w-7 h-7 rounded-full bg-brand-100 dark:bg-brand-800/50 text-brand-800 dark:text-brand-200 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40 dark:ring-brand-700/40">1</span>
             <div>
               <span className="text-sm font-bold text-ink">Seleccionar plantilla</span>
               <p className="text-[0.55rem] text-ink-muted font-medium tracking-wider uppercase mt-0.5">Paso 1</p>
@@ -309,9 +309,9 @@ export default function AuditoriaExport({ onClose }) {
         </div>
 
         {/* Step 2: Upload file */}
-        <div className="rounded-xl border border-ink-line/60 bg-white p-5 space-y-3 transition-shadow hover:shadow-panel-hover">
+        <div className="rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 bg-white dark:bg-[#1E1C1A] p-5 space-y-3 transition-shadow hover:shadow-panel-hover dark:hover:shadow-black/50">
           <div className="flex items-center gap-3">
-            <span className="w-7 h-7 rounded-full bg-brand-100 text-brand-800 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40">2</span>
+            <span className="w-7 h-7 rounded-full bg-brand-100 dark:bg-brand-800/50 text-brand-800 dark:text-brand-200 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40 dark:ring-brand-700/40">2</span>
             <div>
               <span className="text-sm font-bold text-ink">Cargar archivo TXT</span>
               <p className="text-[0.55rem] text-ink-muted font-medium tracking-wider uppercase mt-0.5">Paso 2</p>
@@ -328,7 +328,7 @@ export default function AuditoriaExport({ onClose }) {
             <input ref={inputRef} type="file" accept=".txt" hidden
               onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setResult(null); setEvalData(null); setError('') } }} />
             {file && (
-              <span className="text-xs text-ink-muted flex items-center gap-2 bg-brand-50/50 rounded-lg px-3 py-1.5 border border-brand-100/60">
+              <span className="text-xs text-ink-muted dark:text-[#A0988E] flex items-center gap-2 bg-brand-50/50 dark:bg-brand-900/30 rounded-lg px-3 py-1.5 border border-brand-100/60 dark:border-brand-700/40">
                 <svg className="w-4 h-4 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -342,9 +342,9 @@ export default function AuditoriaExport({ onClose }) {
         </div>
 
         {/* Step 3: Process & export */}
-        <div className="rounded-xl border border-ink-line/60 bg-white p-5 space-y-3 transition-shadow hover:shadow-panel-hover">
+        <div className="rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 bg-white dark:bg-[#1E1C1A] p-5 space-y-3 transition-shadow hover:shadow-panel-hover dark:hover:shadow-black/50">
           <div className="flex items-center gap-3">
-            <span className="w-7 h-7 rounded-full bg-brand-100 text-brand-800 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40">3</span>
+            <span className="w-7 h-7 rounded-full bg-brand-100 dark:bg-brand-800/50 text-brand-800 dark:text-brand-200 text-xs font-bold flex items-center justify-center shrink-0 ring-2 ring-brand-200/40 dark:ring-brand-700/40">3</span>
             <div>
               <span className="text-sm font-bold text-ink">Generar Excel</span>
               <p className="text-[0.55rem] text-ink-muted font-medium tracking-wider uppercase mt-0.5">Paso 3</p>
@@ -353,7 +353,7 @@ export default function AuditoriaExport({ onClose }) {
 
           <div className="pl-10">
             {loading && (
-              <div className="flex items-center gap-3 text-xs text-ink-muted bg-brand-50/50 rounded-lg px-4 py-3 border border-brand-100/60">
+              <div className="flex items-center gap-3 text-xs text-ink-muted dark:text-[#A0988E] bg-brand-50/50 dark:bg-brand-900/30 rounded-lg px-4 py-3 border border-brand-100/60 dark:border-brand-700/40">
                 <svg className="w-4 h-4 text-brand-700 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -388,7 +388,7 @@ export default function AuditoriaExport({ onClose }) {
         {/* Result summary + detailed audit log */}
         {result?.summary && (
           <div className="space-y-4 animate-fade-in-up">
-            <div className="rounded-xl border border-brand-100/80 bg-gradient-to-br from-brand-50/60 to-white p-5 text-xs text-ink grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-xl border border-brand-100/80 dark:border-brand-800/50 bg-gradient-to-br from-brand-50/60 to-white dark:from-brand-950/40 dark:to-[#1E1C1A] p-5 text-xs text-ink grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-0.5">
                 <span className="text-[0.5rem] uppercase tracking-wider text-ink-muted font-semibold">Registros</span>
                 <div className="font-bold text-xl text-brand-900">{result.summary.total}</div>
@@ -409,8 +409,8 @@ export default function AuditoriaExport({ onClose }) {
 
             {/* Audit log por variable */}
             {result.logs && varList.length > 0 && (
-              <div className="rounded-xl border border-ink-line/60 overflow-hidden bg-white transition-shadow hover:shadow-panel-hover">
-                <div className="p-4 border-b border-ink-line/60 bg-brand-50/30 flex items-center gap-3 flex-wrap">
+              <div className="rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 overflow-hidden bg-white dark:bg-[#1E1C1A] transition-shadow hover:shadow-panel-hover dark:hover:shadow-black/50">
+                <div className="p-4 border-b border-ink-line/60 dark:border-[#3A3632]/60 bg-brand-50/30 dark:bg-brand-950/30 flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -431,7 +431,7 @@ export default function AuditoriaExport({ onClose }) {
                 <div className="overflow-x-auto scroll-thin">
                   <table className="min-w-full text-xs">
                     <thead>
-                      <tr className="bg-ink-line/20 border-b border-ink-line/60">
+                      <tr className="bg-ink-line/20 dark:bg-[#3A3632]/20 border-b border-ink-line/60 dark:border-[#3A3632]/60">
                         <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-8"></th>
                         <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Variable</th>
                         <th className="px-3 py-2.5 text-center text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted w-14">Total</th>
@@ -448,7 +448,7 @@ export default function AuditoriaExport({ onClose }) {
                         return (
                           <tr key={g.column}
                             onClick={() => setExpandedVar(isExpanded ? null : g.column)}
-                            className={`border-b border-surface-100 cursor-pointer transition-colors duration-150 hover:bg-brand-50/20 ${isExpanded ? 'bg-brand-50/30' : ''}`}>
+                            className={`border-b border-surface-100 dark:border-[#3A3632]/50 cursor-pointer transition-colors duration-150 hover:bg-brand-50/20 dark:hover:bg-brand-900/20 ${isExpanded ? 'bg-brand-50/30 dark:bg-brand-950/30' : ''}`}>
                             <td className="px-3 py-2.5 text-ink-muted">
                               <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -482,22 +482,22 @@ export default function AuditoriaExport({ onClose }) {
                   </table>
                 </div>
                 {totalVarPages > 1 && (
-                  <div className="p-3 border-t border-ink-line/60 bg-brand-50/20">
+                  <div className="p-3 border-t border-ink-line/60 dark:border-[#3A3632]/60 bg-brand-50/20 dark:bg-brand-950/20">
                     <Pagination page={logPage} totalPages={totalVarPages} onChange={setLogPage} />
                   </div>
                 )}
 
                 {/* Expandable detail per variable */}
                 {expandedVar && (
-                  <div className="border-t border-ink-line/60 bg-ink-line/5 animate-fade-in">
-                    <div className="px-4 py-2 border-b border-ink-line/40 flex items-center gap-2">
+                  <div className="border-t border-ink-line/60 dark:border-[#3A3632]/60 bg-ink-line/5 dark:bg-[#3A3632]/10 animate-fade-in">
+                    <div className="px-4 py-2 border-b border-ink-line/40 dark:border-[#3A3632]/40 flex items-center gap-2">
                       <span className="text-xs font-semibold text-ink">{expandedVar}</span>
                       <span className="text-xs text-ink-muted ml-auto">{expandedEntries.length} registros</span>
                     </div>
                     <div className="overflow-x-auto max-h-64 overflow-y-auto scroll-thin">
                       <table className="min-w-full text-xs">
                         <thead>
-                          <tr className="bg-white/60 border-b border-ink-line/40">
+                          <tr className="bg-white/60 dark:bg-[#1E1C1A]/60 border-b border-ink-line/40 dark:border-[#3A3632]/40">
                             <th className="px-3 py-2 text-left text-[0.4rem] font-bold uppercase tracking-wider text-ink-muted w-12">Fila</th>
                             <th className="px-3 py-2 text-left text-[0.4rem] font-bold uppercase tracking-wider text-ink-muted">Original</th>
                             <th className="px-3 py-2 text-center text-[0.4rem] font-bold uppercase tracking-wider text-ink-muted w-8"></th>
@@ -510,10 +510,10 @@ export default function AuditoriaExport({ onClose }) {
                             const isError = log.status === 'error'
                             const isCorrected = log.status === 'corrected'
                             return (
-                              <tr key={`${log.row}-${i}`} className={`border-b border-surface-100 ${isError ? 'bg-red-50/30' : isCorrected ? 'bg-amber-50/30' : ''}`}>
+                              <tr key={`${log.row}-${i}`} className={`border-b border-surface-100 dark:border-[#3A3632]/50 ${isError ? 'bg-red-50/30 dark:bg-red-950/20' : isCorrected ? 'bg-amber-50/30 dark:bg-amber-950/20' : ''}`}>
                                 <td className="px-3 py-1.5 text-ink-muted font-semibold whitespace-nowrap">{log.row}</td>
                                 <td className="px-3 py-1.5">
-                                  <span className={`inline-block font-mono text-[0.5rem] px-1.5 py-0.5 rounded ${isError || isCorrected ? 'bg-red-50 text-red-700 line-through decoration-red-400' : 'text-ink'}`}>
+                                  <span className={`inline-block font-mono text-[0.5rem] px-1.5 py-0.5 rounded ${isError || isCorrected ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 line-through decoration-red-400' : 'text-ink'}`}>
                                     {log.original || '—'}
                                   </span>
                                 </td>
@@ -523,7 +523,7 @@ export default function AuditoriaExport({ onClose }) {
                                   </svg>
                                 </td>
                                 <td className="px-3 py-1.5">
-                                  <span className={`inline-block font-mono text-[0.5rem] px-1.5 py-0.5 rounded ${isError ? 'bg-red-100 text-red-800 font-bold' : isCorrected ? 'bg-amber-100 text-amber-800 font-bold' : 'text-ink'}`}>
+                                  <span className={`inline-block font-mono text-[0.5rem] px-1.5 py-0.5 rounded ${isError ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-400 font-bold' : isCorrected ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 font-bold' : 'text-ink'}`}>
                                     {log.corrected || '—'}
                                   </span>
                                 </td>
@@ -541,7 +541,7 @@ export default function AuditoriaExport({ onClose }) {
                       </table>
                     </div>
                     {totalDetailPages > 1 && (
-                      <div className="p-3 border-t border-ink-line/40 bg-white/60">
+                      <div className="p-3 border-t border-ink-line/40 dark:border-[#3A3632]/40 bg-white/60 dark:bg-[#1E1C1A]/60">
                         <Pagination page={logPage} totalPages={totalDetailPages} onChange={setLogPage} />
                       </div>
                     )}
@@ -566,7 +566,7 @@ export default function AuditoriaExport({ onClose }) {
         )}
 
         {evalLoading && (
-          <div className="flex items-center justify-center gap-3 text-sm text-ink-muted bg-brand-50/80 rounded-xl px-5 py-4 border border-brand-200/50 animate-fade-in">
+          <div className="flex items-center justify-center gap-3 text-sm text-ink-muted dark:text-[#A0988E] bg-brand-50/80 dark:bg-brand-950/40 rounded-xl px-5 py-4 border border-brand-200/50 dark:border-brand-700/40 animate-fade-in">
             <svg className="w-5 h-5 text-brand-700 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -576,7 +576,7 @@ export default function AuditoriaExport({ onClose }) {
         )}
 
         {error && (
-          <div className="rounded-xl border border-red-200/80 bg-gradient-to-br from-red-50/80 to-white p-4 text-xs text-red-700 flex items-start gap-2 animate-fade-in">
+          <div className="rounded-xl border border-red-200/80 dark:border-red-800/50 bg-gradient-to-br from-red-50/80 to-white dark:from-red-950/40 dark:to-[#1E1C1A] p-4 text-xs text-red-700 dark:text-red-400 flex items-start gap-2 animate-fade-in">
             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -587,7 +587,7 @@ export default function AuditoriaExport({ onClose }) {
         {/* ─── Evaluation Dashboard (inline) ─── */}
         {evalData && (
           <div className="space-y-5 pt-5 animate-fade-in-up">
-            <div className="flex items-center justify-between flex-wrap gap-3 bg-gradient-to-br from-brand-50/60 to-white rounded-xl px-5 py-4 border border-brand-100/80">
+            <div className="flex items-center justify-between flex-wrap gap-3 bg-gradient-to-br from-brand-50/60 to-white dark:from-brand-950/40 dark:to-[#1E1C1A] rounded-xl px-5 py-4 border border-brand-100/80 dark:border-brand-800/50">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-8 rounded-full bg-brand-700" />
                 <div>
@@ -611,7 +611,7 @@ export default function AuditoriaExport({ onClose }) {
                 const metaConfig = META_LABELS[ind.META]
                 const isGood = metaConfig ? val >= metaConfig.bueno : false
                 return (
-                  <div key={ind.INDICADOR} className="rounded-xl border border-ink-line/60 bg-white p-4 text-center transition-shadow hover:shadow-panel-hover">
+                  <div key={ind.INDICADOR} className="rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 bg-white dark:bg-[#1E1C1A] p-4 text-center transition-shadow hover:shadow-panel-hover dark:hover:shadow-black/50">
                     <div className="text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted mb-2">{SHORT_LABELS[ind.INDICADOR] || ind.INDICADOR}</div>
                     <div className={`text-2xl font-extrabold ${isGood ? 'text-brand-700' : 'text-red-500'}`}>
                       {isNaN(val) ? '—' : `${val.toFixed(1)}%`}
@@ -628,8 +628,8 @@ export default function AuditoriaExport({ onClose }) {
             </div>
 
             {/* Patient filter & table */}
-            <div className="rounded-xl border border-ink-line/60 overflow-hidden bg-white transition-shadow hover:shadow-panel-hover">
-              <div className="p-4 border-b border-ink-line/60 bg-brand-50/30 flex items-center gap-3 flex-wrap">
+            <div className="rounded-xl border border-ink-line/60 dark:border-[#3A3632]/60 overflow-hidden bg-white dark:bg-[#1E1C1A] transition-shadow hover:shadow-panel-hover dark:hover:shadow-black/50">
+              <div className="p-4 border-b border-ink-line/60 dark:border-[#3A3632]/60 bg-brand-50/30 dark:bg-brand-950/30 flex items-center gap-3 flex-wrap">
                 <span className="text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Filtrar</span>
                 <select value={filterKey} onChange={(e) => { setFilterKey(e.target.value); setPatientPage(1) }}
                   className="select text-xs max-w-xs">
@@ -645,7 +645,7 @@ export default function AuditoriaExport({ onClose }) {
               <div className="overflow-x-auto max-h-80 overflow-y-auto scroll-thin">
                 <table className="min-w-full text-xs">
                   <thead>
-                    <tr className="bg-brand-50/20 border-b border-ink-line/60">
+                    <tr className="bg-brand-50/20 dark:bg-brand-950/20 border-b border-ink-line/60 dark:border-[#3A3632]/60">
                       <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">#</th>
                       <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Documento</th>
                       <th className="px-3 py-2.5 text-left text-[0.45rem] font-bold uppercase tracking-wider text-ink-muted">Nombre</th>
@@ -656,7 +656,7 @@ export default function AuditoriaExport({ onClose }) {
                   </thead>
                   <tbody>
                     {paginatedPatients.map(p => (
-                      <tr key={p._index} className="border-b border-surface-100 hover:bg-brand-50/20 transition-colors duration-150">
+                      <tr key={p._index} className="border-b border-surface-100 dark:border-[#3A3632]/50 hover:bg-brand-50/20 dark:hover:bg-brand-900/20 transition-colors duration-150">
                         <td className="px-3 py-2 text-ink-muted font-semibold">{p._index}</td>
                         <td className="px-3 py-2 font-mono text-ink">{p._documento}</td>
                         <td className="px-3 py-2 text-ink">{p._nombreCompleto}</td>
@@ -682,7 +682,7 @@ export default function AuditoriaExport({ onClose }) {
                   </tbody>
                 </table>
               </div>
-              <div className="p-3 border-t border-ink-line/60 bg-brand-50/20">
+              <div className="p-3 border-t border-ink-line/60 dark:border-[#3A3632]/60 bg-brand-50/20 dark:bg-brand-950/20">
                 <Pagination page={patientPage} totalPages={patientTotalPages} onChange={setPatientPage} />
               </div>
             </div>

@@ -61,14 +61,14 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
 
   const cellStatus = (rowIndex, columnName) => {
     const status = (logMap[rowIndex + 1] && logMap[rowIndex + 1][columnName]) || 'ok'
-    if (status === 'error') return { cls: 'border-red-200 bg-red-50/30 text-red-600', label: 'Error' }
-    if (status === 'corrected') return { cls: 'border-brand-200 bg-brand-50/40 text-ink', label: 'Corregido' }
-    return { cls: 'border-ink-line/40 bg-white text-ink', label: 'Ok' }
+    if (status === 'error') return { cls: 'border-red-200 dark:border-red-800/50 bg-red-50/30 dark:bg-red-950/30 text-red-600 dark:text-red-400', label: 'Error' }
+    if (status === 'corrected') return { cls: 'border-brand-200 dark:border-brand-700/40 bg-brand-50/40 dark:bg-brand-900/30 text-ink', label: 'Corregido' }
+    return { cls: 'border-ink-line/40 dark:border-[#3A3632]/40 bg-white dark:bg-[#1E1C1A] text-ink', label: 'Ok' }
   }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 bg-[#F8F7F4] p-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 dark:border-[#3A3632]/50 bg-[#F8F7F4] dark:bg-[#181715] p-3 md:flex-row md:items-center md:justify-between">
           <div className="text-sm font-bold text-ink">
             Registros: <span className="text-ink-muted font-semibold">{rows.length}</span>
             <span className="mx-2 text-ink-line">·</span>
@@ -88,7 +88,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 bg-white p-2 scroll-thin shadow-sm">
+        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 dark:border-[#3A3632]/50 bg-white dark:bg-[#1E1C1A] p-2 scroll-thin shadow-sm dark:shadow-black/30">
           {filteredIndexes.length === 0 && (
             <div className="p-4 text-sm text-ink-muted text-center">Sin resultados para este filtro</div>
           )}
@@ -101,8 +101,8 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
                   onClick={() => setSelectedRow(idx)}
                   className={`w-full rounded-xl border p-3 text-left transition-all duration-150 ${
                     safeSelected === idx
-                      ? 'ring-2 ring-brand-800/15 shadow-md border-brand-800/30'
-                      : 'border-ink-line/50 bg-white hover:border-ink-line/70 hover:shadow-sm'
+                      ? 'ring-2 ring-brand-800/15 dark:ring-brand-500/20 shadow-md dark:shadow-black/40 border-brand-800/30 dark:border-brand-500/30'
+                      : 'border-ink-line/50 dark:border-[#3A3632]/50 bg-white dark:bg-[#1E1C1A] hover:border-ink-line/70 dark:hover:border-[#3A3632] hover:shadow-sm'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -116,8 +116,8 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
           </div>
         </div>
 
-        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 bg-white p-3 md:p-4 scroll-thin shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3 sticky top-0 bg-white pb-2 border-b border-ink-line/50">
+        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 dark:border-[#3A3632]/50 bg-white dark:bg-[#1E1C1A] p-3 md:p-4 scroll-thin shadow-sm dark:shadow-black/30">
+          <div className="mb-3 flex items-center justify-between gap-3 sticky top-0 bg-white dark:bg-[#1E1C1A] pb-2 border-b border-ink-line/50 dark:border-[#3A3632]/50">
             <h3 className="text-sm font-bold text-ink">Registro {safeSelected + 1}</h3>
             <span className={`text-[0.45rem] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 ${rowStatus(safeSelected).cls}`}>
               {rowStatus(safeSelected).label}
@@ -129,7 +129,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
               const value = activeRow[ci] || '—'
               const status = cellStatus(safeSelected, col)
               return (
-                <div key={`${col}-${ci}`} className={`rounded-xl border p-3 transition-colors ${status.cls}`}>
+                <div key={`${col}-${ci}`} className={`rounded-xl border p-3 transition-colors ${status.cls} dark:border-[#3A3632]/50`}>
                   <div className="mb-1 text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">{col}</div>
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div className="text-sm font-medium text-ink break-words">{value}</div>
