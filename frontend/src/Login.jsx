@@ -51,7 +51,7 @@ export default function Login() {
       </div>
 
       {/* ─── Phoenix tiled pattern ─── */}
-      <div className="absolute inset-0 pointer-events-none select-none text-brand-800/20 dark:text-white/[0.12]">
+      <div className="absolute inset-0 pointer-events-none select-none text-brand-700/20 dark:text-brand-600/20">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="phoenix-tile" x="0" y="0" width="140" height="140" patternUnits="userSpaceOnUse">
