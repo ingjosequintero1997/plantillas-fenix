@@ -1,4 +1,5 @@
 import * as pako from 'pako'
+import * as XLSX from 'xlsx'
 
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 const rawBase = (import.meta.env.VITE_API_BASE || (isLocalhost ? 'http://localhost:8000' : '/api')).trim()
@@ -46,15 +47,22 @@ function parseApiError(data, fallback) {
   return fallback || 'Error inesperado'
 }
 
+function xlsxToPipeText(arrayBuffer) {
+  const wb = XLSX.read(arrayBuffer, { type: 'array', dense: true })
+  const ws = wb.Sheets[wb.SheetNames[0]]
+  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  return data.map(row => row.map(cell => String(cell).replace(/[\r\n]+/g, ' ')).join('|')).join('\n')
+}
+
 export function uploadFile(file, templateKey, onProgress, options = {}) {
   return new Promise((resolve, reject) => {
     const strictMode = options.strictMode ?? false
     const minTemplateCoverage = options.minTemplateCoverage ?? 95
     const requireExactColumns = options.requireExactColumns ?? true
 
-    const doUpload = (body) => {
+    const doUpload = (body, filename) => {
       const form = new FormData()
-      form.append('file', body, file.name)
+      form.append('file', body, filename || file.name)
       form.append('template_key', templateKey || 'rcv')
       form.append('strict_mode', String(strictMode))
       form.append('min_template_coverage', String(minTemplateCoverage))
@@ -88,15 +96,25 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
       xhr.send(form)
     }
 
-    // Comprimir archivos TXT > 1 MB para evitar límite de 4.5 MB de Vercel
-    const isText = file.name.toLowerCase().endsWith('.txt')
-    const MAX_SIZE = 4.3 * 1024 * 1024
-    if (!isText && file.size > MAX_SIZE) {
-      const mb = (file.size / 1024 / 1024).toFixed(1)
-      reject(new Error(`El archivo Excel es demasiado grande (${mb} MB). El límite es 4.3 MB. Convierte los datos a formato TXT (pipe-delimited) que sí se comprime automáticamente, o divide el Excel en partes más pequeñas.`))
-      return
-    }
-    if (isText && file.size > 1024 * 1024) {
+    const isExcel = /\.xlsx?$/i.test(file.name)
+    const isText = /\.txt$/i.test(file.name)
+
+    if (isExcel) {
+      // Leer Excel en frontend, convertir a pipe-text y comprimir
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const pipeText = xlsxToPipeText(reader.result)
+          const compressed = pako.gzip(pipeText)
+          doUpload(new Blob([compressed], { type: 'application/gzip' }), file.name.replace(/\.xlsx?$/i, '.txt'))
+        } catch (e) {
+          reject(new Error(`Error al leer el Excel: ${e.message}. Asegúrate de que sea un archivo .xlsx válido.`))
+        }
+      }
+      reader.onerror = () => reject(new Error('Error al leer el archivo'))
+      reader.readAsArrayBuffer(file)
+    } else if (isText && file.size > 1024 * 1024) {
+      // TXT grande: comprimir con gzip
       const reader = new FileReader()
       reader.onload = () => {
         try {
