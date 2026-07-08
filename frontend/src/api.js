@@ -1,5 +1,4 @@
 import * as pako from 'pako'
-import * as XLSX from 'xlsx'
 
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 const rawBase = (import.meta.env.VITE_API_BASE || (isLocalhost ? 'http://localhost:8000' : '/api')).trim()
@@ -47,138 +46,61 @@ function parseApiError(data, fallback) {
   return fallback || 'Error inesperado'
 }
 
-function xlsxToPipeText(arrayBuffer) {
-  const wb = XLSX.read(arrayBuffer, { type: 'array' })
-  const ws = wb.Sheets[wb.SheetNames[0]]
-  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1')
-  const rows = []
-  for (let r = range.s.r; r <= range.e.r; r++) {
-    const row = []
-    for (let c = range.s.c; c <= range.e.c; c++) {
-      const addr = XLSX.utils.encode_cell({ r, c })
-      const cell = ws[addr]
-      row.push(cell ? String(cell.v).replace(/[\r\n]+/g, ' ') : '')
-    }
-    rows.push(row.join('|'))
-  }
-  return rows.join('\n')
-}
-
-const CHUNK_SIZE = 200  // filas por lote para evitar timeout 10s de Vercel Hobby
-
-function splitIntoChunks(pipeText, chunkSize) {
-  const lines = pipeText.split('\n')
-  if (lines.length <= chunkSize + 1) return [pipeText]
-  const header = lines[0]
-  const dataLines = lines.slice(1).filter(l => l.trim())
-  const chunks = []
-  for (let i = 0; i < dataLines.length; i += chunkSize) {
-    chunks.push([header, ...dataLines.slice(i, i + chunkSize)].join('\n'))
-  }
-  return chunks
-}
-
 export function uploadFile(file, templateKey, onProgress, options = {}) {
   return new Promise((resolve, reject) => {
     const strictMode = options.strictMode ?? false
     const minTemplateCoverage = options.minTemplateCoverage ?? 95
     const requireExactColumns = options.requireExactColumns ?? true
 
-    const doSingleUpload = (body, filename) => {
-      return new Promise((resolveSingle, rejectSingle) => {
-        const form = new FormData()
-        form.append('file', body, filename || file.name)
-        form.append('template_key', templateKey || 'rcv')
-        form.append('strict_mode', String(strictMode))
-        form.append('min_template_coverage', String(minTemplateCoverage))
-        form.append('require_exact_columns', String(requireExactColumns))
+    const doUpload = (body, filename) => {
+      const form = new FormData()
+      form.append('file', body, filename || file.name)
+      form.append('template_key', templateKey || 'rcv')
+      form.append('strict_mode', String(strictMode))
+      form.append('min_template_coverage', String(minTemplateCoverage))
+      form.append('require_exact_columns', String(requireExactColumns))
 
-        const xhr = new XMLHttpRequest()
-        xhr.open('POST', `${API_BASE}/upload`)
-        const h = authHeaders()
-        if (h.Authorization) xhr.setRequestHeader('Authorization', h.Authorization)
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `${API_BASE}/upload`)
+      const h = authHeaders()
+      if (h.Authorization) xhr.setRequestHeader('Authorization', h.Authorization)
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100))
-        }
-
-        xhr.onload = () => {
-          const status = xhr.status
-          try {
-            const data = JSON.parse(xhr.responseText)
-            if (status >= 200 && status < 300) resolveSingle(data)
-            else rejectSingle(new Error(parseApiError(data, xhr.responseText)))
-          } catch {
-            rejectSingle(new Error(`Error ${status} — el servidor no respondió con JSON válido.`))
-          }
-        }
-
-        xhr.onerror = () => rejectSingle(new Error('Error de conexión'))
-        xhr.send(form)
-      })
-    }
-
-    const pipeTextFromFile = () => {
-      return new Promise((resolvePipe, rejectPipe) => {
-        const isExcel = /\.xlsx?$/i.test(file.name)
-        if (isExcel) {
-          const reader = new FileReader()
-          reader.onload = () => {
-            try { resolvePipe(xlsxToPipeText(reader.result)) }
-            catch (e) { rejectPipe(new Error(`Error al leer el Excel: ${e.message}`)) }
-          }
-          reader.onerror = () => rejectPipe(new Error('Error al leer el archivo'))
-          reader.readAsArrayBuffer(file)
-        } else {
-          const reader = new FileReader()
-          reader.onload = () => resolvePipe(reader.result)
-          reader.onerror = () => rejectPipe(new Error('Error al leer el archivo'))
-          reader.readAsText(file)
-        }
-      })
-    }
-
-    pipeTextFromFile().then((fullPipeText) => {
-      const chunks = splitIntoChunks(fullPipeText, CHUNK_SIZE)
-      const totalChunks = chunks.length
-      const uploadChunk = async (idx, results) => {
-        if (idx >= totalChunks) return results
-        const chunkText = chunks[idx]
-        const compressed = pako.gzip(chunkText)
-        const blob = new Blob([compressed], { type: 'application/gzip' })
-        const filename = file.name.replace(/\.xlsx?$/i, '.txt')
-        const result = await doSingleUpload(blob, filename)
-        results.push(result)
-        if (onProgress) onProgress(Math.round(((idx + 1) / totalChunks) * 100))
-        return uploadChunk(idx + 1, results)
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100))
       }
 
-      uploadChunk(0, []).then((results) => {
-        // Combinar resultados
-        const combined = {
-          success: true,
-          template_key: results[0].template_key,
-          mapping: results[0].mapping,
-          mapping_suggested: results[0].mapping_suggested,
-          template_names: results[0].template_names,
-          corrected_text: results.map(r => r.corrected_text).join('\n'),
-          raw_text: fullPipeText,
-          preview_rows: results[0].preview_rows || [],
-          summary: results.reduce((acc, r) => ({
-            total: acc.total + (r.summary?.total || 0),
-            errors: acc.errors + (r.summary?.errors || 0),
-            corrected: acc.corrected + (r.summary?.corrected || 0),
-            ok: acc.ok + (r.summary?.ok || 0),
-            quality_percent: 100,
-          }), { total: 0, errors: 0, corrected: 0, ok: 0, quality_percent: 100 }),
-          logs_sample: results.flatMap(r => r.logs_sample || []).slice(0, 1000),
+      xhr.onload = () => {
+        const status = xhr.status
+        try {
+          const data = JSON.parse(xhr.responseText)
+          if (status >= 200 && status < 300) resolve(data)
+          else reject(new Error(parseApiError(data, xhr.responseText)))
+        } catch {
+          reject(new Error(`Error ${status} — el servidor no respondió con JSON válido.`))
         }
-        // Recalcular quality_percent
-        const totalCells = Math.max(1, combined.summary.total * (results[0].template_names?.length || 1))
-        combined.summary.quality_percent = Math.round(100 * (1 - combined.summary.errors / totalCells))
-        resolve(combined)
-      }).catch(reject)
-    }).catch(reject)
+      }
+
+      xhr.onerror = () => reject(new Error('Error de conexión'))
+      xhr.send(form)
+    }
+
+    const isText = /\.txt$/i.test(file.name)
+
+    if (isText && file.size > 512 * 1024) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const compressed = pako.gzip(reader.result)
+          doUpload(new Blob([compressed], { type: 'application/gzip' }))
+        } catch {
+          doUpload(file)
+        }
+      }
+      reader.onerror = () => doUpload(file)
+      reader.readAsText(file)
+    } else {
+      doUpload(file)
+    }
   })
 }
 
