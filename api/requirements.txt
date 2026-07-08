@@ -6,4 +6,3 @@ python-dateutil
 numpy
 openpyxl
 pydantic
-pyjwt

@@ -5,9 +5,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import pandas as pd
 import io
 import re
+import hashlib
+import hmac
+import json
+import base64
 from datetime import datetime, timedelta
 from pydantic import BaseModel
-import jwt
 try:
 	from .utils import fuzzy_map, normalize_text
 	from .templates_registry import get_template_by_key, list_templates_meta
@@ -42,11 +45,8 @@ app.add_middleware(
 )
 
 # ─── Auth ────────────────────────────────────────────────────────────────
-JWT_SECRET = os.environ.get("JWT_SECRET", "fenix-secret-key-change-in-production")
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRY_HOURS = 8
+TOKEN_SECRET = os.environ.get("TOKEN_SECRET", "fenix-secret-change-in-production")
 
-# Credenciales fijas (reemplazar con DB en producción)
 USERS = {
     "admin": {"password": "admin123", "name": "Administrador", "role": "admin"},
 }
@@ -58,26 +58,36 @@ class LoginPayload(BaseModel):
     password: str
 
 def create_token(username: str) -> str:
-    payload = {
-        "sub": username,
-        "iat": datetime.utcnow(),
-        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS),
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    payload = json.dumps({"sub": username, "exp": (datetime.utcnow() + timedelta(hours=8)).isoformat()})
+    b64 = base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
+    sig = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
+    return f"{b64}.{sig}"
+
+def verify_token(token: str) -> str | None:
+    try:
+        b64, sig = token.split(".")
+        expected = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return None
+        padded = b64 + "=" * (4 - len(b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded))
+        exp = datetime.fromisoformat(payload["exp"])
+        if datetime.utcnow() > exp:
+            return None
+        return payload["sub"]
+    except Exception:
+        return None
 
 def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
     if credentials is None:
         raise HTTPException(status_code=401, detail="No autorizado")
-    try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        username = payload.get("sub")
-        if username not in USERS:
-            raise HTTPException(status_code=401, detail="Usuario no encontrado")
-        return USERS[username]
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Sesión expirada")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Token inválido")
+    username = verify_token(credentials.credentials)
+    if username is None:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    user = USERS.get(username)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    return user
 
 @app.post("/auth/login")
 async def auth_login(payload: LoginPayload):

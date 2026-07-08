@@ -5,8 +5,12 @@ const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase
 export const DOWNLOAD_TEMPLATE_URL = (key) => `${API_BASE}/download-template/${key}`
 
 function authHeaders() {
-  const token = localStorage.getItem('auth_token')
-  return token ? { 'Authorization': `Bearer ${token}` } : {}
+  try {
+    const raw = localStorage.getItem('auth')
+    if (!raw) return {}
+    const data = JSON.parse(raw)
+    return data.token ? { 'Authorization': `Bearer ${data.token}` } : {}
+  } catch { return {} }
 }
 
 async function apiFetch(url, options = {}) {
@@ -55,8 +59,8 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${API_BASE}/upload`)
-    const token = localStorage.getItem('auth_token')
-    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    const h = authHeaders()
+    if (h.Authorization) xhr.setRequestHeader('Authorization', h.Authorization)
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {

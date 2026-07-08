@@ -1,45 +1,47 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import axios from 'axios'
-
-const API = axios.create({ baseURL: import.meta.env.VITE_API_BASE?.trim() || '' })
+import { useNavigate } from 'react-router-dom'
 
 const AuthContext = createContext(null)
 
+function getStored() {
+  try {
+    const raw = localStorage.getItem('auth')
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch { return null }
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [token, setToken] = useState(() => localStorage.getItem('auth_token'))
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(() => getStored())
 
-  const isAuthenticated = !!token
-
-  useEffect(() => {
-    if (token) {
-      API.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      API.get('/auth/me').then(r => setUser(r.data.user)).catch(() => logout())
-        .finally(() => setLoading(false))
-    } else {
-      setLoading(false)
-    }
-  }, [token])
+  const isAuthenticated = !!user
 
   const login = useCallback(async (username, password) => {
-    const { data } = await API.post('/auth/login', { username, password })
-    localStorage.setItem('auth_token', data.token)
-    API.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
-    setToken(data.token)
-    setUser(data.user)
-    return data
+    const base = (import.meta.env.VITE_API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api')).trim().replace(/\/+$/, '')
+    const resp = await fetch(`${base}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    })
+    const text = await resp.text()
+    if (!resp.ok) {
+      let detail = 'Error de conexión'
+      try { detail = JSON.parse(text).detail || detail } catch { detail = text || detail }
+      throw new Error(detail)
+    }
+    const data = JSON.parse(text)
+    const userData = { ...data.user, token: data.token }
+    localStorage.setItem('auth', JSON.stringify(userData))
+    setUser(userData)
   }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('auth_token')
-    delete API.defaults.headers.common['Authorization']
-    setToken(null)
+    localStorage.removeItem('auth')
     setUser(null)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated, loading, login, logout, api: API }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
