@@ -6,3 +6,4 @@ rapidfuzz
 python-dateutil
 numpy
 openpyxl
+pyjwt

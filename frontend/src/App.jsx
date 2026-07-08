@@ -1,4 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './AuthContext'
+import Login from './Login'
+import ProtectedRoute from './ProtectedRoute'
 import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
@@ -193,7 +197,11 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F3EF] dark:bg-[#0D0D0F]">
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/" element={
+        <ProtectedRoute>
+          <div className="min-h-screen bg-[#F5F3EF] dark:bg-[#0D0D0F]">
 
       {/* ─── Header ─── */}
       <header className="bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 shadow-lg shadow-brand-900/15">
@@ -683,5 +691,8 @@ export default function App() {
         </>)}
       </div>
     </div>
+        </ProtectedRoute>
+      } />
+    </Routes>
   )
 }

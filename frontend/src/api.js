@@ -4,8 +4,16 @@ const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase
 
 export const DOWNLOAD_TEMPLATE_URL = (key) => `${API_BASE}/download-template/${key}`
 
+function authHeaders() {
+  const token = localStorage.getItem('auth_token')
+  return token ? { 'Authorization': `Bearer ${token}` } : {}
+}
+
 async function apiFetch(url, options = {}) {
-  const resp = await fetch(url, options)
+  const resp = await fetch(url, {
+    ...options,
+    headers: { ...options.headers, ...authHeaders() },
+  })
   const text = await resp.text()
   if (!resp.ok) throw new Error(text)
   try {
@@ -47,6 +55,8 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${API_BASE}/upload`)
+    const token = localStorage.getItem('auth_token')
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
@@ -72,7 +82,7 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
 export async function exportFile(corrected_text, filename = 'export_corrigido.txt') {
   const resp = await fetch(`${API_BASE}/export`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ corrected_text, filename }),
   })
   if (!resp.ok) throw new Error(await resp.text())
@@ -83,7 +93,7 @@ export async function evaluateData(corrected_text, template_names, templateKey, 
   const url = `${API_BASE}/evaluate?format=${format}`
   const resp = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ corrected_text, template_names, template_key: templateKey || 'rcv' }),
   })
   const text = await resp.text()

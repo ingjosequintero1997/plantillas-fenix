@@ -1,11 +1,13 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Query
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Query, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import pandas as pd
 import io
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import BaseModel
+import jwt
 try:
 	from .utils import fuzzy_map, normalize_text
 	from .templates_registry import get_template_by_key, list_templates_meta
@@ -38,6 +40,56 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── Auth ────────────────────────────────────────────────────────────────
+JWT_SECRET = os.environ.get("JWT_SECRET", "fenix-secret-key-change-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRY_HOURS = 8
+
+# Credenciales fijas (reemplazar con DB en producción)
+USERS = {
+    "admin": {"password": "admin123", "name": "Administrador", "role": "admin"},
+}
+
+security = HTTPBearer(auto_error=False)
+
+class LoginPayload(BaseModel):
+    username: str
+    password: str
+
+def create_token(username: str) -> str:
+    payload = {
+        "sub": username,
+        "iat": datetime.utcnow(),
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        username = payload.get("sub")
+        if username not in USERS:
+            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+        return USERS[username]
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+@app.post("/auth/login")
+async def auth_login(payload: LoginPayload):
+    user = USERS.get(payload.username)
+    if not user or user["password"] != payload.password:
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+    token = create_token(payload.username)
+    return {"token": token, "user": {"username": payload.username, "name": user["name"], "role": user["role"]}}
+
+@app.get("/auth/me")
+async def auth_me(current_user: dict = Depends(get_current_user)):
+    return {"user": {"username": current_user["name"], "name": current_user["name"], "role": current_user["role"]}}
 
 @app.get("/health")
 async def health():
