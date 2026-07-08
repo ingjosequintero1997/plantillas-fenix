@@ -690,6 +690,13 @@ export default function App() {
         )}
         </>)}
       </div>
+
+      {/* Footer */}
+      <div className="border-t border-ink-line/40 dark:border-[#666669]/40 py-4 px-5 text-center">
+        <p className="text-[0.5rem] text-ink-faint uppercase tracking-wider font-medium">
+          Desarrollado por el Ing. José Quintero &mdash; Todos los derechos reservados &copy; {new Date().getFullYear()}
+        </p>
+      </div>
     </div>
         </ProtectedRoute>
       } />

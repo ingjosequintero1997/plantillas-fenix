@@ -98,7 +98,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-[0.5rem] text-ink-faint mt-6 uppercase tracking-wider font-medium">
-          &copy; {new Date().getFullYear()} FÉNIX — Todos los derechos reservados
+          Desarrollado por el Ing. José Quintero &mdash; Todos los derechos reservados &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>
