@@ -84,23 +84,60 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
       xhr.send(form)
     }
 
-    const isText = /\.txt$/i.test(file.name)
+    const CHUNK_MB = 1
+    const CHUNK_BYTES = CHUNK_MB * 1024 * 1024
+    const totalChunks = Math.ceil(file.size / CHUNK_BYTES)
 
-    if (isText && file.size > 512 * 1024) {
-      const reader = new FileReader()
-      reader.onload = () => {
-        try {
-          const compressed = pako.gzip(reader.result)
-          doUpload(new Blob([compressed], { type: 'application/gzip' }))
-        } catch {
-          doUpload(file)
-        }
-      }
-      reader.onerror = () => doUpload(file)
-      reader.readAsText(file)
-    } else {
+    if (totalChunks <= 1) {
       doUpload(file)
+      return
     }
+
+    const uploadId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+
+    ;(async () => {
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_BYTES
+        const end = Math.min(start + CHUNK_BYTES, file.size)
+        const chunk = file.slice(start, end)
+
+        const form = new FormData()
+        form.append('chunk', chunk)
+        form.append('upload_id', uploadId)
+        form.append('chunk_index', String(i))
+        form.append('total_chunks', String(totalChunks))
+        form.append('original_name', file.name)
+        form.append('template_key', templateKey || 'rcv')
+        form.append('strict_mode', String(strictMode))
+        form.append('min_template_coverage', String(minTemplateCoverage))
+        form.append('require_exact_columns', String(requireExactColumns))
+
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', `${API_BASE}/upload-chunk`)
+        const h = authHeaders()
+        if (h.Authorization) xhr.setRequestHeader('Authorization', h.Authorization)
+
+        const result = await new Promise((res, rej) => {
+          xhr.onload = () => {
+            try {
+              const data = JSON.parse(xhr.responseText)
+              if (xhr.status >= 200 && xhr.status < 300) res(data)
+              else rej(new Error(parseApiError(data, xhr.responseText)))
+            } catch {
+              rej(new Error(`Error ${xhr.status} en chunk ${i + 1}/${totalChunks}`))
+            }
+          }
+          xhr.onerror = () => rej(new Error('Error de conexión'))
+          xhr.send(form)
+        })
+
+        if (result?.done) {
+          resolve(result)
+          return
+        }
+        if (onProgress) onProgress(Math.round(((i + 1) / totalChunks) * 100))
+      }
+    })()
   })
 }
 

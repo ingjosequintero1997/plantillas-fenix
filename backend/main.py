@@ -376,6 +376,118 @@ async def upload_file(
 	except Exception as e:
 		raise HTTPException(status_code=500, detail=str(e))
 
+import tempfile
+import os as _os
+
+@app.post("/upload-chunk")
+async def upload_chunk(
+	chunk: UploadFile = File(...),
+	upload_id: str = Form(...),
+	chunk_index: int = Form(...),
+	total_chunks: int = Form(...),
+	original_name: str = Form(...),
+	template_key: str = Form(default="rcv"),
+	strict_mode: bool = Form(default=False),
+	min_template_coverage: float = Form(default=95.0),
+	require_exact_columns: bool = Form(default=True),
+):
+	tmp_dir = tempfile.gettempdir()
+	chunk_path = _os.path.join(tmp_dir, f"fenix_{upload_id}_{chunk_index}")
+	data = await chunk.read()
+	with open(chunk_path, "wb") as f:
+		f.write(data)
+
+	# Si no es el último chunk, responder "done: false"
+	if chunk_index < total_chunks - 1:
+		return {"done": False}
+
+	# Último chunk: reensamblar y procesar
+	try:
+		parts = []
+		for i in range(total_chunks):
+			p = _os.path.join(tmp_dir, f"fenix_{upload_id}_{i}")
+			with open(p, "rb") as f:
+				parts.append(f.read())
+		contents = b"".join(parts)
+
+		# Limpiar chunks temporales
+		for i in range(total_chunks):
+			p = _os.path.join(tmp_dir, f"fenix_{upload_id}_{i}")
+			try:
+				_os.remove(p)
+			except Exception:
+				pass
+
+		# Procesar como upload normal
+		meta = get_template_by_key(template_key)
+		active_template = meta["template"]
+		active_names = template_names(active_template)
+		template_key = meta["key"]
+		filename = original_name.lower()
+
+		if not (filename.endswith('.txt') or filename.endswith('.xlsx') or filename.endswith('.xls')):
+			raise HTTPException(status_code=400, detail="Solo se permiten .txt, .xlsx o .xls")
+
+		if len(contents) >= 2 and contents[:2] == b'\x1f\x8b':
+			try:
+				contents = gzip.decompress(contents)
+			except Exception:
+				pass
+
+		if filename.endswith('.txt'):
+			text = contents.decode(errors='replace')
+			df = parse_pipe_text(text)
+			df = normalize_source_dataframe(df, active_names)
+		else:
+			df = parse_excel_bytes(contents)
+			df = normalize_source_dataframe(df, active_names)
+
+		if len(df) == 0:
+			raise HTTPException(status_code=400, detail="Archivo vacío")
+
+		orig_headers = list(df.columns)
+		map_suggest = infer_mapping(orig_headers, active_template)
+		mapping_stats = build_mapping_stats(orig_headers, map_suggest, len(active_names))
+		structure_validation = build_structure_validation(orig_headers, len(active_names), len(df))
+		strict_validation = {
+			"strict_mode": bool(strict_mode),
+			"min_template_coverage": float(min_template_coverage),
+			"require_exact_columns": bool(require_exact_columns),
+		}
+		strict_reasons = []
+
+		if strict_mode:
+			reasons = []
+			if mapping_stats["template_coverage_percent"] < float(min_template_coverage):
+				reasons.append(f"Cobertura de plantilla insuficiente ({mapping_stats['template_coverage_percent']}% < {float(min_template_coverage)}%).")
+			if require_exact_columns and structure_validation["input_columns"] != structure_validation["template_columns"]:
+				reasons.append(f"Estructura invalida: columnas de archivo ({structure_validation['input_columns']}) distintas a columnas de plantilla ({structure_validation['template_columns']}).")
+			if mapping_stats["unmapped_headers"]:
+				reasons.append(f"Existen encabezados no mapeados: {', '.join(mapping_stats['unmapped_headers'][:20])}")
+			strict_reasons = reasons
+
+		strict_validation["status"] = "warning" if strict_reasons else "ok"
+		strict_validation["reasons"] = strict_reasons
+		if strict_mode and strict_reasons:
+			raise HTTPException(status_code=400, detail={
+				"message": "El archivo no cumple con los requisitos del modo estricto",
+				"reasons": strict_reasons,
+			})
+
+		canonical_raw_text = df.to_csv(sep='|', index=False, header=True)
+		payload = build_response_payload(df, map_suggest, canonical_raw_text, template_key, active_template)
+		return {"done": True, **payload, **{
+			"original_headers": orig_headers,
+			"template_names": template_names(active_template),
+			"mapping_stats": mapping_stats,
+			"structure_validation": structure_validation,
+			"strict_validation": strict_validation,
+		}}
+	except HTTPException:
+		raise
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/revalidate")
 async def revalidate(payload: RevalidatePayload):
 	try:
