@@ -265,12 +265,13 @@ def to_date_iso(v):
 	if isinstance(v, (int, float)):
 		serial = int(v)
 	elif isinstance(v, str):
-		# Intentar como entero primero, luego como float (ej: "45123.0")
+		# Intentar como entero primero, luego como float (ej: "45123.0"), luego con coma decimal (ej: "45123,0")
+		cleaned = v.strip().replace(",", ".")
 		try:
-			serial = int(v)
+			serial = int(cleaned)
 		except (ValueError, TypeError):
 			try:
-				serial = int(float(v))
+				serial = int(float(cleaned))
 			except (ValueError, TypeError):
 				pass
 	if serial is not None and 1 <= serial <= 60000:
