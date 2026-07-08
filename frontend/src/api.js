@@ -69,12 +69,13 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
     }
 
     xhr.onload = () => {
+      const status = xhr.status
       try {
         const data = JSON.parse(xhr.responseText)
-        if (xhr.status >= 200 && xhr.status < 300) resolve(data)
+        if (status >= 200 && status < 300) resolve(data)
         else reject(new Error(parseApiError(data, xhr.responseText)))
       } catch {
-        reject(new Error(`Respuesta inválida desde ${API_BASE}/upload`))
+        reject(new Error(`Error ${status} — el servidor no respondió con JSON válido. Verifica que el backend esté funcionando.`))
       }
     }
 
