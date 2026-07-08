@@ -88,8 +88,15 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
       xhr.send(form)
     }
 
-    // Comprimir archivos > 1 MB para evitar límite de 4.5 MB de Vercel
-    if (file.size > 1024 * 1024) {
+    // Comprimir archivos TXT > 1 MB para evitar límite de 4.5 MB de Vercel
+    const isText = file.name.toLowerCase().endsWith('.txt')
+    const MAX_SIZE = 4.3 * 1024 * 1024
+    if (!isText && file.size > MAX_SIZE) {
+      const mb = (file.size / 1024 / 1024).toFixed(1)
+      reject(new Error(`El archivo Excel es demasiado grande (${mb} MB). El límite es 4.3 MB. Convierte los datos a formato TXT (pipe-delimited) que sí se comprime automáticamente, o divide el Excel en partes más pequeñas.`))
+      return
+    }
+    if (isText && file.size > 1024 * 1024) {
       const reader = new FileReader()
       reader.onload = () => {
         try {
