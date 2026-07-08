@@ -15,7 +15,10 @@ import { exportFile, fetchTemplates, revalidateData, uploadFile, DOWNLOAD_TEMPLA
 const AUDIT_PER_PAGE = 50
 
 export default function App() {
+  const { user, logout } = useAuth()
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true')
+
+  const handleLogout = () => logout()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
@@ -228,6 +231,17 @@ export default function App() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {user && (
+                <span className="hidden md:inline text-white/50 text-[0.5rem] font-semibold uppercase tracking-wider mr-1">
+                  {user.name}
+                </span>
+              )}
+              <button onClick={handleLogout}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center ring-1 ring-white/10 transition-all" title="Cerrar sesión">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
               <button onClick={() => setDarkMode(!darkMode)}
                 className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center ring-1 ring-white/10 transition-all" title={darkMode ? 'Modo claro' : 'Modo oscuro'}>
                 {darkMode ? (

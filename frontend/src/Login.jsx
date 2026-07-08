@@ -32,10 +32,31 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F3EF] dark:bg-[#0D0D0F] flex items-center justify-center p-6 transition-colors duration-300">
-      <div className="w-full max-w-sm animate-fade-in-up">
+    <div className="relative min-h-screen bg-[#F5F3EF] dark:bg-[#0D0D0F] flex items-center justify-center p-6 overflow-hidden transition-colors duration-300">
 
-        {/* Brand */}
+      {/* ─── Background pattern ─── */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.04]">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1.5" fill="#1E293B" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#dots)" />
+        </svg>
+      </div>
+
+      {/* ─── Phoenix watermark ─── */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.04] dark:opacity-[0.06]">
+        <svg className="w-[70vmin] h-[70vmin] text-[#1E293B] dark:text-white" viewBox="0 0 32 32" fill="none">
+          <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="currentColor" opacity="0.35" />
+          <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="currentColor" opacity="0.65" />
+          <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="currentColor" />
+        </svg>
+      </div>
+
+      {/* ─── Brand ─── */}
+      <div className="relative w-full max-w-sm animate-fade-in-up">
         <div className="text-center mb-8">
           <div className="mx-auto mb-5 w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 shadow-lg shadow-brand-900/25 flex items-center justify-center">
             <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -46,35 +67,18 @@ export default function Login() {
           <p className="text-sm text-ink-muted/80 mt-1">Validador de Plantillas PYM</p>
         </div>
 
-        {/* Card */}
+        {/* ─── Card ─── */}
         <div className="bg-white dark:bg-[#333337] rounded-2xl border border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 p-7">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="block text-[0.55rem] font-bold uppercase tracking-[0.15em] text-ink-muted">
-                Usuario
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={e => { setUsername(e.target.value); setError('') }}
-                placeholder="Ingresa tu usuario"
-                autoFocus
-                autoComplete="username"
-                className="input"
-              />
+              <label className="block text-[0.55rem] font-bold uppercase tracking-[0.15em] text-ink-muted">Usuario</label>
+              <input type="text" value={username} onChange={e => { setUsername(e.target.value); setError('') }}
+                placeholder="Ingresa tu usuario" autoFocus autoComplete="username" className="input" />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[0.55rem] font-bold uppercase tracking-[0.15em] text-ink-muted">
-                Contraseña
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => { setPassword(e.target.value); setError('') }}
-                placeholder="Ingresa tu contraseña"
-                autoComplete="current-password"
-                className="input"
-              />
+              <label className="block text-[0.55rem] font-bold uppercase tracking-[0.15em] text-ink-muted">Contraseña</label>
+              <input type="password" value={password} onChange={e => { setPassword(e.target.value); setError('') }}
+                placeholder="Ingresa tu contraseña" autoComplete="current-password" className="input" />
             </div>
 
             {error && (
@@ -102,7 +106,7 @@ export default function Login() {
           </form>
         </div>
 
-        {/* Footer */}
+        {/* ─── Footer ─── */}
         <p className="text-center text-[0.5rem] text-ink-faint mt-8 uppercase tracking-wider font-medium leading-relaxed">
           Desarrollado por el Ing. José Quintero<br />
           Todos los derechos reservados &copy; {new Date().getFullYear()}
