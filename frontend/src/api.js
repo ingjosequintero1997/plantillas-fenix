@@ -48,10 +48,20 @@ function parseApiError(data, fallback) {
 }
 
 function xlsxToPipeText(arrayBuffer) {
-  const wb = XLSX.read(arrayBuffer, { type: 'array', dense: true })
+  const wb = XLSX.read(arrayBuffer, { type: 'array' })
   const ws = wb.Sheets[wb.SheetNames[0]]
-  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-  return data.map(row => row.map(cell => String(cell).replace(/[\r\n]+/g, ' ')).join('|')).join('\n')
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1')
+  const rows = []
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const row = []
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c })
+      const cell = ws[addr]
+      row.push(cell ? String(cell.v).replace(/[\r\n]+/g, ' ') : '')
+    }
+    rows.push(row.join('|'))
+  }
+  return rows.join('\n')
 }
 
 const CHUNK_SIZE = 200  // filas por lote para evitar timeout 10s de Vercel Hobby
