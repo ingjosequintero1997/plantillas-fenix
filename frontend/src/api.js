@@ -46,6 +46,13 @@ function parseApiError(data, fallback) {
 
 export function uploadFile(file, templateKey, onProgress, options = {}) {
   return new Promise((resolve, reject) => {
+    const MAX_SIZE = 4 * 1024 * 1024 // 4 MB (Vercel Hobby limit es 4.5 MB)
+    if (file.size > MAX_SIZE) {
+      const mb = (file.size / 1024 / 1024).toFixed(1)
+      reject(new Error(`El archivo es demasiado grande (${mb} MB). El límite es 4 MB. Divide el archivo en partes más pequeñas o reduce el número de registros.`))
+      return
+    }
+
     const strictMode = options.strictMode ?? false
     const minTemplateCoverage = options.minTemplateCoverage ?? 95
     const requireExactColumns = options.requireExactColumns ?? true
@@ -70,6 +77,10 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
 
     xhr.onload = () => {
       const status = xhr.status
+      if (status === 413) {
+        reject(new Error('El archivo es demasiado grande para el servidor (413). Límite: ~4.5 MB. Divide el archivo en partes más pequeñas.'))
+        return
+      }
       try {
         const data = JSON.parse(xhr.responseText)
         if (status >= 200 && status < 300) resolve(data)
