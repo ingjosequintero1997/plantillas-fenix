@@ -50,12 +50,19 @@ export default function Login() {
         </svg>
       </div>
 
-      {/* ─── Phoenix watermark ─── */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-        <svg className="w-[80vmin] h-[80vmin] text-brand-800/10 dark:text-white/[0.07]" viewBox="0 0 32 32" fill="none">
-          <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="currentColor" opacity="0.35" />
-          <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="currentColor" opacity="0.65" />
-          <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="currentColor" />
+      {/* ─── Phoenix tiled pattern ─── */}
+      <div className="absolute inset-0 pointer-events-none select-none text-brand-800/20 dark:text-white/[0.12]">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="phoenix-tile" x="0" y="0" width="140" height="140" patternUnits="userSpaceOnUse">
+              <g transform="translate(70,70) scale(2.2)">
+                <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="currentColor" opacity="0.35" />
+                <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="currentColor" opacity="0.65" />
+                <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="currentColor" />
+              </g>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#phoenix-tile)" />
         </svg>
       </div>
 
