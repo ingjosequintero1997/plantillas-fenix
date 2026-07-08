@@ -5,6 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import pandas as pd
 import io
 import re
+import gzip
 import hashlib
 import hmac
 import json
@@ -308,6 +309,12 @@ async def upload_file(
 	
 	try:
 		contents = await file.read()
+		# Detectar y descomprimir gzip (enviado desde frontend para archivos > 1 MB)
+		if len(contents) >= 2 and contents[:2] == b'\x1f\x8b':
+			try:
+				contents = gzip.decompress(contents)
+			except Exception:
+				pass
 		if filename.endswith('.txt'):
 			text = contents.decode(errors='replace')
 			df = parse_pipe_text(text)

@@ -1,3 +1,5 @@
+import * as pako from 'pako'
+
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 const rawBase = (import.meta.env.VITE_API_BASE || (isLocalhost ? 'http://localhost:8000' : '/api')).trim()
 const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase
@@ -46,52 +48,62 @@ function parseApiError(data, fallback) {
 
 export function uploadFile(file, templateKey, onProgress, options = {}) {
   return new Promise((resolve, reject) => {
-    const MAX_SIZE = 4 * 1024 * 1024 // 4 MB (Vercel Hobby limit es 4.5 MB)
-    if (file.size > MAX_SIZE) {
-      const mb = (file.size / 1024 / 1024).toFixed(1)
-      reject(new Error(`El archivo es demasiado grande (${mb} MB). El límite es 4 MB. Divide el archivo en partes más pequeñas o reduce el número de registros.`))
-      return
-    }
-
     const strictMode = options.strictMode ?? false
     const minTemplateCoverage = options.minTemplateCoverage ?? 95
     const requireExactColumns = options.requireExactColumns ?? true
 
-    const form = new FormData()
-    form.append('file', file)
-    form.append('template_key', templateKey || 'rcv')
-    form.append('strict_mode', String(strictMode))
-    form.append('min_template_coverage', String(minTemplateCoverage))
-    form.append('require_exact_columns', String(requireExactColumns))
+    const doUpload = (body) => {
+      const form = new FormData()
+      form.append('file', body, file.name)
+      form.append('template_key', templateKey || 'rcv')
+      form.append('strict_mode', String(strictMode))
+      form.append('min_template_coverage', String(minTemplateCoverage))
+      form.append('require_exact_columns', String(requireExactColumns))
 
-    const xhr = new XMLHttpRequest()
-    xhr.open('POST', `${API_BASE}/upload`)
-    const h = authHeaders()
-    if (h.Authorization) xhr.setRequestHeader('Authorization', h.Authorization)
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `${API_BASE}/upload`)
+      const h = authHeaders()
+      if (h.Authorization) xhr.setRequestHeader('Authorization', h.Authorization)
 
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) {
-        onProgress(Math.round((e.loaded / e.total) * 100))
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100))
       }
+
+      xhr.onload = () => {
+        const status = xhr.status
+        if (status === 413) {
+          reject(new Error('El archivo es demasiado grande para el servidor (413). Límite: ~4.5 MB. Divide el archivo en partes más pequeñas.'))
+          return
+        }
+        try {
+          const data = JSON.parse(xhr.responseText)
+          if (status >= 200 && status < 300) resolve(data)
+          else reject(new Error(parseApiError(data, xhr.responseText)))
+        } catch {
+          reject(new Error(`Error ${status} — el servidor no respondió con JSON válido. Verifica que el backend esté funcionando.`))
+        }
+      }
+
+      xhr.onerror = () => reject(new Error('Error de conexión'))
+      xhr.send(form)
     }
 
-    xhr.onload = () => {
-      const status = xhr.status
-      if (status === 413) {
-        reject(new Error('El archivo es demasiado grande para el servidor (413). Límite: ~4.5 MB. Divide el archivo en partes más pequeñas.'))
-        return
+    // Comprimir archivos > 1 MB para evitar límite de 4.5 MB de Vercel
+    if (file.size > 1024 * 1024) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const compressed = pako.gzip(reader.result)
+          doUpload(new Blob([compressed], { type: 'application/gzip' }))
+        } catch {
+          doUpload(file)
+        }
       }
-      try {
-        const data = JSON.parse(xhr.responseText)
-        if (status >= 200 && status < 300) resolve(data)
-        else reject(new Error(parseApiError(data, xhr.responseText)))
-      } catch {
-        reject(new Error(`Error ${status} — el servidor no respondió con JSON válido. Verifica que el backend esté funcionando.`))
-      }
+      reader.onerror = () => doUpload(file)
+      reader.readAsText(file)
+    } else {
+      doUpload(file)
     }
-
-    xhr.onerror = () => reject(new Error('Error de conexión'))
-    xhr.send(form)
   })
 }
 
