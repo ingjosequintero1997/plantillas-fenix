@@ -465,6 +465,11 @@ async def download_template(template_key: str):
 
         if f['type'] == 'DATE':
             cell2.number_format = 'yyyy-mm-dd'
+            # Aplicar formato de fecha a 100 filas para que al pegar datos Excel reconozca seriales como fechas
+            for r in range(3, 102):
+                c = ws.cell(row=r, column=col_idx)
+                c.number_format = 'yyyy-mm-dd'
+                c.border = thin_border
 
         allowed = f.get('allowed', [])
         if allowed:
