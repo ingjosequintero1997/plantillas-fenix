@@ -51,14 +51,14 @@ export default function Login() {
       </div>
 
       {/* ─── Phoenix tiled pattern ─── */}
-      <div className="absolute inset-0 pointer-events-none select-none text-brand-700/20 dark:text-brand-600/20">
+      <div className="absolute inset-0 pointer-events-none select-none">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="phoenix-tile" x="0" y="0" width="140" height="140" patternUnits="userSpaceOnUse">
               <g transform="translate(70,70) scale(2.2)">
-                <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="currentColor" opacity="0.35" />
-                <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="currentColor" opacity="0.65" />
-                <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="currentColor" />
+                <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="#388E3C" opacity="0.15" />
+                <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="#388E3C" opacity="0.25" />
+                <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="#388E3C" opacity="0.4" />
               </g>
             </pattern>
           </defs>
