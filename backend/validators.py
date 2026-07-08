@@ -265,10 +265,14 @@ def to_date_iso(v):
 	if isinstance(v, (int, float)):
 		serial = int(v)
 	elif isinstance(v, str):
+		# Intentar como entero primero, luego como float (ej: "45123.0")
 		try:
 			serial = int(v)
 		except (ValueError, TypeError):
-			pass
+			try:
+				serial = int(float(v))
+			except (ValueError, TypeError):
+				pass
 	if serial is not None and 1 <= serial <= 60000:
 		try:
 			base = datetime(1899, 12, 30)
