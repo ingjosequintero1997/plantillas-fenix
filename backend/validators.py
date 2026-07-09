@@ -196,11 +196,14 @@ def to_int_safe(v):
 	if raw == "":
 		return None
 
+	# Eliminar guiones (separadores de teléfono) antes de parsear
+	clean = raw.replace("-", "")
+
 	# Soporta entradas decimales para campos enteros (ej: 35,0 o 35.0).
 	# NOTA: debe ir ANTES del compact para no concatenar dígitos de la parte decimal.
-	numeric = raw.replace(" ", "")
+	numeric = clean.replace(" ", "")
 	numeric = numeric.replace(",", ".")
-	numeric = re.sub(r"[^0-9.\-+]", "", numeric)
+	numeric = re.sub(r"[^0-9.+]", "", numeric)
 	if re.fullmatch(r"[+-]?\d+(\.\d+)?", numeric):
 		try:
 			return int(float(numeric))
@@ -210,7 +213,7 @@ def to_int_safe(v):
 	# Soporta teléfonos/identificaciones con separadores y texto accidental.
 	# Solo aplica cuando NO hay punto decimal en el original.
 	if "." not in raw:
-		compact = re.sub(r"[^0-9+\-]", "", raw)
+		compact = re.sub(r"[^0-9+]", "", clean)
 		if re.fullmatch(r"[+-]?\d+", compact):
 			return int(compact)
 
