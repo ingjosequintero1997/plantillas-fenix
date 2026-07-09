@@ -10,7 +10,7 @@ import StatsCard from './components/StatsCard'
 import EvaluationDashboard from './components/EvaluationDashboard'
 import AuditoriaExport from './components/AuditoriaExport'
 import Pagination from './components/Pagination'
-import { exportFile, fetchTemplates, revalidateData, uploadFile, DOWNLOAD_TEMPLATE_URL } from './api'
+import { fetchTemplates, revalidateData, uploadFile, DOWNLOAD_TEMPLATE_URL } from './api'
 
 const AUDIT_PER_PAGE = 50
 
@@ -174,11 +174,12 @@ export default function App() {
 
   const handleExport = async () => {
     try {
-      const blob = await exportFile(correctedText)
+      const filename = `export_${selectedTemplate}_${new Date().toISOString().slice(0, 10)}.txt`
+      const blob = new Blob([correctedText], { type: 'text/plain;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `export_${selectedTemplate}_${new Date().toISOString().slice(0, 10)}.txt`
+      a.download = filename
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
