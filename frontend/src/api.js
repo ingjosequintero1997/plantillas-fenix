@@ -8,7 +8,7 @@ export const DOWNLOAD_TEMPLATE_URL = (key) => `${API_BASE}/download-template/${k
 
 function authHeaders() {
   try {
-    const raw = localStorage.getItem('auth')
+    const raw = sessionStorage.getItem('auth')
     if (!raw) return {}
     const data = JSON.parse(raw)
     return data.token ? { 'Authorization': `Bearer ${data.token}` } : {}

@@ -5,7 +5,7 @@ const AuthContext = createContext(null)
 
 function getStored() {
   try {
-    const raw = localStorage.getItem('auth')
+    const raw = sessionStorage.getItem('auth')
     if (!raw) return null
     return JSON.parse(raw)
   } catch { return null }
@@ -31,12 +31,12 @@ export function AuthProvider({ children }) {
     }
     const data = JSON.parse(text)
     const userData = { ...data.user, token: data.token }
-    localStorage.setItem('auth', JSON.stringify(userData))
+    sessionStorage.setItem('auth', JSON.stringify(userData))
     setUser(userData)
   }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('auth')
+    sessionStorage.removeItem('auth')
     setUser(null)
   }, [])
 
