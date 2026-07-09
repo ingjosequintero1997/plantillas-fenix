@@ -207,13 +207,14 @@ export default function App() {
           <div className="min-h-screen bg-[#F5F3EF] dark:bg-[#0D0D0F]">
 
       {/* ─── Header ─── */}
-      <header className="bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 shadow-lg shadow-brand-900/15">
-        <div className="mx-auto max-w-[1200px] px-5 md:px-8">
+      <header className="relative bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 shadow-lg shadow-brand-900/15 border-b border-white/5">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
+        <div className="mx-auto max-w-[1200px] px-5 md:px-8 relative">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm ring-1 ring-white/20 shadow-inner shadow-white/5">
-                  <svg className="w-6 h-6 text-white" viewBox="0 0 32 32" fill="none">
+                <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20 shadow-inner shadow-white/5 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white drop-shadow-sm" viewBox="0 0 32 32" fill="none">
                     <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="currentColor" opacity="0.35" />
                     <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="currentColor" opacity="0.65" />
                     <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="currentColor" />
@@ -221,29 +222,36 @@ export default function App() {
                 </div>
                 <div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-white font-extrabold text-base tracking-wider">FÉNIX</span>
-                    <span className="text-white/60 text-[0.65rem] font-medium uppercase tracking-[0.2em]">Validación de plantillas</span>
+                    <span className="text-white font-extrabold text-base tracking-wider drop-shadow-sm">FÉNIX</span>
+                    <span className="text-white/50 text-[0.6rem] font-medium uppercase tracking-[0.2em] hidden sm:inline">Validación de plantillas</span>
                   </div>
-                  <span className="text-white/50 text-[0.6rem] font-light leading-tight block">
+                  <span className="text-white/40 text-[0.55rem] font-light leading-tight block">
                     Asociación de Cabildos Indígenas del Cesar y La Guajira
                   </span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2">
               {user && (
-                <span className="hidden md:inline text-white/50 text-[0.5rem] font-semibold uppercase tracking-wider mr-1">
+                <span className="hidden md:inline-flex items-center gap-1.5 bg-white/10 rounded-full pl-2.5 pr-3 py-1 text-white/60 text-[0.5rem] font-semibold uppercase tracking-wider ring-1 ring-white/10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
                   {user.name}
                 </span>
               )}
-              <button onClick={handleLogout}
-                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center ring-1 ring-white/10 transition-all" title="Cerrar sesión">
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
+              {selectedTemplateMeta && (
+                <span className="hidden lg:inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1 text-white/50 text-[0.45rem] font-semibold tracking-wider uppercase ring-1 ring-white/10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                  {selectedTemplateMeta.fields} variables
+                </span>
+              )}
+              <label className="hidden sm:flex items-center gap-1.5 cursor-pointer group px-2 py-1 rounded-lg hover:bg-white/5 transition-colors">
+                <input type="checkbox" checked={strictMode} onChange={(e) => setStrictMode(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-white/30 bg-white/10 text-brand-400 accent-brand-400 focus:ring-0 cursor-pointer transition-all" />
+                <span className="text-[0.45rem] font-semibold text-white/35 tracking-wider uppercase group-hover:text-white/55 transition-colors">Estricto</span>
+              </label>
+              <div className="w-px h-6 bg-white/10 mx-0.5" />
               <button onClick={() => setDarkMode(!darkMode)}
-                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center ring-1 ring-white/10 transition-all" title={darkMode ? 'Modo claro' : 'Modo oscuro'}>
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center ring-1 ring-white/10 transition-all hover:scale-105 active:scale-95" title={darkMode ? 'Modo claro' : 'Modo oscuro'}>
                 {darkMode ? (
                   <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -254,17 +262,12 @@ export default function App() {
                   </svg>
                 )}
               </button>
-              {selectedTemplateMeta && (
-                <span className="hidden md:inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1 text-white/70 text-[0.5rem] font-semibold tracking-wider uppercase ring-1 ring-white/10">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                  {selectedTemplateMeta.fields} variables
-                </span>
-              )}
-              <label className="flex items-center gap-1.5 cursor-pointer group">
-                <input type="checkbox" checked={strictMode} onChange={(e) => setStrictMode(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-white/30 bg-white/10 text-brand-500 accent-brand-500 focus:ring-0 cursor-pointer transition-all" />
-                <span className="text-[0.5rem] font-semibold text-white/40 tracking-wider uppercase group-hover:text-white/60 transition-colors">Estricto</span>
-              </label>
+              <button onClick={handleLogout}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center ring-1 ring-white/10 transition-all hover:scale-105 active:scale-95" title="Cerrar sesión">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -273,17 +276,21 @@ export default function App() {
       <div className="mx-auto max-w-[1200px] px-5 md:px-8 py-8 md:py-12 space-y-8">
 
         {/* ─── Hero ─── */}
-        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-50/60 via-white to-white dark:from-brand-950/50 dark:via-[#333337] dark:to-[#333337] shadow-sm">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-800 via-brand-500 to-brand-300 rounded-r-sm" />
-          <div className="relative px-8 md:px-12 py-10 md:py-12">
-            <div className="inline-flex items-center gap-1.5 bg-brand-100/70 dark:bg-brand-900/40 rounded-full px-3 py-1 mb-4 ring-1 ring-brand-200/50 dark:ring-brand-700/40">
-              <div className="w-2 h-2 rounded-full bg-brand-700" />
-              <span className="text-[0.55rem] font-bold text-brand-800 dark:text-brand-200 tracking-[0.15em] uppercase">Bienvenido</span>
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-50 via-white to-white dark:from-brand-950/40 dark:via-[#333337] dark:to-[#333337] shadow-sm">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-200/10 via-transparent to-transparent dark:from-brand-800/10 pointer-events-none" />
+          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand-600 via-brand-400 to-brand-300 rounded-r-sm" />
+          <div className="relative px-8 md:px-12 py-10 md:py-14">
+            <div className="inline-flex items-center gap-1.5 bg-brand-100/80 dark:bg-brand-900/40 rounded-full px-3 py-1 mb-4 ring-1 ring-brand-200/50 dark:ring-brand-700/40 shadow-sm">
+              <div className="w-2 h-2 rounded-full bg-brand-600 animate-pulse" />
+              <span className="text-[0.5rem] font-bold text-brand-800 dark:text-brand-200 tracking-[0.15em] uppercase">Bienvenido</span>
             </div>
-            <h1 className="text-[clamp(1.8rem,5vw,3rem)] font-extrabold text-ink tracking-tight leading-[1.1]">
-              Valida tus plantillas<br />de indicadores
+            <h1 className="text-[clamp(2rem,5vw,3.2rem)] font-extrabold text-ink tracking-tight leading-[1.1]">
+              Valida tus plantillas<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 dark:from-brand-300 dark:via-brand-400 dark:to-brand-500">
+                de indicadores
+              </span>
             </h1>
-            <p className="text-sm text-ink-muted/90 mt-3 max-w-xl font-normal leading-relaxed">
+            <p className="text-sm text-ink-muted/80 mt-3 max-w-xl font-normal leading-relaxed">
               Carga tu archivo, selecciona la plantilla y obtén los datos listos al instante.
             </p>
           </div>
@@ -291,33 +298,40 @@ export default function App() {
 
         {/* ─── Módulos ─── */}
         <section className="animate-fade-in-up">
-          <div className="flex items-center justify-between gap-4 mb-5">
-            <div className="section-header">
-              <div className="section-header-bar" />
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 shadow-md shadow-brand-900/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              </div>
               <div>
                 <h2 className="text-base font-bold text-ink tracking-tight">Plantillas</h2>
-                <p className="text-xs text-ink-muted/70 mt-0.5">Selecciona la plantilla según los datos a procesar</p>
+                <p className="text-xs text-ink-muted/60 mt-0.5">Selecciona según los datos a procesar</p>
               </div>
             </div>
-            <span className="badge-gray shrink-0">{templates.length} disponible{templates.length !== 1 ? 's' : ''}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.5rem] font-semibold uppercase tracking-wider bg-brand-50 dark:bg-brand-900/30 text-brand-800 dark:text-brand-200 border border-brand-200/50 dark:border-brand-700/40">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
+              {templates.length} disponible{templates.length !== 1 ? 's' : ''}
+            </span>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {templates.map((item, idx) => {
               const isSelected = selectedTemplate === item.key
               const num = String(idx + 1).padStart(2, '0')
               const accent = [
-                { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200', border: 'border-brand-300/40 dark:border-brand-700/40', light: 'bg-brand-50 dark:bg-brand-900/30' },
-                { dot: 'bg-rose-600', tag: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300', border: 'border-rose-300/40 dark:border-rose-700/40', light: 'bg-rose-50 dark:bg-rose-900/30' },
-                { dot: 'bg-amber-600', tag: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', border: 'border-amber-300/40 dark:border-amber-700/40', light: 'bg-amber-50 dark:bg-amber-900/30' },
-                { dot: 'bg-sky-600', tag: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300', border: 'border-sky-300/40 dark:border-sky-700/40', light: 'bg-sky-50 dark:bg-sky-900/30' },
-                { dot: 'bg-violet-600', tag: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', border: 'border-violet-300/40 dark:border-violet-700/40', light: 'bg-violet-50 dark:bg-violet-900/30' },
-              ][idx] || { dot: 'bg-brand-700', tag: 'bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200', border: 'border-brand-300/40 dark:border-brand-700/40', light: 'bg-brand-50 dark:bg-brand-900/30' }
+                { dot: 'bg-brand-600', tag: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300', border: 'border-brand-300/40 dark:border-brand-700/40', light: 'bg-brand-50 dark:bg-brand-900/30' },
+                { dot: 'bg-rose-500', tag: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300', border: 'border-rose-300/40 dark:border-rose-700/40', light: 'bg-rose-50 dark:bg-rose-900/30' },
+                { dot: 'bg-amber-500', tag: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', border: 'border-amber-300/40 dark:border-amber-700/40', light: 'bg-amber-50 dark:bg-amber-900/30' },
+                { dot: 'bg-sky-500', tag: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300', border: 'border-sky-300/40 dark:border-sky-700/40', light: 'bg-sky-50 dark:bg-sky-900/30' },
+                { dot: 'bg-violet-500', tag: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', border: 'border-violet-300/40 dark:border-violet-700/40', light: 'bg-violet-50 dark:bg-violet-900/30' },
+              ][idx] || { dot: 'bg-brand-600', tag: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300', border: 'border-brand-300/40 dark:border-brand-700/40', light: 'bg-brand-50 dark:bg-brand-900/30' }
               const short = { rcv: 'RCV', gestante: 'GEST', citologia: 'CITO', mamografia: 'MAMO', penta: 'PENTA' }[item.key] || item.key.toUpperCase()
               return (
-                <div key={item.key} className={`relative transition-all duration-200 rounded-2xl bg-white dark:bg-[#333337] border ${
+                <div key={item.key} className={`relative transition-all duration-300 rounded-2xl bg-white dark:bg-[#333337] border ${
                   isSelected
-                    ? 'ring-2 ring-brand-800/15 dark:ring-brand-500/20 shadow-md dark:shadow-black/40 border-brand-800/30 dark:border-brand-500/30'
-                    : 'border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 hover:shadow-md dark:hover:shadow-black/50 hover:-translate-y-0.5 hover:border-ink-line/70 dark:hover:border-[#666669]'
+                    ? 'ring-2 ring-brand-800/20 dark:ring-brand-500/20 shadow-lg dark:shadow-black/50 border-brand-800/40 dark:border-brand-500/40'
+                    : 'border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 hover:shadow-lg dark:hover:shadow-black/50 hover:-translate-y-1 hover:border-brand-300/40 dark:hover:border-brand-600/40'
                 }`}>
                   <button onClick={() => {
                     setSelectedTemplate(item.key); setCurrentTemplateLabel(item.label)
@@ -332,7 +346,7 @@ export default function App() {
                     )}
                     <div className="flex items-center gap-3 mb-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all text-sm font-bold ${
-                        isSelected ? `${accent.dot} text-white shadow-sm` : `${accent.light} text-brand-800 dark:text-brand-200`
+                        isSelected ? `${accent.dot} text-white shadow-md` : `${accent.light} text-ink`
                       }`}>
                         {num}
                       </div>
@@ -341,16 +355,16 @@ export default function App() {
                         <span className="text-sm font-bold text-ink">{item.label}</span>
                       </div>
                     </div>
-                    <p className="text-xs text-ink-muted/80 leading-relaxed mb-4">{item.description}</p>
+                    <p className="text-xs text-ink-muted/70 leading-relaxed mb-4 line-clamp-2">{item.description}</p>
                     <div className="flex items-center gap-3">
-                      <span className="badge-green">{item.fields} variables</span>
-                      <span className={`text-[0.5rem] font-bold tracking-wider rounded-md px-2 py-0.5 ${accent.tag}`}>{short}</span>
+                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.45rem] font-bold uppercase tracking-wider bg-brand-50 dark:bg-brand-900/30 text-brand-800 dark:text-brand-200 border border-brand-200/50 dark:border-brand-700/40">{item.fields} variables</span>
+                      <span className={`text-[0.45rem] font-bold tracking-wider rounded-md px-2 py-0.5 ${accent.tag}`}>{short}</span>
                     </div>
                   </button>
-                  <div className="px-5 pb-4 pt-0 border-t border-ink-line/30">
+                  <div className="px-5 pb-4 pt-0 border-t border-ink-line/20 dark:border-[#666669]/30">
                     <a href={DOWNLOAD_TEMPLATE_URL(item.key)}
-                      className="inline-flex items-center gap-1.5 text-[0.55rem] font-semibold text-brand-700 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300 transition-colors">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      className="inline-flex items-center gap-1.5 text-[0.5rem] font-semibold text-brand-600 hover:text-brand-500 dark:text-brand-400 dark:hover:text-brand-300 transition-colors group/download">
+                      <svg className="w-3.5 h-3.5 transition-transform group-hover/download:-translate-y-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                       Descargar plantilla
@@ -362,23 +376,23 @@ export default function App() {
           </div>
 
           {/* ─── Módulo Auditoría ─── */}
-          <div className={`relative transition-all duration-200 rounded-2xl bg-white dark:bg-[#333337] border mt-5 ${
+          <div className={`relative transition-all duration-300 rounded-2xl bg-white dark:bg-[#333337] border mt-5 ${
             showAuditoria
-              ? 'ring-2 ring-amber-500/15 dark:ring-amber-500/20 shadow-md dark:shadow-black/40 border-amber-400/30'
-              : 'border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 hover:shadow-md dark:hover:shadow-black/50 hover:-translate-y-0.5 hover:border-ink-line/70 dark:hover:border-[#666669]'
+              ? 'ring-2 ring-amber-500/20 dark:ring-amber-500/20 shadow-lg dark:shadow-black/50 border-amber-400/40'
+              : 'border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 hover:shadow-lg dark:hover:shadow-black/50 hover:-translate-y-1 hover:border-amber-300/40 dark:hover:border-amber-600/40'
           }`}>
-            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-500/60 via-amber-400/60 to-amber-300/60 rounded-t-2xl" />
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 rounded-t-2xl" />
             <button onClick={() => setShowAuditoria(!showAuditoria)}
               className="w-full text-left p-5">
               {showAuditoria && (
-                <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-amber-600 flex items-center justify-center shadow-sm">
+                <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shadow-sm">
                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
               )}
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all text-sm font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
@@ -388,11 +402,11 @@ export default function App() {
                   <span className="text-sm font-bold text-ink">Auditoría Excel</span>
                 </div>
               </div>
-              <p className="text-xs text-ink-muted/80 leading-relaxed mb-4">
+              <p className="text-xs text-ink-muted/70 leading-relaxed mb-4">
                 Convierte archivos TXT en un libro Excel ordenado por variables.
               </p>
               <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.5rem] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200/50 dark:border-amber-700/40">
+                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.45rem] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200/50 dark:border-amber-700/40">
                   TXT → Excel
                 </span>
               </div>
@@ -413,34 +427,36 @@ export default function App() {
 
         {/* ─── Error ─── */}
         {error && (
-          <div className="animate-slide-down rounded-2xl border border-red-200/80 dark:border-red-800/50 bg-red-50/80 dark:bg-red-950/40 p-4 text-sm text-red-600 dark:text-red-400 flex items-start gap-3 shadow-sm">
-            <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
-              <svg className="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <div className="animate-slide-down rounded-2xl border border-red-200/80 dark:border-red-800/50 bg-gradient-to-r from-red-50/90 to-red-50/60 dark:from-red-950/40 dark:to-red-950/20 backdrop-blur px-5 py-4 flex items-start gap-3 shadow-sm">
+            <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <span className="font-medium">{error}</span>
+            <span className="text-sm font-medium text-red-700 dark:text-red-300">{error}</span>
           </div>
         )}
 
         {/* ─── Loading ─── */}
         {loading && (
-          <div className="rounded-2xl bg-white dark:bg-[#333337] border border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 p-5 animate-fade-in-up">
+          <div className="rounded-2xl bg-white/80 dark:bg-[#333337]/80 backdrop-blur-lg border border-ink-line/50 dark:border-[#666669]/50 shadow-lg dark:shadow-black/40 p-5 animate-fade-in-up">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-brand-800 dark:text-brand-300 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-md shadow-brand-900/20">
+                  <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                </div>
                 <div>
-                  <span className="text-sm font-bold text-ink">Procesando…</span>
-                  {selectedFileName && <span className="text-xs text-ink-muted block leading-tight">{selectedFileName}</span>}
+                  <span className="text-sm font-bold text-ink">Procesando archivo…</span>
+                  {selectedFileName && <span className="text-xs text-ink-muted/70 block leading-tight mt-0.5">{selectedFileName}</span>}
                 </div>
               </div>
-              <span className="text-lg font-bold text-brand-800">{progress}%</span>
+              <span className="text-lg font-bold bg-gradient-to-r from-brand-600 to-brand-500 bg-clip-text text-transparent">{progress}%</span>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-ink-line/40">
-              <div className="h-full rounded-full bg-gradient-to-r from-brand-800 to-brand-500 transition-all duration-500 ease-out shadow-sm shadow-brand-200 dark:shadow-brand-700/50" style={{ width: `${progress}%` }} />
+            <div className="h-2 w-full overflow-hidden rounded-full bg-ink-line/30 dark:bg-[#555558]/30">
+              <div className="h-full rounded-full bg-gradient-to-r from-brand-500 via-brand-400 to-brand-500 transition-all duration-500 ease-out shadow-sm shadow-brand-500/30" style={{ width: `${progress}%` }} />
             </div>
           </div>
         )}
@@ -454,28 +470,28 @@ export default function App() {
               <StatsCard label="Corregidos" value={summary.corrected} color="gold" />
               <StatsCard label="Calidad" value={`${summary.quality_percent}%`} color="green" />
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={handleRevalidate} disabled={!hasDataLoaded || reprocessing} className="btn-primary">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button onClick={handleRevalidate} disabled={!hasDataLoaded || reprocessing} className="btn-primary shadow-lg shadow-brand-900/20 hover:shadow-xl hover:shadow-brand-900/30">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 {reprocessing ? 'Validando...' : 'Validar'}
               </button>
-              <button onClick={handleExport} disabled={!canExport} className="btn-outline">
+              <button onClick={handleExport} disabled={!canExport} className="btn-outline shadow-sm">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Exportar TXT
               </button>
               {selectedTemplate === 'rcv' && (
-                <button onClick={handleEvaluate} disabled={!canExport || evaluating} className="btn bg-brand-700 dark:bg-brand-600 text-white hover:bg-brand-800 dark:hover:bg-brand-500 shadow-sm dark:shadow-black/30 hover:shadow-md">
+                <button onClick={handleEvaluate} disabled={!canExport || evaluating} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed bg-brand-600 dark:bg-brand-600 text-white hover:bg-brand-500 dark:hover:bg-brand-500 shadow-lg shadow-brand-900/20 hover:shadow-xl hover:shadow-brand-900/30">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                   {evaluating ? 'Evaluando...' : 'Indicadores'}
                 </button>
               )}
-              <button onClick={handleReset} className="btn-secondary">
+              <button onClick={handleReset} className="btn-secondary shadow-sm">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
