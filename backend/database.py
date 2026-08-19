@@ -133,6 +133,7 @@ class HistoriaClinica(Base):
     id = Column(Integer, primary_key=True)
     prestador_id = Column(Integer, ForeignKey("prestadores.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    template_key = Column(String(60), nullable=True, index=True)
     paciente_documento = Column(String(60), nullable=True, index=True)
     paciente_nombre = Column(String(255), nullable=True)
     filename = Column(String(255), nullable=False)
@@ -162,6 +163,11 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute("ALTER TABLE historias_clinicas ADD COLUMN pdf_path VARCHAR(500)")
+    except Exception:
+        pass
+    try:
+        with engine.begin() as conn:
+            conn.execute("ALTER TABLE historias_clinicas ADD COLUMN template_key VARCHAR(60)")
     except Exception:
         pass
 

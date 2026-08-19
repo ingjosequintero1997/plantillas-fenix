@@ -6,6 +6,7 @@ import ProtectedRoute from './ProtectedRoute'
 import DashboardLayout from './components/DashboardLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 import DashboardHome from './components/DashboardHome'
+import TemplateSelector from './components/TemplateSelector'
 import PlantillasView from './components/PlantillasView'
 import HistorialView from './components/HistorialView'
 import PrestadoresView from './components/PrestadoresView'
@@ -56,6 +57,7 @@ export default function App() {
   const { user } = useAuth()
 
   const [section, setSection] = useState('inicio')
+  const [activeTemplate, setActiveTemplate] = useState('')
   const [mapping, setMapping] = useState({})
   const [summary, setSummary] = useState(null)
   const [logs, setLogs] = useState([])
@@ -254,6 +256,7 @@ export default function App() {
     setSelectedTemplate(key)
     setCurrentTemplateLabel(templates.find((item) => item.key === key)?.label || key)
     setTemplateNames([]); setMapping({}); setSummary(null); setLogs([]); setCorrectedText('')
+    setActiveTemplate(key)
   }
 
   const handleExportExcel = async () => {
@@ -278,24 +281,37 @@ export default function App() {
       <Route path="/" element={
         <ProtectedRoute>
           <ErrorBoundary>
-          <DashboardLayout section={section} onNavigate={setSection}>
+          <DashboardLayout
+            section={section}
+            onNavigate={setSection}
+            templates={templates}
+            activeTemplate={activeTemplate}
+            onSelectTemplate={handleSelectTemplate}
+          >
 
             {/* ─── INICIO ─── */}
             {section === 'inicio' && (
-              <div className="space-y-6">
-                <DashboardHome
-                  user={user}
-                  summary={summary}
-                  batchResults={batchResults}
-                />
-
-                <PlantillasView
+              !activeTemplate ? (
+                <TemplateSelector
                   templates={templates}
-                  selectedTemplate={selectedTemplate}
                   onSelect={handleSelectTemplate}
-                  onNavigate={setSection}
                 />
-              </div>
+              ) : (
+                <div className="space-y-6">
+                  <DashboardHome
+                    user={user}
+                    summary={summary}
+                    batchResults={batchResults}
+                  />
+
+                  <PlantillasView
+                    templates={templates}
+                    selectedTemplate={selectedTemplate}
+                    onSelect={handleSelectTemplate}
+                    onNavigate={setSection}
+                  />
+                </div>
+              )
             )}
 
             {/* ─── SUBIR DATA / VALIDAR ─── */}
@@ -393,17 +409,17 @@ export default function App() {
             )}
             {/* ─── HISTORIAL / VERIFICAR DATA ─── */}
             {section === 'historial' && (
-              <HistorialView onNavigate={setSection} />
+              <HistorialView onNavigate={setSection} templateKey={activeTemplate} />
             )}
 
             {/* ─── CONSOLIDAR ─── */}
             {section === 'consolidar' && (
-              <ConsolidacionView templates={templates} />
+              <ConsolidacionView templates={templates} templateKey={activeTemplate} />
             )}
 
             {/* ─── HISTORIAS CLÍNICAS ─── */}
             {section === 'historias' && (
-              <HistoriasView />
+              <HistoriasView templateKey={activeTemplate} />
             )}
 
             {/* ─── PRESTADORES (admin) ─── */}

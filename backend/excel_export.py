@@ -117,14 +117,6 @@ def build_formulas(types_by_col: dict[int, str] | None = None) -> dict[int, call
     return f
 
 
-def build_data_excel(corrected_text: str, template: list[dict]) -> io.BytesIO:
-    headers = [t["name"] for t in template]
-    types = [t["type"] for t in template]
-    types_by_col = {i + 1: t["type"] for i, t in enumerate(template)}
-    formulas = build_formulas(types_by_col)
-    rows = parse_corrected(corrected_text)
-
-
 def parse_corrected(corrected_text: str) -> list[list[str]]:
     rows = []
     for line in corrected_text.replace("\r\n", "\n").split("\n"):
@@ -143,6 +135,7 @@ def build_data_excel(corrected_text: str, template: list[dict]) -> io.BytesIO:
     rows = parse_corrected(corrected_text)
 
     wb = Workbook()
+    wb.calculation.fullCalcOnLoad = True  # Recalcula todas las fórmulas al abrir
     ws = wb.active
     ws.title = "DATA"
 

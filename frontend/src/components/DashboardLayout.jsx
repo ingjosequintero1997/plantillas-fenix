@@ -44,7 +44,7 @@ function Logo({ size = 26 }) {
   )
 }
 
-export default function DashboardLayout({ section, onNavigate, children }) {
+export default function DashboardLayout({ section, onNavigate, children, templates = [], activeTemplate = null, onSelectTemplate }) {
   const { user, logout } = useAuth()
   const [dark, setDark] = useState(() => localStorage.getItem('darkMode') === 'true')
   const [open, setOpen] = useState(false)
@@ -56,6 +56,7 @@ export default function DashboardLayout({ section, onNavigate, children }) {
   const items = NAV.filter((i) => i.roles.includes(role))
   const meta = META[section] || META.inicio
   const rt = ROLE_TITLE[section]?.[role]
+  const activeMeta = templates.find((t) => t.key === activeTemplate)
   if (rt) meta.title = rt
 
   return (
@@ -82,6 +83,32 @@ export default function DashboardLayout({ section, onNavigate, children }) {
             </div>
             <div className="text-white/60 text-[0.6rem] font-semibold uppercase tracking-[0.2em] mt-1">Recepción de datos</div>
           </div>
+        </div>
+
+        {/* Selector de plantilla */}
+        <div className="relative px-3 pt-3">
+          <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-[0.22em] px-3 mb-2">Módulo de plantilla</div>
+          <div className="relative">
+            <select
+              value={activeTemplate || ''}
+              onChange={(e) => { if (onSelectTemplate) onSelectTemplate(e.target.value) }}
+              className="w-full rounded-xl bg-white/15 text-white text-sm font-bold px-3 py-2.5 pr-8 ring-1 ring-white/25 backdrop-blur-sm outline-none appearance-none cursor-pointer focus:ring-white/40"
+            >
+              <option value="" disabled className="text-[#333]">Selecciona…</option>
+              {templates.map((t) => (
+                <option key={t.key} value={t.key} className="text-[#333]">{t.label}</option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          {activeMeta && (
+            <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-[0.6rem] font-bold text-white/80 ring-1 ring-white/15">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              Activo: {activeMeta.label}
+            </div>
+          )}
         </div>
 
         {/* Nav */}
@@ -151,7 +178,9 @@ export default function DashboardLayout({ section, onNavigate, children }) {
               </div>
               <div>
                 <h1 className="text-[17px] font-extrabold text-[rgb(var(--ink))] tracking-tight leading-none">{meta.title}</h1>
-                <p className="text-xs text-[rgb(var(--faint))] mt-1 hidden sm:block">{meta.sub}</p>
+                <p className="text-xs text-[rgb(var(--faint))] mt-1 hidden sm:block">
+                  {activeMeta ? `${meta.sub} · ${activeMeta.label}` : meta.sub}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">

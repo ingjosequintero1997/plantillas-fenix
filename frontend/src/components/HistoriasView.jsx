@@ -9,7 +9,7 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
-export default function HistoriasView() {
+export default function HistoriasView({ templateKey = 'gestante' }) {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const fileRef = useRef(null)
@@ -27,7 +27,7 @@ export default function HistoriasView() {
   const load = async () => {
     setLoading(true)
     try {
-      setHistorias(await fetchHistorias())
+      setHistorias(await fetchHistorias('', templateKey))
     } catch (e) {
       setError(e.message || 'Error al cargar las historias clínicas')
     } finally {
@@ -35,7 +35,7 @@ export default function HistoriasView() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [templateKey])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -70,7 +70,7 @@ export default function HistoriasView() {
     }
     setUploading(true); setError(''); setMessage(null)
     try {
-      await uploadHistoria(file, { documento: documento.trim(), nombre: paciente.trim() })
+      await uploadHistoria(file, { documento: documento.trim(), nombre: paciente.trim() }, templateKey)
       setMessage(`Historia clínica "${file.name}" subida correctamente.`)
       setFile(null); setDocumento(''); setPaciente('')
       if (fileRef.current) fileRef.current.value = ''

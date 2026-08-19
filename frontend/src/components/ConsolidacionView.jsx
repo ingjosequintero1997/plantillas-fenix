@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { consolidateCargues, fetchCargues } from '../api'
 
-export default function ConsolidacionView({ templates }) {
-  const [templateKey, setTemplateKey] = useState('gestante')
+export default function ConsolidacionView({ templates, templateKey = 'gestante' }) {
   const [mes, setMes] = useState('')
   const [cargues, setCargues] = useState([])
   const [loading, setLoading] = useState(false)
@@ -11,14 +10,14 @@ export default function ConsolidacionView({ templates }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fetchCargues()
+        const data = await fetchCargues(templateKey)
         setCargues(data)
       } catch (e) {
         setError(e.message || 'No se pudo cargar el historial')
       }
     }
     load()
-  }, [])
+  }, [templateKey])
 
   const handleConsolidate = async () => {
     setLoading(true); setError('')
@@ -61,15 +60,7 @@ export default function ConsolidacionView({ templates }) {
       )}
 
       <div className="rounded-2xl bg-white dark:bg-[#333337] border border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 p-6 space-y-5">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-[0.55rem] font-bold text-ink-muted uppercase tracking-wider mb-1.5">Plantilla</label>
-            <select value={templateKey} onChange={(e) => setTemplateKey(e.target.value)} className="select w-full">
-              {templates.map((t) => (
-                <option key={t.key} value={t.key}>{t.label}</option>
-              ))}
-            </select>
-          </div>
+        <div className="grid gap-4 md:grid-cols-1">
           <div>
             <label className="block text-[0.55rem] font-bold text-ink-muted uppercase tracking-wider mb-1.5">Mes (opcional)</label>
             <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="input" />

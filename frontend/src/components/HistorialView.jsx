@@ -153,7 +153,7 @@ function CargueDetail({ cargue, onBack }) {
   )
 }
 
-export default function HistorialView({ onNavigate }) {
+export default function HistorialView({ onNavigate, templateKey = '' }) {
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -166,7 +166,7 @@ export default function HistorialView({ onNavigate }) {
     const load = async () => {
       setLoading(true)
       try {
-        const data = await fetchCargues()
+        const data = await fetchCargues(templateKey)
         setRecords(data)
       } catch (e) {
         setError(e.message || 'Error al cargar el historial')

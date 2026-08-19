@@ -709,13 +709,18 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 
 
 @app.get("/cargues")
-async def list_cargues(current_user: User = Depends(get_current_user)):
+async def list_cargues(
+    template_key: str = Query(""),
+    current_user: User = Depends(get_current_user),
+):
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
 		q = db.query(Cargue)
 		if current_user.role != "admin":
 			q = q.filter(Cargue.user_id == current_user.id)
+		if template_key:
+			q = q.filter(Cargue.template_key == template_key)
 		q = q.order_by(Cargue.created_at.desc())
 		items = q.limit(100).all()
 		result = []
@@ -857,6 +862,7 @@ async def upload_historia(
     file: UploadFile = File(...),
     paciente_documento: str = Form(""),
     paciente_nombre: str = Form(""),
+    template_key: str = Form("gestante"),
     current_user: User = Depends(get_current_user),
 ):
     ensure_db_ready()
@@ -878,6 +884,7 @@ async def upload_historia(
         historia = HistoriaClinica(
             prestador_id=prestador.id if prestador else None,
             user_id=current_user.id,
+            template_key=template_key.strip() or "gestante",
             paciente_documento=paciente_documento.strip(),
             paciente_nombre=paciente_nombre.strip(),
             filename=filename,
@@ -917,6 +924,7 @@ async def upload_historia(
 @app.get("/historias")
 async def list_historias(
     q: str = Query(""),
+    template_key: str = Query(""),
     current_user: User = Depends(get_current_user),
 ):
     ensure_db_ready()
@@ -925,6 +933,8 @@ async def list_historias(
         query = db.query(HistoriaClinica)
         if current_user.role != "admin":
             query = query.filter(HistoriaClinica.user_id == current_user.id)
+        if template_key:
+            query = query.filter(HistoriaClinica.template_key == template_key)
         query = query.order_by(HistoriaClinica.created_at.desc())
         items = query.limit(500).all()
         term = q.strip().lower()
@@ -934,6 +944,7 @@ async def list_historias(
                 continue
             result.append({
                 "id": h.id,
+                "template_key": h.template_key or "gestante",
                 "prestador": (h.prestador.nombre if h.prestador else None) or (h.user.name if h.user else None),
                 "paciente_nombre": h.paciente_nombre,
                 "paciente_documento": h.paciente_documento,

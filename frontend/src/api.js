@@ -147,8 +147,9 @@ export async function saveCargue(payload) {
   })
 }
 
-export async function fetchCargues() {
-  const data = await apiFetch(`${API_BASE}/cargues`)
+export async function fetchCargues(templateKey = '') {
+  const q = templateKey ? `?template_key=${encodeURIComponent(templateKey)}` : ''
+  const data = await apiFetch(`${API_BASE}/cargues${q}`)
   return data.cargues || []
 }
 
@@ -196,11 +197,12 @@ export async function revalidateData(raw_text, mapping, templateKey) {
 
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 
-export async function uploadHistoria(file, paciente) {
+export async function uploadHistoria(file, paciente, templateKey = 'gestante') {
   const form = new FormData()
   form.append('file', file)
   if (paciente.documento) form.append('paciente_documento', paciente.documento)
   if (paciente.nombre) form.append('paciente_nombre', paciente.nombre)
+  if (templateKey) form.append('template_key', templateKey)
   const resp = await fetch(`${API_BASE}/historias`, {
     method: 'POST',
     headers: authHeaders(),
@@ -211,7 +213,11 @@ export async function uploadHistoria(file, paciente) {
   return JSON.parse(text)
 }
 
-export async function fetchHistorias(q = '') {
-  const data = await apiFetch(`${API_BASE}/historias${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+export async function fetchHistorias(q = '', templateKey = '') {
+  const params = new URLSearchParams()
+  if (q) params.set('q', q)
+  if (templateKey) params.set('template_key', templateKey)
+  const qs = params.toString()
+  const data = await apiFetch(`${API_BASE}/historias${qs ? `?${qs}` : ''}`)
   return data.historias || []
 }
