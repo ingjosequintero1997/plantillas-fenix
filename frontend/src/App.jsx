@@ -16,7 +16,6 @@ import HistoriasView from './components/HistoriasView'
 import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
-import StatsCard from './components/StatsCard'
 import EvaluationDashboard from './components/EvaluationDashboard'
 import Pagination from './components/Pagination'
 import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue } from './api'
@@ -329,93 +328,67 @@ export default function App() {
 
             {/* ─── SUBIR DATA / VALIDAR ─── */}
             {section === 'subir' && (
-              <div className="space-y-6">
-                <DragDrop onFile={handleFile} />
-
-                {error && (
-                  <div className="animate-slide-down rounded-2xl border border-red-200/80 dark:border-red-800/50 bg-gradient-to-r from-red-50/90 to-red-50/60 dark:from-red-950/40 dark:to-red-950/20 backdrop-blur px-5 py-4 flex items-start gap-3 shadow-sm">
-                    <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+              <div className="space-y-6 fade-in">
+                {!summary ? (
+                  <>
+                    <div>
+                      <div className="page-title">Cargue mensual</div>
+                      <div className="page-subtitle">Sube tu data del período para validarla contra el instructivo.</div>
                     </div>
-                    <span className="text-sm font-medium text-red-700 dark:text-red-300">{error}</span>
-                  </div>
-                )}
+                    <DragDrop onFile={handleFile} />
+                    {error && (
+                      <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Cabecera con resumen */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="page-title">Resumen de la validación</div>
+                        <div className="page-subtitle">{selectedFileName}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {currentTemplateLabel && <span className="badge-neutral">Data detectada: {currentTemplateLabel}</span>}
+                      </div>
+                    </div>
 
-                {loading && (
-                  <div className="rounded-2xl bg-white/80 dark:bg-[#333337]/80 backdrop-blur-lg border border-ink-line/50 dark:border-[#666669]/50 shadow-lg dark:shadow-black/40 p-5 animate-fade-in-up">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-md shadow-brand-900/20">
-                          <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
+                    {/* Resumen en línea (no tarjetas llenas) */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-5 border-y" style={{ borderColor: 'var(--border)' }}>
+                      <div><div className="stat-label">Registros</div><div className="stat-value">{summary.total}</div></div>
+                      <div><div className="stat-label">Errores</div><div className="stat-value" style={{ color: summary.errors ? 'var(--error)' : 'var(--success)' }}>{summary.errors}</div></div>
+                      <div><div className="stat-label">Corregidos</div><div className="stat-value">{summary.corrected}</div></div>
+                      <div><div className="stat-label">Calidad</div><div className="stat-value">{summary.quality_percent}%</div></div>
+                    </div>
+
+                    {/* Descarga de data ajustada */}
+                    <div className="panel flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium" style={{ color: 'var(--text)' }}>Tu data quedó ajustada</div>
+                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Descarga el archivo con los datos corregidos y las fórmulas aplicadas.</div>
+                      </div>
+                      <button onClick={handleExportExcel} disabled={!canExport} className="btn-primary">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Descargar data ajustada
+                      </button>
+                    </div>
+
+                    {loading && (
+                      <div className="panel flex items-center gap-3">
+                        <div className="skeleton h-8 w-8 rounded-full" />
+                        <div className="flex-1">
+                          <div className="skeleton h-4 w-40" />
+                          <div className="skeleton h-2 w-full mt-2" style={{ width: `${progress}%` }} />
                         </div>
-                        <div>
-                          <span className="text-sm font-bold text-ink">Procesando archivo…</span>
-                          {selectedFileName && <span className="text-xs text-ink-muted/70 block leading-tight mt-0.5">{selectedFileName}</span>}
-                        </div>
                       </div>
-                      <span className="text-lg font-bold bg-gradient-to-r from-brand-600 to-brand-500 bg-clip-text text-transparent">{progress}%</span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-ink-line/30 dark:bg-[#555558]/30">
-                      <div className="h-full rounded-full bg-gradient-to-r from-brand-500 via-brand-400 to-brand-500 transition-all duration-500 ease-out shadow-sm shadow-brand-500/30" style={{ width: `${progress}%` }} />
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {summary && (
-                  <div className="space-y-6 animate-fade-in-up">
-                    {/* Resumen */}
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="section-header">
-                        <div className="section-header-bar" />
-                        <h2 className="section-title">Resumen de la validación</h2>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {currentTemplateLabel && (
-                          <span className="badge-green">Data detectada: {currentTemplateLabel}</span>
-                        )}
-                        {selectedFileName && <span className="badge-gray">{selectedFileName}</span>}
-                      </div>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-4">
-                      <StatsCard label="Registros" value={summary.total} color="neutral" />
-                      <StatsCard label="Errores" value={summary.errors} color="red" />
-                      <StatsCard label="Corregidos" value={summary.corrected} color="gold" />
-                      <StatsCard label="Calidad" value={`${summary.quality_percent}%`} color="green" />
-                    </div>
-
-                    {/* Botón principal: descargar data ajustada */}
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 shadow-xl shadow-brand-900/20 p-6 md:p-8 text-center">
-                      <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-                      <div className="absolute -bottom-24 -left-16 w-56 h-56 rounded-full bg-white/5 blur-2xl pointer-events-none" />
-                      <div className="relative">
-                        <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 mb-4 ring-1 ring-white/20">
-                          <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                          <span className="text-[0.5rem] font-bold text-white/90 tracking-[0.15em] uppercase">Data lista</span>
-                        </div>
-                        <h3 className="text-white text-xl md:text-2xl font-extrabold tracking-tight mb-2">Tu data quedó ajustada</h3>
-                        <p className="text-white/75 text-sm max-w-lg mx-auto mb-6 font-normal">
-                          Descarga el archivo Excel con los datos corregidos y las fórmulas de cálculo aplicadas, listo para abrir y usar.
-                        </p>
-                        <button onClick={handleExportExcel} disabled={!canExport}
-                          className="inline-flex items-center gap-3 rounded-2xl bg-white text-brand-800 hover:bg-brand-50 px-8 py-4 text-base font-extrabold shadow-2xl shadow-black/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          DESCARGAR DATA AJUSTADA
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Fórmulas aplicadas */}
                     <FormulasView />
-
-                    {/* Ajustes realizados */}
                     <AjustesView logs={logs} />
+
+                    <div className="flex justify-end">
+                      <button onClick={handleReset} className="btn-ghost text-sm">Validar otro archivo</button>
+                    </div>
                   </div>
                 )}
               </div>

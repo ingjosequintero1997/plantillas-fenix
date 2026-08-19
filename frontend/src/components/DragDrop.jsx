@@ -16,41 +16,32 @@ export default function DragDrop({ onFile }) {
   return (
     <div>
       <div
-        onDragOver={(e)=>{e.preventDefault(); setHover(true)}}
-        onDragLeave={()=>setHover(false)}
-        onDrop={(e)=>{e.preventDefault(); setHover(false); emitFiles(e.dataTransfer.files)}}
+        onDragOver={(e) => { e.preventDefault(); setHover(true) }}
+        onDragLeave={() => setHover(false)}
+        onDrop={(e) => { e.preventDefault(); setHover(false); emitFiles(e.dataTransfer.files) }}
         onClick={() => inputRef.current?.click()}
-        className={`relative overflow-hidden p-10 md:p-14 text-center transition-all duration-300 cursor-pointer rounded-2xl border-2 border-dashed ${
-          hover
-            ? 'border-brand-800 bg-brand-50/60 dark:bg-brand-900/40 border-solid shadow-sm dark:shadow-black/40 shadow-brand-200/50 dark:shadow-brand-900/30'
-            : 'border-ink-line dark:border-[#666669] bg-white dark:bg-[#333337] hover:border-brand-400 dark:hover:border-brand-600 hover:bg-brand-50/30 dark:hover:bg-brand-900/20'
-        }`}
+        className="flex flex-col items-center justify-center text-center py-14 px-6 rounded-lg border-2 border-dashed transition-colors cursor-pointer"
+        style={{
+          borderColor: hover ? 'var(--primary)' : 'var(--border)',
+          backgroundColor: hover ? 'var(--primary-light)' : 'transparent',
+        }}
       >
-        <div className="relative">
-          <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border-2 transition-all ${
-          hover
-            ? 'border-brand-800 bg-brand-100 dark:bg-brand-800/50 text-brand-800 dark:text-brand-200 shadow-sm dark:shadow-black/40'
-            : 'border-brand-200/50 dark:border-brand-700/40 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
-          }`}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-          </div>
-          <div className="text-xl md:text-2xl font-bold text-ink">Cargar archivos</div>
-          <div className="mt-1.5 text-sm text-ink-muted/80">Arrastra o haz clic para seleccionar</div>
-          <div className="mt-4 inline-flex items-center gap-2 badge-gray text-[0.5rem]">
-            .txt &middot; .xlsx &middot; .xls
-          </div>
-          <div className="mt-2 text-[0.55rem] text-ink-faint">Se procesa y genera TXT delimitado por |</div>
+        <div className="flex items-center justify-center w-12 h-12 rounded-full mb-4" style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
         </div>
+        <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>Arrastra tu archivo aquí</div>
+        <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>o selecciona un archivo desde tu equipo</div>
+        <div className="mt-3 text-[0.68rem]" style={{ color: 'var(--text-secondary)' }}>.xlsx · .xls · .txt</div>
         <input
           ref={inputRef}
           type="file"
           accept=".txt,.xlsx,.xls"
           multiple
-          onChange={(e)=>emitFiles(e.target.files)}
+          onChange={(e) => emitFiles(e.target.files)}
           className="hidden"
         />
       </div>
