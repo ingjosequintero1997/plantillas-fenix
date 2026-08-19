@@ -302,23 +302,13 @@ export default function App() {
                   onSelect={handleSelectTemplate}
                 />
               ) : (
-                <div className="space-y-6">
-                  <DashboardHome
-                    user={user}
-                    summary={summary}
-                    batchResults={batchResults}
-                  />
-
-                  {/* Solo mostrar las plantillas de nuevo si el admin las gestiona */}
-                  {user?.role === 'admin' && templates.length > 1 && (
-                    <PlantillasView
-                      templates={templates}
-                      selectedTemplate={selectedTemplate}
-                      onSelect={handleSelectTemplate}
-                      onNavigate={setSection}
-                    />
-                  )}
-                </div>
+                <PlantillasView
+                  templates={templates}
+                  selectedTemplate={selectedTemplate}
+                  onSelect={handleSelectTemplate}
+                  onNavigate={setSection}
+                  single
+                />
               )
             )}
 
