@@ -6,92 +6,105 @@ export default function ConsolidacionView({ templates, templateKey = 'gestante' 
   const [cargues, setCargues] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [confirm, setConfirm] = useState(false)
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const data = await fetchCargues(templateKey)
-        setCargues(data)
-      } catch (e) {
-        setError(e.message || 'No se pudo cargar el historial')
-      }
+      try { setCargues(await fetchCargues(templateKey)) }
+      catch (e) { setError('No se pudieron cargar los archivos.') }
     }
     load()
   }, [templateKey])
 
+  const filtered = cargues.filter((c) => (!mes || c.mes === mes))
+
   const handleConsolidate = async () => {
-    setLoading(true); setError('')
+    setLoading(true); setError(''); setConfirm(false)
     try {
       const blob = await consolidateCargues(templateKey, mes)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      const suffix = mes ? `_${mes}` : ''
       a.href = url
-      a.download = `consolidada_${templateKey}${suffix}.xlsx`
+      a.download = `consolidada_${templateKey}${mes ? `_${mes}` : ''}.xlsx`
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
-      setError(e.message || 'Error al consolidar la data')
+      setError('No fue posible consolidar los datos. Verifica que los archivos estén validados.')
     } finally {
       setLoading(false)
     }
   }
 
-  const filtered = cargues.filter((c) => c.template_key === templateKey && (!mes || c.mes === mes))
-
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 shadow-md shadow-brand-900/20 flex items-center justify-center">
-          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V5zM4 15a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z" />
-          </svg>
-        </div>
+    <div className="space-y-6 fade-in">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-ink tracking-tight">Consolidar data</h2>
-          <p className="text-xs text-ink-muted/60 mt-0.5">Une los cargues mensuales de todos los prestadores en una sola hoja Excel</p>
+          <div className="page-title">Consolidar</div>
+          <div className="page-subtitle">Une los cargues de los prestadores en una sola data.</div>
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-red-200/80 dark:border-red-800/50 bg-red-50/80 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-300">
-          {error}
+      {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
+
+      <div className="panel space-y-4">
+        <div>
+          <label className="form-label">Período (opcional)</label>
+          <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="input max-w-xs" />
+        </div>
+
+        <div>
+          <div className="section-label mb-2">Archivos disponibles para consolidar</div>
+          {filtered.length === 0 ? (
+            <div className="text-sm py-4" style={{ color: 'var(--text-secondary)' }}>
+              No hay cargues disponibles para consolidar con el período seleccionado.
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Archivo</th>
+                    <th>Período</th>
+                    <th>Registros</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c) => (
+                    <tr key={c.id}>
+                      <td className="font-medium">{c.original_filename}</td>
+                      <td>{c.mes}</td>
+                      <td>{c.row_count ?? 0}</td>
+                      <td><span className="badge-success">Validado</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <button onClick={() => setConfirm(true)} disabled={filtered.length === 0} className="btn-primary">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            {loading ? 'Consolidando...' : 'Consolidar datos'}
+          </button>
+        </div>
+      </div>
+
+      {/* Confirmación */}
+      {confirm && (
+        <div className="modal-overlay" onClick={() => setConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">¿Consolidar datos?</div>
+            <div className="modal-desc">Se unirán {filtered.length} cargues validados en una sola hoja de datos.</div>
+            <div className="flex justify-end gap-2.5">
+              <button onClick={() => setConfirm(false)} className="btn-secondary">Cancelar</button>
+              <button onClick={handleConsolidate} className="btn-primary" disabled={loading}>{loading ? 'Consolidando...' : 'Consolidar'}</button>
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="rounded-2xl bg-white dark:bg-[#333337] border border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 p-6 space-y-5">
-        <div className="grid gap-4 md:grid-cols-1">
-          <div>
-            <label className="block text-[0.55rem] font-bold text-ink-muted uppercase tracking-wider mb-1.5">Mes (opcional)</label>
-            <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="input" />
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-ink-line/50 dark:border-[#666669]/50 bg-[#F8F7F4] dark:bg-[#28282B] p-4">
-          <div className="text-xs text-ink-muted mb-2">
-            <span className="font-bold text-ink">{filtered.length}</span> cargues serán consolidados
-          </div>
-          {filtered.length === 0 && (
-            <div className="text-xs text-ink-faint">No hay cargues para este filtro todavía.</div>
-          )}
-          <div className="max-h-40 overflow-auto scroll-thin space-y-1.5">
-            {filtered.map((c) => (
-              <div key={c.id} className="flex items-center justify-between rounded-lg bg-white dark:bg-[#333337] border border-ink-line/50 dark:border-[#666669]/50 px-3 py-2 text-xs">
-                <span className="font-semibold text-ink truncate">{c.original_filename}</span>
-                <span className="text-ink-muted shrink-0 ml-2">{c.mes} · {c.row_count} registros</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <button onClick={handleConsolidate} disabled={loading || filtered.length === 0}
-          className="btn-primary shadow-lg shadow-brand-900/20 w-full md:w-auto">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          {loading ? 'Consolidando...' : 'Consolidar y descargar'}
-        </button>
-      </div>
     </div>
   )
 }
