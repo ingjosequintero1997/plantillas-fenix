@@ -60,27 +60,25 @@ function NewPrestadorForm({ onClose, onCreated }) {
   )
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-xl p-6 sm:p-7 max-h-[90vh] overflow-y-auto"
-        style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
-        onClick={(e) => e.stopPropagation()}>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-base font-semibold" style={{ color: 'var(--text)' }}>Nuevo prestador</div>
-              <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Se crearán las credenciales de acceso para el cargue mensual.</div>
-            </div>
-            <button type="button" onClick={onClose} className="p-2 rounded-md text-gray-400 hover:bg-gray-100" title="Cerrar">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+    <div className="panel fade-in">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="page-title">Nuevo prestador</div>
+            <div className="page-subtitle">Se crearán las credenciales de acceso para el cargue mensual.</div>
           </div>
+          <button type="button" onClick={onClose} className="btn-ghost text-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Volver
+          </button>
+        </div>
 
-          {error && (
-            <div className="flex items-start gap-2 px-3 py-2.5 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>
-              <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span>{error}</span>
-            </div>
-          )}
+        {error && (
+          <div className="flex items-start gap-2 px-3 py-2.5 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>
+            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>{error}</span>
+          </div>
+        )}
 
           {/* Información del prestador */}
           <div>
@@ -172,7 +170,6 @@ function NewPrestadorForm({ onClose, onCreated }) {
             </button>
           </div>
         </form>
-      </div>
     </div>
   )
 }
@@ -213,6 +210,16 @@ export default function PrestadoresView() {
   const toggleSort = (key) => {
     setSort((s) => s.key === key ? { key, dir: -s.dir } : { key, dir: 1 })
     setPage(1)
+  }
+
+  // Vista de formulario (en lugar de modal)
+  if (showForm) {
+    return (
+      <NewPrestadorForm
+        onClose={() => setShowForm(false)}
+        onCreated={() => { setShowForm(false); load() }}
+      />
+    )
   }
 
   return (
@@ -310,13 +317,6 @@ export default function PrestadoresView() {
             )}
           </div>
         </>
-      )}
-
-      {showForm && (
-        <NewPrestadorForm
-          onClose={() => setShowForm(false)}
-          onCreated={() => { setShowForm(false); load() }}
-        />
       )}
     </div>
   )
