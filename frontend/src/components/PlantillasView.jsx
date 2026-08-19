@@ -43,19 +43,13 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
             </div>
             <div className="flex flex-col sm:flex-row items-stretch gap-2.5 shrink-0">
               <a href={DOWNLOAD_TEMPLATE_URL(sel.key)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white text-[#2E7D32] hover:bg-[#EAF6EB] px-5 py-3 text-sm font-extrabold shadow-2xl shadow-[#1B5E20]/30 transition-all hover:scale-[1.03] active:scale-[0.97]">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-white text-[#2E7D32] hover:bg-[#EAF6EB] px-6 py-3 text-sm font-extrabold shadow-2xl shadow-[#1B5E20]/30 transition-all hover:scale-[1.03] active:scale-[0.97]">
+                {/* Icono de Excel */}
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM13 3.5L18.5 9H13V3.5zM9.7 16.3l1.8-2.1-1.8-2.1.9-1.1 2 2.4 2-2.4.9 1.1-1.8 2.1 1.8 2.1-.9 1.1-2-2.4-2 2.4-.9-1.1z"/>
                 </svg>
-                Descargar en Excel
+                Descargar plantilla
               </a>
-              <button onClick={() => onNavigate('subir')}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 text-white hover:bg-white/25 px-5 py-3 text-sm font-bold ring-1 ring-white/30 transition-all active:scale-95">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                Subir data
-              </button>
             </div>
           </div>
         </section>
