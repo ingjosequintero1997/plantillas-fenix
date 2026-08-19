@@ -40,7 +40,7 @@ try:
     else:
         # Timeout corto para no bloquear el cold start si la BD no responde.
         connect_args = {"connect_timeout": 5}
-    engine = create_engine(DATABASE_URL, connect_args=connect_args)
+    engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 except Exception:
     DB_AVAILABLE = False
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})

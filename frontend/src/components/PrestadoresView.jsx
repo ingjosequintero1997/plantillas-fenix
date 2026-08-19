@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { fetchPrestadores, createPrestador } from '../api'
 
+const TEMPLATE_LABELS = {
+  gestante: 'Gestante', citologia: 'Citología', mamografia: 'Mamografía', penta: 'Penta',
+}
+
 export default function PrestadoresView() {
   const [prestadores, setPrestadores] = useState([])
   const [showForm, setShowForm] = useState(false)
@@ -10,7 +14,7 @@ export default function PrestadoresView() {
 
   const [form, setForm] = useState({
     nombre: '', nit: '', municipio: '',
-    username: '', password: '',
+    username: '', password: '', template_key: 'gestante',
   })
 
   useEffect(() => {
@@ -39,7 +43,7 @@ export default function PrestadoresView() {
     setSaving(true); setError('')
     try {
       await createPrestador(form)
-      setForm({ nombre: '', nit: '', municipio: '', username: '', password: '' })
+      setForm({ nombre: '', nit: '', municipio: '', username: '', password: '', template_key: 'gestante' })
       setShowForm(false)
       setPrestadores(await fetchPrestadores())
     } catch (err) {
@@ -105,6 +109,15 @@ export default function PrestadoresView() {
               <input name="municipio" value={form.municipio} onChange={handleChange} className="input" placeholder="Albania" />
             </div>
             <div>
+              <label className="block text-[0.55rem] font-bold text-ink-muted uppercase tracking-wider mb-1.5">Plantilla asignada</label>
+              <select name="template_key" value={form.template_key} onChange={handleChange} className="select w-full">
+                <option value="gestante">Gestante</option>
+                <option value="citologia">Citología</option>
+                <option value="mamografia">Mamografía</option>
+                <option value="penta">Penta</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-[0.55rem] font-bold text-ink-muted uppercase tracking-wider mb-1.5">Usuario</label>
               <input name="username" value={form.username} onChange={handleChange} required className="input" placeholder="usuario_prestador" />
             </div>
@@ -149,6 +162,11 @@ export default function PrestadoresView() {
                   {p.username}
                 </span>
                 <span className="text-[0.45rem] text-ink-faint font-semibold uppercase tracking-wider">{p.cargues_count ?? 0} cargues</span>
+              </div>
+              <div className="mt-2.5 flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#5EBA65]/15 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-[#2E7D32] dark:text-[#6FCB76] border border-[#5EBA65]/40">
+                  {TEMPLATE_LABELS[p.template_key] || p.template_key || 'Gestante'}
+                </span>
               </div>
             </div>
           ))}

@@ -52,7 +52,7 @@ try:
         require_admin,
         verify_credentials,
     )
-    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica
+    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla
     from . import gcs_storage
 except ImportError:
     from auth_utils import (
@@ -62,7 +62,7 @@ except ImportError:
         require_admin,
         verify_credentials,
     )
-    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica
+    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla
     import gcs_storage
 
 class LoginPayload(BaseModel):
@@ -171,8 +171,25 @@ async def get_template(template_key: str = Query(default="gestante")):
 	}
 
 @app.get("/templates")
-async def get_templates():
-	return {"templates": list_templates_meta()}
+async def get_templates(current_user: User = Depends(get_current_user)):
+	all_templates = list_templates_meta()
+	if current_user.role == "admin":
+		return {"templates": all_templates}
+	# Prestador: solo las plantillas que tiene asignadas
+	db = SessionLocal()
+	try:
+		prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+		if prestador is None:
+			return {"templates": []}
+		assigned = [p.template_key for p in prestador.plantillas]
+	except Exception:
+		assigned = []
+	finally:
+		db.close()
+	if not assigned:
+		return {"templates": []}
+	filtered = [t for t in all_templates if t["key"] in assigned]
+	return {"templates": filtered}
 
 
 # ─── Detección automática de plantilla ────────────────────────────────────
@@ -1024,6 +1041,7 @@ class PrestadorPayload(BaseModel):
 	municipio: str = ""
 	username: str
 	password: str
+	template_key: str = "gestante"
 
 
 @app.post("/admin/prestadores")
@@ -1050,8 +1068,12 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 			municipio=payload.municipio,
 		)
 		db.add(prestador)
+		db.flush()
+		# Asignar la plantilla del prestador
+		pp = PrestadorPlantilla(prestador_id=prestador.id, template_key=payload.template_key)
+		db.add(pp)
 		db.commit()
-		return {"id": prestador.id, "username": user.username, "nombre": prestador.nombre}
+		return {"id": prestador.id, "username": user.username, "nombre": prestador.nombre, "template_key": payload.template_key}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
 	finally:
@@ -1067,6 +1089,7 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 		result = []
 		for p in items:
 			cargues_count = db.query(Cargue).filter(Cargue.prestador_id == p.id).count()
+			plantillas = [pp.template_key for pp in p.plantillas]
 			result.append({
 				"id": p.id,
 				"nombre": p.nombre,
@@ -1074,6 +1097,7 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 				"municipio": p.municipio,
 				"username": p.user.username if p.user else None,
 				"cargues_count": cargues_count,
+				"template_key": plantillas[0] if plantillas else "gestante",
 			})
 		return {"prestadores": result}
 	except OperationalError:
