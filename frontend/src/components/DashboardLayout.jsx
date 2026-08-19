@@ -62,31 +62,31 @@ export default function DashboardLayout({ section, onNavigate, children }) {
     <div className="min-h-screen app-bg">
       {open && <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden" onClick={() => setOpen(false)} />}
 
-      {/* ═══ Sidebar glassmorphism flotante ═══ */}
-      <aside className={`fixed inset-y-4 left-4 z-50 w-64 flex flex-col rounded-3xl bg-[#0B1220]/95 dark:bg-[#0B1220]/90 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.35)] transition-all duration-500 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-[120%]'}`}>
+      {/* ═══ Sidebar verde institucional ═══ */}
+      <aside className={`fixed inset-y-4 left-4 z-50 w-64 flex flex-col rounded-3xl bg-gradient-to-b from-[#5EBA65] via-[#4CAF50] to-[#388E3C] shadow-[0_25px_60px_rgba(46,125,50,0.35)] transition-all duration-500 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-[120%]'}`}>
         {/* Glow superior */}
-        <div className="pointer-events-none absolute -top-16 -left-16 w-48 h-48 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 -right-10 w-40 h-40 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -top-16 -left-16 w-48 h-48 rounded-full bg-white/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 -right-10 w-40 h-40 rounded-full bg-[#1B5E20]/20 blur-3xl" />
 
         {/* Logo */}
-        <div className="relative flex items-center gap-3 px-5 h-[72px] border-b border-white/[0.07]">
+        <div className="relative flex items-center gap-3 px-5 h-[72px] border-b border-white/[0.12]">
           <div className="relative">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400/30 to-sky-500/20 flex items-center justify-center ring-1 ring-white/20">
+            <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center ring-1 ring-white/30 backdrop-blur-sm">
               <Logo />
             </div>
-            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)] animate-pulse" />
           </div>
           <div>
             <div className="text-white font-extrabold text-[15px] leading-none tracking-tight">
-              Fénix <span className="text-gradient">Data</span>
+              Fénix <span className="text-white/80">Data</span>
             </div>
-            <div className="text-white/30 text-[0.6rem] font-semibold uppercase tracking-[0.2em] mt-1">Recepción de datos</div>
+            <div className="text-white/60 text-[0.6rem] font-semibold uppercase tracking-[0.2em] mt-1">Recepción de datos</div>
           </div>
         </div>
 
         {/* Nav */}
         <nav className="relative flex-1 px-3 py-5 space-y-1.5 overflow-y-auto scroll-thin">
-          <div className="text-[0.6rem] font-bold text-white/25 uppercase tracking-[0.22em] px-3 mb-3">Menú principal</div>
+          <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-[0.22em] px-3 mb-3">Menú principal</div>
           {items.map((item, idx) => {
             const active = section === item.key
             return (
@@ -94,21 +94,21 @@ export default function DashboardLayout({ section, onNavigate, children }) {
                 key={item.key + idx}
                 onClick={() => { onNavigate(item.key); setOpen(false) }}
                 className={`group relative w-full flex items-center gap-3 rounded-2xl px-3 py-3 transition-all duration-300 overflow-hidden ${
-                  active ? 'bg-gradient-to-r from-emerald-500/90 to-sky-600/80 shadow-[0_8px_25px_rgba(16,185,129,0.4)]' : 'hover:bg-white/[0.06]'
+                  active ? 'bg-white text-[#2E7D32] shadow-[0_8px_25px_rgba(27,94,32,0.35)]' : 'hover:bg-white/15'
                 }`}
               >
                 {active && (
                   <>
-                    <span className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent animate-shine" />
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-7 rounded-r-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+                    <span className="absolute inset-0 bg-gradient-to-r from-white/40 to-transparent animate-shine" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-7 rounded-r-full bg-[#1B5E20] shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
                   </>
                 )}
                 <span className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all shrink-0 ${
-                  active ? 'bg-white/20 text-white' : 'bg-white/[0.05] text-white/40 group-hover:text-white/70'
+                  active ? 'bg-[#2E7D32]/10 text-[#2E7D32]' : 'bg-white/15 text-white group-hover:text-white'
                 }`}>
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">{item.icon}</svg>
                 </span>
-                <span className={`text-[13px] transition-colors ${active ? 'text-white font-bold' : 'text-white/60 group-hover:text-white/90'}`}>
+                <span className={`text-[13px] transition-colors ${active ? 'text-[#2E7D32] font-bold' : 'text-white group-hover:text-white'}`}>
                   {item.label}
                 </span>
               </button>
@@ -118,15 +118,15 @@ export default function DashboardLayout({ section, onNavigate, children }) {
 
         {/* Usuario */}
         <div className="relative px-3 pb-4">
-          <div className="flex items-center gap-3 rounded-2xl px-3 py-3 bg-white/[0.05] ring-1 ring-white/[0.08]">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-white text-sm font-extrabold shadow-md shadow-emerald-500/30 shrink-0">
+          <div className="flex items-center gap-3 rounded-2xl px-3 py-3 bg-white/15 ring-1 ring-white/25 backdrop-blur-sm">
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#2E7D32] text-sm font-extrabold shadow-md shrink-0">
               {(user?.name || '?').slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-bold text-white truncate">{user?.name}</div>
-              <div className="text-[0.6rem] font-bold text-emerald-400 uppercase tracking-wider">{isAdmin ? 'EPS' : 'Prestador'}</div>
+              <div className="text-[0.6rem] font-bold text-white/80 uppercase tracking-wider">{isAdmin ? 'EPS' : 'Prestador'}</div>
             </div>
-            <button onClick={logout} title="Cerrar sesión" className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+            <button onClick={logout} title="Cerrar sesión" className="w-8 h-8 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
