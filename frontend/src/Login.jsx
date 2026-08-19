@@ -179,17 +179,11 @@ export default function Login() {
 
         {/* Brand */}
         <div className="text-center mb-10">
-          <div className="mx-auto mb-6 w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-900 shadow-2xl shadow-brand-900/40 flex items-center justify-center ring-[3px] ring-white/15 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-tl from-white/20 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-br from-brand-300/0 via-brand-300/30 to-brand-300/0 animate-[shimmer_3s_ease-in-out_infinite] translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-            <svg className="w-8 h-8 text-white relative z-10 drop-shadow-lg" viewBox="0 0 32 32" fill="none">
-              <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="currentColor" opacity="0.35" />
-              <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="currentColor" opacity="0.65" />
-              <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="currentColor" />
-            </svg>
+          <div className="mx-auto mb-6 w-24 h-24 rounded-2xl bg-white shadow-2xl shadow-black/10 ring-1 ring-black/5 flex items-center justify-center p-2 overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 dark:from-brand-300 dark:via-brand-400 dark:to-brand-500 bg-clip-text text-transparent">
-            FÉNIX
+            FÉNIX DATA
           </h1>
           <p className="text-sm mt-2 h-5 font-medium">
             <Typewriter texts={SUBTITLES} />

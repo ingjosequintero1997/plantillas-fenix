@@ -22,6 +22,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
   const [historias, setHistorias] = useState([])
   const [loading, setLoading] = useState(false)
   const [query, setQuery] = useState('')
+  const [mes, setMes] = useState('all')
 
   const load = async () => {
     setLoading(true); setError('')
@@ -31,13 +32,23 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
   }
   useEffect(() => { load() }, [templateKey])
 
+  // Meses disponibles según las fechas de las historias
+  const meses = useMemo(() => {
+    const set = new Set(historias.map((h) => h.created_at ? new Date(h.created_at).toISOString().slice(0, 7) : '').filter(Boolean))
+    return Array.from(set).sort().reverse()
+  }, [historias])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return historias
-    return historias.filter((h) =>
-      `${h.filename} ${h.paciente_nombre ?? ''} ${h.paciente_documento ?? ''} ${h.prestador ?? ''}`.toLowerCase().includes(q)
-    )
-  }, [historias, query])
+    return historias.filter((h) => {
+      if (mes !== 'all' && h.created_at) {
+        const hMes = new Date(h.created_at).toISOString().slice(0, 7)
+        if (hMes !== mes) return false
+      }
+      if (!q) return true
+      return `${h.filename} ${h.paciente_nombre ?? ''} ${h.paciente_documento ?? ''} ${h.prestador ?? ''}`.toLowerCase().includes(q)
+    })
+  }, [historias, query, mes])
 
   const handlePickFile = (e) => {
     const f = e.target.files?.[0]
@@ -107,12 +118,18 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
 
       {/* Búsqueda y listado */}
       <div>
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
           <div className="relative flex-1 max-w-sm">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por paciente, documento o archivo..." className="input pl-9" />
           </div>
-          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{filtered.length} historias</span>
+          <select value={mes} onChange={(e) => setMes(e.target.value)} className="select sm:w-44">
+            <option value="all">Todos los meses</option>
+            {meses.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <span className="text-xs ml-auto" style={{ color: 'var(--text-secondary)' }}>{filtered.length} historias</span>
         </div>
 
         {loading ? (

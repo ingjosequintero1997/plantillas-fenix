@@ -69,8 +69,8 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         style={{ backgroundColor: 'var(--primary-dark)' }}>
         {/* Branding */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
-            <Logo />
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="text-white font-semibold text-[15px] leading-none">Fénix Data</div>

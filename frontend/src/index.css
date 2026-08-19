@@ -131,7 +131,7 @@
   .divider { height: 1px; background-color: var(--border); }
 
   /* ── Modal ────────────────────────────────────────── */
-  .modal-overlay { @apply fixed inset-0 z-50 flex items-center justify-center p-4; background-color: rgba(16,22,18,0.5); }
+  .modal-overlay { @apply fixed inset-0 z-50 flex items-center justify-center p-4; background-color: rgba(16,22,18,0.35); backdrop-filter: blur(2px); }
   .modal { @apply w-full max-w-md; background-color: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.5rem; }
   .modal-title { @apply text-base font-semibold mb-1; color: var(--text); }
   .modal-desc { @apply text-sm mb-5; color: var(--text-secondary); }
