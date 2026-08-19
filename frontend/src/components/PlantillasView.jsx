@@ -20,13 +20,13 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="w-1.5 h-7 rounded-full bg-gradient-to-b from-[#2E9E4C] to-[#1E6B33]" />
+          <span className="section-header-bar" />
           <div>
             <h2 className="text-base font-extrabold text-[rgb(var(--ink))] tracking-tight">Formatos de data</h2>
             <p className="text-xs text-[rgb(var(--faint))] mt-0.5">Selecciona una plantilla, descárgala en Excel y sube tu data</p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 text-[0.6rem] font-bold uppercase tracking-wider text-[#1E6B33] dark:text-[#79CB8A] border border-emerald-200/70 dark:border-emerald-800/40">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 text-[0.6rem] font-bold uppercase tracking-wider text-[#047857] dark:text-[#6EE7B7] border border-emerald-200/70 dark:border-emerald-800/40">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           {templates.length} disponible{templates.length !== 1 ? 's' : ''}
         </span>
@@ -34,35 +34,35 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
 
       {/* Panel de la plantilla seleccionada */}
       {sel && (
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#123F20] via-[#175528] to-[#1E6B33] shadow-[0_16px_40px_rgba(18,63,32,0.30)]">
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-400/15 blur-3xl" />
-          <div className="absolute -bottom-28 -left-16 w-64 h-64 rounded-full bg-emerald-200/10 blur-3xl" />
+        <section className="relative overflow-hidden rounded-[28px] bg-[#04120C] text-white shadow-[0_25px_60px_rgba(0,0,0,0.35)]">
+          <div className="pointer-events-none absolute -top-28 -right-24 w-80 h-80 rounded-full bg-emerald-500/30 blur-[110px]" />
+          <div className="pointer-events-none absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-sky-500/20 blur-[110px]" />
           <div className="relative flex flex-wrap items-center gap-5 px-6 md:px-8 py-7">
-            <div className="w-14 h-14 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center text-white text-lg font-extrabold shadow-lg shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400/30 to-sky-500/30 flex items-center justify-center text-white text-lg font-extrabold ring-1 ring-white/25 shadow-lg shrink-0">
               {String(selIdx + 1).padStart(2, '0')}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-2.5 py-1 mb-1.5 ring-1 ring-white/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+              <div className="inline-flex items-center gap-1.5 bg-white/10 rounded-full px-2.5 py-1 mb-1.5 ring-1 ring-white/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[0.55rem] font-bold text-white/90 tracking-[0.15em] uppercase">Plantilla seleccionada</span>
               </div>
               <h3 className="text-white text-xl font-extrabold tracking-tight">{sel.label}</h3>
               <p className="text-white/70 text-xs mt-1 max-w-xl">{sel.description}</p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className="inline-flex items-center rounded-full bg-white/15 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-white ring-1 ring-white/20">{sel.fields} variables</span>
-                <span className="text-[0.55rem] font-bold tracking-wider rounded-md px-2 py-0.5 bg-white text-[#1E6B33]">{SHORT[sel.key] || sel.key.toUpperCase()}</span>
+                <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-white ring-1 ring-white/20">{sel.fields} variables</span>
+                <span className="text-[0.55rem] font-bold tracking-wider rounded-md px-2 py-0.5 bg-white text-[#064E3B]">{SHORT[sel.key] || sel.key.toUpperCase()}</span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch gap-2.5 shrink-0">
               <a href={DOWNLOAD_TEMPLATE_URL(sel.key)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white text-[#175528] hover:bg-emerald-50 px-5 py-3 text-sm font-extrabold shadow-2xl shadow-black/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-[#04120C] hover:from-emerald-300 hover:to-emerald-400 px-5 py-3 text-sm font-extrabold shadow-2xl shadow-emerald-500/30 transition-all hover:scale-[1.03] active:scale-[0.97]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Descargar en Excel
               </a>
               <button onClick={() => onNavigate('subir')}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 text-white hover:bg-white/25 px-5 py-3 text-sm font-bold ring-1 ring-white/25 transition-all active:scale-95">
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 text-white hover:bg-white/20 px-5 py-3 text-sm font-bold ring-1 ring-white/25 transition-all active:scale-95">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
