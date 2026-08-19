@@ -23,22 +23,6 @@ function Stat({ label, value, icon, tint }) {
   )
 }
 
-function Phoenix({ cls }) {
-  return (
-    <svg className={cls} viewBox="0 0 32 32" fill="none">
-      <defs>
-        <linearGradient id="phx" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#34D399" />
-          <stop offset="100%" stopColor="#0EA5E9" />
-        </linearGradient>
-      </defs>
-      <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="url(#phx)" opacity="0.3" />
-      <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="url(#phx)" opacity="0.6" />
-      <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="url(#phx)" />
-    </svg>
-  )
-}
-
 export default function DashboardHome({ user, summary, batchResults }) {
   const isAdmin = user?.role === 'admin'
   const firstName = (user?.name || 'usuario').split(' ')[0]
@@ -47,39 +31,19 @@ export default function DashboardHome({ user, summary, batchResults }) {
 
   return (
     <div className="space-y-7 animate-fade-in-up">
-      {/* ═══ Hero principal ═══ */}
-      <section className="relative overflow-hidden rounded-[28px] bg-[#04120C] text-white shadow-[0_30px_70px_rgba(0,0,0,0.4)]">
-        {/* Glows */}
-        <div className="pointer-events-none absolute -top-32 -right-24 w-[420px] h-[420px] rounded-full bg-emerald-500/30 blur-[120px]" />
-        <div className="pointer-events-none absolute -bottom-40 -left-24 w-[380px] h-[380px] rounded-full bg-sky-500/20 blur-[120px]" />
-        {/* Phoenix decorativo */}
-        <div className="pointer-events-none absolute right-6 bottom-0 hidden lg:block opacity-20 animate-float">
-          <Phoenix cls="w-64 h-64" />
-        </div>
-        {/* Rejilla */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-
-        <div className="relative px-7 md:px-10 py-9 md:py-12">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-white/20 backdrop-blur-sm text-[0.6rem] font-bold text-white/90 uppercase tracking-[0.15em]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              {today}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500/30 to-sky-500/30 px-3.5 py-1.5 ring-1 ring-white/20 text-[0.6rem] font-bold text-white uppercase tracking-wider">
-              {isAdmin ? 'EPS · Recepción de datos' : 'Prestador'}
-            </span>
-          </div>
-
-          <h2 className="text-[clamp(1.9rem,5vw,3rem)] font-extrabold tracking-tight leading-[1.05]">
-            Hola, <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-sky-300 bg-clip-text text-transparent">{firstName}</span>
+      {/* ═══ Encabezado simple ═══ */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[22px] font-extrabold text-[rgb(var(--ink))] tracking-tight">
+            Hola, <span className="text-[#2E7D32]">{firstName}</span>
           </h2>
-          <p className="text-white/70 text-[15px] mt-3 max-w-lg font-normal leading-relaxed">
-            {isAdmin
-              ? 'Recibe y verifica la data mensual de los prestadores, consolida la información y revisa las historias clínicas.'
-              : 'Sube tu data mensual, descarga los formatos oficiales y gestiona tus historias clínicas.'}
-          </p>
+          <p className="text-sm text-[rgb(var(--faint))] mt-1 capitalize">{today}</p>
         </div>
-      </section>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5EBA65]/15 px-3.5 py-1.5 text-[0.6rem] font-bold uppercase tracking-wider text-[#2E7D32] dark:text-[#6FCB76] border border-[#5EBA65]/40">
+          <span className="w-2 h-2 rounded-full bg-[#5EBA65] animate-pulse" />
+          {isAdmin ? 'EPS · Recepción de datos' : 'Prestador'}
+        </span>
+      </div>
 
       {/* ═══ Estadísticas ═══ */}
       {summary && (
