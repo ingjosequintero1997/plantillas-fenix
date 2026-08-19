@@ -18,54 +18,47 @@ const FORMULAS = [
 ]
 
 const TIPO_STYLE = {
-  'Numérico': 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200/60 dark:border-blue-700/40',
-  'Fecha': 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-700/40',
-  'Texto': 'bg-gray-100 dark:bg-[#3D3D40] text-ink-muted border-ink-line/60 dark:border-[#666669]',
+  'Numérico': { color: '#237A32', bg: 'var(--primary-light)' },
+  'Fecha': { color: '#185C25', bg: '#E8F1EC' },
+  'Texto': { color: 'var(--text-secondary)', bg: 'var(--bg)' },
 }
 
 export default function FormulasView() {
   return (
-    <section className="rounded-2xl bg-white dark:bg-[#333337] border border-ink-line/50 dark:border-[#666669]/50 shadow-sm dark:shadow-black/30 p-5 animate-fade-in-up">
-      <div className="flex items-center gap-3 mb-1">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 flex items-center justify-center shrink-0 shadow-md shadow-brand-900/20">
-          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </div>
-        <div>
-          <h2 className="text-sm font-bold text-ink">Fórmulas aplicadas</h2>
-          <p className="text-xs text-ink-muted/70">Estas variables se calculan automáticamente al abrir el archivo en Excel</p>
-        </div>
+    <div className="panel">
+      <div className="flex items-center gap-2 mb-4">
+        <svg className="w-4 h-4" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        <span className="font-medium">Fórmulas aplicadas</span>
       </div>
+      <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>Estas variables se calculan automáticamente al abrir el archivo en Excel.</p>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-ink-line/50 dark:border-[#666669]/50">
-        <table className="min-w-full">
+      <div className="table-wrap">
+        <table className="table">
           <thead>
-            <tr className="bg-[#F8F7F4] dark:bg-[#28282B] border-b border-ink-line/50 dark:border-[#666669]/50">
-              <th className="px-4 py-2.5 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Variable</th>
-              <th className="px-4 py-2.5 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Qué calcula</th>
-              <th className="px-4 py-2.5 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Tipo</th>
-              <th className="px-4 py-2.5 text-left text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted">Si no hay dato</th>
+            <tr>
+              <th>Variable</th>
+              <th>Qué calcula</th>
+              <th>Tipo</th>
+              <th>Si no hay dato</th>
             </tr>
           </thead>
           <tbody>
-            {FORMULAS.map((f) => (
-              <tr key={f.variable} className="border-b border-surface-100 dark:border-[#666669]/40 align-top hover:bg-brand-50/20 dark:hover:bg-brand-900/10 transition-colors">
-                <td className="px-4 py-2.5 text-xs font-bold text-ink">{f.variable}</td>
-                <td className="px-4 py-2.5 text-xs text-ink-muted">{f.desc}</td>
-                <td className="px-4 py-2.5">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.45rem] font-bold uppercase tracking-wider border ${TIPO_STYLE[f.tipo]}`}>
-                    {f.tipo}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className="font-mono text-xs font-semibold text-brand-700 dark:text-brand-300">{f.sinDato}</span>
-                </td>
-              </tr>
-            ))}
+            {FORMULAS.map((f) => {
+              const st = TIPO_STYLE[f.tipo] || TIPO_STYLE['Texto']
+              return (
+                <tr key={f.variable}>
+                  <td className="font-medium">{f.variable}</td>
+                  <td style={{ color: 'var(--text-secondary)' }}>{f.desc}</td>
+                  <td>
+                    <span className="inline-flex rounded px-2 py-0.5 text-xs" style={{ color: st.color, backgroundColor: st.bg }}>{f.tipo}</span>
+                  </td>
+                  <td><span style={{ fontFamily: 'monospace', color: 'var(--primary)' }}>{f.sinDato}</span></td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
   )
 }
