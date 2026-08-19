@@ -34,35 +34,35 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
 
       {/* Panel de la plantilla seleccionada */}
       {sel && (
-        <section className="relative overflow-hidden rounded-[28px] bg-[#04120C] text-white shadow-[0_25px_60px_rgba(0,0,0,0.35)]">
-          <div className="pointer-events-none absolute -top-28 -right-24 w-80 h-80 rounded-full bg-emerald-500/30 blur-[110px]" />
-          <div className="pointer-events-none absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-sky-500/20 blur-[110px]" />
+        <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#5EBA65] via-[#4CAF50] to-[#388E3C] text-white shadow-[0_25px_60px_rgba(46,125,50,0.35)]">
+          <div className="pointer-events-none absolute -top-28 -right-24 w-80 h-80 rounded-full bg-white/20 blur-[110px]" />
+          <div className="pointer-events-none absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-[#1B5E20]/30 blur-[110px]" />
           <div className="relative flex flex-wrap items-center gap-5 px-6 md:px-8 py-7">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400/30 to-sky-500/30 flex items-center justify-center text-white text-lg font-extrabold ring-1 ring-white/25 shadow-lg shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white text-lg font-extrabold ring-1 ring-white/30 shadow-lg shrink-0">
               {String(selIdx + 1).padStart(2, '0')}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="inline-flex items-center gap-1.5 bg-white/10 rounded-full px-2.5 py-1 mb-1.5 ring-1 ring-white/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-2.5 py-1 mb-1.5 ring-1 ring-white/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 <span className="text-[0.55rem] font-bold text-white/90 tracking-[0.15em] uppercase">Plantilla seleccionada</span>
               </div>
               <h3 className="text-white text-xl font-extrabold tracking-tight">{sel.label}</h3>
-              <p className="text-white/70 text-xs mt-1 max-w-xl">{sel.description}</p>
+              <p className="text-white/80 text-xs mt-1 max-w-xl">{sel.description}</p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-white ring-1 ring-white/20">{sel.fields} variables</span>
-                <span className="text-[0.55rem] font-bold tracking-wider rounded-md px-2 py-0.5 bg-white text-[#064E3B]">{SHORT[sel.key] || sel.key.toUpperCase()}</span>
+                <span className="inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-white ring-1 ring-white/30">{sel.fields} variables</span>
+                <span className="text-[0.55rem] font-bold tracking-wider rounded-md px-2 py-0.5 bg-white text-[#2E7D32]">{SHORT[sel.key] || sel.key.toUpperCase()}</span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch gap-2.5 shrink-0">
               <a href={DOWNLOAD_TEMPLATE_URL(sel.key)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-[#04120C] hover:from-emerald-300 hover:to-emerald-400 px-5 py-3 text-sm font-extrabold shadow-2xl shadow-emerald-500/30 transition-all hover:scale-[1.03] active:scale-[0.97]">
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white text-[#2E7D32] hover:bg-[#EAF6EB] px-5 py-3 text-sm font-extrabold shadow-2xl shadow-[#1B5E20]/30 transition-all hover:scale-[1.03] active:scale-[0.97]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Descargar en Excel
               </a>
               <button onClick={() => onNavigate('subir')}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 text-white hover:bg-white/20 px-5 py-3 text-sm font-bold ring-1 ring-white/25 transition-all active:scale-95">
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 text-white hover:bg-white/25 px-5 py-3 text-sm font-bold ring-1 ring-white/30 transition-all active:scale-95">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
@@ -81,14 +81,14 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
           const accent = ACCENTS[idx] || ACCENTS[0]
           const short = SHORT[item.key] || item.key.toUpperCase()
           return (
-            <div key={item.key} className={`relative transition-all duration-300 rounded-2xl bg-white dark:bg-[#1A1D21] border ${
+            <div key={item.key} className={`relative transition-all duration-300 rounded-2xl bg-white dark:bg-[#131920] border ${
               isSelected
-                ? 'ring-2 ring-emerald-500/20 shadow-[0_10px_30px_rgba(30,107,51,0.12)] border-emerald-500/40 dark:border-emerald-600/50'
-                : 'border-[var(--line)] dark:border-[#262B33] shadow-[0_1px_3px_rgba(15,23,42,0.05)] dark:shadow-black/30 hover:shadow-[0_10px_30px_rgba(15,23,42,0.08)] dark:hover:shadow-black/50 hover:-translate-y-1 hover:border-emerald-300/50 dark:hover:border-emerald-700/40'
+                ? 'ring-2 ring-[#5EBA65]/40 shadow-[0_10px_30px_rgba(94,186,101,0.18)] border-[#5EBA65]/60 dark:border-[#5EBA65]/50'
+                : 'border-[#5EBA65]/25 dark:border-[#5EBA65]/20 shadow-[0_1px_3px_rgba(15,23,42,0.05)] dark:shadow-black/30 hover:shadow-[0_10px_30px_rgba(94,186,101,0.15)] dark:hover:shadow-black/50 hover:-translate-y-1 hover:border-[#5EBA65]/50 dark:hover:border-[#5EBA65]/40'
             }`}>
               <button onClick={() => onSelect(item.key)} className="w-full text-left p-5">
                 {isSelected && (
-                  <div className={`absolute top-3 right-3 w-6 h-6 rounded-full ${accent.dot} flex items-center justify-center shadow-sm`}>
+                  <div className={`absolute top-3 right-3 w-6 h-6 rounded-full bg-[#5EBA65] flex items-center justify-center shadow-sm`}>
                     <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -96,7 +96,7 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
                 )}
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all text-sm font-extrabold ${
-                    isSelected ? `${accent.chip} text-white shadow-md` : 'bg-slate-100 dark:bg-[#22262C] text-[rgb(var(--ink))]'
+                    isSelected ? 'bg-[#5EBA65] text-white shadow-md' : 'bg-[#5EBA65]/15 text-[#2E7D32] dark:text-[#6FCB76]'
                   }`}>
                     {num}
                   </div>
@@ -107,12 +107,12 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
                 </div>
                 <p className="text-xs text-[rgb(var(--faint))] leading-relaxed mb-4 line-clamp-2">{item.description}</p>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-[#1E6B33] dark:text-[#79CB8A] border border-emerald-200/70 dark:border-emerald-800/40">{item.fields} variables</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#5EBA65]/15 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-[#2E7D32] dark:text-[#6FCB76] border border-[#5EBA65]/40">{item.fields} variables</span>
                   <span className={`text-[0.55rem] font-bold tracking-wider rounded-md px-2 py-0.5 ${accent.tag}`}>{short}</span>
                 </div>
               </button>
               <div className="px-5 pb-4 pt-0 flex justify-end">
-                <span className={`inline-flex items-center gap-1 text-[0.55rem] font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-emerald-600 dark:text-emerald-300' : 'text-[rgb(var(--faint))]'}`}>
+                <span className={`inline-flex items-center gap-1 text-[0.55rem] font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-[#2E7D32] dark:text-[#6FCB76]' : 'text-[rgb(var(--faint))]'}`}>
                   {isSelected ? 'Seleccionada' : 'Clic para seleccionar'}
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
