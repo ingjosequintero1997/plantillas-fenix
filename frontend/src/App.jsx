@@ -209,6 +209,8 @@ export default function App() {
         setProgress(Math.round((index / files.length) * 100))
         await processSingleFile(file, files.length === 1)
       }
+      // Mostrar el resultado de la validación
+      setSection('subir')
     } catch (e) {
       setError(e.message || 'Error al procesar archivo')
     } finally {
@@ -302,13 +304,18 @@ export default function App() {
                   onSelect={handleSelectTemplate}
                 />
               ) : (
-                <PlantillasView
-                  templates={templates}
-                  selectedTemplate={selectedTemplate}
-                  onSelect={handleSelectTemplate}
-                  onNavigate={setSection}
-                  single
-                />
+                <div className="space-y-6">
+                  <PlantillasView
+                    templates={templates}
+                    selectedTemplate={selectedTemplate}
+                    onSelect={handleSelectTemplate}
+                    onNavigate={setSection}
+                    single
+                  />
+
+                  {/* Acceso directo para cargar la data de la plantilla activa */}
+                  <DragDrop onFile={handleFile} />
+                </div>
               )
             )}
 
