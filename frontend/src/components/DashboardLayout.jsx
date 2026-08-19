@@ -85,29 +85,30 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           </div>
         </div>
 
-        {/* Selector de plantilla */}
+        {/* Selector de plantilla (píldoras) */}
         <div className="relative px-3 pt-3">
-          <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-[0.22em] px-3 mb-2">Módulo de plantilla</div>
-          <div className="relative">
-            <select
-              value={activeTemplate || ''}
-              onChange={(e) => { if (onSelectTemplate) onSelectTemplate(e.target.value) }}
-              className="w-full rounded-xl bg-white/15 text-white text-sm font-bold px-3 py-2.5 pr-8 ring-1 ring-white/25 backdrop-blur-sm outline-none appearance-none cursor-pointer focus:ring-white/40"
-            >
-              <option value="" disabled className="text-[#333]">Selecciona…</option>
-              {templates.map((t) => (
-                <option key={t.key} value={t.key} className="text-[#333]">{t.label}</option>
-              ))}
-            </select>
-            <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
+          <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-[0.22em] px-3 mb-2">Plantilla</div>
+          <div className="flex flex-wrap gap-1.5">
+            {templates.map((t) => {
+              const active = t.key === activeTemplate
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => onSelectTemplate && onSelectTemplate(t.key)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-wider transition-all duration-200 ${
+                    active
+                      ? 'bg-white text-[#2E7D32] shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
+                      : 'bg-white/10 text-white/70 ring-1 ring-white/20 hover:bg-white/20 hover:text-white'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-[#5EBA65]' : 'bg-white/40'}`} />
+                  {t.label}
+                </button>
+              )
+            })}
           </div>
-          {activeMeta && (
-            <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-[0.6rem] font-bold text-white/80 ring-1 ring-white/15">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              Activo: {activeMeta.label}
-            </div>
+          {templates.length === 0 && (
+            <div className="mt-2 text-[0.6rem] text-white/40 px-1">Sin plantillas asignadas</div>
           )}
         </div>
 
