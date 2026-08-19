@@ -85,33 +85,6 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           </div>
         </div>
 
-        {/* Selector de plantilla (píldoras) */}
-        <div className="relative px-3 pt-3">
-          <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-[0.22em] px-3 mb-2">Plantilla</div>
-          <div className="flex flex-wrap gap-1.5">
-            {templates.map((t) => {
-              const active = t.key === activeTemplate
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => onSelectTemplate && onSelectTemplate(t.key)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-wider transition-all duration-200 ${
-                    active
-                      ? 'bg-white text-[#2E7D32] shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
-                      : 'bg-white/10 text-white/70 ring-1 ring-white/20 hover:bg-white/20 hover:text-white'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-[#5EBA65]' : 'bg-white/40'}`} />
-                  {t.label}
-                </button>
-              )
-            })}
-          </div>
-          {templates.length === 0 && (
-            <div className="mt-2 text-[0.6rem] text-white/40 px-1">Sin plantillas asignadas</div>
-          )}
-        </div>
-
         {/* Nav */}
         <nav className="relative flex-1 px-3 py-5 space-y-1.5 overflow-y-auto scroll-thin">
           <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-[0.22em] px-3 mb-3">Menú principal</div>

@@ -305,6 +305,23 @@ export default function App() {
                 />
               ) : (
                 <div className="space-y-6">
+                  {/* Botón para volver al selector de plantillas */}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <button
+                      onClick={() => setActiveTemplate('')}
+                      className="inline-flex items-center gap-2 rounded-xl border border-[#5EBA65]/40 bg-white dark:bg-[#131920] text-[#2E7D32] dark:text-[#6FCB76] hover:bg-[#5EBA65]/10 px-4 py-2.5 text-sm font-bold transition-all"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Cambiar plantilla
+                    </button>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5EBA65]/15 px-3 py-1.5 text-[0.6rem] font-bold uppercase tracking-wider text-[#2E7D32] dark:text-[#6FCB76] border border-[#5EBA65]/40">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#5EBA65] animate-pulse" />
+                      {templates.find((t) => t.key === activeTemplate)?.label}
+                    </span>
+                  </div>
+
                   <PlantillasView
                     templates={templates}
                     selectedTemplate={selectedTemplate}
