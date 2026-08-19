@@ -22,29 +22,23 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
     if (!sel) return null
     return (
       <div className="animate-fade-in-up">
-        <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#5EBA65] via-[#4CAF50] to-[#388E3C] text-white shadow-[0_25px_60px_rgba(46,125,50,0.35)]">
-          <div className="pointer-events-none absolute -top-28 -right-24 w-80 h-80 rounded-full bg-white/20 blur-[110px]" />
-          <div className="pointer-events-none absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-[#1B5E20]/30 blur-[110px]" />
-          <div className="relative flex flex-wrap items-center gap-5 px-6 md:px-8 py-7">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white text-lg font-extrabold ring-1 ring-white/30 shadow-lg shrink-0">
+        <section className="rounded-3xl bg-[#2E7D32] text-white shadow-sm">
+          <div className="flex flex-wrap items-center gap-5 px-6 md:px-8 py-7">
+            <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center text-white text-lg font-extrabold shrink-0">
               {String(selIdx + 1).padStart(2, '0')}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-2.5 py-1 mb-1.5 ring-1 ring-white/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                <span className="text-[0.55rem] font-bold text-white/90 tracking-[0.15em] uppercase">Plantilla seleccionada</span>
-              </div>
+              <div className="text-[0.55rem] font-bold text-white/70 tracking-[0.15em] uppercase mb-1">Plantilla seleccionada</div>
               <h3 className="text-white text-xl font-extrabold tracking-tight">{sel.label}</h3>
               <p className="text-white/80 text-xs mt-1 max-w-xl">{sel.description}</p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className="inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-white ring-1 ring-white/30">{sel.fields} variables</span>
+                <span className="inline-flex items-center rounded-full bg-white/15 px-2.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-white">{sel.fields} variables</span>
                 <span className="text-[0.55rem] font-bold tracking-wider rounded-md px-2 py-0.5 bg-white text-[#2E7D32]">{SHORT[sel.key] || sel.key.toUpperCase()}</span>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-stretch gap-2.5 shrink-0">
+            <div className="shrink-0">
               <a href={DOWNLOAD_TEMPLATE_URL(sel.key)}
-                className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-white text-[#2E7D32] hover:bg-[#EAF6EB] px-6 py-3 text-sm font-extrabold shadow-2xl shadow-[#1B5E20]/30 transition-all hover:scale-[1.03] active:scale-[0.97]">
-                {/* Icono de Excel */}
+                className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-white text-[#2E7D32] hover:bg-[#EAF6EB] px-6 py-3 text-sm font-bold transition-all">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM13 3.5L18.5 9H13V3.5zM9.7 16.3l1.8-2.1-1.8-2.1.9-1.1 2 2.4 2-2.4.9 1.1-1.8 2.1 1.8 2.1-.9 1.1-2-2.4-2 2.4-.9-1.1z"/>
                 </svg>

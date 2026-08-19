@@ -2,11 +2,22 @@ import React from 'react'
 import { useAuth } from '../AuthContext'
 
 const ACCENTS = [
-  { chip: 'bg-[#5EBA65]', icon: '👶', desc: 'Data de control prenatal y gestantes', short: 'GEST' },
-  { chip: 'bg-rose-500', icon: '🔬', desc: 'Data de citologías y tamizaje', short: 'CITO' },
-  { chip: 'bg-sky-500', icon: '🩺', desc: 'Data de mamografías de tamizaje', short: 'MAMO' },
-  { chip: 'bg-amber-500', icon: '💉', desc: 'Data de vacunación penta', short: 'PENTA' },
+  { chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300', icon: 'mujer' },
+  { chip: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300', icon: 'citologia' },
+  { chip: 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300', icon: 'mama' },
+  { chip: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300', icon: 'vacuna' },
 ]
+
+function Icon({ name }) {
+  const common = { className: 'w-6 h-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', strokeWidth: '1.8' }
+  const paths = {
+    mujer: <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />,
+    citologia: <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v4.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z" />,
+    mama: <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />,
+    vacuna: <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15m7.5 0V5.5m0 13V19M12 3.5A8.5 8.5 0 0112 20.5 8.5 8.5 0 0112 3.5z" />,
+  }
+  return <svg {...common}>{paths[name]}</svg>
+}
 
 export default function TemplateSelector({ templates, onSelect }) {
   const { user } = useAuth()
@@ -17,49 +28,37 @@ export default function TemplateSelector({ templates, onSelect }) {
     <div className="space-y-8 animate-fade-in-up">
       {/* Encabezado */}
       <div className="text-center max-w-2xl mx-auto">
-        <div className="inline-flex items-center gap-2 rounded-full bg-[#5EBA65]/15 px-3.5 py-1.5 text-[0.6rem] font-bold uppercase tracking-wider text-[#2E7D32] dark:text-[#6FCB76] border border-[#5EBA65]/40 mb-5">
-          <span className="w-2 h-2 rounded-full bg-[#5EBA65] animate-pulse" />
+        <div className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-1.5 text-[0.6rem] font-bold uppercase tracking-wider text-[#2E7D32] dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 mb-5">
           {isAdmin ? 'EPS · Recepción de datos' : 'Prestador'}
         </div>
         <h2 className="text-[clamp(1.6rem,4vw,2.4rem)] font-extrabold text-[rgb(var(--ink))] tracking-tight">
           Hola, <span className="text-[#2E7D32]">{firstName}</span>
         </h2>
         <p className="text-[15px] text-[rgb(var(--faint))] mt-2">
-          Selecciona el módulo de plantilla con el que vas a trabajar. Cada módulo es independiente: su propio cargue, historias clínicas y consolidación.
+          Selecciona la plantilla con la que vas a trabajar. Cada una es independiente: su propio cargue, historias clínicas y consolidación.
         </p>
       </div>
 
       {/* Tarjetas de plantillas */}
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {templates.map((item, idx) => {
           const accent = ACCENTS[idx] || ACCENTS[0]
-          const num = String(idx + 1).padStart(2, '0')
           return (
             <button
               key={item.key}
               onClick={() => onSelect(item.key)}
-              className="group relative text-left overflow-hidden rounded-3xl bg-white dark:bg-[#131920] border border-[#5EBA65]/25 dark:border-[#5EBA65]/20 shadow-[0_2px_10px_rgba(15,23,42,0.05)] dark:shadow-black/30 hover:shadow-[0_20px_50px_rgba(94,186,101,0.20)] dark:hover:shadow-black/60 hover:-translate-y-1.5 hover:border-[#5EBA65]/50 transition-all duration-300 p-6"
+              className="group text-left rounded-2xl bg-white dark:bg-[#131920] border border-slate-200 dark:border-[#1E2733] p-5 hover:border-[#5EBA65]/50 hover:shadow-md dark:hover:shadow-black/40 transition-all duration-200"
             >
-              {/* Top bar */}
-              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#5EBA65] to-[#388E3C]" />
-
-              <div className="flex items-center justify-between mb-5">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl ${accent.chip} shadow-lg shadow-black/10`}>
-                  {accent.icon}
-                </div>
-                <span className="text-[2.5rem] font-extrabold text-[rgb(var(--ink))]/5 leading-none">{num}</span>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${accent.chip}`}>
+                <Icon name={accent.icon} />
               </div>
-
-              <div className="text-[0.6rem] font-bold text-[rgb(var(--faint))] uppercase tracking-[0.15em] mb-1">Módulo de plantilla</div>
-              <h3 className="text-lg font-extrabold text-[rgb(var(--ink))] tracking-tight mb-1.5">{item.label}</h3>
-              <p className="text-[13px] text-[rgb(var(--faint))] leading-relaxed mb-5">{accent.desc}</p>
-
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#5EBA65]/15 px-2.5 py-1 text-[0.55rem] font-bold uppercase tracking-wider text-[#2E7D32] dark:text-[#6FCB76] border border-[#5EBA65]/40">
-                  {item.fields} variables
-                </span>
-                <span className="inline-flex items-center gap-1 text-[0.6rem] font-bold text-[#2E7D32] dark:text-[#6FCB76] uppercase tracking-wider group-hover:gap-2 transition-all">
-                  Entrar <span>→</span>
+              <div className="text-[0.6rem] font-bold text-[rgb(var(--faint))] uppercase tracking-wider mb-1">Plantilla</div>
+              <h3 className="text-base font-bold text-[rgb(var(--ink))] tracking-tight mb-1.5">{item.label}</h3>
+              <p className="text-[13px] text-[rgb(var(--faint))] leading-relaxed mb-4">{item.description}</p>
+              <div className="flex items-center justify-between border-t border-slate-100 dark:border-[#1E2733] pt-3">
+                <span className="text-[0.55rem] font-bold uppercase tracking-wider text-[rgb(var(--faint))]">{item.fields} variables</span>
+                <span className="inline-flex items-center gap-1 text-[0.6rem] font-bold text-[#2E7D32] dark:text-emerald-300 uppercase tracking-wider">
+                  Entrar <span className="group-hover:translate-x-0.5 transition-transform">→</span>
                 </span>
               </div>
             </button>
