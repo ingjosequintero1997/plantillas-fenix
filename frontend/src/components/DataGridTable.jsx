@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import Pagination from './Pagination'
 
 const PER_PAGE = 40
+const MAX_PREVIEW_ROWS = 2000
 
 function buildLogMap(logs) {
   const map = {}
@@ -15,13 +16,15 @@ function buildLogMap(logs) {
 }
 
 export default function DataGridTable({ corrected_text, templateColumns, logs }) {
-  const rows = useMemo(() => {
-    if (!corrected_text) return []
-    return corrected_text
+  const { rows, truncated } = useMemo(() => {
+    if (!corrected_text) return { rows: [], truncated: false }
+    const all = corrected_text
       .trim()
       .split('\n')
       .filter(Boolean)
       .map((row) => row.split('|'))
+    const truncated = all.length > MAX_PREVIEW_ROWS
+    return { rows: truncated ? all.slice(0, MAX_PREVIEW_ROWS) : all, truncated }
   }, [corrected_text])
 
   const [search, setSearch] = useState('')
@@ -70,7 +73,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
     <div className="space-y-3">
       <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 dark:border-[#666669]/50 bg-[#F8F7F4] dark:bg-[#28282B] p-3 md:flex-row md:items-center md:justify-between">
           <div className="text-sm font-bold text-ink">
-            Registros: <span className="text-ink-muted font-semibold">{rows.length}</span>
+            Registros: <span className="text-ink-muted font-semibold">{truncated ? `${MAX_PREVIEW_ROWS}+` : rows.length}</span>
             <span className="mx-2 text-ink-line">·</span>
             Visibles: <span className="text-ink-muted font-semibold">{filteredIndexes.length}</span>
         </div>

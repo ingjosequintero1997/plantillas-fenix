@@ -1,0 +1,15 @@
+.git/
+.vercel/
+node_modules/
+__pycache__/
+*.pyc
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+frontend/dist/
+frontend/node_modules/
+test_export.txt
+gen_test.py
+make_test.py

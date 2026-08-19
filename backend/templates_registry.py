@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 try:
-    from .template_config import get_rcv_template
     from .gestante_config import get_gestante_template
     from .citologia_config import get_citologia_template
     from .mamografia_config import get_mamografia_template
     from .penta_config import get_penta_template
 except ImportError:
-    from template_config import get_rcv_template
     from gestante_config import get_gestante_template
     from citologia_config import get_citologia_template
     from mamografia_config import get_mamografia_template
@@ -15,12 +13,6 @@ except ImportError:
 
 
 TEMPLATE_REGISTRY = {
-    "rcv": {
-        "key": "rcv",
-        "label": "Plantilla RCV",
-        "description": "Riesgo cardiovascular y seguimiento crónico.",
-        "template_factory": get_rcv_template,
-    },
     "gestante": {
         "key": "gestante",
         "label": "Plantilla Gestante",
@@ -49,9 +41,9 @@ TEMPLATE_REGISTRY = {
 
 
 def get_template_by_key(template_key: str):
-    key = (template_key or "rcv").strip().lower()
+    key = (template_key or "gestante").strip().lower()
     if key not in TEMPLATE_REGISTRY:
-        return TEMPLATE_REGISTRY["rcv"]
+        return TEMPLATE_REGISTRY["gestante"]
     entry = TEMPLATE_REGISTRY[key]
     return {
         "key": entry["key"],

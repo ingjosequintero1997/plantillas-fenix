@@ -1,17 +1,15 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Query, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Query, Depends, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import pandas as pd
 import io
 import re
 import gzip
-import hashlib
-import hmac
-import json
 import base64
-from datetime import datetime, timedelta
+import json
+from datetime import datetime
 from pydantic import BaseModel
+from sqlalchemy.exc import OperationalError
 try:
 	from .utils import fuzzy_map, normalize_text
 	from .templates_registry import get_template_by_key, list_templates_meta
@@ -31,7 +29,7 @@ app = FastAPI(title="Validador IPS", root_path=API_ROOT_PATH)
 class RevalidatePayload(BaseModel):
 	raw_text: str
 	mapping: dict[str, str | None]
-	template_key: str = "rcv"
+	template_key: str = "gestante"
 
 def template_names(template: list[dict]):
 	return [t['name'] for t in template]
@@ -46,68 +44,125 @@ app.add_middleware(
 )
 
 # ─── Auth ────────────────────────────────────────────────────────────────
-TOKEN_SECRET = os.environ.get("TOKEN_SECRET", "fenix-secret-change-in-production")
-
-USERS = {
-    "admin": {"password": "admin123", "name": "Administrador", "role": "admin"},
-}
-
-security = HTTPBearer(auto_error=False)
+try:
+    from .auth_utils import (
+        create_token,
+        get_current_user,
+        hash_password,
+        require_admin,
+        verify_credentials,
+    )
+    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica
+    from . import gcs_storage
+except ImportError:
+    from auth_utils import (
+        create_token,
+        get_current_user,
+        hash_password,
+        require_admin,
+        verify_credentials,
+    )
+    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica
+    import gcs_storage
 
 class LoginPayload(BaseModel):
     username: str
     password: str
 
-def create_token(username: str) -> str:
-    payload = json.dumps({"sub": username, "exp": (datetime.utcnow() + timedelta(hours=8)).isoformat()})
-    b64 = base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
-    sig = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
-    return f"{b64}.{sig}"
-
-def verify_token(token: str) -> str | None:
-    try:
-        b64, sig = token.split(".")
-        expected = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(sig, expected):
-            return None
-        padded = b64 + "=" * (4 - len(b64) % 4)
-        payload = json.loads(base64.urlsafe_b64decode(padded))
-        exp = datetime.fromisoformat(payload["exp"])
-        if datetime.utcnow() > exp:
-            return None
-        return payload["sub"]
-    except Exception:
-        return None
-
-def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
-    if credentials is None:
-        raise HTTPException(status_code=401, detail="No autorizado")
-    username = verify_token(credentials.credentials)
-    if username is None:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
-    user = USERS.get(username)
-    if user is None:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
-    return user
-
 @app.post("/auth/login")
 async def auth_login(payload: LoginPayload):
-    user = USERS.get(payload.username)
-    if not user or user["password"] != payload.password:
+    ensure_db_ready()
+    user = verify_credentials(payload.username, payload.password)
+    if user is None:
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-    token = create_token(payload.username)
-    return {"token": token, "user": {"username": payload.username, "name": user["name"], "role": user["role"]}}
+    token = create_token(user)
+    return {
+        "token": token,
+        "user": {"id": user.id, "username": user.username, "name": user.name, "role": user.role},
+    }
 
 @app.get("/auth/me")
-async def auth_me(current_user: dict = Depends(get_current_user)):
-    return {"user": {"username": current_user["name"], "name": current_user["name"], "role": current_user["role"]}}
+async def auth_me(current_user: User = Depends(get_current_user)):
+    prestador_id = None
+    prestador_nombre = None
+    try:
+        db = SessionLocal()
+        try:
+            prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+            prestador_id = prestador.id if prestador else None
+            prestador_nombre = prestador.nombre if prestador else None
+        finally:
+            db.close()
+    except Exception:
+        pass
+    return {
+        "user": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "name": current_user.name,
+            "role": current_user.role,
+            "prestador_id": prestador_id,
+            "prestador_nombre": prestador_nombre,
+        }
+    }
+
+
+def seed_admin():
+    try:
+        db = SessionLocal()
+        try:
+            existing = db.query(User).filter(User.username == "admin").first()
+            if existing is None:
+                db.add(
+                    User(
+                        username="admin",
+                        password_hash=hash_password("admin123"),
+                        name="Administrador",
+                        role="admin",
+                        active=True,
+                    )
+                )
+                db.commit()
+        finally:
+            db.close()
+    except Exception:
+        pass  # Sin BD persistente: se usa el admin de respaldo
+
+
+_db_ready = False
+
+def ensure_db_ready():
+    # Inicializa la BD de forma perezosa (solo al primer login), para no
+    # bloquear el cold start de las funciones serverless con la conexión a BD.
+    global _db_ready
+    if _db_ready:
+        return
+    try:
+        db_init_db()
+    except Exception:
+        pass
+    try:
+        seed_admin()
+    except Exception:
+        pass
+    _db_ready = True
 
 @app.get("/health")
 async def health():
 	return {"status": "ok"}
 
+@app.get("/debug-oidc")
+async def debug_oidc(request: Request):
+	token = request.headers.get("x-vercel-oidc-token", "")
+	return {
+		"oidc_header_present": bool(token),
+		"oidc_header_len": len(token),
+		"oidc_header_preview": token[:40],
+		"all_headers": [h for h in request.headers.keys()],
+	}
+
 @app.get("/template")
-async def get_template(template_key: str = Query(default="rcv")):
+async def get_template(template_key: str = Query(default="gestante")):
 	meta = get_template_by_key(template_key)
 	return {
 		"template_key": meta["key"],
@@ -118,6 +173,45 @@ async def get_template(template_key: str = Query(default="rcv")):
 @app.get("/templates")
 async def get_templates():
 	return {"templates": list_templates_meta()}
+
+
+# ─── Detección automática de plantilla ────────────────────────────────────
+def _template_names_of(key: str) -> list[str]:
+	try:
+		from .templates_registry import TEMPLATE_REGISTRY
+	except ImportError:
+		from templates_registry import TEMPLATE_REGISTRY
+	entry = TEMPLATE_REGISTRY.get(key)
+	if not entry:
+		return []
+	return [t["name"] for t in entry["template_factory"]()]
+
+
+def union_template_names() -> list[str]:
+	names = set()
+	for key in ("gestante", "citologia", "mamografia", "penta"):
+		for name in _template_names_of(key):
+			names.add(name)
+	return sorted(names)
+
+
+def detect_best_template(headers: list[str]) -> tuple[str | None, dict]:
+	best_key = None
+	best_score = -1.0
+	scores: dict[str, float] = {}
+	for key in ("gestante", "citologia", "mamografia", "penta"):
+		names = _template_names_of(key)
+		if not names:
+			continue
+		row_map = fuzzy_map(headers, names, score_cutoff=76)
+		hits = sum(1 for value in row_map.values() if value is not None)
+		coverage = hits / max(1, len(names))
+		score = hits + coverage
+		scores[key] = round(score, 3)
+		if score > best_score:
+			best_score = score
+			best_key = key
+	return best_key, scores
 
 def parse_pipe_text(text: str) -> pd.DataFrame:
 	return pd.read_csv(
@@ -209,15 +303,18 @@ def normalize_source_dataframe(raw_df: pd.DataFrame, expected_names: list[str]) 
 
 	# Compatibilidad con pandas 2.x/3.x sin usar applymap.
 	df = df.apply(lambda col: col.map(clean_string))
+
 	# Descarta únicamente columnas completamente vacías al final del bloque.
 	if df.shape[1] > 0:
-		last_non_empty = -1
-		for col_idx in range(df.shape[1]):
-			if any(df.iloc[:, col_idx].astype(str).str.strip() != ""):
-				last_non_empty = col_idx
-		if last_non_empty >= 0:
-			df = df.iloc[:, : last_non_empty + 1]
-	df = df[df.apply(lambda row: any(cell != "" for cell in row), axis=1)]
+		non_empty_cols = df.ne("").any(axis=0)
+		last_idx = df.shape[1] - 1
+		while last_idx >= 0 and not bool(non_empty_cols.iloc[last_idx]):
+			last_idx -= 1
+		if last_idx >= 0:
+			df = df.iloc[:, : last_idx + 1]
+
+	# Elimina filas completamente vacías.
+	df = df[df.ne("").any(axis=1)]
 	return df.reset_index(drop=True)
 
 
@@ -267,6 +364,11 @@ def build_structure_validation(headers: list[str], template_cols: int, row_count
 		"row_count": row_count,
 	}
 
+def _gz_compress(text: str) -> str:
+	# Comprime y codifica en base64 para reducir el tamaño de la respuesta
+	# (las respuestas grandes son lentas/inestables en serverless de Vercel).
+	return base64.b64encode(gzip.compress(text.encode("utf-8"))).decode("ascii")
+
 def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, template_key: str, active_template: list[dict]):
 	corrected_df, logs, stats = validate_and_correct(df, mapping, active_template)
 	# Asegurar que no hay NaN antes de exportar
@@ -285,28 +387,25 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 		"mapping": mapping,
 		"summary": stats,
 		"logs_sample": logs[:1000],
-		"corrected_text": corrected_text,
+		"corrected_text": _gz_compress(corrected_text),
 		"preview_rows": preview_rows,
-		"raw_text": raw_text,
+		"raw_text": _gz_compress(raw_text),
 		"template_names": [t['name'] for t in active_template],
+		"compressed": True,
 	}
 
 @app.post("/upload")
 async def upload_file(
 	file: UploadFile = File(...),
-	template_key: str = Form(default="rcv"),
+	template_key: str = Form(default="auto"),
 	strict_mode: bool = Form(default=False),
 	min_template_coverage: float = Form(default=95.0),
 	require_exact_columns: bool = Form(default=True),
 ):
-	meta = get_template_by_key(template_key)
-	active_template = meta["template"]
-	active_names = template_names(active_template)
-	template_key = meta["key"]
 	filename = (file.filename or '').lower()
 	if not (filename.endswith('.txt') or filename.endswith('.xlsx') or filename.endswith('.xls')):
 		raise HTTPException(status_code=400, detail="Solo se permiten .txt, .xlsx o .xls")
-	
+
 	try:
 		contents = await file.read()
 		# Detectar y descomprimir gzip (enviado desde frontend para archivos > 1 MB)
@@ -315,17 +414,34 @@ async def upload_file(
 				contents = gzip.decompress(contents)
 			except Exception:
 				pass
-		if filename.endswith('.txt'):
-			text = contents.decode(errors='replace')
-			df = parse_pipe_text(text)
-			df = normalize_source_dataframe(df, active_names)
+
+		raw_df = parse_pipe_text(contents.decode(errors='replace')) if filename.endswith('.txt') else parse_excel_bytes(contents)
+
+		# Detección automática de plantilla a partir de la fila de encabezados
+		union = union_template_names()
+		header_idx = detect_header_row(raw_df, union)
+		if header_idx is not None:
+			detect_headers = make_unique_headers([clean_string(v) for v in raw_df.iloc[header_idx].tolist()])
 		else:
-			df = parse_excel_bytes(contents)
-			df = normalize_source_dataframe(df, active_names)
-		
+			detect_headers = [f"C{i + 1}" for i in range(raw_df.shape[1])]
+
+		if not template_key or template_key == "auto":
+			detected_key, detect_scores = detect_best_template(detect_headers)
+			best_score = detect_scores.get(detected_key, 0) if detected_key else 0
+			if detected_key is None or best_score < 2:
+				raise HTTPException(status_code=400, detail="No se pudo identificar la plantilla del archivo. Asegúrate de usar la plantilla descargada de la aplicación.")
+			template_key = detected_key
+
+		meta = get_template_by_key(template_key)
+		active_template = meta["template"]
+		active_names = template_names(active_template)
+		template_key = meta["key"]
+
+		df = normalize_source_dataframe(raw_df, active_names)
+
 		if len(df) == 0:
 			raise HTTPException(status_code=400, detail="Archivo vacío")
-		
+
 		orig_headers = list(df.columns)
 		map_suggest = infer_mapping(orig_headers, active_template)
 		mapping_stats = build_mapping_stats(orig_headers, map_suggest, len(active_names))
@@ -386,7 +502,7 @@ async def upload_chunk(
 	chunk_index: int = Form(...),
 	total_chunks: int = Form(...),
 	original_name: str = Form(...),
-	template_key: str = Form(default="rcv"),
+	template_key: str = Form(default="gestante"),
 	strict_mode: bool = Form(default=False),
 	min_template_coverage: float = Form(default=95.0),
 	require_exact_columns: bool = Form(default=True),
@@ -518,11 +634,495 @@ async def export_file(payload: dict):
 		headers={"Content-Disposition": f"attachment; filename={filename}"}
 	)
 
+@app.post("/export-excel")
+async def export_excel(payload: dict):
+	try:
+		from .excel_export import build_data_excel
+	except ImportError:
+		from excel_export import build_data_excel
+	ct = payload.get('corrected_text')
+	template_key = payload.get('template_key', 'gestante')
+	if not ct:
+		raise HTTPException(status_code=400, detail="Se requiere corrected_text")
+	meta = get_template_by_key(template_key)
+	buf = build_data_excel(ct, meta["template"])
+	filename = payload.get('filename', f'data_corregida_{template_key}.xlsx')
+	return StreamingResponse(
+		buf,
+		media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		headers={"Content-Disposition": f"attachment; filename={filename}"},
+	)
+
+# ─── Cargues (historial mensual) ──────────────────────────────────────────
+
+class CarguePayload(BaseModel):
+	corrected_text: str = ""
+	raw_text: str = ""
+	template_key: str = "gestante"
+	filename: str = "cargue.xlsx"
+	mes: str = ""
+	compressed: bool = False
+	summary: dict | None = None
+	logs: list | None = None
+	row_count: int = 0
+	errors_count: int = 0
+	corrected_count: int = 0
+	quality_percent: float = 0.0
+
+
+def _current_month() -> str:
+	now = datetime.utcnow()
+	return now.strftime("%Y-%m")
+
+
+@app.post("/cargues")
+async def create_cargue(payload: CarguePayload, current_user: User = Depends(get_current_user)):
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+		cargue = Cargue(
+			prestador_id=prestador.id if prestador else None,
+			user_id=current_user.id,
+			template_key=payload.template_key,
+			mes=payload.mes or _current_month(),
+			original_filename=payload.filename,
+			raw_text=payload.raw_text,
+			corrected_text=payload.corrected_text,
+			compressed=bool(payload.compressed),
+			summary_json=json.dumps(payload.summary) if payload.summary else None,
+			logs_json=json.dumps(payload.logs) if payload.logs else None,
+			row_count=payload.row_count,
+			errors_count=payload.errors_count,
+			corrected_count=payload.corrected_count,
+			quality_percent=payload.quality_percent,
+			status="validado",
+		)
+		db.add(cargue)
+		db.commit()
+		db.refresh(cargue)
+		return {"id": cargue.id, "mes": cargue.mes, "template_key": cargue.template_key}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para guardar el cargue. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+@app.get("/cargues")
+async def list_cargues(current_user: User = Depends(get_current_user)):
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		q = db.query(Cargue)
+		if current_user.role != "admin":
+			q = q.filter(Cargue.user_id == current_user.id)
+		q = q.order_by(Cargue.created_at.desc())
+		items = q.limit(100).all()
+		result = []
+		for c in items:
+			summary = {}
+			try:
+				summary = json.loads(c.summary_json) if c.summary_json else {}
+			except Exception:
+				pass
+			result.append({
+				"id": c.id,
+				"template_key": c.template_key,
+				"mes": c.mes,
+				"original_filename": c.original_filename,
+				"prestador": (c.prestador.nombre if c.prestador else None) or (c.user.name if c.user else None),
+				"row_count": c.row_count,
+				"errors_count": c.errors_count,
+				"corrected_count": c.corrected_count,
+				"quality_percent": c.quality_percent,
+				"status": c.status,
+				"created_at": c.created_at.isoformat() if c.created_at else None,
+				"summary": summary,
+			})
+		return {"cargues": result}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para consultar el historial. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+@app.get("/cargues/{cargue_id}")
+async def get_cargue(cargue_id: int, current_user: User = Depends(get_current_user)):
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargue = db.get(Cargue, cargue_id)
+		if cargue is None:
+			raise HTTPException(status_code=404, detail="Cargue no encontrado")
+		if current_user.role != "admin" and cargue.user_id != current_user.id:
+			raise HTTPException(status_code=403, detail="No autorizado")
+		def _parse_json(value):
+			try:
+				return json.loads(value) if value else {}
+			except Exception:
+				return {}
+		return {
+			"id": cargue.id,
+			"template_key": cargue.template_key,
+			"mes": cargue.mes,
+			"original_filename": cargue.original_filename,
+			"corrected_text": cargue.corrected_text,
+			"raw_text": cargue.raw_text,
+			"compressed": cargue.compressed,
+			"row_count": cargue.row_count,
+			"errors_count": cargue.errors_count,
+			"corrected_count": cargue.corrected_count,
+			"quality_percent": cargue.quality_percent,
+			"summary": _parse_json(cargue.summary_json),
+			"logs_sample": _parse_json(cargue.logs_json),
+			"created_at": cargue.created_at.isoformat() if cargue.created_at else None,
+		}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+def _decompress_cargue(cargue) -> str:
+	ct = cargue.corrected_text or ""
+	if cargue.compressed and ct:
+		try:
+			return gzip.decompress(base64.b64decode(ct)).decode("utf-8")
+		except Exception:
+			return ct
+	return ct
+
+
+@app.get("/cargues/{cargue_id}/download-txt")
+async def download_cargue_txt(cargue_id: int, current_user: User = Depends(get_current_user)):
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargue = db.get(Cargue, cargue_id)
+		if cargue is None:
+			raise HTTPException(status_code=404, detail="Cargue no encontrado")
+		if current_user.role != "admin" and cargue.user_id != current_user.id:
+			raise HTTPException(status_code=403, detail="No autorizado")
+		text = _decompress_cargue(cargue)
+		filename = cargue.original_filename.replace(".xlsx", "_corregido.txt").replace(".xls", "_corregido.txt")
+		text_normalized = text.replace('\r\n', '\n').replace('\n', '\r\n')
+		return StreamingResponse(
+			io.BytesIO(text_normalized.encode('utf-8')),
+			media_type='text/plain; charset=utf-8',
+			headers={"Content-Disposition": f"attachment; filename={filename}"},
+		)
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+@app.get("/cargues/{cargue_id}/download-excel")
+async def download_cargue_excel(cargue_id: int, current_user: User = Depends(get_current_user)):
+	try:
+		from .excel_export import build_data_excel
+	except ImportError:
+		from excel_export import build_data_excel
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargue = db.get(Cargue, cargue_id)
+		if cargue is None:
+			raise HTTPException(status_code=404, detail="Cargue no encontrado")
+		if current_user.role != "admin" and cargue.user_id != current_user.id:
+			raise HTTPException(status_code=403, detail="No autorizado")
+		text = _decompress_cargue(cargue)
+		meta = get_template_by_key(cargue.template_key)
+		buf = build_data_excel(text, meta["template"])
+		filename = cargue.original_filename.replace(".xlsx", "_ajustada.xlsx").replace(".xls", "_ajustada.xlsx")
+		return StreamingResponse(
+			buf,
+			media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename={filename}"},
+		)
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+# ─── Historias clínicas (PDF) ─────────────────────────────────────────────
+
+MAX_PDF_MB = 20
+
+
+@app.post("/historias")
+async def upload_historia(
+    request: Request,
+    file: UploadFile = File(...),
+    paciente_documento: str = Form(""),
+    paciente_nombre: str = Form(""),
+    current_user: User = Depends(get_current_user),
+):
+    ensure_db_ready()
+    filename = (file.filename or "historia.pdf").strip()
+    content = file.file.read()
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+    if not filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos PDF.")
+    if len(content) > MAX_PDF_MB * 1024 * 1024:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El archivo supera {MAX_PDF_MB} MB. En el entorno desplegado el límite de subida es de ~4.5 MB; divide la historia en partes menores.",
+        )
+    oidc_token = request.headers.get("x-vercel-oidc-token", "")
+    db = SessionLocal()
+    try:
+        prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+        historia = HistoriaClinica(
+            prestador_id=prestador.id if prestador else None,
+            user_id=current_user.id,
+            paciente_documento=paciente_documento.strip(),
+            paciente_nombre=paciente_nombre.strip(),
+            filename=filename,
+            content_type=file.content_type or "application/pdf",
+            file_size=len(content),
+        )
+        db.add(historia)
+        db.flush()  # genera el id
+        if gcs_storage.gcs_enabled():
+            safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
+            blob_path = f"historias/{historia.id}/{safe_name}"
+            gcs_storage.upload_pdf(oidc_token, blob_path, content, historia.content_type)
+            historia.pdf_path = blob_path
+        else:
+            historia.pdf_data = content
+        db.commit()
+        db.refresh(historia)
+        storage_used = "gcs" if historia.pdf_path else "db"
+        return {
+            "id": historia.id,
+            "filename": historia.filename,
+            "paciente_nombre": historia.paciente_nombre,
+            "storage": storage_used,
+        }
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para guardar la historia clínica. Verifica la conexión al servidor PostgreSQL.")
+    except Exception as exc:
+        db.rollback()
+        detail = "No se pudo guardar el PDF en el almacenamiento. Verifica la configuración de Google Cloud Storage."
+        if os.environ.get("DEBUG_GCS", ""):
+            detail += f" Detalle: {exc} | oidc_len={len(oidc_token)}"
+        raise HTTPException(status_code=500, detail=detail)
+    finally:
+        db.close()
+
+
+@app.get("/historias")
+async def list_historias(
+    q: str = Query(""),
+    current_user: User = Depends(get_current_user),
+):
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        query = db.query(HistoriaClinica)
+        if current_user.role != "admin":
+            query = query.filter(HistoriaClinica.user_id == current_user.id)
+        query = query.order_by(HistoriaClinica.created_at.desc())
+        items = query.limit(500).all()
+        term = q.strip().lower()
+        result = []
+        for h in items:
+            if term and term not in f"{h.filename} {h.paciente_nombre or ''} {h.paciente_documento or ''}".lower():
+                continue
+            result.append({
+                "id": h.id,
+                "prestador": (h.prestador.nombre if h.prestador else None) or (h.user.name if h.user else None),
+                "paciente_nombre": h.paciente_nombre,
+                "paciente_documento": h.paciente_documento,
+                "filename": h.filename,
+                "file_size": h.file_size,
+                "created_at": h.created_at.isoformat() if h.created_at else None,
+            })
+        return {"historias": result}
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para consultar las historias clínicas. Verifica la conexión al servidor PostgreSQL.")
+    finally:
+        db.close()
+
+
+@app.get("/historias/{historia_id}")
+async def get_historia(request: Request, historia_id: int, current_user: User = Depends(get_current_user)):
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        h = db.get(HistoriaClinica, historia_id)
+        if h is None:
+            raise HTTPException(status_code=404, detail="Historia clínica no encontrada")
+        if current_user.role != "admin" and h.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No autorizado")
+        filename = h.filename or f"historia_{h.id}.pdf"
+        if h.pdf_path:
+            oidc_token = request.headers.get("x-vercel-oidc-token", "")
+            try:
+                data = gcs_storage.download_pdf(oidc_token, h.pdf_path)
+            except Exception:
+                raise HTTPException(status_code=502, detail="No se pudo leer el PDF desde el almacenamiento. Verifica la configuración de Google Cloud Storage.")
+        elif h.pdf_data:
+            data = bytes(h.pdf_data)
+        else:
+            raise HTTPException(status_code=404, detail="El archivo PDF no está disponible")
+        return StreamingResponse(
+            io.BytesIO(data),
+            media_type=h.content_type or "application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{filename}"'},
+        )
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+    finally:
+        db.close()
+
+
+@app.delete("/historias/{historia_id}")
+async def delete_historia(request: Request, historia_id: int, current_user: User = Depends(get_current_user)):
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        h = db.get(HistoriaClinica, historia_id)
+        if h is None:
+            raise HTTPException(status_code=404, detail="Historia clínica no encontrada")
+        if current_user.role != "admin" and h.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No autorizado")
+        if h.pdf_path:
+            try:
+                oidc_token = request.headers.get("x-vercel-oidc-token", "")
+                gcs_storage.delete_pdf(oidc_token, h.pdf_path)
+            except Exception:
+                pass  # no bloquear el borrado si el objeto no existe
+        db.delete(h)
+        db.commit()
+        return {"ok": True}
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+    finally:
+        db.close()
+
+
+# ─── Gestión de prestadores (admin / EPS) ─────────────────────────────────
+
+class PrestadorPayload(BaseModel):
+	nombre: str
+	nit: str = ""
+	municipio: str = ""
+	username: str
+	password: str
+
+
+@app.post("/admin/prestadores")
+async def create_prestador(payload: PrestadorPayload, admin: User = Depends(require_admin)):
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		exists = db.query(User).filter(User.username == payload.username.strip()).first()
+		if exists:
+			raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+		user = User(
+			username=payload.username.strip(),
+			password_hash=hash_password(payload.password),
+			name=payload.nombre,
+			role="prestador",
+			active=True,
+		)
+		db.add(user)
+		db.flush()
+		prestador = Prestador(
+			user_id=user.id,
+			nombre=payload.nombre,
+			nit=payload.nit,
+			municipio=payload.municipio,
+		)
+		db.add(prestador)
+		db.commit()
+		return {"id": prestador.id, "username": user.username, "nombre": prestador.nombre}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+@app.get("/admin/prestadores")
+async def list_prestadores(admin: User = Depends(require_admin)):
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		items = db.query(Prestador).order_by(Prestador.nombre.asc()).all()
+		result = []
+		for p in items:
+			cargues_count = db.query(Cargue).filter(Cargue.prestador_id == p.id).count()
+			result.append({
+				"id": p.id,
+				"nombre": p.nombre,
+				"nit": p.nit,
+				"municipio": p.municipio,
+				"username": p.user.username if p.user else None,
+				"cargues_count": cargues_count,
+			})
+		return {"prestadores": result}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+# ─── Consolidación de cargues (admin / EPS) ───────────────────────────────
+
+@app.post("/consolidate")
+async def consolidate_cargues(payload: dict, current_user: User = Depends(get_current_user)):
+	if current_user.role != "admin":
+		raise HTTPException(status_code=403, detail="Solo el EPS puede consolidar la data")
+	try:
+		from .excel_export import build_data_excel
+	except ImportError:
+		from excel_export import build_data_excel
+	template_key = payload.get("template_key", "gestante")
+	mes = payload.get("mes", "")
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		q = db.query(Cargue).filter(Cargue.template_key == template_key)
+		if mes:
+			q = q.filter(Cargue.mes == mes)
+		q = q.order_by(Cargue.created_at.asc())
+		cargues = q.all()
+		if not cargues:
+			raise HTTPException(status_code=404, detail="No hay cargues para consolidar")
+		all_rows = []
+		total = 0
+		errores = 0
+		for c in cargues:
+			text = _decompress_cargue(c)
+			for line in text.replace("\r\n", "\n").split("\n"):
+				if line.strip():
+					all_rows.append(line)
+			total += c.row_count or 0
+			errores += c.errors_count or 0
+		corrected_text = "\n".join(all_rows)
+		meta = get_template_by_key(template_key)
+		buf = build_data_excel(corrected_text, meta["template"])
+		filename = f"consolidada_{template_key}{'_'+mes if mes else ''}.xlsx"
+		return StreamingResponse(
+			buf,
+			media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename={filename}"},
+		)
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
 @app.post("/evaluate")
 async def evaluate_endpoint(payload: dict, format: str = Query(default="json")):
 	ct = payload.get('corrected_text', '')
 	template_names = payload.get('template_names', [])
-	template_key = payload.get('template_key', 'rcv')
+	template_key = payload.get('template_key', 'gestante')
 	if not ct or not ct.strip():
 		raise HTTPException(
 			status_code=400,
@@ -639,19 +1239,34 @@ async def download_template(template_key: str):
         cell.alignment = Alignment(wrap_text=True, vertical="center")
         cell.border = thin_border
 
+        # Fila 2: leyenda del tipo de dato (coloreada), también sirve de área de datos
         cell2 = ws.cell(row=2, column=col_idx)
         cell2.fill = type_fills.get(f['type'], PatternFill())
         cell2.border = thin_border
         cell2.alignment = Alignment(vertical="center")
 
+        # Formato por tipo aplicado a toda el área de datos (filas 2-102)
         if f['type'] == 'DATE':
-            cell2.number_format = 'yyyy-mm-dd'
-            # Aplicar formato de fecha a 100 filas para que al pegar datos Excel reconozca seriales como fechas
-            for r in range(3, 102):
+            for r in range(2, 102):
                 c = ws.cell(row=r, column=col_idx)
                 c.number_format = 'yyyy-mm-dd'
                 c.border = thin_border
+        elif f['type'] == 'INT':
+            for r in range(2, 102):
+                c = ws.cell(row=r, column=col_idx)
+                c.number_format = '0'
+                c.border = thin_border
+        elif f['type'] == 'DECIMAL':
+            for r in range(2, 102):
+                c = ws.cell(row=r, column=col_idx)
+                c.number_format = '0.00'
+                c.border = thin_border
+        else:
+            for r in range(2, 102):
+                c = ws.cell(row=r, column=col_idx)
+                c.border = thin_border
 
+        # Lista desplegable con los valores permitidos, aplicada al área de datos
         allowed = f.get('allowed', [])
         if allowed:
             formula = register_list(allowed)
@@ -659,7 +1274,7 @@ async def download_template(template_key: str):
             dv.error = f"Valor no permitido. Use uno de: {', '.join(allowed)}"
             dv.errorTitle = "Valor inválido"
             ws.add_data_validation(dv)
-            dv.add(cell2)
+            dv.add(f"{col_letter}2:{col_letter}101")
 
     # Column widths
     ws.column_dimensions['A'].width = 4

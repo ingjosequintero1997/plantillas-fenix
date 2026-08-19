@@ -6,3 +6,5 @@ python-dateutil
 numpy
 openpyxl
 pydantic
+sqlalchemy
+psycopg2-binary

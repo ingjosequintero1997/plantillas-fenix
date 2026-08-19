@@ -227,6 +227,8 @@ def to_municipality_code(v):
 	if code is not None:
 		return code
 	normalized = normalize_text(v)
+	if not normalized:
+		return None
 	if normalized in MUNICIPALITY_CODE_ALIASES:
 		return MUNICIPALITY_CODE_ALIASES[normalized]
 	for alias, municipality_code in MUNICIPALITY_CODE_ALIASES.items():
@@ -532,8 +534,6 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		# Normaliza cualquier variación de "SIN DATO" / "SIN DATOS"
 		if s_clean in ("SINDATO", "SINDATOS", "S/D", "SIN", "SD"):
 			return "SIN DATO"
-		if s in ("AC",):
-			return "SIN DATO"
 		return x
 	
 	# Usar map() en lugar de applymap() (pandas 2.1+)
@@ -552,16 +552,42 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		canonical = normalized_tmap.get(normalize_text(templ))
 		if canonical:
 			inverse[canonical] = orig
-	rows = []
-	logs = []
-	stats = {"total": int(len(df)), "errors": 0, "corrected": 0, "ok": 0}
 
-	for ridx, row in df.iterrows():
-		out = {}
-		for col in template_cols:
-			tdef = tmap[col]
-			src = inverse.get(col)
-			val = row.get(src) if src in df.columns else None
+	n = int(len(df))
+	stats = {"total": n, "errors": 0, "corrected": 0, "ok": 0}
+
+	# Precomputar las columnas fuente para evitar iterrows() (muy lento)
+	src_values = []
+	for col in template_cols:
+		src = inverse.get(col)
+		if src and src in df.columns:
+			src_values.append(df[src].tolist())
+		else:
+			src_values.append(None)
+
+	corrected_cols = []  # (col, valores, estados, originales)
+
+	for ci, col in enumerate(template_cols):
+		tdef = tmap[col]
+		values = src_values[ci]
+
+		# Fast path: columna de plantilla SIN fuente en el archivo.
+		# No hay datos que corregir; solo se rellena con el valor seguro.
+		if values is None:
+			default = safe_default_for_required(tdef)
+			out_vals = [default] * n
+			statuses = ["corrected"] * n
+			origins = [None] * n
+			stats["corrected"] += n
+			corrected_cols.append((col, out_vals, statuses, origins))
+			continue
+
+		out_vals = [None] * n
+		statuses = [None] * n
+		origins = [None] * n
+
+		for ridx in range(n):
+			val = values[ridx] if values is not None else None
 			orig_val = None if val is None or pd.isna(val) else str(val)
 			status = "ok"
 			corrected = None
@@ -624,21 +650,43 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 					if orig_val is not None and normalize_text(orig_val) != normalize_text(corrected):
 						status = "corrected"
 
-			out[col] = corrected
+			out_vals[ridx] = corrected
+			statuses[ridx] = status
+			origins[ridx] = orig_val
 			if status == "error":
 				stats["errors"] += 1
-				logs.append({"row": int(ridx) + 1, "column": col, "original": orig_val, "corrected": corrected, "status": "error"})
 			elif status == "corrected":
 				stats["corrected"] += 1
-				logs.append({"row": int(ridx) + 1, "column": col, "original": orig_val, "corrected": corrected, "status": "corrected"})
 			else:
 				stats["ok"] += 1
 
-		rows.append(out)
+		corrected_cols.append((col, out_vals, statuses, origins))
 
-	out_df = pd.DataFrame(rows, columns=template_cols)
+	# Reconstruir el DataFrame por columnas (más rápido que por filas)
+	data = {col: vals for col, vals, _, _ in corrected_cols}
+	out_df = pd.DataFrame(data, columns=template_cols)
 	# Rellenar cualquier NaN residual para evitar campos vacíos en exportación
 	out_df = out_df.fillna("SIN DATO").astype(str)
+
+	# Bitácora en orden fila-mayor (igual que antes), limitada a 1000 registros
+	logs = []
+	MAX_LOGS = 1000
+	for ridx in range(n):
+		for ci, col in enumerate(template_cols):
+			status = corrected_cols[ci][2][ridx]
+			if status != "ok":
+				logs.append({
+					"row": ridx + 1,
+					"column": col,
+					"original": corrected_cols[ci][3][ridx],
+					"corrected": corrected_cols[ci][1][ridx],
+					"status": status,
+				})
+				if len(logs) >= MAX_LOGS:
+					break
+		if len(logs) >= MAX_LOGS:
+			break
+
 	total_cells = max(1, stats["total"] * len(template_cols))
 	stats["quality_percent"] = round(100 * (1 - stats["errors"] / total_cells), 2)
 	return out_df, logs, stats

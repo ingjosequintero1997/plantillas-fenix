@@ -9,6 +9,11 @@ build/
 venv/
 env/
 
+# Databases locales
+*.db
+*.sqlite
+*.sqlite3
+
 # Node
 node_modules/
 frontend/dist/
