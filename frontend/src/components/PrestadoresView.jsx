@@ -26,11 +26,13 @@ function NewPrestadorForm({ onClose, onCreated }) {
   const [form, setForm] = useState({ nombre: '', nit: '', municipio: '', template_key: 'gestante', username: '', password: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [showPass, setShowPass] = useState(false)
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (form.password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return }
     setSaving(true); setError('')
     try {
       await createPrestador(form)
@@ -42,73 +44,132 @@ function NewPrestadorForm({ onClose, onCreated }) {
     }
   }
 
+  const SectionTitle = ({ children }) => (
+    <div className="flex items-center gap-2 mb-3">
+      <div className="w-1 h-4 rounded-full" style={{ backgroundColor: 'var(--primary)' }} />
+      <span className="section-label" style={{ color: 'var(--text)' }}>{children}</span>
+    </div>
+  )
+
+  const Field = ({ label, children, hint }) => (
+    <div>
+      <label className="form-label">{label}</label>
+      {children}
+      {hint && <p className="text-[0.68rem] mt-1" style={{ color: 'var(--text-secondary)' }}>{hint}</p>}
+    </div>
+  )
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-title">Nuevo prestador</div>
-          <div className="modal-desc">Se crearán las credenciales de acceso para el cargue mensual.</div>
+      <div className="w-full max-w-lg rounded-xl p-6 sm:p-7 max-h-[90vh] overflow-y-auto"
+        style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+        onClick={(e) => e.stopPropagation()}>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-base font-semibold" style={{ color: 'var(--text)' }}>Nuevo prestador</div>
+              <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Se crearán las credenciales de acceso para el cargue mensual.</div>
+            </div>
+            <button type="button" onClick={onClose} className="p-2 rounded-md text-gray-400 hover:bg-gray-100" title="Cerrar">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
 
           {error && (
-            <div className="mb-4 px-3 py-2 rounded-md text-xs" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>
+              <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span>{error}</span>
+            </div>
           )}
 
-          <div className="space-y-5">
-            <div>
-              <div className="section-label mb-2">Información del prestador</div>
-              <div className="space-y-3">
-                <div>
-                  <label className="form-label">Nombre de la institución</label>
-                  <input name="nombre" value={form.nombre} onChange={handleChange} required className="input" placeholder="E.S.E. Hospital ..." />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="form-label">NIT / identificación</label>
-                    <input name="nit" value={form.nit} onChange={handleChange} className="input" placeholder="800.000.000-0" />
-                  </div>
-                  <div>
-                    <label className="form-label">Municipio</label>
-                    <input name="municipio" value={form.municipio} onChange={handleChange} className="input" placeholder="Albania" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            <div>
-              <div className="section-label mb-2">Usuario de acceso</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="form-label">Usuario</label>
-                  <input name="username" value={form.username} onChange={handleChange} required className="input" placeholder="usuario_prestador" />
-                </div>
-                <div>
-                  <label className="form-label">Contraseña</label>
-                  <input name="password" value={form.password} onChange={handleChange} required type="password" className="input" placeholder="••••••••" />
-                </div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            <div>
-              <div className="section-label mb-2">Configuración</div>
-              <div>
-                <label className="form-label">Plantilla asignada</label>
-                <select name="template_key" value={form.template_key} onChange={handleChange} className="select w-full">
-                  <option value="gestante">Gestante</option>
-                  <option value="citologia">Citología</option>
-                  <option value="mamografia">Mamografía</option>
-                  <option value="penta">Penta</option>
-                </select>
+          {/* Información del prestador */}
+          <div>
+            <SectionTitle>Información del prestador</SectionTitle>
+            <div className="space-y-3">
+              <Field label="Nombre de la institución *">
+                <input name="nombre" value={form.nombre} onChange={handleChange} required className="input" placeholder="E.S.E. Hospital San José" />
+              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="NIT / identificación">
+                  <input name="nit" value={form.nit} onChange={handleChange} className="input" placeholder="800.000.000-0" />
+                </Field>
+                <Field label="Municipio">
+                  <input name="municipio" value={form.municipio} onChange={handleChange} className="input" placeholder="Albania" />
+                </Field>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2.5 mt-6">
-            <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
-            <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Creando...' : 'Crear prestador'}</button>
+          <div className="divider" />
+
+          {/* Usuario de acceso */}
+          <div>
+            <SectionTitle>Usuario de acceso</SectionTitle>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Nombre de usuario *" hint="Con el que iniciará sesión">
+                <input name="username" value={form.username} onChange={handleChange} required className="input" placeholder="usuario_hospital" autoComplete="off" />
+              </Field>
+              <Field label="Contraseña *" hint="Mínimo 6 caracteres">
+                <div className="relative">
+                  <input name="password" value={form.password} onChange={handleChange} required type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" autoComplete="new-password" />
+                  <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPass ? (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    )}
+                  </button>
+                </div>
+              </Field>
+            </div>
+          </div>
+
+          <div className="divider" />
+
+          {/* Configuración */}
+          <div>
+            <SectionTitle>Configuración</SectionTitle>
+            <Field label="Plantilla asignada" hint="El prestador solo tendrá acceso a esta plantilla">
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: 'gestante', label: 'Gestante', desc: 'Control prenatal' },
+                  { key: 'citologia', label: 'Citología', desc: 'Cáncer cervicouterino' },
+                  { key: 'mamografia', label: 'Mamografía', desc: 'Cáncer de mama' },
+                  { key: 'penta', label: 'Penta', desc: 'Vacunación' },
+                ].map((t) => (
+                  <button
+                    type="button"
+                    key={t.key}
+                    onClick={() => setForm((f) => ({ ...f, template_key: t.key }))}
+                    className="text-left px-3 py-2.5 rounded-lg border transition-colors"
+                    style={{
+                      borderColor: form.template_key === t.key ? 'var(--primary)' : 'var(--border)',
+                      backgroundColor: form.template_key === t.key ? 'var(--primary-light)' : 'transparent',
+                    }}
+                  >
+                    <div className="text-sm font-medium flex items-center gap-1.5" style={{ color: form.template_key === t.key ? 'var(--primary)' : 'var(--text)' }}>
+                      {t.label}
+                      {form.template_key === t.key && (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      )}
+                    </div>
+                    <div className="text-[0.68rem]" style={{ color: 'var(--text-secondary)' }}>{t.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+            <button type="button" onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                  Creando...
+                </>
+              ) : 'Crear prestador'}
+            </button>
           </div>
         </form>
       </div>
