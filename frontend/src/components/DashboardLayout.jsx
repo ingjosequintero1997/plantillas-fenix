@@ -4,7 +4,7 @@ import { useAuth } from '../AuthContext'
 const NAV = [
   { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" /> },
-  { key: 'subir', label: 'Cargue mensual', roles: ['prestador'],
+  { key: 'subir', label: 'Cargue mensual', roles: ['admin', 'prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /> },
   { key: 'historial', label: 'Verificar data', roles: ['admin'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },

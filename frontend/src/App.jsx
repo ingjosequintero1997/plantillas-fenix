@@ -93,11 +93,8 @@ export default function App() {
           if (!data.find((item) => item.key === selectedTemplate)) {
             setSelectedTemplate(data[0].key)
           }
-          // Si el usuario (prestador) tiene una sola plantilla, se activa
-          // automáticamente. El admin ve el selector de todas.
-          if (user?.role !== 'admin' && data.length === 1) {
-            setActiveTemplate(data[0].key)
-          }
+          // Seleccionar automáticamente la primera plantilla si no hay una activa
+          setActiveTemplate((prev) => prev || data[0].key)
         }
       } catch (e) {
         setError(e.message || 'Error al cargar plantillas')
