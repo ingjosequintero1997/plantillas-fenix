@@ -66,16 +66,15 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: 'var(--primary-dark)' }}>
+        style={{ backgroundColor: 'var(--primary)' }}>
         {/* Branding */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ backgroundColor: 'var(--primary)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.15)' }}>
-            <Logo />
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="text-white font-semibold text-[15px] leading-none">Fénix <span style={{ color: '#8FD6A0' }}>Data</span></div>
-            <div className="text-white/50 text-[0.6rem] font-medium tracking-[0.14em] mt-1">RECEPCIÓN DE DATOS</div>
+            <div className="text-white font-semibold text-[15px] leading-none tracking-tight">Fénix Data</div>
+            <div className="text-white/60 text-[0.6rem] font-medium tracking-[0.14em] mt-1">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
