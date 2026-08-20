@@ -67,32 +67,32 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: '#69C455' }}>
+        style={{ background: 'linear-gradient(180deg, #69C455 0%, #5CB84A 100%)', boxShadow: '2px 0 12px rgba(0,0,0,0.06)' }}>
         {/* Branding */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-white/30">
-          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-0.5 shadow-md shrink-0">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="text-white font-bold text-[15px] leading-none tracking-tight">Fénix Data</div>
+            <div className="text-white font-bold text-[15px] leading-none tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>Fénix Data</div>
             <div className="text-white/80 text-[0.6rem] font-bold tracking-[0.14em] mt-1">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {items.map((item, idx) => {
             const active = section === item.key
             return (
               <button
                 key={item.key + idx}
                 onClick={() => { onNavigate(item.key); setOpen(false) }}
-                className={`relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 ${
+                className={`relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 ${
                   active ? 'font-bold' : 'font-bold text-white hover:bg-white/20'
                 }`}
-                style={active ? { backgroundColor: '#fff', color: '#69C455' } : undefined}
+                style={active ? { backgroundColor: '#fff', color: '#3E8A32', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' } : undefined}
               >
-                {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ backgroundColor: '#2E7D32' }} />}
+                {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full" style={{ backgroundColor: '#2E7D32' }} />}
                 <span className="flex items-center justify-center w-5 h-5 shrink-0">
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7">{item.icon}</svg>
                 </span>
@@ -105,8 +105,8 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         {/* Usuario */}
         <div className="px-3 pb-4 border-t border-white/30 pt-3" ref={userMenuRef}>
           <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-              style={{ backgroundColor: '#fff', color: '#69C455' }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 shadow-sm"
+              style={{ backgroundColor: '#fff', color: '#3E8A32' }}>
               {(user?.name || '?').slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -122,7 +122,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
           {/* Menú contextual de usuario */}
           {userMenu && (
-            <div className="mt-1 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+            <div className="mt-1 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
               <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {roleLabel}</div>
               <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
               <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Configuración</button>
@@ -137,7 +137,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <div className="lg:pl-60 flex flex-col min-h-screen flex-1">
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-6 border-b"
-          style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
+          style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', boxShadow: '0 1px 3px rgba(16,24,40,0.04)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>

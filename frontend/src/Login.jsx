@@ -26,27 +26,35 @@ export default function Login() {
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Panel de marca (izquierda) */}
-      <div className="hidden lg:flex flex-col justify-between w-[45%] p-12" style={{ backgroundColor: 'var(--primary-dark)' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1 shrink-0">
+      <div className="hidden lg:flex flex-col justify-between w-[45%] p-12 relative overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #54A844 0%, #3E8A32 100%)' }}>
+        {/* Watermark phoenix */}
+        <svg className="absolute -bottom-20 -right-20 w-[420px] h-[420px] opacity-[0.07]" viewBox="0 0 32 32" fill="none">
+          <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="#fff" opacity="0.35" />
+          <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="#fff" opacity="0.65" />
+          <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="#fff" />
+        </svg>
+
+        <div className="flex items-center gap-3 relative">
+          <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1 shadow-lg shrink-0">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="text-white font-semibold text-lg leading-none">Fénix Data</div>
-            <div className="text-white/50 text-[0.62rem] font-medium tracking-[0.16em] mt-1">RECEPCIÓN DE DATOS</div>
+            <div className="text-white/60 text-[0.62rem] font-medium tracking-[0.16em] mt-1">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
-        <div>
-          <h2 className="text-2xl font-semibold text-white leading-snug mb-3">
-            Recepción y validación de datos<br />para el sector salud.
+        <div className="relative">
+          <h2 className="text-[2rem] font-semibold text-white leading-tight mb-4">
+            Recepción y validación de datos para el sector salud.
           </h2>
-          <p className="text-white/60 text-sm max-w-sm leading-relaxed">
+          <p className="text-white/70 text-sm max-w-sm leading-relaxed">
             Plataforma empresarial para la recepción mensual de plantillas de datos de prestadores, su validación, consolidación y gestión de historias clínicas.
           </p>
         </div>
 
-        <div className="text-white/40 text-xs">
+        <div className="text-white/50 text-xs relative">
           Asociación de Cabildos Indígenas del Cesar y La Guajira
         </div>
       </div>
@@ -66,11 +74,11 @@ export default function Login() {
           </div>
 
           <div className="mb-8">
-            <div className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Iniciar sesión</div>
+            <div className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>Iniciar sesión</div>
             <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Ingresa con tus credenciales para continuar.</div>
           </div>
 
-          <div className="panel p-6">
+          <div className="panel p-7" style={{ boxShadow: '0 8px 30px rgba(16,24,40,0.08)' }}>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="form-label">Usuario</label>
@@ -79,7 +87,7 @@ export default function Login() {
                   onChange={(e) => { setUsername(e.target.value); setError('') }}
                   autoFocus
                   autoComplete="username"
-                  className="input"
+                  className="input py-2.5"
                   placeholder="Tu usuario"
                 />
               </div>
@@ -93,7 +101,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError('') }}
                     autoComplete="current-password"
-                    className="input pr-10"
+                    className="input py-2.5 pr-10"
                     placeholder="Tu contraseña"
                   />
                   <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -113,7 +121,7 @@ export default function Login() {
                 </div>
               )}
 
-              <button type="submit" disabled={submitting} className="btn-primary w-full py-2.5">
+              <button type="submit" disabled={submitting} className="btn-primary w-full py-2.5 mt-2">
                 {submitting ? (
                   <>
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
