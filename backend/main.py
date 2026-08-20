@@ -734,8 +734,16 @@ async def list_cargues(
 	db = SessionLocal()
 	try:
 		q = db.query(Cargue)
-		if current_user.role != "admin":
+		if current_user.role == "prestador":
 			q = q.filter(Cargue.user_id == current_user.id)
+		elif current_user.role == "lider":
+			# El líder ve todos los cargues de su plantilla asignada
+			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			assigned = [p.template_key for p in (prestador.plantillas if prestador else [])]
+			if assigned:
+				q = q.filter(Cargue.template_key.in_(assigned))
+			else:
+				q = q.filter(Cargue.id == -1)
 		if template_key:
 			q = q.filter(Cargue.template_key == template_key)
 		q = q.order_by(Cargue.created_at.desc())
@@ -776,8 +784,13 @@ async def get_cargue(cargue_id: int, current_user: User = Depends(get_current_us
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role != "admin" and cargue.user_id != current_user.id:
+		if current_user.role == "prestador" and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
+		if current_user.role == "lider":
+			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			_assigned = [p.template_key for p in (_prest.plantillas if _prest else [])]
+			if cargue.template_key not in _assigned:
+				raise HTTPException(status_code=403, detail="No autorizado")
 		def _parse_json(value):
 			try:
 				return json.loads(value) if value else {}
@@ -823,8 +836,13 @@ async def download_cargue_txt(cargue_id: int, current_user: User = Depends(get_c
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role != "admin" and cargue.user_id != current_user.id:
+		if current_user.role == "prestador" and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
+		if current_user.role == "lider":
+			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			_assigned = [p.template_key for p in (_prest.plantillas if _prest else [])]
+			if cargue.template_key not in _assigned:
+				raise HTTPException(status_code=403, detail="No autorizado")
 		text = _decompress_cargue(cargue)
 		filename = cargue.original_filename.replace(".xlsx", "_corregido.txt").replace(".xls", "_corregido.txt")
 		text_normalized = text.replace('\r\n', '\n').replace('\n', '\r\n')
@@ -851,8 +869,13 @@ async def download_cargue_excel(cargue_id: int, current_user: User = Depends(get
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role != "admin" and cargue.user_id != current_user.id:
+		if current_user.role == "prestador" and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
+		if current_user.role == "lider":
+			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			_assigned = [p.template_key for p in (_prest.plantillas if _prest else [])]
+			if cargue.template_key not in _assigned:
+				raise HTTPException(status_code=403, detail="No autorizado")
 		text = _decompress_cargue(cargue)
 		meta = get_template_by_key(cargue.template_key)
 		buf = build_data_excel(text, meta["template"])
@@ -948,8 +971,15 @@ async def list_historias(
     db = SessionLocal()
     try:
         query = db.query(HistoriaClinica)
-        if current_user.role != "admin":
+        if current_user.role == "prestador":
             query = query.filter(HistoriaClinica.user_id == current_user.id)
+        elif current_user.role == "lider":
+            prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+            assigned = [p.template_key for p in (prestador.plantillas if prestador else [])]
+            if assigned:
+                query = query.filter(HistoriaClinica.template_key.in_(assigned))
+            else:
+                query = query.filter(HistoriaClinica.id == -1)
         if template_key:
             query = query.filter(HistoriaClinica.template_key == template_key)
         query = query.order_by(HistoriaClinica.created_at.desc())
@@ -984,8 +1014,13 @@ async def get_historia(request: Request, historia_id: int, current_user: User = 
         h = db.get(HistoriaClinica, historia_id)
         if h is None:
             raise HTTPException(status_code=404, detail="Historia clínica no encontrada")
-        if current_user.role != "admin" and h.user_id != current_user.id:
+        if current_user.role == "prestador" and h.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="No autorizado")
+        if current_user.role == "lider":
+            _prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+            _assigned = [p.template_key for p in (_prest.plantillas if _prest else [])]
+            if (h.template_key or "gestante") not in _assigned:
+                raise HTTPException(status_code=403, detail="No autorizado")
         filename = h.filename or f"historia_{h.id}.pdf"
         if h.pdf_path:
             oidc_token = request.headers.get("x-vercel-oidc-token", "")
@@ -1016,8 +1051,13 @@ async def delete_historia(request: Request, historia_id: int, current_user: User
         h = db.get(HistoriaClinica, historia_id)
         if h is None:
             raise HTTPException(status_code=404, detail="Historia clínica no encontrada")
-        if current_user.role != "admin" and h.user_id != current_user.id:
+        if current_user.role == "prestador" and h.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="No autorizado")
+        if current_user.role == "lider":
+            _prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+            _assigned = [p.template_key for p in (_prest.plantillas if _prest else [])]
+            if (h.template_key or "gestante") not in _assigned:
+                raise HTTPException(status_code=403, detail="No autorizado")
         if h.pdf_path:
             try:
                 oidc_token = request.headers.get("x-vercel-oidc-token", "")
@@ -1042,6 +1082,7 @@ class PrestadorPayload(BaseModel):
 	username: str
 	password: str
 	template_key: str = "gestante"
+	role: str = "prestador"  # "prestador" | "lider"
 
 
 @app.post("/admin/prestadores")
@@ -1052,11 +1093,12 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 		exists = db.query(User).filter(User.username == payload.username.strip()).first()
 		if exists:
 			raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+		role = payload.role if payload.role in ("prestador", "lider") else "prestador"
 		user = User(
 			username=payload.username.strip(),
 			password_hash=hash_password(payload.password),
 			name=payload.nombre,
-			role="prestador",
+			role=role,
 			active=True,
 		)
 		db.add(user)
@@ -1073,7 +1115,7 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 		pp = PrestadorPlantilla(prestador_id=prestador.id, template_key=payload.template_key)
 		db.add(pp)
 		db.commit()
-		return {"id": prestador.id, "username": user.username, "nombre": prestador.nombre, "template_key": payload.template_key}
+		return {"id": prestador.id, "username": user.username, "nombre": prestador.nombre, "template_key": payload.template_key, "role": role}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
 	finally:
@@ -1094,11 +1136,12 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 				"id": p.id,
 				"nombre": p.nombre,
 				"nit": p.nit,
-				"municipio": p.municipio,
-				"username": p.user.username if p.user else None,
-				"cargues_count": cargues_count,
-				"template_key": plantillas[0] if plantillas else "gestante",
-			})
+			"municipio": p.municipio,
+			"username": p.user.username if p.user else None,
+			"cargues_count": cargues_count,
+			"template_key": plantillas[0] if plantillas else "gestante",
+			"role": p.user.role if p.user else "prestador",
+		})
 		return {"prestadores": result}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
@@ -1110,8 +1153,8 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 
 @app.post("/consolidate")
 async def consolidate_cargues(payload: dict, current_user: User = Depends(get_current_user)):
-	if current_user.role != "admin":
-		raise HTTPException(status_code=403, detail="Solo el EPS puede consolidar la data")
+	if current_user.role not in ("admin", "lider"):
+		raise HTTPException(status_code=403, detail="Solo el EPS o el líder del programa puede consolidar la data")
 	try:
 		from .excel_export import build_data_excel
 	except ImportError:
@@ -1121,6 +1164,12 @@ async def consolidate_cargues(payload: dict, current_user: User = Depends(get_cu
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
+		# El líder solo puede consolidar su plantilla asignada
+		if current_user.role == "lider":
+			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			assigned = [p.template_key for p in (prestador.plantillas if prestador else [])]
+			if template_key not in assigned:
+				raise HTTPException(status_code=403, detail="No tienes acceso a esta plantilla")
 		q = db.query(Cargue).filter(Cargue.template_key == template_key)
 		if mes:
 			q = q.filter(Cargue.mes == mes)

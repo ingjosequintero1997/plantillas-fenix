@@ -35,9 +35,9 @@ export default function TemplateSelector({ templates, onSelect }) {
           <div className="page-title" style={{ fontSize: '1.5rem' }}>{saludo}, {firstName}</div>
           <div className="page-subtitle mt-1">Cargando módulos de datos...</div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="skeleton rounded-xl" style={{ height: '180px' }} />
+            <div key={i} className="skeleton rounded-xl" style={{ height: '150px' }} />
           ))}
         </div>
       </div>
@@ -52,44 +52,43 @@ export default function TemplateSelector({ templates, onSelect }) {
         <div className="page-subtitle mt-1">Selecciona el módulo de datos con el que vas a trabajar.</div>
       </div>
 
-      {/* Módulos grandes que llenan el espacio */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {/* Módulos compactos */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {available.map((m) => {
           const t = templates.find((x) => x.key === m.key)
           return (
             <button
               key={m.key}
               onClick={() => onSelect(m.key)}
-              className="group flex flex-col p-7 text-left rounded-xl transition-all duration-200 hover:-translate-y-0.5"
+              className="group flex flex-col p-5 text-left rounded-xl transition-all duration-200 hover:-translate-y-0.5"
               style={{
                 backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border)',
-                minHeight: '180px',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(105,196,85,0.15)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(105,196,85,0.15)' }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
             >
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-16 h-16 rounded-xl flex items-center justify-center"
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center"
                   style={{ color: 'var(--primary)', backgroundColor: 'var(--primary-light)' }}>
                   <Icon name={m.icon} />
                 </div>
-                <span className="text-[0.65rem] font-semibold tracking-[0.12em] px-2.5 py-1 rounded"
+                <span className="text-[0.6rem] font-semibold tracking-[0.1em] px-2 py-0.5 rounded"
                   style={{ color: 'var(--primary)', backgroundColor: 'var(--primary-light)' }}>
                   {m.short}
                 </span>
               </div>
-              <div className="text-lg font-semibold mb-1.5" style={{ color: 'var(--text)', fontFamily: 'Manrope, sans-serif' }}>
+              <div className="text-base font-semibold mb-1" style={{ color: 'var(--text)', fontFamily: 'Manrope, sans-serif' }}>
                 {m.label}
               </div>
-              <div className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>{m.desc}</div>
+              <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{m.desc}</div>
               {t && (
-                <div className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>{t.fields} variables</div>
+                <div className="text-[0.68rem]" style={{ color: 'var(--text-secondary)' }}>{t.fields} variables</div>
               )}
-              <div className="mt-auto flex items-center gap-1.5 text-sm font-medium"
+              <div className="mt-2 flex items-center gap-1 text-[0.8rem] font-medium"
                 style={{ color: 'var(--primary)' }}>
-                Entrar al módulo
-                <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                Entrar
+                <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </div>

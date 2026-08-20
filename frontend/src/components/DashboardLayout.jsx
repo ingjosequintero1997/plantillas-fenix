@@ -2,17 +2,17 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 
 const NAV = [
-  { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador'],
+  { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador', 'lider'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" /> },
   { key: 'subir', label: 'Cargues de data', roles: ['admin', 'prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /> },
-  { key: 'historial', label: 'Verificar data', roles: ['admin'],
+  { key: 'historial', label: 'Verificar data', roles: ['admin', 'lider'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
   { key: 'historial', label: 'Mis cargues', roles: ['prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /> },
-  { key: 'consolidar', label: 'Consolidar', roles: ['admin'],
+  { key: 'consolidar', label: 'Consolidar', roles: ['admin', 'lider'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V5zM4 15a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z" /> },
-  { key: 'historias', label: 'Historias clínicas', roles: ['admin', 'prestador'],
+  { key: 'historias', label: 'Historias clínicas', roles: ['admin', 'prestador', 'lider'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
   { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7" /> },
@@ -26,7 +26,7 @@ const META = {
   historias: { title: 'Historias clínicas', sub: 'Expedientes clínicos' },
   prestadores: { title: 'Usuarios', sub: 'Prestadores y líderes de programa' },
 }
-const ROLE_TITLE = { historial: { admin: 'Verificar data', prestador: 'Mis cargues' } }
+const ROLE_TITLE = { historial: { admin: 'Verificar data', lider: 'Verificar data', prestador: 'Mis cargues' } }
 
 function Logo({ size = 24 }) {
   return (
@@ -53,7 +53,8 @@ export default function DashboardLayout({ section, onNavigate, children, templat
   }, [])
 
   const isAdmin = user?.role === 'admin'
-  const role = isAdmin ? 'admin' : 'prestador'
+  const role = user?.role === 'admin' ? 'admin' : user?.role === 'lider' ? 'lider' : 'prestador'
+  const roleLabel = user?.role === 'admin' ? 'EPS' : user?.role === 'lider' ? 'Líder' : 'Prestador'
   const items = NAV.filter((i) => i.roles.includes(role))
   const meta = META[section] || META.inicio
   const rt = ROLE_TITLE[section]?.[role]
@@ -110,7 +111,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-bold truncate text-white">{user?.name}</div>
-              <div className="text-[0.62rem] font-bold uppercase tracking-wider text-white/80">{isAdmin ? 'EPS' : 'Prestador'}</div>
+              <div className="text-[0.62rem] font-bold uppercase tracking-wider text-white/80">{roleLabel}</div>
             </div>
             <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white hover:bg-white/20 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -122,7 +123,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           {/* Menú contextual de usuario */}
           {userMenu && (
             <div className="mt-1 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-              <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {isAdmin ? 'EPS' : 'Prestador'}</div>
+              <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {roleLabel}</div>
               <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
               <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Configuración</button>
               <div className="divider" />
@@ -147,11 +148,11 @@ export default function DashboardLayout({ section, onNavigate, children, templat
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {isAdmin && (
+            {(isAdmin || role === 'lider') && (
               <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
                 style={{ color: 'var(--primary)', backgroundColor: 'var(--primary-light)' }}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
-                EPS
+                {roleLabel}
               </span>
             )}
             <button onClick={() => setDark(!dark)} className="p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors" title="Cambiar tema">

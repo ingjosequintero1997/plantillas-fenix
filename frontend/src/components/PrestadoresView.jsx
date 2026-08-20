@@ -12,18 +12,14 @@ function EmptyState({ onNew }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7" />
         </svg>
       </div>
-  <div className="empty-title">Sin usuarios registrados</div>
-  <div className="empty-desc">Agrega el primer usuario (prestador o líder de programa) para comenzar.</div>
-      <button onClick={onNew} className="btn-primary">
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-          Nuevo usuario
-      </button>
+      <div className="empty-title">Sin usuarios registrados</div>
+      <div className="empty-desc">Usa el botón "Nuevo usuario" para registrar un prestador o líder de programa.</div>
     </div>
   )
 }
 
 function NewPrestadorForm({ onClose, onCreated }) {
-  const [form, setForm] = useState({ nombre: '', nit: '', municipio: '', template_key: 'gestante', username: '', password: '' })
+  const [form, setForm] = useState({ nombre: '', nit: '', municipio: '', template_key: 'gestante', username: '', password: '', role: 'prestador' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -127,6 +123,35 @@ function NewPrestadorForm({ onClose, onCreated }) {
           {/* Configuración */}
           <div>
             <SectionTitle>Configuración</SectionTitle>
+            <div className="mb-4">
+              <label className="form-label">Rol del usuario</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: 'prestador', label: 'Prestador', desc: 'Carga mensual de su data' },
+                  { key: 'lider', label: 'Líder de programa', desc: 'Verifica y consolida su plantilla' },
+                ].map((r) => (
+                  <button
+                    type="button"
+                    key={r.key}
+                    onClick={() => setForm((f) => ({ ...f, role: r.key }))}
+                    className="text-left px-3 py-2.5 rounded-lg border transition-colors"
+                    style={{
+                      borderColor: form.role === r.key ? 'var(--accent)' : 'var(--border)',
+                      backgroundColor: form.role === r.key ? '#EEF3F7' : 'transparent',
+                    }}
+                  >
+                    <div className="text-sm font-medium flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
+                      {r.label}
+                      {form.role === r.key && (
+                        <svg className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      )}
+                    </div>
+                    <div className="text-[0.68rem]" style={{ color: 'var(--text-secondary)' }}>{r.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Field label="Plantilla asignada" hint="El usuario solo tendrá acceso a esta plantilla">
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -265,6 +290,7 @@ export default function PrestadoresView() {
                   <th>Identificación</th>
                   <th>Municipio</th>
                   <th>Plantilla</th>
+                  <th>Rol</th>
                   <th className="text-center">Cargas</th>
                   <th className="text-right">Acciones</th>
                 </tr>
@@ -287,6 +313,11 @@ export default function PrestadoresView() {
                     <td>{p.nit || '—'}</td>
                     <td>{p.municipio || '—'}</td>
                     <td><span className="badge-neutral">{TEMPLATE_LABELS[p.template_key] || p.template_key || '—'}</span></td>
+                    <td>
+                      <span className={p.role === 'lider' ? 'badge-success' : 'badge-neutral'}>
+                        {p.role === 'lider' ? 'Líder' : 'Prestador'}
+                      </span>
+                    </td>
                     <td className="text-center">{p.cargues_count ?? 0}</td>
                     <td className="text-right">
                       <button onClick={() => setMenuOpen(menuOpen === p.id ? null : p.id)} className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100">
