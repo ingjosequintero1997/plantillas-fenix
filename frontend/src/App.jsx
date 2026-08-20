@@ -93,8 +93,6 @@ export default function App() {
           if (!data.find((item) => item.key === selectedTemplate)) {
             setSelectedTemplate(data[0].key)
           }
-          // Seleccionar automáticamente la primera plantilla si no hay una activa
-          setActiveTemplate((prev) => prev || data[0].key)
         }
       } catch (e) {
         setError(e.message || 'Error al cargar plantillas')

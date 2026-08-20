@@ -4,7 +4,7 @@ import { useAuth } from '../AuthContext'
 const NAV = [
   { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" /> },
-  { key: 'subir', label: 'Cargue mensual', roles: ['admin', 'prestador'],
+  { key: 'subir', label: 'Cargues de data', roles: ['admin', 'prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /> },
   { key: 'historial', label: 'Verificar data', roles: ['admin'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
@@ -20,7 +20,7 @@ const NAV = [
 
 const META = {
   inicio: { title: 'Inicio', sub: 'Centro de operaciones' },
-  subir: { title: 'Cargue mensual', sub: 'Sube y valida la data' },
+  subir: { title: 'Cargues de data', sub: 'Cargue masivo o mensual' },
   historial: { title: 'Verificar data', sub: 'Cargues de los prestadores' },
   consolidar: { title: 'Consolidar', sub: 'Une las datas' },
   historias: { title: 'Historias clínicas', sub: 'Expedientes clínicos' },
@@ -68,13 +68,13 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
         style={{ backgroundColor: 'var(--primary)' }}>
         {/* Branding */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
+        <div className="flex items-center gap-3 px-4 h-16 border-b border-black/10">
           <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="text-white font-semibold text-[15px] leading-none tracking-tight">Fénix Data</div>
-            <div className="text-white/60 text-[0.6rem] font-medium tracking-[0.14em] mt-1">RECEPCIÓN DE DATOS</div>
+            <div className="font-semibold text-[15px] leading-none tracking-tight" style={{ color: '#1B3A16' }}>Fénix Data</div>
+            <div className="text-[0.6rem] font-medium tracking-[0.14em] mt-1" style={{ color: 'rgba(27,58,22,0.6)' }}>RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
@@ -87,11 +87,11 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                 key={item.key + idx}
                 onClick={() => { onNavigate(item.key); setOpen(false) }}
                 className={`relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 ${
-                  active ? 'font-medium' : 'text-white/70 hover:text-white hover:bg-white/5'
+                  active ? 'font-semibold text-white' : 'hover:bg-black/5'
                 }`}
-                style={active ? { backgroundColor: 'rgba(255,255,255,0.12)', color: '#fff' } : undefined}
+                style={active ? { backgroundColor: 'var(--primary-dark)', color: '#fff' } : { color: 'rgba(27,58,22,0.8)' }}
               >
-                {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ backgroundColor: '#7CC98B' }} />}
+                {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ backgroundColor: '#fff' }} />}
                 <span className="flex items-center justify-center w-5 h-5 shrink-0">
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7">{item.icon}</svg>
                 </span>
@@ -102,17 +102,17 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         </nav>
 
         {/* Usuario */}
-        <div className="px-3 pb-4 border-t border-white/10 pt-3" ref={userMenuRef}>
+        <div className="px-3 pb-4 border-t border-black/10 pt-3" ref={userMenuRef}>
           <div className="flex items-center gap-3 rounded-lg px-2 py-2">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
-              style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: '#fff' }}>
+              style={{ backgroundColor: 'var(--primary-dark)', color: '#fff' }}>
               {(user?.name || '?').slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium text-white truncate">{user?.name}</div>
-              <div className="text-[0.62rem] text-white/50 font-medium uppercase tracking-wider">{isAdmin ? 'EPS' : 'Prestador'}</div>
+              <div className="text-[13px] font-medium truncate" style={{ color: '#1B3A16' }}>{user?.name}</div>
+              <div className="text-[0.62rem] font-medium uppercase tracking-wider" style={{ color: 'rgba(27,58,22,0.6)' }}>{isAdmin ? 'EPS' : 'Prestador'}</div>
             </div>
-            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md hover:bg-black/5" style={{ color: 'rgba(27,58,22,0.7)' }}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
               </svg>
