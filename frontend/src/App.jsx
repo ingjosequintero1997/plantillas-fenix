@@ -80,12 +80,13 @@ export default function App() {
   const [minTemplateCoverage] = useState(95)
   const [evaluating, setEvaluating] = useState(false)
   const [showEvaluation, setShowEvaluation] = useState(false)
+  const [tipoCargue, setTipoCargue] = useState('mensual')
 
   const hasDataLoaded = Boolean(rawText)
   const canExport = Boolean(correctedText)
 
   useEffect(() => {
-    const loadTemplates = async () => {
+    const loadTemplates = async (attempt = 0) => {
       try {
         const data = await fetchTemplates()
         if (data.length > 0) {
@@ -95,7 +96,12 @@ export default function App() {
           }
         }
       } catch (e) {
-        setError(e.message || 'Error al cargar plantillas')
+        // Reintenta una vez si el token aún no está listo (evita "No autorizado" al cargar)
+        if (attempt < 2) {
+          setTimeout(() => loadTemplates(attempt + 1), 600)
+          return
+        }
+        setError('No fue posible cargar las plantillas. Verifica tu sesión.')
       }
     }
     loadTemplates()
@@ -327,9 +333,44 @@ export default function App() {
                 {!summary ? (
                   <>
                     <div>
-                      <div className="page-title">Cargue mensual</div>
-                      <div className="page-subtitle">Sube tu data del período para validarla contra el instructivo.</div>
+                      <div className="page-title">Cargues de data</div>
+                      <div className="page-subtitle">Selecciona el tipo de cargue y sube tu data para validarla contra el instructivo.</div>
                     </div>
+
+                    {/* Selección de tipo de cargue */}
+                    <div className="panel">
+                      <div className="section-label mb-3">Tipo de cargue</div>
+                      <div className="grid grid-cols-2 gap-3 max-w-md">
+                        <button
+                          onClick={() => setTipoCargue('mensual')}
+                          className="text-left px-4 py-3 rounded-lg border transition-colors"
+                          style={{
+                            borderColor: tipoCargue === 'mensual' ? 'var(--accent)' : 'var(--border)',
+                            backgroundColor: tipoCargue === 'mensual' ? '#EEF3F7' : 'transparent',
+                          }}
+                        >
+                          <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Cargue mensual</div>
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Data de un período específico</div>
+                        </button>
+                        <button
+                          onClick={() => setTipoCargue('masivo')}
+                          className="text-left px-4 py-3 rounded-lg border transition-colors"
+                          style={{
+                            borderColor: tipoCargue === 'masivo' ? 'var(--accent)' : 'var(--border)',
+                            backgroundColor: tipoCargue === 'masivo' ? '#EEF3F7' : 'transparent',
+                          }}
+                        >
+                          <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Cargue masivo</div>
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Todo lo acumulado del año</div>
+                        </button>
+                      </div>
+                      {tipoCargue === 'mensual' && user?.role === 'admin' && (
+                        <div className="mt-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          Los cargues mensuales se pueden consolidar en una sola data desde el módulo <span className="font-medium" style={{ color: 'var(--text)' }}>Consolidar</span>.
+                        </div>
+                      )}
+                    </div>
+
                     <DragDrop onFile={handleFile} />
                     {error && (
                       <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>

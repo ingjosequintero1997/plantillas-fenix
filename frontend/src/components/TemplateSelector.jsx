@@ -28,6 +28,22 @@ export default function TemplateSelector({ templates, onSelect }) {
 
   const available = MODULES.filter((m) => templates.some((t) => t.key === m.key))
 
+  if (templates.length === 0) {
+    return (
+      <div className="fade-in">
+        <div className="mb-8">
+          <div className="page-title" style={{ fontSize: '1.5rem' }}>{saludo}, {firstName}</div>
+          <div className="page-subtitle mt-1">Cargando módulos de datos...</div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="skeleton rounded-xl" style={{ height: '180px' }} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fade-in">
       {/* Encabezado */}

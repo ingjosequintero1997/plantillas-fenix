@@ -18,8 +18,8 @@ const FORMULAS = [
 ]
 
 const TIPO_STYLE = {
-  'Numérico': { color: '#237A32', bg: 'var(--primary-light)' },
-  'Fecha': { color: '#185C25', bg: '#E8F1EC' },
+  'Numérico': { color: '#3E8E2A', bg: 'var(--primary-light)' },
+  'Fecha': { color: '#3E8E2A', bg: 'var(--primary-light)' },
   'Texto': { color: 'var(--text-secondary)', bg: 'var(--bg)' },
 }
 

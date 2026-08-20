@@ -14,7 +14,7 @@ const NAV = [
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V5zM4 15a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z" /> },
   { key: 'historias', label: 'Historias clínicas', roles: ['admin', 'prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
-  { key: 'prestadores', label: 'Prestadores', roles: ['admin'],
+  { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7" /> },
 ]
 
@@ -24,7 +24,7 @@ const META = {
   historial: { title: 'Verificar data', sub: 'Cargues de los prestadores' },
   consolidar: { title: 'Consolidar', sub: 'Une las datas' },
   historias: { title: 'Historias clínicas', sub: 'Expedientes clínicos' },
-  prestadores: { title: 'Prestadores', sub: 'Usuarios y accesos' },
+  prestadores: { title: 'Usuarios', sub: 'Prestadores y líderes de programa' },
 }
 const ROLE_TITLE = { historial: { admin: 'Verificar data', prestador: 'Mis cargues' } }
 
