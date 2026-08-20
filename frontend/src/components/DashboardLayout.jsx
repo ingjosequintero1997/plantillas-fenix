@@ -66,7 +66,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: '#0D1712' }}>
+        style={{ backgroundColor: 'var(--primary-dark)' }}>
         {/* Branding */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -137,7 +137,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <div className="lg:pl-60 flex flex-col min-h-screen flex-1">
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-6 border-b"
-          style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+          style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
