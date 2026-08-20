@@ -26,11 +26,11 @@ export default function Login() {
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Panel de marca (izquierda) */}
-      <div className="hidden lg:flex flex-col justify-between w-[45%] p-12 relative overflow-hidden">
-        {/* Fondo institucional */}
-        <img src="/fondo-institucional.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
-        {/* Capa para legibilidad */}
-        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(11,23,18,0.55)' }} />
+      <div className="hidden lg:flex flex-col justify-between w-[45%] p-12 relative overflow-hidden" style={{ backgroundColor: 'var(--primary-dark)' }}>
+        {/* Fondo institucional minimizado en la parte inferior */}
+        <img src="/fondo-institucional.png" alt=""
+          className="absolute bottom-0 left-0 w-[70%] h-[45%] object-cover object-bottom opacity-90"
+          style={{ filter: 'brightness(0.8)' }} />
 
         <div className="relative flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1 shrink-0">
@@ -42,7 +42,7 @@ export default function Login() {
           </div>
         </div>
 
-        <div>
+        <div className="relative">
           <h2 className="text-2xl font-semibold text-white leading-snug mb-3">
             Recepción y validación de datos<br />para el sector salud.
           </h2>
