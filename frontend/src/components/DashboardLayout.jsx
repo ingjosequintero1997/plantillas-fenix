@@ -66,15 +66,15 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: 'var(--primary)' }}>
+        style={{ backgroundColor: '#1E4520' }}>
         {/* Branding */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-black/10">
+        <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
           <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="font-semibold text-[15px] leading-none tracking-tight" style={{ color: '#1B3A16' }}>Fénix Data</div>
-            <div className="text-[0.6rem] font-medium tracking-[0.14em] mt-1" style={{ color: 'rgba(27,58,22,0.6)' }}>RECEPCIÓN DE DATOS</div>
+            <div className="text-white font-semibold text-[15px] leading-none tracking-tight">Fénix Data</div>
+            <div className="text-white/60 text-[0.6rem] font-medium tracking-[0.14em] mt-1">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
@@ -87,9 +87,9 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                 key={item.key + idx}
                 onClick={() => { onNavigate(item.key); setOpen(false) }}
                 className={`relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 ${
-                  active ? 'font-semibold text-white' : 'hover:bg-black/5'
+                  active ? 'font-semibold text-[#1E4520]' : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`}
-                style={active ? { backgroundColor: 'var(--primary-dark)', color: '#fff' } : { color: 'rgba(27,58,22,0.8)' }}
+                style={active ? { backgroundColor: 'var(--primary)', color: '#1E4520' } : undefined}
               >
                 {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ backgroundColor: '#fff' }} />}
                 <span className="flex items-center justify-center w-5 h-5 shrink-0">
@@ -102,17 +102,17 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         </nav>
 
         {/* Usuario */}
-        <div className="px-3 pb-4 border-t border-black/10 pt-3" ref={userMenuRef}>
+        <div className="px-3 pb-4 border-t border-white/10 pt-3" ref={userMenuRef}>
           <div className="flex items-center gap-3 rounded-lg px-2 py-2">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
-              style={{ backgroundColor: 'var(--primary-dark)', color: '#fff' }}>
+              style={{ backgroundColor: 'var(--primary)', color: '#1E4520' }}>
               {(user?.name || '?').slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium truncate" style={{ color: '#1B3A16' }}>{user?.name}</div>
-              <div className="text-[0.62rem] font-medium uppercase tracking-wider" style={{ color: 'rgba(27,58,22,0.6)' }}>{isAdmin ? 'EPS' : 'Prestador'}</div>
+              <div className="text-[13px] font-medium truncate text-white">{user?.name}</div>
+              <div className="text-[0.62rem] font-medium uppercase tracking-wider text-white/50">{isAdmin ? 'EPS' : 'Prestador'}</div>
             </div>
-            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md hover:bg-black/5" style={{ color: 'rgba(27,58,22,0.7)' }}>
+            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
               </svg>
