@@ -40,12 +40,12 @@ function Logo({ size = 24 }) {
 
 export default function DashboardLayout({ section, onNavigate, children, templates = [], activeTemplate = null }) {
   const { user, logout } = useAuth()
-  const [dark, setDark] = useState(() => localStorage.getItem('darkMode') === 'true')
+  const [dark, setDark] = useState(false)
   const [open, setOpen] = useState(false)
   const [userMenu, setUserMenu] = useState(false)
   const userMenuRef = useRef(null)
 
-  useEffect(() => { document.documentElement.classList.toggle('dark', dark); localStorage.setItem('darkMode', dark) }, [dark])
+  useEffect(() => { document.documentElement.classList.toggle('dark', dark) }, [dark])
   useEffect(() => {
     const onClick = (e) => { if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenu(false) }
     document.addEventListener('click', onClick)
