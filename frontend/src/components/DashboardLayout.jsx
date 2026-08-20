@@ -66,14 +66,15 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: 'var(--primary-dark)' }}>
+        style={{ backgroundColor: '#0D1712' }}>
         {/* Branding */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
-          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: 'var(--primary)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.15)' }}>
+            <Logo />
           </div>
           <div>
-            <div className="text-white font-semibold text-[15px] leading-none">Fénix Data</div>
+            <div className="text-white font-semibold text-[15px] leading-none">Fénix <span style={{ color: '#8FD6A0' }}>Data</span></div>
             <div className="text-white/50 text-[0.6rem] font-medium tracking-[0.14em] mt-1">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
@@ -136,7 +137,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <div className="lg:pl-60 flex flex-col min-h-screen flex-1">
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-6 border-b"
-          style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
+          style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
