@@ -187,4 +187,11 @@
   .shadow-brand-900\/20, .shadow-brand-900\/25, .shadow-brand-900\/30, .shadow-brand-900\/40 { box-shadow: none; }
   .btn-accent { @apply btn; background-color: var(--warning); color: #fff; }
   .badge-amber { @apply badge-warning; }
+
+  /* ── Refinamientos de pulido ─────────────────────── */
+  .table tbody tr { transition: background-color 0.12s ease; }
+  .table tbody tr:last-child td { border-bottom: none; }
+  .btn, .input, .select { transition: all 0.15s ease; }
+  .panel { transition: box-shadow 0.15s ease; }
+  .page-title { letter-spacing: -0.015em; }
 }
