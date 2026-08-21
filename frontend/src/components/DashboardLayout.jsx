@@ -114,26 +114,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 lg:top-[60px] lg:h-[calc(100vh-60px)] lg:z-20 lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
           style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)' }}
         >
-          {/* Brand */}
-          <div className="px-4 pt-5 pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center p-1" style={{ background: 'linear-gradient(135deg, var(--green-400), var(--green-600))', boxShadow: '0 2px 8px rgba(90,174,90,0.2)' }}>
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              </div>
-              <div>
-                <div className="text-[0.8rem] font-semibold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Fénix Data</div>
-                <div className="text-[0.55rem] font-medium uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Panel de control</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mx-4 mb-4" style={{ height: '1px', background: 'var(--border-subtle)' }} />
-
-          {/* Nav */}
-          <nav className="flex-1 px-3 overflow-y-auto">
-            <div className="mb-2 px-2">
-              <span className="text-[0.6rem] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-muted)' }}>Navegación</span>
-            </div>
+          <nav className="flex-1 px-3 pt-4 overflow-y-auto">
             <div className="space-y-0.5">
               {items.map((item, idx) => {
                 const active = section === item.key
@@ -160,29 +141,9 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                 )
               })}
             </div>
-
-            <div className="my-5 mx-2" style={{ height: '1px', background: 'var(--border-subtle)' }} />
-
-            <div className="mb-2 px-2">
-              <span className="text-[0.6rem] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-muted)' }}>Sistema</span>
-            </div>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg" style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                <span className="flex items-center justify-center w-5 h-5 shrink-0">
-                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Soporte técnico</div>
-                  <div className="mt-0.5" style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Asoc. Cabildos Indígenas</div>
-                </div>
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--green-400)' }} />
-              </div>
-            </div>
           </nav>
 
-          {/* User */}
           <div className="px-3 pb-4 pt-3" ref={userMenuRef}>
-            <div className="mx-2 mb-3" style={{ height: '1px', background: 'var(--border-subtle)' }} />
             <button onClick={() => setUserMenu((v) => !v)}
               className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all"
               style={{ backgroundColor: userMenu ? 'var(--bg-surface-hover)' : 'transparent', transitionDuration: '120ms' }}
