@@ -56,8 +56,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
     <div className="min-h-screen app-bg flex flex-col">
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
 
-      <header className="sticky top-0 z-30 w-full" style={{ backgroundColor: 'var(--green-700)' }}>
-        <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #F4E72B 0%, #60C050 60%, #0D973C 100%)' }} />
+      <header className="sticky top-0 z-30 w-full" style={{ background: 'linear-gradient(180deg, #166534 0%, #14532D 100%)', boxShadow: '0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.08)' }}>
         <div className="h-[64px] flex items-center justify-between px-4 lg:px-6 w-full">
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="lg:hidden p-1.5 rounded-md text-white/80 hover:bg-white/10 transition-colors" style={{ transitionDuration: '160ms' }}>
@@ -107,7 +106,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <div className="flex flex-1 min-h-0 relative">
         <aside
           className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
-          style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', top: '67px' }}
+          style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-strong)', top: '64px', boxShadow: '1px 0 0 var(--border-subtle)' }}
         >
           <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
             <div className="px-3 mb-3">
@@ -139,7 +138,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
               )
             })}
 
-            <div className="mt-6 mx-2 px-3 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)' }}>
+            <div className="mt-6 mx-2 px-3 py-3 rounded-lg" style={{ backgroundColor: 'var(--green-50)', border: '1px solid var(--green-200)' }}>
               <div className="flex items-center gap-2 mb-1">
                 <svg className="w-3.5 h-3.5" style={{ color: 'var(--green-600)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span className="section-label" style={{ fontSize: '0.55rem' }}>Soporte</span>
