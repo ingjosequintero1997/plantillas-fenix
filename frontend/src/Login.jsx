@@ -27,13 +27,15 @@ export default function Login() {
     <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Panel de marca (izquierda) */}
       <div className="hidden lg:flex flex-col justify-between w-[45%] p-12 relative overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #0D973C 0%, #60C050 100%)' }}>
+        style={{ background: 'linear-gradient(155deg, #0A6B2E 0%, #0D973C 45%, #60C050 100%)' }}>
         {/* Watermark phoenix */}
-        <svg className="absolute -bottom-20 -right-20 w-[420px] h-[420px] opacity-[0.07]" viewBox="0 0 32 32" fill="none">
+        <svg className="absolute -bottom-24 -right-24 w-[460px] h-[460px] opacity-[0.08]" viewBox="0 0 32 32" fill="none">
           <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="#fff" opacity="0.35" />
           <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="#fff" opacity="0.65" />
           <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="#fff" />
         </svg>
+        {/* Resplandor decorativo */}
+        <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-[#F4E72B]/20 blur-3xl" />
 
         <div className="flex items-center gap-3 relative">
           <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1 shadow-lg shrink-0">
@@ -41,20 +43,39 @@ export default function Login() {
           </div>
           <div>
             <div className="text-white font-semibold text-lg leading-none">Fénix Data</div>
-            <div className="text-white/60 text-[0.62rem] font-medium tracking-[0.16em] mt-1">RECEPCIÓN DE DATOS</div>
+            <div className="text-white/70 text-[0.62rem] font-medium tracking-[0.16em] mt-1">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
         <div className="relative">
-          <h2 className="text-[2rem] font-semibold text-white leading-tight mb-4">
+          <h2 className="text-[2rem] font-bold text-white leading-tight mb-4">
             Recepción y validación de datos para el sector salud.
           </h2>
-          <p className="text-white/70 text-sm max-w-sm leading-relaxed">
+          <p className="text-white/75 text-sm max-w-sm leading-relaxed">
             Plataforma empresarial para la recepción mensual de plantillas de datos de prestadores, su validación, consolidación y gestión de historias clínicas.
           </p>
+
+          {/* Características */}
+          <div className="mt-8 space-y-3">
+            {[
+              { t: 'Validación automática', d: 'Detección de plantilla y corrección inteligente de datos.' },
+              { t: 'Consolidación', d: 'Unifica cargues mensuales en una sola data.' },
+              { t: 'Historias clínicas', d: 'Gestión centralizada de expedientes en PDF.' },
+            ].map((f, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0 mt-0.5">
+                  <svg className="w-4 h-4 text-[#F4E72B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <div>
+                  <div className="text-white font-semibold text-sm">{f.t}</div>
+                  <div className="text-white/60 text-xs mt-0.5">{f.d}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="text-white/50 text-xs relative">
+        <div className="text-white/55 text-xs relative">
           Asociación de Cabildos Indígenas del Cesar y La Guajira
         </div>
       </div>
