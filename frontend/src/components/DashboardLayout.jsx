@@ -62,124 +62,128 @@ export default function DashboardLayout({ section, onNavigate, children, templat
   const activeMeta = templates.find((t) => t.key === activeTemplate)
 
   return (
-    <div className="min-h-screen app-bg flex">
+    <div className="min-h-screen app-bg flex flex-col">
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
 
-      {/* ═══ Sidebar ═══ */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: '#0D973C', boxShadow: '4px 0 24px rgba(13,151,60,0.18)' }}>
-        {/* Branding */}
-        <div className="flex items-center gap-3.5 px-6 h-[84px] border-b border-white/15">
-          <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white flex items-center justify-center p-1.5 shadow-md shrink-0">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <div className="text-white font-extrabold text-[17px] leading-none tracking-tight">Fénix Data</div>
-            <div className="text-white/75 text-[0.62rem] font-bold tracking-[0.18em] mt-1.5">RECEPCIÓN DE DATOS</div>
+      {/* ═══ Header verde a todo el ancho ═══ */}
+      <header className="sticky top-0 z-30 h-[76px] flex items-center justify-between px-6 lg:px-8 w-full"
+        style={{ backgroundColor: '#0D973C', boxShadow: '0 2px 12px rgba(13,151,60,0.25)' }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-md text-white/90 hover:bg-white/10">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          {/* Logo y marca */}
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-sm shrink-0">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-white font-extrabold text-[17px] leading-none tracking-tight">Fénix Data</div>
+              <div className="text-white/75 text-[0.6rem] font-bold tracking-[0.18em] mt-1">RECEPCIÓN DE DATOS</div>
+            </div>
           </div>
         </div>
 
-        {/* Navegación */}
-        <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
-          <div className="text-[0.65rem] font-bold text-white/55 uppercase tracking-[0.16em] px-3 mb-3">Menú principal</div>
-          {items.map((item, idx) => {
-            const active = section === item.key
-            return (
-              <button
-                key={item.key + idx}
-                onClick={() => { onNavigate(item.key); setOpen(false) }}
-                className={`relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 ${
-                  active
-                    ? 'text-white bg-white/20'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full bg-white" />
-                )}
-                <span className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors duration-150 ${
-                  active ? 'bg-white/25 text-white' : 'text-white/85'
-                }`}>
-                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">{item.icon}</svg>
-                </span>
-                {item.label}
-              </button>
-            )
-          })}
-        </nav>
-
-        {/* Usuario */}
-        <div className="px-4 pb-5 pt-3 border-t border-white/15" ref={userMenuRef}>
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-white/10">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-white text-[#0D973C] shadow-sm">
-              {(user?.name || '?').slice(0, 1).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-bold truncate text-white">{user?.name}</div>
-              <div className="text-[0.62rem] font-bold uppercase tracking-wider text-white/75">{roleLabel}</div>
-            </div>
-            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/80 hover:bg-white/15 transition-colors">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Menú contextual de usuario */}
-          {userMenu && (
-            <div className="mt-2 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}>
-              <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {roleLabel}</div>
-              <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
-              <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Configuración</button>
-              <div className="divider" />
-              <button onClick={() => { setUserMenu(false); logout() }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">Cerrar sesión</button>
-            </div>
+        <div className="flex items-center gap-3">
+          {(isAdmin || role === 'lider') && (
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/15 text-white">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F4E72B]" />
+              {roleLabel}
+            </span>
           )}
-        </div>
-      </aside>
-
-      {/* ═══ Contenido ═══ */}
-      <div className="lg:pl-[280px] flex flex-col min-h-screen flex-1">
-        {/* Header */}
-        <header className="sticky top-0 z-30 h-[68px] flex items-center justify-between px-8"
-          style={{ backgroundColor: '#0D973C', boxShadow: '0 2px 12px rgba(13,151,60,0.25)' }}>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-md text-white/90 hover:bg-white/10">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-            </button>
-            <div>
-              <div className="text-white font-bold text-[1.35rem] leading-tight tracking-tight">{meta.title}</div>
-              <div className="text-white/75 text-[0.8rem] mt-0.5">{meta.sub}{activeMeta ? ` · ${activeMeta.label}` : ''}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {(isAdmin || role === 'lider') && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/15 text-white">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#F4E72B]" />
-                {roleLabel}
-              </span>
+          <button onClick={() => setDark(!dark)} className="p-2 rounded-md text-white/85 hover:bg-white/10 transition-colors" title="Cambiar tema">
+            {dark ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
             )}
-            <button onClick={() => setDark(!dark)} className="p-2 rounded-md text-white/85 hover:bg-white/10 transition-colors" title="Cambiar tema">
-              {dark ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-              )}
-            </button>
+          </button>
+        </div>
+      </header>
+
+      {/* ═══ Cuerpo: sidebar blanco + contenido ═══ */}
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Sidebar blanco */}
+        <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
+          style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid var(--border)' }}>
+          {/* Navegación */}
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            <div className="text-[0.65rem] font-bold text-[var(--text-secondary)] uppercase tracking-[0.16em] px-3 mb-3">Menú principal</div>
+            {items.map((item, idx) => {
+              const active = section === item.key
+              return (
+                <button
+                  key={item.key + idx}
+                  onClick={() => { onNavigate(item.key); setOpen(false) }}
+                  className={`relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 ${
+                    active
+                      ? 'text-[#0D973C]'
+                      : 'text-[var(--text)] hover:bg-[#EEF6EC]'
+                  }`}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full bg-[#0D973C]" />
+                  )}
+                  <span className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors duration-150 ${
+                    active ? 'bg-[#0D973C] text-white shadow-md' : 'text-[#0D973C] bg-[#EEF6EC]'
+                  }`}>
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">{item.icon}</svg>
+                  </span>
+                  {item.label}
+                </button>
+              )
+            })}
+          </nav>
+
+          {/* Usuario */}
+          <div className="px-4 pb-6 pt-3 border-t" style={{ borderColor: 'var(--border)' }} ref={userMenuRef}>
+            <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ backgroundColor: '#EEF6EC' }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-[#0D973C] text-white shadow-sm">
+                {(user?.name || '?').slice(0, 1).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-bold truncate" style={{ color: 'var(--text)' }}>{user?.name}</div>
+                <div className="text-[0.62rem] font-bold uppercase tracking-wider text-[#0D973C]">{roleLabel}</div>
+              </div>
+              <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-[#0D973C] hover:bg-white transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Menú contextual de usuario */}
+            {userMenu && (
+              <div className="mt-2 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}>
+                <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {roleLabel}</div>
+                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
+                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Configuración</button>
+                <div className="divider" />
+                <button onClick={() => { setUserMenu(false); logout() }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">Cerrar sesión</button>
+              </div>
+            )}
           </div>
-        </header>
+        </aside>
 
-        {/* Contenido principal */}
-        <main className="flex-1 px-6 py-6 w-full max-w-[1200px] mx-auto">
-          {children}
-        </main>
+        {/* Contenido */}
+        <div className="flex flex-col flex-1 min-w-0">
+          {/* Título de sección */}
+          <div className="px-6 lg:px-8 pt-6 pb-2">
+            <div className="text-[1.35rem] font-bold" style={{ color: 'var(--text)', fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.02em' }}>{meta.title}</div>
+            <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>{meta.sub}{activeMeta ? ` · ${activeMeta.label}` : ''}</div>
+          </div>
 
-        {/* Footer */}
-        <footer className="px-6 py-4 border-t text-center" style={{ borderColor: 'var(--border)' }}>
-          <p className="text-[0.68rem] text-[var(--text-secondary)]">
-            Asociación de Cabildos Indígenas del Cesar y La Guajira &mdash; Ing. José Quintero &copy; {new Date().getFullYear()}
-          </p>
-        </footer>
+          <main className="flex-1 px-6 lg:px-8 py-5 w-full max-w-[1200px]">
+            {children}
+          </main>
+
+          {/* Footer */}
+          <footer className="px-6 py-4 border-t text-center" style={{ borderColor: 'var(--border)' }}>
+            <p className="text-[0.68rem] text-[var(--text-secondary)]">
+              Asociación de Cabildos Indígenas del Cesar y La Guajira &mdash; Ing. José Quintero &copy; {new Date().getFullYear()}
+            </p>
+          </footer>
+        </div>
       </div>
     </div>
   )
