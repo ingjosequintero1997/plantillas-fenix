@@ -67,21 +67,23 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ background: 'linear-gradient(180deg, #69C455 0%, #5CB84A 100%)', boxShadow: '2px 0 16px rgba(0,0,0,0.08)' }}>
-        {/* Branding */}
-        <div className="flex items-center gap-3 px-5 h-[72px] border-b border-white/25">
-          <div className="w-11 h-11 rounded-xl overflow-hidden bg-white flex items-center justify-center p-1 shadow-lg shrink-0 ring-1 ring-white/40">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <div className="text-white font-bold text-[16px] leading-none tracking-tight" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>Fénix Data</div>
-            <div className="text-white/80 text-[0.58rem] font-bold tracking-[0.18em] mt-1.5">RECEPCIÓN DE DATOS</div>
+        style={{ backgroundColor: '#fff', boxShadow: '2px 0 20px rgba(0,0,0,0.08)' }}>
+        {/* Banda superior verde institucional */}
+        <div className="relative px-5 py-6" style={{ background: 'linear-gradient(160deg, #69C455 0%, #4FA83F 100%)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white flex items-center justify-center p-1 shadow-lg shrink-0 ring-2 ring-white/50">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <div className="text-white font-bold text-[18px] leading-none tracking-tight" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.25)' }}>Fénix Data</div>
+              <div className="text-white/80 text-[0.6rem] font-bold tracking-[0.18em] mt-1.5">RECEPCIÓN DE DATOS</div>
+            </div>
           </div>
         </div>
 
-        {/* Navegación */}
+        {/* Navegación (cuerpo blanco) */}
         <nav className="flex-1 px-3 py-5 overflow-y-auto">
-          <div className="text-[0.6rem] font-bold text-white/70 uppercase tracking-[0.15em] px-3 mb-2">Principal</div>
+          <div className="text-[0.6rem] font-bold text-gray-400 uppercase tracking-[0.15em] px-3 mb-2">Menú</div>
           <div className="space-y-1">
             {items.map((item, idx) => {
               const active = section === item.key
@@ -90,13 +92,13 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                   key={item.key + idx}
                   onClick={() => { onNavigate(item.key); setOpen(false) }}
                   className={`relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 ${
-                    active ? 'font-semibold' : 'font-medium text-white hover:bg-white/20'
+                    active ? 'font-semibold' : 'font-medium text-gray-600 hover:bg-[#69C455]/10 hover:text-[#3E8A32]'
                   }`}
-                  style={active ? { backgroundColor: '#fff', color: '#3E8A32', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' } : undefined}
+                  style={active ? { backgroundColor: '#69C455', color: '#fff', boxShadow: '0 4px 14px rgba(105,196,85,0.35)' } : undefined}
                 >
-                  {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full" style={{ backgroundColor: '#1E4520' }} />}
+                  {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full" style={{ backgroundColor: '#2E7D32' }} />}
                   <span className={`flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-colors ${
-                    active ? 'text-[#3E8A32]' : 'text-white'
+                    active ? 'text-white' : 'text-[#69C455]'
                   }`}>
                     <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7">{item.icon}</svg>
                   </span>
@@ -108,35 +110,33 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         </nav>
 
         {/* Usuario */}
-        <div className="px-3 pb-4 pt-3" ref={userMenuRef}>
-          <div className="rounded-xl px-3 py-2.5" style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 shadow-sm"
-                style={{ backgroundColor: '#fff', color: '#3E8A32' }}>
-                {(user?.name || '?').slice(0, 1).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-bold truncate text-white">{user?.name}</div>
-                <div className="text-[0.6rem] font-bold uppercase tracking-wider text-white/80">{roleLabel}</div>
-              </div>
-              <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/80 hover:bg-white/20 transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
-                </svg>
-              </button>
+        <div className="px-3 pb-4 pt-3 border-t" style={{ borderColor: 'var(--border)' }} ref={userMenuRef}>
+          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+              style={{ backgroundColor: '#69C455', color: '#fff' }}>
+              {(user?.name || '?').slice(0, 1).toUpperCase()}
             </div>
-
-            {/* Menú contextual de usuario */}
-            {userMenu && (
-              <div className="mt-2 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-                <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {roleLabel}</div>
-                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
-                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Configuración</button>
-                <div className="divider" />
-                <button onClick={() => { setUserMenu(false); logout() }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">Cerrar sesión</button>
-              </div>
-            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-bold truncate" style={{ color: 'var(--text)' }}>{user?.name}</div>
+              <div className="text-[0.6rem] font-bold uppercase tracking-wider text-[#3E8A32]">{roleLabel}</div>
+            </div>
+            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
+              </svg>
+            </button>
           </div>
+
+          {/* Menú contextual de usuario */}
+          {userMenu && (
+            <div className="mt-2 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+              <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {roleLabel}</div>
+              <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
+              <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Configuración</button>
+              <div className="divider" />
+              <button onClick={() => { setUserMenu(false); logout() }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">Cerrar sesión</button>
+            </div>
+          )}
         </div>
       </aside>
 
