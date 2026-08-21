@@ -199,6 +199,22 @@ export async function deleteCargue(id) {
   return apiFetch(`${API_BASE}/cargues/${id}`, { method: 'DELETE' })
 }
 
+export async function validateData(corrected_text, templateKey, templateNames = []) {
+  return apiFetch(`${API_BASE}/validate-data`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ corrected_text, template_key: templateKey || 'gestante', template_names: templateNames }),
+  })
+}
+
+export async function fetchIndicadores(templateKey, correctedText) {
+  return apiFetch(`${API_BASE}/indicadores`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ template_key: templateKey || 'gestante', corrected_text: correctedText || '' }),
+  })
+}
+
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 
 export async function uploadHistoria(file, paciente, templateKey = 'gestante') {

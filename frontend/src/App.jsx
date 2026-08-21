@@ -9,6 +9,7 @@ import DashboardHome from './components/DashboardHome'
 import TemplateSelector from './components/TemplateSelector'
 import HistorialView from './components/HistorialView'
 import PrestadoresView from './components/PrestadoresView'
+import IndicadoresView from './components/IndicadoresView'
 import FormulasView from './components/FormulasView'
 import AjustesView from './components/AjustesView'
 import ConsolidacionView from './components/ConsolidacionView'
@@ -447,6 +448,11 @@ export default function App() {
             {/* ─── PRESTADORES (admin) ─── */}
             {section === 'prestadores' && (
               <PrestadoresView />
+            )}
+
+            {/* ─── INDICADORES ─── */}
+            {section === 'indicadores' && (
+              <IndicadoresView templateKey={activeTemplate} />
             )}
 
           </DashboardLayout>

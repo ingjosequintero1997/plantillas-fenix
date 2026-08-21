@@ -1438,10 +1438,9 @@ async def validate_data(payload: dict):
 	template_cols = [t["name"] for t in tmpl]
 	n = len(df)
 
-	# Validar cada celda: tipo correcto, valor dentro de permitidos
-	total_cells = 0
-	errors = []
-	stats = {"total": n, "errors": 0, "valid": 0, "by_type": {}}
+	# Errores por fila: {row_idx: ["col: msg", ...]}
+	row_errors: dict[int, list[str]] = {}
+	stats = {"total": n, "rows_with_errors": 0, "total_error_cells": 0, "by_column": {}}
 
 	for ci, col_name in enumerate(template_cols):
 		if ci >= len(df.columns):
@@ -1451,13 +1450,11 @@ async def validate_data(payload: dict):
 			continue
 
 		values = df.iloc[:, ci].tolist()
-		type_errors = 0
+		col_errors = 0
 
 		for ridx, val in enumerate(values):
-			total_cells += 1
 			val_str = str(val).strip() if val else ""
-			status = "valid"
-			msg = None
+			err_msg = None
 
 			if tdef["type"] == "SET":
 				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
@@ -1465,7 +1462,6 @@ async def validate_data(payload: dict):
 				if val_str:
 					sn = normalize_text(val_str)
 					if sn not in normalized_allowed:
-						# Buscar alias
 						alias_match = False
 						for alias_canonical, alias_synonyms in {
 							"SI": {"S", "1", "YES", "Y"},
@@ -1480,63 +1476,179 @@ async def validate_data(payload: dict):
 								alias_match = True
 								break
 						if not alias_match:
-							status = "error"
-							msg = f"Valor '{val_str}' no esta en la lista permitida"
-							type_errors += 1
+							allowed_str = ", ".join(allowed[:8])
+							err_msg = f"[{col_name}] Valor '{val_str}' no permitido. Opciones: {allowed_str}"
+							col_errors += 1
 
 			elif tdef["type"] == "INT":
 				if val_str and val_str not in ("SIN DATO", ""):
 					clean = val_str.replace("-", "").replace(" ", "")
 					if not re.fullmatch(r'[+-]?\d+', clean):
-						status = "error"
-						msg = f"Se esperaba un entero, se encontro '{val_str}'"
-						type_errors += 1
+						err_msg = f"[{col_name}] Se esperaba entero, se encontro '{val_str}'"
+						col_errors += 1
 
 			elif tdef["type"] == "DECIMAL":
 				if val_str and val_str not in ("SIN DATO", ""):
 					s = val_str.replace(" ", "").replace(",", ".")
 					if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
-						status = "error"
-						msg = f"Se esperaba un decimal, se encontro '{val_str}'"
-						type_errors += 1
+						err_msg = f"[{col_name}] Se esperaba decimal, se encontro '{val_str}'"
+						col_errors += 1
 
 			elif tdef["type"] == "DATE":
 				if val_str and val_str not in ("SIN DATO", "1900-01-01", ""):
 					if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', val_str):
-						status = "error"
-						msg = f"Formato de fecha invalido: '{val_str}' (se espera AAAA-MM-DD)"
-						type_errors += 1
+						err_msg = f"[{col_name}] Fecha invalida: '{val_str}' (formato: AAAA-MM-DD)"
+						col_errors += 1
 
-			elif tdef["type"] == "TEXT":
-				if not val_str or val_str in ("None", "nan", "NaN"):
-					status = "warning"
-					msg = "Campo vacio"
+			if err_msg:
+				if ridx not in row_errors:
+					row_errors[ridx] = []
+				row_errors[ridx].append(err_msg)
+				stats["total_error_cells"] += 1
 
-			if status != "valid":
-				errors.append({
-					"row": ridx + 1,
-					"column": col_name,
-					"value": val_str,
-					"status": status,
-					"message": msg,
-				})
-				stats["errors"] += 1
-			else:
-				stats["valid"] += 1
+		stats["by_column"][col_name] = {"type": tdef["type"], "errors": col_errors}
 
-		stats["by_type"][col_name] = {
-			"type": tdef["type"],
-			"errors": type_errors,
-			"total": n,
-		}
+	stats["rows_with_errors"] = len(row_errors)
+
+	# Construir el TXT con errores: misma estructura pipe-delimited + columna ERRORES
+	header_line = "|".join(template_cols) + "|ERRORES"
+	output_lines = [header_line]
+	for ridx in range(n):
+		row_vals = [str(df.iloc[ridx, ci]) if ci < len(df.columns) else "" for ci in range(len(template_cols))]
+	 errs = row_errors.get(ridx, [])
+		err_col = "; ".join(errs) if errs else "OK"
+		output_lines.append("|".join(row_vals) + "|" + err_col)
+
+	report_text = "\r\n".join(output_lines)
 
 	return {
-		"valid": stats["errors"] == 0,
-		"stats": stats,
-		"errors": errors[:2000],
-		"total_errors": stats["errors"],
+		"valid": stats["rows_with_errors"] == 0,
+		"stats": {
+			"total_rows": n,
+			"rows_with_errors": stats["rows_with_errors"],
+			"rows_ok": n - stats["rows_with_errors"],
+			"total_error_cells": stats["total_error_cells"],
+			"by_column": stats["by_column"],
+		},
+		"row_errors": {str(k): v for k, v in row_errors.items()},
+		"report_text": base64.b64encode(report_text.encode("utf-8")).decode("ascii"),
 		"template_key": template_key,
 	}
+
+
+@app.post("/indicadores")
+async def indicadores_endpoint(payload: dict):
+	template_key = payload.get("template_key", "gestante")
+	corrected_text = payload.get("corrected_text", "")
+
+	if not corrected_text or not corrected_text.strip():
+		raise HTTPException(status_code=400, detail="No hay datos para generar indicadores")
+
+	try:
+		df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+		df = df.fillna('').astype(str)
+	except Exception as e:
+		raise HTTPException(status_code=400, detail=f"Error al parsear datos: {e}")
+
+	if df.empty:
+		raise HTTPException(status_code=400, detail="No hay datos")
+
+	meta = get_template_by_key(template_key)
+	tmpl = meta["template"]
+	tmpl_names = [t['name'] for t in tmpl]
+
+	if len(df.columns) == len(tmpl_names):
+		df.columns = tmpl_names
+
+	tmap = {t["name"]: t for t in tmpl}
+
+	def safe_col(name):
+		if name in df.columns:
+			return df[name]
+		return pd.Series([""] * len(df), index=df.index)
+
+	def count_values(series, allowed_map=None):
+		counts = {}
+		for v in series:
+			vn = normalize_text(str(v).strip()) if v else ""
+			if not vn or vn in ("SIN DATO", "NONE", "NAN", ""):
+				continue
+			if allowed_map and vn in allowed_map:
+				vn = allowed_map[vn]
+			counts[vn] = counts.get(vn, 0) + 1
+		return counts
+
+	def pct(part, total):
+		return round(part / max(total, 1) * 100, 1)
+
+	totalregistros = len(df)
+	registrosok = 0
+	registrosconerror = 0
+
+	# Stats base
+	result = {
+		"template_key": template_key,
+		"total_registros": totalregistros,
+		"indicadores": {},
+	}
+
+	if template_key == "gestante":
+		sexo = count_values(safe_col("SEXO"))
+		regimen = count_values(safe_col("REGIMEN DE AFILIACION"))
+		etnia = count_values(safe_col("ETNIA"))
+		zona = count_values(safe_col("ZONA"))
+		riesgo = count_values(safe_col("CLASIFICACION DEL RIESGO"))
+		vih = count_values(safe_col("RESULTADO PRIMER TAMIZAJE PRUEBA DE VIH"))
+		sifilis = count_values(safe_col("RESULTADO PRIMERA PRUEBA TREPONEMICA RAPIDA SIFILIS"))
+		hipertension = count_values(safe_col("HIPERTENSION ARTERIAL"))
+		diabetes = count_values(safe_col("DIABETES"))
+		trimestre = count_values(safe_col("TRIMESTRE INICIO CONTROL"))
+		parto = count_values(safe_col("CARACTERISTICAS DEL PARTO"))
+		condicion_rn = count_values(safe_col("CONDICION DEL RECIEN NACIDO"))
+		vacuna_bcg = count_values(safe_col("VACUNACION CON BCG"))
+		vacuna_hepb = count_values(safe_col("VACUNACION ANTIHEPATITIS B"))
+
+		result["indicadores"] = {
+			"sexo": {"label": "Distribucion por sexo", "data": sexo, "total": totalregistros},
+			"regimen": {"label": "Regimen de afiliacion", "data": regimen, "total": totalregistros},
+			"etnia": {"label": "Pertenencia etnica", "data": etnia, "total": totalregistros},
+			"zona": {"label": "Zona de residencia", "data": zona, "total": totalregistros},
+			"riesgo": {"label": "Clasificacion del riesgo", "data": riesgo, "total": totalregistros},
+			"vih_tamizaje": {"label": "Tamizaje VIH (1er tamizaje)", "data": vih, "total": totalregistros},
+			"sifilis_tamizaje": {"label": "Tamizaje Sifilis (1era prueba)", "data": sifilis, "total": totalregistros},
+			"hipertension": {"label": "Hipertension arterial", "data": hipertension, "total": totalregistros},
+			"diabetes": {"label": "Diabetes", "data": diabetes, "total": totalregistros},
+			"trimestre_control": {"label": "Trimestre inicio control", "data": trimestre, "total": totalregistros},
+			"tipo_parto": {"label": "Tipo de parto", "data": parto, "total": totalregistros},
+			"condicion_rn": {"label": "Condicion recien nacido", "data": condicion_rn, "total": totalregistros},
+			"vacuna_bcg": {"label": "Vacunacion BCG", "data": vacuna_bcg, "total": totalregistros},
+			"vacuna_hepb": {"label": "Vacunacion antihepatitis B", "data": vacuna_hepb, "total": totalregistros},
+		}
+
+	elif template_key == "citologia":
+		resultado_citologia = count_values(safe_col("RESULTADO CITOLOGIA CERVICOUTERINA"))
+		tipo_doc = count_values(safe_col("TIPO DE DOCUMENTO DE IDENTIDAD"))
+		result["indicadores"] = {
+			"resultado_citologia": {"label": "Resultado citologia", "data": resultado_citologia, "total": totalregistros},
+			"tipo_documento": {"label": "Tipo de documento", "data": tipo_doc, "total": totalregistros},
+		}
+
+	elif template_key == "mamografia":
+		resultado_mamo = count_values(safe_col("RESULTADO MAMOGRAFIA"))
+		result["indicadores"] = {
+			"resultado_mamografia": {"label": "Resultado mamografia", "data": resultado_mamo, "total": totalregistros},
+		}
+
+	elif template_key == "penta":
+		vacuna_penta = count_values(safe_col("VACUNACION PENTAVALENTE"))
+		result["indicadores"] = {
+			"vacuna_penta": {"label": "Vacunacion pentavalente", "data": vacuna_penta, "total": totalregistros},
+		}
+
+	else:
+		result["indicadores"] = {}
+
+	return result
 
 
 if __name__ == "__main__":
