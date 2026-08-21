@@ -67,21 +67,21 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ background: 'linear-gradient(180deg, #69C455 0%, #4FA83F 100%)', boxShadow: '2px 0 16px rgba(0,0,0,0.08)' }}>
+        style={{ background: 'linear-gradient(180deg, #69C455 0%, #5CB84A 100%)', boxShadow: '2px 0 16px rgba(0,0,0,0.08)' }}>
         {/* Branding */}
-        <div className="flex items-center gap-3 px-5 h-[72px] border-b border-white/20">
+        <div className="flex items-center gap-3 px-5 h-[72px] border-b border-white/25">
           <div className="w-11 h-11 rounded-xl overflow-hidden bg-white flex items-center justify-center p-1 shadow-lg shrink-0 ring-1 ring-white/40">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="text-white font-bold text-[16px] leading-none tracking-tight" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>Fénix Data</div>
-            <div className="text-white/70 text-[0.58rem] font-bold tracking-[0.18em] mt-1.5">RECEPCIÓN DE DATOS</div>
+            <div className="text-white/80 text-[0.58rem] font-bold tracking-[0.18em] mt-1.5">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
         {/* Navegación */}
         <nav className="flex-1 px-3 py-5 overflow-y-auto">
-          <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-[0.15em] px-3 mb-2">Principal</div>
+          <div className="text-[0.6rem] font-bold text-white/70 uppercase tracking-[0.15em] px-3 mb-2">Principal</div>
           <div className="space-y-1">
             {items.map((item, idx) => {
               const active = section === item.key
@@ -90,13 +90,13 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                   key={item.key + idx}
                   onClick={() => { onNavigate(item.key); setOpen(false) }}
                   className={`relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 ${
-                    active ? 'font-semibold' : 'font-medium text-white/85 hover:bg-white/15 hover:text-white'
+                    active ? 'font-semibold' : 'font-medium text-white hover:bg-white/20'
                   }`}
-                  style={active ? { backgroundColor: '#fff', color: '#2E7D32', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' } : undefined}
+                  style={active ? { backgroundColor: '#fff', color: '#3E8A32', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' } : undefined}
                 >
                   {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full" style={{ backgroundColor: '#1E4520' }} />}
                   <span className={`flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-colors ${
-                    active ? 'text-[#2E7D32]' : 'text-white/90'
+                    active ? 'text-[#3E8A32]' : 'text-white'
                   }`}>
                     <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7">{item.icon}</svg>
                   </span>
@@ -109,15 +109,15 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
         {/* Usuario */}
         <div className="px-3 pb-4 pt-3" ref={userMenuRef}>
-          <div className="rounded-xl bg-white/15 ring-1 ring-white/30 px-3 py-2.5">
+          <div className="rounded-xl px-3 py-2.5" style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 shadow-sm ring-2 ring-white/40"
-                style={{ backgroundColor: '#fff', color: '#2E7D32' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 shadow-sm"
+                style={{ backgroundColor: '#fff', color: '#3E8A32' }}>
                 {(user?.name || '?').slice(0, 1).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[13px] font-bold truncate text-white">{user?.name}</div>
-                <div className="text-[0.6rem] font-bold uppercase tracking-wider text-white/70">{roleLabel}</div>
+                <div className="text-[0.6rem] font-bold uppercase tracking-wider text-white/80">{roleLabel}</div>
               </div>
               <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/80 hover:bg-white/20 transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -128,7 +128,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
             {/* Menú contextual de usuario */}
             {userMenu && (
-              <div className="mt-2 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}>
+              <div className="mt-2 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
                 <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {roleLabel}</div>
                 <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
                 <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Configuración</button>
