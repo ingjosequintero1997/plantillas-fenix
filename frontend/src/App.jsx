@@ -298,22 +298,11 @@ export default function App() {
 
             {/* ─── INICIO ─── */}
             {section === 'inicio' && (
-              !activeTemplate ? (
-                <TemplateSelector
-                  templates={templates}
-                  onSelect={handleSelectTemplate}
-                />
-              ) : (
-                <div className="space-y-6 fade-in">
-                  <DashboardHome
-                    user={user}
-                    summary={summary}
-                    batchResults={batchResults}
-                    templates={templates}
-                    activeTemplate={activeTemplate}
-                  />
-                </div>
-              )
+              <TemplateSelector
+                templates={templates}
+                onSelect={handleSelectTemplate}
+                activeTemplate={activeTemplate}
+              />
             )}
 
             {/* ─── SUBIR DATA / VALIDAR ─── */}
