@@ -1515,7 +1515,7 @@ async def validate_data(payload: dict):
 	output_lines = [header_line]
 	for ridx in range(n):
 		row_vals = [str(df.iloc[ridx, ci]) if ci < len(df.columns) else "" for ci in range(len(template_cols))]
-	 errs = row_errors.get(ridx, [])
+		errs = row_errors.get(ridx, [])
 		err_col = "; ".join(errs) if errs else "OK"
 		output_lines.append("|".join(row_vals) + "|" + err_col)
 
