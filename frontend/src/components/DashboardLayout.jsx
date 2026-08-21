@@ -105,80 +105,65 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       <div className="flex flex-1 min-h-0 relative">
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 lg:top-[64px] lg:h-[calc(100vh-64px)] lg:z-20 lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
-          style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-strong)', boxShadow: '4px 0 24px rgba(28,28,26,0.04)' }}
+          className={`fixed inset-y-0 left-0 z-50 w-[240px] flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 lg:top-[64px] lg:h-[calc(100vh-64px)] lg:z-20 lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
+          style={{ backgroundColor: 'var(--bg-surface)' }}
         >
-          <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
-            <div className="px-3 mb-3">
-              <span className="section-label" style={{ fontSize: '0.6rem', letterSpacing: '0.12em' }}>Navegación</span>
-            </div>
+          <nav className="flex-1 px-2 pt-4 pb-2 space-y-0.5 overflow-y-auto">
             {items.map((item, idx) => {
               const active = section === item.key
               return (
                 <button
                   key={item.key + idx}
                   onClick={() => { onNavigate(item.key); setOpen(false) }}
-                  className="relative w-full flex items-center gap-2.5 px-3 py-2.5 text-left rounded-xl transition-all group"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-lg transition-all"
                   style={{
-                    fontSize: 'var(--text-body-sm)',
-                    fontWeight: active ? '600' : '500',
-                    color: active ? 'var(--green-700)' : 'var(--text-secondary)',
-                    backgroundColor: active ? 'var(--surface-brand-weak)' : 'transparent',
-                    border: active ? '1px solid var(--green-200)' : '1px solid transparent',
-                    transitionDuration: '160ms',
+                    fontSize: '0.8125rem',
+                    fontWeight: active ? '500' : '400',
+                    color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    backgroundColor: active ? 'var(--bg-subtle)' : 'transparent',
+                    transitionDuration: '120ms',
                   }}
                   onMouseEnter={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
                   onMouseLeave={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
                 >
-                  {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full" style={{ backgroundColor: 'var(--green-600)' }} />}
-                  <span className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-colors" style={{ color: active ? 'var(--green-700)' : 'var(--text-muted)', backgroundColor: active ? 'var(--green-100)' : 'transparent', transitionDuration: '160ms' }}>
-                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
+                  <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
                   </span>
                   <span className="truncate">{item.label}</span>
                 </button>
               )
             })}
-
-            <div className="mt-6 mx-2 px-3 py-3 rounded-xl" style={{ background: 'linear-gradient(135deg, var(--green-50) 0%, var(--green-100) 100%)', border: '1px solid var(--green-200)' }}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: 'var(--green-200)' }}>
-                  <svg className="w-3.5 h-3.5" style={{ color: 'var(--green-700)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-                <span className="section-label" style={{ fontSize: '0.55rem' }}>Soporte</span>
-              </div>
-              <div className="text-[0.65rem] leading-snug" style={{ color: 'var(--text-muted)' }}>Asoc. Cabildos Indígenas del Cesar y La Guajira</div>
-            </div>
           </nav>
 
-          <div className="px-3 pb-4 pt-3 border-t" style={{ borderColor: 'var(--border-subtle)' }} ref={userMenuRef}>
+          <div className="px-3 pb-3 pt-2" ref={userMenuRef}>
             <button onClick={() => setUserMenu((v) => !v)}
-              className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all"
-              style={{ backgroundColor: userMenu ? 'var(--bg-surface-hover)' : 'transparent', border: '1px solid transparent', transitionDuration: '160ms' }}
+              className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-all"
+              style={{ backgroundColor: userMenu ? 'var(--bg-surface-hover)' : 'transparent', transitionDuration: '120ms' }}
               onMouseEnter={(e) => { if (!userMenu) e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
               onMouseLeave={(e) => { if (!userMenu) e.currentTarget.style.backgroundColor = 'transparent' }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0" style={{ background: 'linear-gradient(135deg, var(--green-500) 0%, var(--green-700) 100%)', color: 'var(--text-on-brand)', boxShadow: '0 2px 8px rgba(90,174,90,0.25)' }}>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-[0.65rem] font-semibold shrink-0" style={{ background: 'linear-gradient(135deg, var(--green-500) 0%, var(--green-700) 100%)', color: 'var(--text-on-brand)' }}>
                 {(user?.name || '?').slice(0, 1).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[0.8rem] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user?.name}</div>
-                <div className="text-[0.6rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--green-600)' }}>{roleLabel}</div>
+                <div className="text-[0.6rem] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{roleLabel}</div>
               </div>
-              <svg className="w-3.5 h-3.5 shrink-0 transition-transform" style={{ color: 'var(--text-muted)', transform: userMenu ? 'rotate(180deg)' : 'rotate(0deg)', transitionDuration: '160ms' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <svg className="w-3.5 h-3.5 shrink-0 transition-transform" style={{ color: 'var(--text-muted)', transform: userMenu ? 'rotate(180deg)' : 'rotate(0deg)', transitionDuration: '120ms' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
             {userMenu && (
-              <div className="mt-1 rounded-xl py-1 animate-scale-in" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', boxShadow: '0 12px 32px rgba(28,28,26,0.12)' }}>
-                <div className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--border-subtle)', fontSize: '0.65rem', color: 'var(--text-muted)' }}>{user?.name} &middot; {roleLabel}</div>
-                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm transition-colors" style={{ color: 'var(--text-primary)', transitionDuration: '160ms' }}
+              <div className="mt-1 rounded-lg py-1 animate-scale-in" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', boxShadow: '0 8px 28px rgba(28,28,26,0.12)' }}>
+                <div className="px-3 py-2 text-[0.65rem]" style={{ color: 'var(--text-muted)' }}>{user?.name} &middot; {roleLabel}</div>
+                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm transition-colors rounded-md" style={{ color: 'var(--text-primary)', transitionDuration: '120ms' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>Mi perfil</button>
-                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm transition-colors" style={{ color: 'var(--text-primary)', transitionDuration: '160ms' }}
+                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm transition-colors rounded-md" style={{ color: 'var(--text-primary)', transitionDuration: '120ms' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>Configuración</button>
-                <div className="divider" />
-                <button onClick={() => { setUserMenu(false); logout() }} className="w-full text-left px-3 py-2 text-sm transition-colors" style={{ color: 'var(--danger)', transitionDuration: '160ms' }}
+                <div className="my-1 mx-2" style={{ borderTop: '1px solid var(--border-subtle)' }} />
+                <button onClick={() => { setUserMenu(false); logout() }} className="w-full text-left px-3 py-2 text-sm transition-colors rounded-md" style={{ color: 'var(--danger)', transitionDuration: '120ms' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--danger-bg)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>Cerrar sesión</button>
               </div>
