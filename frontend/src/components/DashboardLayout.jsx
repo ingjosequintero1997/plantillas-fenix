@@ -66,18 +66,19 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
         {/* Sidebar */}
         <aside
-          className="shrink-0 flex flex-col transition-all duration-200 overflow-hidden border-r"
+          className="shrink-0 flex flex-col transition-all duration-200 overflow-hidden"
           style={{
             width: open ? SIDEBAR_W : 0,
             backgroundColor: 'var(--bg-surface)',
-            borderColor: open ? 'var(--border-subtle)' : 'transparent',
+            boxShadow: open ? '2px 0 12px rgba(0,0,0,0.04)' : 'none',
           }}
         >
           <div className="flex flex-col h-full" style={{ width: SIDEBAR_W }}>
+
             {/* User */}
-            <div className="px-4 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+            <div className="px-5 pt-5 pb-4 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-[0.7rem] font-bold shrink-0" style={{ backgroundColor: 'var(--green-500)', color: '#fff' }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-[0.75rem] font-bold shrink-0" style={{ backgroundColor: 'var(--green-500)', color: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                   {(user?.name || '?').slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-0">
@@ -87,29 +88,34 @@ export default function DashboardLayout({ section, onNavigate, children, templat
               </div>
             </div>
 
+            <div className="mx-4 mb-3" style={{ borderTop: '1px solid var(--border-subtle)' }} />
+
             {/* Nav */}
-            <nav className="flex-1 px-3 py-4 overflow-y-auto">
-              <div className="mb-3 px-2">
+            <nav className="flex-1 px-3 overflow-y-auto">
+              <div className="mb-2 px-2">
                 <span className="text-[0.6rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>Menu</span>
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {items.map((item, idx) => {
                   const active = section === item.key
                   return (
                     <button
                       key={item.key + idx}
                       onClick={() => { onNavigate(item.key); setOpen(false) }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-all"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-xl transition-all relative"
                       style={{
                         fontSize: '0.8125rem',
                         fontWeight: active ? '500' : '400',
                         color: active ? 'var(--green-700)' : 'var(--text-secondary)',
                         backgroundColor: active ? 'var(--green-50)' : 'transparent',
-                        transitionDuration: '120ms',
+                        transitionDuration: '150ms',
                       }}
                       onMouseEnter={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
                       onMouseLeave={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
                     >
+                      {active && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ backgroundColor: 'var(--green-500)' }} />
+                      )}
                       <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: active ? 'var(--green-600)' : 'var(--text-muted)' }}>
                         <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? '2' : '1.5'}><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
                       </span>
@@ -121,11 +127,12 @@ export default function DashboardLayout({ section, onNavigate, children, templat
             </nav>
 
             {/* Logout */}
-            <div className="px-3 pb-4 pt-2 shrink-0" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+            <div className="px-3 pb-4 pt-3 shrink-0">
+              <div className="mx-1 mb-3" style={{ borderTop: '1px solid var(--border-subtle)' }} />
               <button
                 onClick={logout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-all"
-                style={{ fontSize: '0.8125rem', color: 'var(--danger)', transitionDuration: '120ms' }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-xl transition-all"
+                style={{ fontSize: '0.8125rem', color: 'var(--danger)', transitionDuration: '150ms' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--danger-bg)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
