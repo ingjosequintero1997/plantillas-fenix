@@ -6,20 +6,20 @@
 
 :root {
   /* ── Color: Verde institucional (escala 50–900) ────────────── */
-  --green-50:  #F0F9F1;
+  --green-50:  #EEF6EC;
   --green-100: #DCF1DF;
   --green-200: #B8E3C0;
   --green-300: #8ACD98;
-  --green-400: #57B36D;
-  --green-500: #2F9E52;
-  --green-600: #15803D;
-  --green-700: #166534;
-  --green-800: #14532D;
-  --green-900: #14532D;
+  --green-400: #60C050;
+  --green-500: #0D973C;
+  --green-600: #0A7A32;
+  --green-700: #085F28;
+  --green-800: #064A1F;
+  --green-900: #043516;
 
-  /* Verde institucional de marca (equivalente al header actual) */
-  --brand-strong: #16A34A;
-  --brand-stronger: #15803D;
+  /* Verde institucional de marca */
+  --brand-strong: #0D973C;
+  --brand-stronger: #0A7A32;
 
   /* ── Color: Neutros cálidos ────────────────────────────────── */
   --warm-50:  #F7F7F5;
@@ -152,13 +152,12 @@
 
   --focus-ring: rgba(87, 179, 109, 0.4);
 
-  /* Verde institucional ligeramente desaturado para dark,
-     evita el efecto "neón" sobre fondo oscuro. */
-  --green-400: #6BBF83;
-  --green-500: #4FAE68;
-  --green-600: #3D9B5A;
-  --brand-strong: #4FAE68;
-  --brand-stronger: #3D9B5A;
+  /* Verde institucional desaturado para dark */
+  --green-400: #5AB84D;
+  --green-500: #3EA84A;
+  --green-600: #329040;
+  --brand-strong: #3EA84A;
+  --brand-stronger: #329040;
   --surface-brand-weak: #16301F;
 
   --danger: #F97066;

@@ -56,7 +56,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
     <div className="min-h-screen app-bg flex flex-col">
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
 
-      <header className="sticky top-0 z-30 w-full" style={{ background: 'linear-gradient(180deg, #166534 0%, #14532D 100%)', boxShadow: '0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.08)' }}>
+      <header className="sticky top-0 z-30 w-full" style={{ background: 'linear-gradient(180deg, #0D973C 0%, #0A7A32 100%)', boxShadow: '0 1px 0 rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.10)' }}>
         <div className="h-[64px] flex items-center justify-between px-4 lg:px-6 w-full">
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="lg:hidden p-1.5 rounded-md text-white/80 hover:bg-white/10 transition-colors" style={{ transitionDuration: '160ms' }}>
@@ -105,8 +105,8 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       <div className="flex flex-1 min-h-0 relative">
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
-          style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-strong)', top: '64px', boxShadow: '1px 0 0 var(--border-subtle)' }}
+          className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 lg:top-[64px] lg:h-[calc(100vh-64px)] lg:z-20 lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
+          style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-strong)', boxShadow: '1px 0 0 var(--border-subtle)' }}
         >
           <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
             <div className="px-3 mb-3">
