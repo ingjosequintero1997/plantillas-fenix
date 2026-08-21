@@ -418,6 +418,7 @@ async def upload_file(
 	strict_mode: bool = Form(default=False),
 	min_template_coverage: float = Form(default=95.0),
 	require_exact_columns: bool = Form(default=True),
+	mode: str = Form(default="limpiador"),
 ):
 	filename = (file.filename or '').lower()
 	if not (filename.endswith('.txt') or filename.endswith('.xlsx') or filename.endswith('.xls')):
@@ -495,6 +496,29 @@ async def upload_file(
 			})
 
 		canonical_raw_text = df.to_csv(sep='|', index=False, header=True)
+
+		if mode == "validador":
+			from validators import validate_only
+			validation_result = validate_only(df, map_suggest, active_template)
+			raw_text_compressed = _gz_compress(canonical_raw_text)
+			return JSONResponse({
+				"success": True,
+				"template_key": template_key,
+				"mode": "validador",
+				"mapping_suggested": map_suggest,
+				"mapping": map_suggest,
+				"summary": validation_result["stats"],
+				"logs_sample": validation_result["logs"],
+				"corrected_text": raw_text_compressed,
+				"raw_text": raw_text_compressed,
+				"preview_rows": df.head(30).to_dict(orient='records'),
+				"template_names": template_names(active_template),
+				"mapping_stats": mapping_stats,
+				"structure_validation": structure_validation,
+				"strict_validation": strict_validation,
+				"compressed": True,
+			})
+
 		payload = build_response_payload(df, map_suggest, canonical_raw_text, template_key, active_template)
 		return JSONResponse({
 			**payload,

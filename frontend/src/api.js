@@ -51,6 +51,7 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
     const strictMode = options.strictMode ?? false
     const minTemplateCoverage = options.minTemplateCoverage ?? 95
     const requireExactColumns = options.requireExactColumns ?? true
+    const mode = options.mode ?? 'limpiador'
 
     const doUpload = (body, filename) => {
       const form = new FormData()
@@ -59,6 +60,7 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
       form.append('strict_mode', String(strictMode))
       form.append('min_template_coverage', String(minTemplateCoverage))
       form.append('require_exact_columns', String(requireExactColumns))
+      form.append('mode', mode)
 
       const xhr = new XMLHttpRequest()
       xhr.open('POST', `${API_BASE}/upload`)

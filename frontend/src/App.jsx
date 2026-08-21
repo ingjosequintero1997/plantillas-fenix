@@ -11,6 +11,7 @@ import HistorialView from './components/HistorialView'
 import PrestadoresView from './components/PrestadoresView'
 import IndicadoresView from './components/IndicadoresView'
 import ErrorSummaryTable from './components/ErrorSummaryTable'
+import EditableDataTable from './components/EditableDataTable'
 import ConsolidacionView from './components/ConsolidacionView'
 import HistoriasView from './components/HistoriasView'
 import DragDrop from './components/DragDrop'
@@ -81,6 +82,7 @@ export default function App() {
   const [evaluating, setEvaluating] = useState(false)
   const [showEvaluation, setShowEvaluation] = useState(false)
   const [tipoCargue, setTipoCargue] = useState('mensual')
+  const [processingMode, setProcessingMode] = useState('limpiador')
 
   const hasDataLoaded = Boolean(rawText)
   const canExport = Boolean(correctedText)
@@ -159,7 +161,7 @@ export default function App() {
 
   const processSingleFile = async (file, reportProgress = true) => {
     const raw = await uploadFile(file, 'auto', reportProgress ? setProgress : undefined, {
-      strictMode, minTemplateCoverage, requireExactColumns: true,
+      strictMode, minTemplateCoverage, requireExactColumns: true, mode: processingMode,
     })
     const data = maybeDecompress(raw)
     const item = {
@@ -349,6 +351,75 @@ export default function App() {
                     </div>
 
                     <DragDrop onFile={handleFile} />
+
+                    {/* Modo de procesamiento */}
+                    {user?.role === 'admin' && (
+                      <div className="panel">
+                        <div className="section-label mb-3">Modo de procesamiento</div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setProcessingMode('validador')}
+                            className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
+                            style={{
+                              borderColor: processingMode === 'validador' ? 'var(--green-500)' : 'var(--border)',
+                              backgroundColor: processingMode === 'validador' ? 'var(--green-50)' : 'transparent',
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4" style={{ color: processingMode === 'validador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              <div>
+                                <div className="text-sm font-semibold" style={{ color: processingMode === 'validador' ? 'var(--green-700)' : 'var(--text)' }}>Validador</div>
+                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Solo valida, sin ajustar</div>
+                              </div>
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => setProcessingMode('limpiador')}
+                            className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
+                            style={{
+                              borderColor: processingMode === 'limpiador' ? 'var(--green-500)' : 'var(--border)',
+                              backgroundColor: processingMode === 'limpiador' ? 'var(--green-50)' : 'transparent',
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4" style={{ color: processingMode === 'limpiador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              <div>
+                                <div className="text-sm font-semibold" style={{ color: processingMode === 'limpiador' ? 'var(--green-700)' : 'var(--text)' }}>Limpiador</div>
+                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Ajusta segun instructivo</div>
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Barra de progreso */}
+                    {loading && (
+                      <div className="panel">
+                        <div className="flex items-center gap-3 mb-2">
+                          <svg className="w-4 h-4 animate-spin" style={{ color: 'var(--green-500)' }} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Procesando archivo...</span>
+                              <span className="text-sm font-medium" style={{ color: 'var(--green-600)' }}>{progress}%</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-subtle)' }}>
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${progress}%`,
+                                  backgroundColor: progress < 100 ? 'var(--green-500)' : 'var(--green-600)',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          {processingMode === 'validador' ? 'Validando datos contra el instructivo...' : 'Limpiando y ajustando datos segun el instructivo...'}
+                        </p>
+                      </div>
+                    )}
+
                     {error && (
                       <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
                     )}
@@ -370,33 +441,49 @@ export default function App() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-5 border-y" style={{ borderColor: 'var(--border)' }}>
                       <div><div className="stat-label">Registros</div><div className="stat-value">{summary.total}</div></div>
                       <div><div className="stat-label">Errores</div><div className="stat-value" style={{ color: summary.errors ? 'var(--error)' : 'var(--success)' }}>{summary.errors}</div></div>
-                      <div><div className="stat-label">Corregidos</div><div className="stat-value">{summary.corrected}</div></div>
+                      {processingMode === 'limpiador' && (
+                        <div><div className="stat-label">Corregidos</div><div className="stat-value">{summary.corrected}</div></div>
+                      )}
                       <div><div className="stat-label">Calidad</div><div className="stat-value">{summary.quality_percent}%</div></div>
                     </div>
 
-                    {/* Descarga de data ajustada */}
-                    <div className="panel flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="font-medium" style={{ color: 'var(--text)' }}>Tu data quedó ajustada</div>
-                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Descarga el archivo con los datos corregidos y las fórmulas aplicadas.</div>
-                      </div>
-                      <button onClick={handleExportExcel} disabled={!canExport} className="btn-primary">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        Descargar data ajustada
-                      </button>
-                    </div>
-
-                    {loading && (
-                      <div className="panel flex items-center gap-3">
-                        <div className="skeleton h-8 w-8 rounded-full" />
-                        <div className="flex-1">
-                          <div className="skeleton h-4 w-40" />
-                          <div className="skeleton h-2 w-full mt-2" style={{ width: `${progress}%` }} />
+                    {/* Descarga de data ajustada (solo modo limpiador) */}
+                    {processingMode === 'limpiador' && (
+                      <div className="panel flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="font-medium" style={{ color: 'var(--text)' }}>Tu data quedó ajustada</div>
+                          <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Descarga el archivo con los datos corregidos y las fórmulas aplicadas.</div>
                         </div>
+                        <button onClick={handleExportExcel} disabled={!canExport} className="btn-primary">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          Descargar data ajustada
+                        </button>
                       </div>
                     )}
 
+                    {/* Tabla de errores */}
                     <ErrorSummaryTable logs={logs} />
+
+                    {/* Tabla editable (modo validador) */}
+                    {processingMode === 'validador' && (
+                      <EditableDataTable
+                        logs={logs}
+                        rawText={rawText}
+                        templateNames={templateNames}
+                        onRevalidate={async (newText) => {
+                          setLoading(true); setError('')
+                          try {
+                            const data = maybeDecompress(await revalidateData(newText, mapping, selectedTemplate))
+                            applyResponse(data)
+                          } catch (e) {
+                            setError(e.message || 'Error al re-validar')
+                          } finally {
+                            setLoading(false)
+                          }
+                        }}
+                        loading={loading}
+                      />
+                    )}
 
                     <div className="flex justify-end">
                       <button onClick={handleReset} className="btn-ghost text-sm">Validar otro archivo</button>

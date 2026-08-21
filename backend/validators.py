@@ -524,6 +524,105 @@ def safe_default_for_required(tdef: dict):
 		return "SIN DATO"
 	return "SIN DATO"
 
+def validate_only(df: pd.DataFrame, mapping: dict, template: list):
+	"""Valida la data sin corregirla. Retorna los errores encontrados."""
+	tmap = {t["name"]: t for t in template}
+	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
+	template_cols = [t["name"] for t in template]
+	inverse = {}
+	for orig, templ in (mapping or {}).items():
+		if not templ:
+			continue
+		canonical = normalized_tmap.get(normalize_text(templ))
+		if canonical:
+			inverse[canonical] = orig
+
+	n = int(len(df))
+	stats = {"total": n, "errors": 0, "corrected": 0, "ok": 0}
+
+	src_values = []
+	for col in template_cols:
+		src = inverse.get(col)
+		if src and src in df.columns:
+			src_values.append(df[src].tolist())
+		else:
+			src_values.append(None)
+
+	logs = []
+	MAX_LOGS = 5000
+
+	for ci, col in enumerate(template_cols):
+		tdef = tmap[col]
+		values = src_values[ci]
+		if values is None:
+			continue
+
+		for ridx in range(n):
+			val = values[ridx] if values is not None else None
+			orig_val = None if val is None or pd.isna(val) else str(val)
+			val_str = str(orig_val).strip() if orig_val else ""
+			err_msg = None
+			expected = None
+
+			if tdef["type"] == "SET":
+				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
+				normalized_allowed = [normalize_text(a) for a in allowed]
+				if val_str:
+					sn = normalize_text(val_str)
+					if sn not in normalized_allowed:
+						alias_match = False
+						for alias_canonical, alias_synonyms in {
+							"SI": {"S", "1", "YES", "Y"},
+							"NO": {"N", "0", "FALSE", "F"},
+							"MASCULINO": {"M"},
+							"FEMENINO": {"F"},
+							"CC": {"CEDULA", "C.C.", "C.C"},
+							"TI": {"TARJETA IDENTIDAD", "T.I."},
+							"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
+						}.items():
+							if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
+								alias_match = True
+								break
+						if not alias_match:
+							expected = allowed[0] if allowed else "SIN DATO"
+							err_msg = f"Valor no permitido"
+
+			elif tdef["type"] == "INT":
+				if val_str and val_str not in ("SIN DATO", ""):
+					clean = val_str.replace("-", "").replace(" ", "")
+					if not re.fullmatch(r'[+-]?\d+', clean):
+						expected = "Entero valido"
+						err_msg = f"Se esperaba entero"
+
+			elif tdef["type"] == "DECIMAL":
+				if val_str and val_str not in ("SIN DATO", ""):
+					s = val_str.replace(" ", "").replace(",", ".")
+					if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
+						expected = "Decimal valido"
+						err_msg = f"Se esperaba decimal"
+
+			elif tdef["type"] == "DATE":
+				if val_str and val_str not in ("SIN DATO", "1900-01-01", ""):
+					if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', val_str):
+						expected = "AAAA-MM-DD"
+						err_msg = f"Fecha invalida"
+
+			if err_msg and len(logs) < MAX_LOGS:
+				logs.append({
+					"row": ridx + 1,
+					"column": col,
+					"original": orig_val or "",
+					"corrected": expected or "",
+					"status": "error",
+				})
+				stats["errors"] += 1
+
+	total_cells = max(1, stats["total"] * len(template_cols))
+	stats["quality_percent"] = round(100 * (1 - stats["errors"] / total_cells), 2)
+	stats["rows_with_errors"] = len(set(l["row"] for l in logs))
+	stats["rows_ok"] = stats["total"] - stats["rows_with_errors"]
+	return {"stats": stats, "logs": logs}
+
 def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 	# Limpieza de emergencia: reemplaza valores malformados
 	def clean_malformed(x):
