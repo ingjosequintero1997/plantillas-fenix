@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
 
@@ -152,22 +153,22 @@ def init_db():
     # Migraciones ligeras para tablas creadas con esquemas anteriores
     try:
         with engine.begin() as conn:
-            conn.execute("ALTER TABLE cargues ADD COLUMN compressed BOOLEAN")
+            conn.execute(text("ALTER TABLE cargues ADD COLUMN compressed BOOLEAN"))
     except Exception:
         pass
     try:
         with engine.begin() as conn:
-            conn.execute("ALTER TABLE cargues ALTER COLUMN prestador_id DROP NOT NULL")
+            conn.execute(text("ALTER TABLE cargues ALTER COLUMN prestador_id DROP NOT NULL"))
     except Exception:
         pass
     try:
         with engine.begin() as conn:
-            conn.execute("ALTER TABLE historias_clinicas ADD COLUMN pdf_path VARCHAR(500)")
+            conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN pdf_path VARCHAR(500)"))
     except Exception:
         pass
     try:
         with engine.begin() as conn:
-            conn.execute("ALTER TABLE historias_clinicas ADD COLUMN template_key VARCHAR(60)")
+            conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN template_key VARCHAR(60)"))
     except Exception:
         pass
 
