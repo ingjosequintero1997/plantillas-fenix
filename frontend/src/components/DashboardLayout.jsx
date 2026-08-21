@@ -15,7 +15,6 @@ const NAV = [
   { key: 'historias', label: 'Historias clinicas', roles: ['admin', 'prestador', 'lider'],
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
-
     icon: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7' },
 ]
 
@@ -53,45 +52,49 @@ export default function DashboardLayout({ section, onNavigate, children, templat
   const activeMeta = templates.find((t) => t.key === activeTemplate)
 
   return (
-    <div className="min-h-screen app-bg flex flex-col">
-      {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-canvas)' }}>
+      {open && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
-      <header className="sticky top-0 z-30 w-full" style={{ background: 'linear-gradient(160deg, #3A863A 0%, #5AAE5A 40%, #6BC06B 100%)', boxShadow: '0 4px 16px rgba(90,174,90,0.28), 0 1px 0 rgba(0,0,0,0.06)' }}>
-        <div className="h-16 flex items-center justify-between px-4 lg:px-6 w-full">
+      {/* ── Header ──────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 w-full" style={{
+        background: 'linear-gradient(160deg, #3A863A 0%, #4A9A4A 30%, #5AAE5A 60%, #6BC06B 100%)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.12) inset, 0 4px 20px rgba(90,174,90,0.30)',
+      }}>
+        <div className="h-[60px] flex items-center justify-between px-4 lg:px-5 w-full max-w-[1600px] mx-auto">
           <div className="flex items-center gap-3">
-            <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-xl text-white/80 hover:bg-white/15 transition-all" style={{ transitionDuration: '160ms' }}>
+            <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-lg text-white/80 hover:bg-white/15 transition-all" style={{ transitionDuration: '120ms' }}>
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1 shadow-lg shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center p-1 shadow-md shrink-0">
                 <img src="/logo.png" alt="Fénix" className="w-full h-full object-contain" />
               </div>
               <div className="hidden sm:block">
-                <div className="text-white font-semibold text-sm leading-none tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>Fénix Data</div>
-                <div className="text-white/55 text-[0.58rem] font-medium tracking-[0.16em] mt-1 uppercase">Recepción de datos</div>
+                <div className="text-white font-semibold text-[0.85rem] leading-none tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>Fénix Data</div>
+                <div className="text-white/50 text-[0.55rem] font-medium tracking-[0.18em] mt-1 uppercase">Recepción de datos</div>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-1.5 mr-2 text-white/50 text-xs">
-              <span className="text-white/75 font-medium">{meta.title}</span>
+              <span className="text-white/70 font-medium">{meta.title}</span>
               {activeMeta && (
                 <>
-                  <svg className="w-3 h-3 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                  <span className="text-white/55">{activeMeta.label}</span>
+                  <svg className="w-3 h-3 text-white/25" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  <span className="text-white/50">{activeMeta.label}</span>
                 </>
               )}
             </div>
 
-            <div className="flex items-center gap-1 rounded-xl p-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(6px)' }}>
+            <div className="flex items-center gap-1.5 rounded-xl p-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
               {(isAdmin || role === 'lider') && (
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-[0.65rem] font-medium px-2.5 py-1 rounded-lg text-white/85">
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-[0.6rem] font-semibold px-2.5 py-1 rounded-lg text-white/80 uppercase tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse-soft" />
                   {roleLabel}
                 </span>
               )}
-              <button onClick={() => setDark(!dark)} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/15 transition-all" style={{ transitionDuration: '160ms' }} title="Cambiar tema">
+              <button onClick={() => setDark(!dark)} className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/15 transition-all" style={{ transitionDuration: '120ms' }} title="Cambiar tema">
                 {dark ? (
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                 ) : (
@@ -103,16 +106,35 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         </div>
       </header>
 
+      {/* ── Body ────────────────────────────────────────────── */}
       <div className="flex flex-1 min-h-0 relative">
+
+        {/* ── Sidebar ─────────────────────────────────────────── */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 lg:top-[64px] lg:h-[calc(100vh-64px)] lg:z-20 lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
-          style={{ backgroundColor: 'var(--bg-surface)' }}
+          className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 lg:top-[60px] lg:h-[calc(100vh-60px)] lg:z-20 lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
+          style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)' }}
         >
-          <nav className="flex-1 px-3 pt-5 pb-3 overflow-y-auto">
-            <div className="mb-4">
-              <span style={{ fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.05em', paddingLeft: '12px' }}>Principal</span>
+          {/* Brand */}
+          <div className="px-4 pt-5 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center p-1" style={{ background: 'linear-gradient(135deg, var(--green-400), var(--green-600))', boxShadow: '0 2px 8px rgba(90,174,90,0.2)' }}>
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              </div>
+              <div>
+                <div className="text-[0.8rem] font-semibold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Fénix Data</div>
+                <div className="text-[0.55rem] font-medium uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Panel de control</div>
+              </div>
             </div>
-            <div className="space-y-1">
+          </div>
+
+          <div className="mx-4 mb-4" style={{ height: '1px', background: 'var(--border-subtle)' }} />
+
+          {/* Nav */}
+          <nav className="flex-1 px-3 overflow-y-auto">
+            <div className="mb-2 px-2">
+              <span className="text-[0.6rem] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-muted)' }}>Navegación</span>
+            </div>
+            <div className="space-y-0.5">
               {items.map((item, idx) => {
                 const active = section === item.key
                 return (
@@ -123,15 +145,15 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                     style={{
                       fontSize: '0.8125rem',
                       fontWeight: active ? '500' : '400',
-                      color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      backgroundColor: active ? 'var(--bg-subtle)' : 'transparent',
+                      color: active ? 'var(--green-700)' : 'var(--text-secondary)',
+                      backgroundColor: active ? 'var(--green-50)' : 'transparent',
                       transitionDuration: '120ms',
                     }}
                     onMouseEnter={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
                     onMouseLeave={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
                   >
-                    <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
+                    <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: active ? 'var(--green-600)' : 'var(--text-muted)' }}>
+                      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? '2' : '1.5'}><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
                     </span>
                     <span className="truncate">{item.label}</span>
                   </button>
@@ -139,39 +161,39 @@ export default function DashboardLayout({ section, onNavigate, children, templat
               })}
             </div>
 
-            <div className="mt-8 mb-4">
-              <span style={{ fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.05em', paddingLeft: '12px' }}>Sistema</span>
+            <div className="my-5 mx-2" style={{ height: '1px', background: 'var(--border-subtle)' }} />
+
+            <div className="mb-2 px-2">
+              <span className="text-[0.6rem] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-muted)' }}>Sistema</span>
             </div>
-            <div className="space-y-1">
-              <div className="px-3 py-2.5 rounded-lg" style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center justify-center w-5 h-5 shrink-0">
-                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </span>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Soporte</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>Asoc. Cabildos Indígenas</div>
-                  </div>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg" style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                <span className="flex items-center justify-center w-5 h-5 shrink-0">
+                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Soporte técnico</div>
+                  <div className="mt-0.5" style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Asoc. Cabildos Indígenas</div>
                 </div>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--green-400)' }} />
               </div>
             </div>
           </nav>
 
-          <div className="px-3 pb-4 pt-2" ref={userMenuRef}>
-            <div className="mb-3 px-1">
-              <div style={{ fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>Cuenta</div>
-            </div>
+          {/* User */}
+          <div className="px-3 pb-4 pt-3" ref={userMenuRef}>
+            <div className="mx-2 mb-3" style={{ height: '1px', background: 'var(--border-subtle)' }} />
             <button onClick={() => setUserMenu((v) => !v)}
               className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all"
               style={{ backgroundColor: userMenu ? 'var(--bg-surface-hover)' : 'transparent', transitionDuration: '120ms' }}
               onMouseEnter={(e) => { if (!userMenu) e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
               onMouseLeave={(e) => { if (!userMenu) e.currentTarget.style.backgroundColor = 'transparent' }}>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-[0.7rem] font-semibold shrink-0" style={{ background: 'linear-gradient(135deg, var(--green-500) 0%, var(--green-700) 100%)', color: 'var(--text-on-brand)' }}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-[0.65rem] font-bold shrink-0" style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-700))', color: '#fff' }}>
                 {(user?.name || '?').slice(0, 1).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[0.8rem] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user?.name}</div>
-                <div className="text-[0.65rem] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{roleLabel}</div>
+                <div className="text-[0.6rem] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{roleLabel}</div>
               </div>
               <svg className="w-3.5 h-3.5 shrink-0 transition-transform" style={{ color: 'var(--text-muted)', transform: userMenu ? 'rotate(180deg)' : 'rotate(0deg)', transitionDuration: '120ms' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -196,12 +218,13 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           </div>
         </aside>
 
+        {/* ── Main ────────────────────────────────────────────── */}
         <div className="flex flex-col flex-1 min-w-0">
-          <main className="flex-1 px-6 lg:px-8 py-6 w-full max-w-[1200px]">
+          <main className="flex-1 px-5 lg:px-8 py-6 w-full max-w-[1400px]">
             {children}
           </main>
-          <footer className="px-6 py-4 border-t text-center" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
-            <p style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)' }}>
+          <footer className="px-6 py-3 border-t text-center" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
+            <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
               Asociación de Cabildos Indígenas del Cesar y La Guajira &mdash; Ing. José Quintero &copy; {new Date().getFullYear()}
             </p>
           </footer>
