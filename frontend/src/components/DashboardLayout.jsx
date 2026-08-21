@@ -46,10 +46,10 @@ export default function DashboardLayout({ section, onNavigate, children, templat
   if (rt) meta.title = rt
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-canvas)' }}>
+    <div className="h-dvh flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-canvas)' }}>
 
       {/* Header */}
-      <header className="sticky top-0 z-30 w-full" style={{
+      <header className="shrink-0 z-30 w-full" style={{
         background: 'linear-gradient(160deg, #3A863A 0%, #4A9A4A 30%, #5AAE5A 60%, #6BC06B 100%)',
         boxShadow: '0 1px 0 rgba(255,255,255,0.12) inset, 0 4px 20px rgba(90,174,90,0.30)',
       }}>
@@ -61,21 +61,21 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         </div>
       </header>
 
-      {/* Body */}
-      <div className="flex" style={{ minHeight: 'calc(100vh - 52px)' }}>
+      {/* Body - fills remaining viewport */}
+      <div className="flex flex-1 min-h-0">
 
         {/* Sidebar */}
         <aside
-          className="flex flex-col shrink-0 transition-all duration-200 overflow-hidden"
+          className="shrink-0 flex flex-col transition-all duration-200 overflow-hidden border-r"
           style={{
             width: open ? SIDEBAR_W : 0,
             backgroundColor: 'var(--bg-surface)',
-            borderRight: open ? '1px solid var(--border-subtle)' : 'none',
+            borderColor: open ? 'var(--border-subtle)' : 'transparent',
           }}
         >
           <div className="flex flex-col h-full" style={{ width: SIDEBAR_W }}>
             {/* User */}
-            <div className="px-4 py-4" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+            <div className="px-4 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-[0.7rem] font-bold shrink-0" style={{ backgroundColor: 'var(--green-500)', color: '#fff' }}>
                   {(user?.name || '?').slice(0, 1).toUpperCase()}
@@ -121,7 +121,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
             </nav>
 
             {/* Logout */}
-            <div className="px-3 pb-4 pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+            <div className="px-3 pb-4 pt-2 shrink-0" style={{ borderTop: '1px solid var(--border-subtle)' }}>
               <button
                 onClick={logout}
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-all"
@@ -137,11 +137,11 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         </aside>
 
         {/* Main */}
-        <div className="flex flex-col flex-1 min-w-0">
-          <main className="flex-1 px-5 lg:px-8 py-6 w-full max-w-[1400px]">
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
+          <main className="flex-1 overflow-y-auto px-5 lg:px-8 py-6">
             {children}
           </main>
-          <footer className="px-6 py-3 border-t text-center" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
+          <footer className="shrink-0 px-6 py-3 border-t text-center" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
             <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
               Asociacion de Cabildos Indigenas del Cesar y La Guajira - Ing. Jose Quintero {new Date().getFullYear()}
             </p>
