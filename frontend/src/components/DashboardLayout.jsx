@@ -66,41 +66,45 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
 
       {/* ═══ Sidebar ═══ */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ background: 'linear-gradient(180deg, #0D973C 0%, #60C050 100%)' }}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid var(--border)' }}>
         {/* Barra superior decorativa institucional */}
         <div className="h-1.5 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #F4E72B 0%, #60C050 50%, #0D973C 100%)' }} />
 
         {/* Branding */}
-        <div className="flex items-center gap-3 px-5 h-[72px] border-b border-white/15">
-          <div className="w-11 h-11 rounded-xl overflow-hidden bg-white flex items-center justify-center p-1 shadow-sm shrink-0 ring-2 ring-white/30">
+        <div className="flex items-center gap-3 px-5 h-[84px] border-b" style={{ borderColor: 'var(--border)' }}>
+          <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#EEF6EC] flex items-center justify-center p-1.5 shadow-sm shrink-0">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="text-white font-bold text-[15px] leading-none tracking-tight">Fénix Data</div>
-            <div className="text-white/80 text-[0.6rem] font-bold tracking-[0.16em] mt-1">RECEPCIÓN DE DATOS</div>
+            <div className="font-bold text-[16px] leading-none tracking-tight" style={{ color: 'var(--text)' }}>Fénix Data</div>
+            <div className="text-[0.6rem] font-bold tracking-[0.16em] mt-1" style={{ color: '#0D973C' }}>RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-          <div className="text-[0.6rem] font-bold text-white/70 uppercase tracking-[0.14em] px-3 mb-2">Menú</div>
+        <nav className="flex-1 px-3.5 py-5 space-y-1 overflow-y-auto">
+          <div className="section-label px-2 mb-3">Menú principal</div>
           {items.map((item, idx) => {
             const active = section === item.key
             return (
               <button
                 key={item.key + idx}
                 onClick={() => { onNavigate(item.key); setOpen(false) }}
-                className={`relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 ${
+                className={`relative w-full flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm transition-all duration-150 ${
                   active
-                    ? 'font-bold text-white bg-white/25 shadow-md'
-                    : 'font-semibold text-white/90 hover:bg-white/15 hover:text-white'
+                    ? 'font-bold'
+                    : 'font-medium hover:bg-[#EEF6EC]'
                 }`}
+                style={active ? { backgroundColor: '#EEF6EC', color: '#0D973C' } : { color: 'var(--text)' }}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-white" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full" style={{ backgroundColor: '#0D973C' }} />
                 )}
-                <span className={`flex items-center justify-center w-5 h-5 shrink-0 transition-colors ${active ? 'text-white' : 'text-white/80'}`}>
+                <span className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors ${
+                  active ? 'bg-[#60C050] text-white shadow-md' : 'text-[#0D973C]'
+                }`}
+                style={!active ? { backgroundColor: '#EEF6EC' } : undefined}>
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">{item.icon}</svg>
                 </span>
                 {item.label}
@@ -110,16 +114,16 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         </nav>
 
         {/* Usuario */}
-        <div className="px-3 pb-4 border-t border-white/15 pt-3" ref={userMenuRef}>
-          <div className="flex items-center gap-3 rounded-lg px-2 py-2 bg-white/10">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-white text-[#0D973C]">
+        <div className="px-3.5 pb-5 pt-3 border-t" style={{ borderColor: 'var(--border)' }} ref={userMenuRef}>
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ backgroundColor: '#EEF6EC' }}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-[#0D973C] text-white">
               {(user?.name || '?').slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-bold truncate text-white">{user?.name}</div>
-              <div className="text-[0.6rem] font-bold uppercase tracking-wider text-white/75">{roleLabel}</div>
+              <div className="text-[13px] font-bold truncate" style={{ color: 'var(--text)' }}>{user?.name}</div>
+              <div className="text-[0.6rem] font-bold uppercase tracking-wider" style={{ color: '#0D973C' }}>{roleLabel}</div>
             </div>
-            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/80 hover:bg-white/15 transition-colors">
+            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-[#0D973C] hover:bg-white transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
               </svg>
@@ -140,7 +144,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       </aside>
 
       {/* ═══ Contenido ═══ */}
-      <div className="lg:pl-64 flex flex-col min-h-screen flex-1">
+      <div className="lg:pl-[280px] flex flex-col min-h-screen flex-1">
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-6 border-b"
           style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', boxShadow: '0 1px 3px rgba(16,24,40,0.04)' }}>
