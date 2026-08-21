@@ -12,13 +12,13 @@ const NAV_SECTIONS = [
   {
     label: 'Operaciones',
     items: [
-      { key: 'subir', label: 'Cargues de data', roles: ['admin', 'prestador'], badge: 1,
+      { key: 'subir', label: 'Validar data', roles: ['admin', 'prestador'],
         icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
-      { key: 'historial', label: 'Verificar data', roles: ['admin', 'lider'], badge: 2,
+      { key: 'historial', label: 'Verificar data', roles: ['admin', 'lider'],
         icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-      { key: 'historial', label: 'Mis cargues', roles: ['prestador'], badge: 2,
+      { key: 'historial', label: 'Mis cargues', roles: ['prestador'],
         icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-      { key: 'consolidar', label: 'Consolidar', roles: ['admin', 'lider'], badge: 3,
+      { key: 'consolidar', label: 'Consolidar', roles: ['admin', 'lider'],
         icon: 'M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V5zM4 15a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z' },
     ],
   },
@@ -37,7 +37,7 @@ const NAV_SECTIONS = [
 
 const META = {
   inicio: { title: 'Inicio', sub: 'Centro de operaciones' },
-  subir: { title: 'Cargues de data', sub: 'Cargue masivo o mensual' },
+  subir: { title: 'Validar data', sub: 'Validar y cargar data' },
   historial: { title: 'Verificar data', sub: 'Cargues de los prestadores' },
   consolidar: { title: 'Consolidar', sub: 'Une las datas' },
   historias: { title: 'Historias clinicas', sub: 'Expedientes clinicos' },

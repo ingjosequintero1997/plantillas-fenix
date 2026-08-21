@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import ReactDOM from 'react-dom'
 import * as pako from 'pako'
 import { fetchCargues, fetchCargue, deleteCargue, CARGUE_TXT_URL, CARGUE_EXCEL_URL } from '../api'
 import AjustesView from './AjustesView'
@@ -31,12 +32,26 @@ function CalidadBadge({ value }) {
   return <span className="badge-error">{value}%</span>
 }
 
-function DeleteConfirmModal({ filename, onConfirm, onCancel }) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={onCancel}>
-      <div className="bg-white rounded-xl p-6 w-full max-w-md relative z-[101] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+function DeleteConfirmModal({ filename, onConfirm, onCancel, loading }) {
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onCancel() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 9999, backgroundColor: 'rgba(15,15,15,0.35)', backdropFilter: 'blur(2px)' }}
+      onMouseDown={onCancel}
+    >
+      <div
+        className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl"
+        style={{ border: '1px solid var(--border-subtle)' }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#FEE2E2' }}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
           </div>
           <div>
@@ -48,13 +63,14 @@ function DeleteConfirmModal({ filename, onConfirm, onCancel }) {
           Se eliminara permanentemente el cargue <strong className="font-medium" style={{ color: 'var(--text-primary)' }}>{filename}</strong> y todos sus datos asociados.
         </p>
         <div className="flex justify-end gap-2">
-          <button onClick={onCancel} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
-          <button onClick={onConfirm} className="text-sm px-4 py-2 rounded-lg font-medium text-white transition-all" style={{ backgroundColor: '#DC2626' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#B91C1C'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#DC2626'}>
-            Eliminar
+          <button onClick={onCancel} className="btn-secondary text-sm px-4 py-2" disabled={loading}>Cancelar</button>
+          <button onClick={onConfirm} disabled={loading} className="text-sm px-4 py-2 rounded-lg font-medium text-white transition-all" style={{ backgroundColor: loading ? '#F87171' : '#DC2626' }} onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = '#B91C1C' }} onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = '#DC2626' }}>
+            {loading ? 'Eliminando...' : 'Eliminar'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -153,7 +169,7 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
 
   useEffect(() => { loadRecords() }, [loadRecords])
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!deleting) return
     setDeleteLoading(true)
     try {
@@ -166,7 +182,9 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
     } finally {
       setDeleteLoading(false)
     }
-  }
+  }, [deleting])
+
+  const handleCloseDelete = useCallback(() => setDeleting(null), [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -275,7 +293,8 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
         <DeleteConfirmModal
           filename={deleting.original_filename}
           onConfirm={handleDelete}
-          onCancel={() => setDeleting(null)}
+          onCancel={handleCloseDelete}
+          loading={deleteLoading}
         />
       )}
     </div>
