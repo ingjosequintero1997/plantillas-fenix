@@ -66,38 +66,42 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
 
       {/* ═══ Header verde a todo el ancho ═══ */}
-      <header className="sticky top-0 z-30 h-[76px] flex items-center justify-between px-6 lg:px-8 w-full"
-        style={{ backgroundColor: '#0D973C', boxShadow: '0 2px 12px rgba(13,151,60,0.25)' }}>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-md text-white/90 hover:bg-white/10">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-          </button>
-          {/* Logo y marca */}
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-sm shrink-0">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-            </div>
-            <div className="hidden sm:block">
-              <div className="text-white font-extrabold text-[17px] leading-none tracking-tight">Fénix Data</div>
-              <div className="text-white/75 text-[0.6rem] font-bold tracking-[0.18em] mt-1">RECEPCIÓN DE DATOS</div>
+      <header className="sticky top-0 z-30 w-full"
+        style={{ background: 'linear-gradient(90deg, #0A6B2E 0%, #0D973C 50%, #0FAA42 100%)', boxShadow: '0 4px 24px rgba(13,151,60,0.35)' }}>
+        {/* Barra fina institucional */}
+        <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #F4E72B 0%, #60C050 60%, #0D973C 100%)' }} />
+        <div className="h-[73px] flex items-center justify-between px-6 lg:px-8 w-full">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-lg text-white/90 hover:bg-white/10">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            {/* Logo y marca */}
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-1.5 shadow-lg shrink-0 ring-1 ring-white/40">
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <div className="text-white font-extrabold text-[18px] leading-none tracking-tight drop-shadow-sm">Fénix Data</div>
+                <div className="text-[#F4E72B] text-[0.6rem] font-bold tracking-[0.22em] mt-1.5">RECEPCIÓN DE DATOS</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          {(isAdmin || role === 'lider') && (
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/15 text-white">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#F4E72B]" />
-              {roleLabel}
-            </span>
-          )}
-          <button onClick={() => setDark(!dark)} className="p-2 rounded-md text-white/85 hover:bg-white/10 transition-colors" title="Cambiar tema">
-            {dark ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+          <div className="flex items-center gap-3">
+            {(isAdmin || role === 'lider') && (
+              <span className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-white/15 text-white backdrop-blur-sm">
+                <span className="w-2 h-2 rounded-full bg-[#F4E72B] shadow-sm" />
+                {roleLabel}
+              </span>
             )}
-          </button>
+            <button onClick={() => setDark(!dark)} className="p-2.5 rounded-lg text-white/85 hover:bg-white/10 transition-colors" title="Cambiar tema">
+              {dark ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -105,27 +109,31 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <div className="flex flex-1 min-h-0 relative">
         {/* Sidebar blanco */}
         <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
-          style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid var(--border)' }}>
+          style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid var(--border)', boxShadow: '2px 0 16px rgba(16,24,40,0.04)' }}>
           {/* Navegación */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            <div className="text-[0.65rem] font-bold text-[var(--text-secondary)] uppercase tracking-[0.16em] px-3 mb-3">Menú principal</div>
+            <div className="px-3 mb-4">
+              <div className="text-[0.65rem] font-bold text-[var(--text-secondary)] uppercase tracking-[0.18em]">Navegación</div>
+            </div>
             {items.map((item, idx) => {
               const active = section === item.key
               return (
                 <button
                   key={item.key + idx}
                   onClick={() => { onNavigate(item.key); setOpen(false) }}
-                  className={`relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 ${
+                  className={`relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 group ${
                     active
                       ? 'text-[#0D973C]'
-                      : 'text-[var(--text)] hover:bg-[#EEF6EC]'
+                      : 'text-[var(--text)] hover:text-[#0D973C] hover:bg-[#F2FAEF]'
                   }`}
                 >
                   {active && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full bg-[#0D973C]" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full bg-[#0D973C]" />
                   )}
-                  <span className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors duration-150 ${
-                    active ? 'bg-[#0D973C] text-white shadow-md' : 'text-[#0D973C] bg-[#EEF6EC]'
+                  <span className={`flex items-center justify-center w-9 h-9 rounded-xl shrink-0 transition-all duration-200 ${
+                    active
+                      ? 'bg-[#0D973C] text-white shadow-md shadow-[#0D973C]/30'
+                      : 'text-[#0D973C] bg-[#F2FAEF] group-hover:bg-[#E3F4DD]'
                   }`}>
                     <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">{item.icon}</svg>
                   </span>
@@ -133,12 +141,21 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                 </button>
               )
             })}
+
+            {/* Pie informativo */}
+            <div className="mt-8 mx-2 px-4 py-3.5 rounded-2xl" style={{ background: 'linear-gradient(135deg, #F2FAEF 0%, #E3F4DD 100%)', border: '1px solid #D4EDC8' }}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <svg className="w-4 h-4 text-[#0D973C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div className="text-[0.65rem] font-bold text-[#0D973C] uppercase tracking-wider">Soporte</div>
+              </div>
+              <div className="text-[0.7rem] leading-snug" style={{ color: 'var(--text-secondary)' }}>Asociación de Cabildos Indígenas del Cesar y La Guajira</div>
+            </div>
           </nav>
 
           {/* Usuario */}
           <div className="px-4 pb-6 pt-3 border-t" style={{ borderColor: 'var(--border)' }} ref={userMenuRef}>
-            <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ backgroundColor: '#EEF6EC' }}>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-[#0D973C] text-white shadow-sm">
+            <div className="flex items-center gap-3 rounded-2xl px-3 py-3" style={{ backgroundColor: '#F2FAEF', border: '1px solid #E3F4DD' }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-[#0D973C] text-white shadow-md shadow-[#0D973C]/25">
                 {(user?.name || '?').slice(0, 1).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
@@ -169,11 +186,17 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         <div className="flex flex-col flex-1 min-w-0">
           {/* Título de sección */}
           <div className="px-6 lg:px-8 pt-6 pb-2">
-            <div className="text-[1.35rem] font-bold" style={{ color: 'var(--text)', fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.02em' }}>{meta.title}</div>
-            <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>{meta.sub}{activeMeta ? ` · ${activeMeta.label}` : ''}</div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-wider text-[#0D973C]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0D973C]" />
+                Panel de control
+              </span>
+            </div>
+            <div className="text-[1.6rem] font-bold" style={{ color: 'var(--text)', fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.02em' }}>{meta.title}</div>
+            <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{meta.sub}{activeMeta ? ` · ${activeMeta.label}` : ''}</div>
           </div>
 
-          <main className="flex-1 px-6 lg:px-8 py-5 w-full max-w-[1200px]">
+          <main className="flex-1 px-6 lg:px-8 py-6 w-full max-w-[1200px]">
             {children}
           </main>
 

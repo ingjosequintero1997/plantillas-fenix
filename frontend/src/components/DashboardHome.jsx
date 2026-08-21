@@ -39,11 +39,26 @@ export default function DashboardHome({ user, summary, batchResults, templates, 
   return (
     <div className="space-y-8 fade-in">
       {/* Saludo editorial */}
-      <div className="panel" style={{ background: 'linear-gradient(135deg, #0D973C 0%, #60C050 100%)', border: 'none' }}>
-        <div className="text-white font-bold text-[1.5rem] font-[Manrope] tracking-tight">
-          {saludo}, {firstName}
+      <div className="relative overflow-hidden panel"
+        style={{ background: 'linear-gradient(120deg, #0A6B2E 0%, #0D973C 55%, #60C050 100%)', border: 'none', borderRadius: '1rem' }}>
+        <div className="absolute -top-10 -right-10 w-56 h-56 rounded-full bg-[#F4E72B]/15 blur-2xl" />
+        <div className="relative flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <div className="text-white font-bold text-[1.6rem] font-[Manrope] tracking-tight">
+              {saludo}, {firstName}
+            </div>
+            <div className="text-white/85 text-sm mt-1.5 capitalize">{now}</div>
+          </div>
+          <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-3 backdrop-blur-sm border border-white/10">
+            <div className="w-9 h-9 rounded-full bg-[#F4E72B] flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 text-[#0D973C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            </div>
+            <div>
+              <div className="text-white text-[0.65rem] font-semibold uppercase tracking-wider opacity-80">Sistema activo</div>
+              <div className="text-white text-sm font-bold leading-tight">Operativo</div>
+            </div>
+          </div>
         </div>
-        <div className="text-white/80 text-sm mt-1 capitalize">{now}</div>
       </div>
 
       {/* Resumen en tarjetas sutiles */}
@@ -56,7 +71,10 @@ export default function DashboardHome({ user, summary, batchResults, templates, 
 
       {/* Actividad reciente en tabla */}
       <div>
-        <div className="text-sm font-bold mb-3" style={{ color: 'var(--text)' }}>Actividad reciente</div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>Actividad reciente</div>
+          <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-[#0D973C]">Esta sesión</span>
+        </div>
         <div className="table-wrap">
           <table className="table">
             <thead>
