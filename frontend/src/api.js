@@ -84,21 +84,7 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
       xhr.send(form)
     }
 
-    // En Vercel serverless cada request puede ir a una instancia distinta,
-    // por lo que el reensamblaje de chunks en /tmp falla. Se sube el archivo
-    // completo en una sola petición hasta el límite de body de la plataforma.
-    const MAX_BODY_MB = 4.5
-    const CHUNK_BYTES = MAX_BODY_MB * 1024 * 1024
-    const totalChunks = Math.ceil(file.size / CHUNK_BYTES)
-
-    if (totalChunks <= 1) {
-      doUpload(file)
-      return
-    }
-
-    reject(new Error(
-      `El archivo supera ${MAX_BODY_MB} MB. En el entorno desplegado los archivos se deben cargar en partes menores a ${MAX_BODY_MB} MB (divide el archivo por mes o por rango de registros).`
-    ))
+    doUpload(file)
   })
 }
 

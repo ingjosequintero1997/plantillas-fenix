@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import ReactDOM from 'react-dom'
 import * as pako from 'pako'
 import { fetchCargues, fetchCargue, deleteCargue, CARGUE_TXT_URL, CARGUE_EXCEL_URL } from '../api'
-import AjustesView from './AjustesView'
+import ErrorSummaryTable from './ErrorSummaryTable'
 
 const PER_PAGE = 12
 
@@ -143,7 +143,7 @@ function CargueDetail({ cargue, onBack }) {
             </div>
           </div>
 
-          <AjustesView logs={Array.isArray(detail.logs_sample) ? detail.logs_sample : []} />
+          <ErrorSummaryTable logs={Array.isArray(detail.logs_sample) ? detail.logs_sample : []} />
         </>
       )}
     </div>

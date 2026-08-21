@@ -11,7 +11,7 @@ import HistorialView from './components/HistorialView'
 import PrestadoresView from './components/PrestadoresView'
 import IndicadoresView from './components/IndicadoresView'
 import FormulasView from './components/FormulasView'
-import AjustesView from './components/AjustesView'
+import ErrorSummaryTable from './components/ErrorSummaryTable'
 import ConsolidacionView from './components/ConsolidacionView'
 import HistoriasView from './components/HistoriasView'
 import DragDrop from './components/DragDrop'
@@ -397,8 +397,7 @@ export default function App() {
                       </div>
                     )}
 
-                    <FormulasView />
-                    <AjustesView logs={logs} />
+                    <ErrorSummaryTable logs={logs} />
 
                     <div className="flex justify-end">
                       <button onClick={handleReset} className="btn-ghost text-sm">Validar otro archivo</button>
