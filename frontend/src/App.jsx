@@ -293,7 +293,7 @@ export default function App() {
             onNavigate={setSection}
             templates={templates}
             activeTemplate={activeTemplate}
-            onSelectTemplate={handleSelectTemplate}
+            onSelectTemplate={(key) => { handleSelectTemplate(key); setSection('inicio') }}
           >
 
             {/* ─── INICIO ─── */}
@@ -305,18 +305,6 @@ export default function App() {
                 />
               ) : (
                 <div className="space-y-6 fade-in">
-                  {/* Acceso discreto para cambiar plantilla */}
-                  <div className="flex items-center justify-between">
-                    <div className="section-label">
-                      Plantilla activa: {templates.find((t) => t.key === activeTemplate)?.label}
-                    </div>
-                    {templates.length > 1 && (
-                      <button onClick={() => setActiveTemplate('')} className="btn-ghost text-xs">
-                        Cambiar plantilla
-                      </button>
-                    )}
-                  </div>
-
                   <DashboardHome
                     user={user}
                     summary={summary}
