@@ -114,9 +114,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 lg:top-[60px] lg:h-[calc(100vh-60px)] lg:z-20 lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
           style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)' }}
         >
-          <nav className="flex-1 px-3 pt-4 pb-4 flex flex-col overflow-y-auto">
-            <div className="flex-1 flex flex-col justify-between">
-            <div className="space-y-px">
+          <nav className="flex-1 px-3 py-6 flex flex-col justify-evenly overflow-y-auto">
               {items.map((item, idx) => {
                 const active = section === item.key
                 return (
@@ -141,8 +139,6 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                   </button>
                 )
               })}
-            </div>
-            </div>
           </nav>
 
           <div className="px-3 pb-4 pt-3" ref={userMenuRef}>
