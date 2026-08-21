@@ -44,9 +44,9 @@ export default function DashboardHome({ user, summary, batchResults, templates, 
   return (
     <div className="space-y-6 fade-in">
       <div className="panel" style={{
-        background: 'linear-gradient(135deg, #0D973C 0%, #0A7A32 100%)',
+        background: 'linear-gradient(135deg, #6BC06B 0%, #5AAE5A 100%)',
         border: 'none',
-        boxShadow: '0 4px 16px rgba(13,151,60,0.25)',
+        boxShadow: '0 4px 16px rgba(90,174,90,0.25)',
       }}>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>

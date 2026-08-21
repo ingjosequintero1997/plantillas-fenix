@@ -1,27 +1,25 @@
 /* ═══════════════════════════════════════════════════════════════
    Fénix Data — Design Tokens
-   Sistema de diseño institucional para datos en salud.
-   Verde institucional como marca · neutros cálidos · acento crítico.
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Color: Verde institucional (escala 50–900) ────────────── */
-  --green-50:  #EEF6EC;
+  /* ── Verde institucional (extraído de imagen real) ──────────── */
+  --green-50:  #F0F9F1;
   --green-100: #DCF1DF;
   --green-200: #B8E3C0;
-  --green-300: #8ACD98;
-  --green-400: #60C050;
-  --green-500: #0D973C;
-  --green-600: #0A7A32;
-  --green-700: #085F28;
-  --green-800: #064A1F;
-  --green-900: #043516;
+  --green-300: #8AD998;
+  --green-400: #6BC06B;
+  --green-500: #5AAE5A;
+  --green-600: #4A9A4A;
+  --green-700: #3A863A;
+  --green-800: #2A722A;
+  --green-900: #1A5E1A;
 
-  /* Verde institucional de marca */
-  --brand-strong: #0D973C;
-  --brand-stronger: #0A7A32;
+  /* Marca */
+  --brand-strong: #6BC06B;
+  --brand-stronger: #5AAE5A;
 
-  /* ── Color: Neutros cálidos ────────────────────────────────── */
+  /* ── Neutros cálidos ──────────────────────────────────────── */
   --warm-50:  #F7F7F5;
   --warm-100: #EDEDE9;
   --warm-200: #DCDCD6;
@@ -34,9 +32,7 @@
   --warm-900: #1C1C1A;
   --warm-950: #12120F;
 
-  /* ── Color: Acento crítico (estados de atención en datos) ──── */
-  /* Terracota apagado: reservado para "requiere atención", nunca
-     para acciones normales. Complementa al verde, no compite. */
+  /* ── Acento crítico ───────────────────────────────────────── */
   --accent-50:  #FBF2EE;
   --accent-100: #F6E2D8;
   --accent-200: #EDC6B3;
@@ -48,49 +44,47 @@
   --accent-800: #6E2E1C;
   --accent-900: #542516;
 
-  /* ── Tokens semánticos (Light) ─────────────────────────────── */
-  --bg-canvas: #F7F7F5;
+  /* ── Semánticos Light ─────────────────────────────────────── */
+  --bg-canvas: #F4F6F2;
   --bg-surface: #FFFFFF;
-  --bg-surface-hover: #F0F0EC;
-  --bg-subtle: #EDEDE9;
-  --bg-inset: #EDEDE9;
+  --bg-surface-hover: #F0F2EE;
+  --bg-subtle: #E8EBE6;
+  --bg-inset: #E2E5DE;
 
   --text-primary: #1C1C1A;
   --text-secondary: #5B5B54;
   --text-muted: #7A7A71;
   --text-on-brand: #FFFFFF;
 
-  --border-subtle: #E4E4DE;
-  --border-strong: #D0D0C8;
+  --border-subtle: #D8DBD4;
+  --border-strong: #C2C6BE;
 
-  --focus-ring: rgba(22, 128, 61, 0.35);
+  --focus-ring: rgba(107, 192, 107, 0.4);
 
-  --action-primary: var(--brand-strong);
-  --action-primary-hover: var(--brand-stronger);
+  --action-primary: #5AAE5A;
+  --action-primary-hover: #4A9A4A;
   --action-primary-text: #FFFFFF;
 
-  --surface-brand-weak: var(--green-50);
+  --surface-brand-weak: #F0F9F1;
 
   --danger: #B42318;
   --danger-bg: #FEF3F2;
   --warning: #B54708;
   --warning-bg: #FFFAEB;
-  --success: #15803D;
+  --success: #4A9A4A;
   --success-bg: #ECFDF3;
 
   /* ── Tipografía ───────────────────────────────────────────── */
   --font-display: 'Sora', 'Manrope', sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
-  --font-numeric: 'Inter', system-ui, sans-serif; /* con tabular-nums */
 
-  /* Escala modular (basada en 14px de base) */
-  --text-display: 1.875rem;   /* 30px  H1 */
-  --text-title-lg: 1.375rem;  /* 22px  H2 */
-  --text-title: 1.125rem;     /* 18px  H3 */
-  --text-body: 0.875rem;      /* 14px  body */
-  --text-body-sm: 0.8125rem;  /* 13px  body compacto */
-  --text-caption: 0.75rem;    /* 12px  caption */
-  --text-label: 0.6875rem;    /* 11px  label de formulario */
+  --text-display: 1.875rem;
+  --text-title-lg: 1.375rem;
+  --text-title: 1.125rem;
+  --text-body: 0.875rem;
+  --text-body-sm: 0.8125rem;
+  --text-caption: 0.75rem;
+  --text-label: 0.6875rem;
 
   --leading-tight: 1.15;
   --leading-snug: 1.35;
@@ -101,14 +95,14 @@
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  /* ── Radios (diferenciados por jerarquía) ─────────────────── */
-  --radius-sm: 6px;     /* inputs, botones, badges, chips */
-  --radius-md: 10px;    /* controles medianos, dropdowns */
-  --radius-lg: 14px;    /* cards, paneles */
-  --radius-xl: 20px;    /* contenedores grandes, modales */
+  /* ── Radios ───────────────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
-  /* ── Espaciado (grid de 4px) ──────────────────────────────── */
+  /* ── Espaciado ────────────────────────────────────────────── */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -120,12 +114,12 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  /* ── Elevación (sombras suaves con tinte cálido-verde) ────── */
-  --shadow-xs: 0 1px 2px rgba(28, 28, 26, 0.05);
-  --shadow-sm: 0 1px 3px rgba(28, 28, 26, 0.06), 0 1px 2px rgba(28, 28, 26, 0.04);
-  --shadow-md: 0 4px 12px rgba(28, 28, 26, 0.06), 0 2px 4px rgba(22, 128, 61, 0.05);
-  --shadow-lg: 0 12px 28px rgba(28, 28, 26, 0.08), 0 4px 10px rgba(22, 128, 61, 0.06);
-  --shadow-xl: 0 20px 44px rgba(28, 28, 26, 0.12), 0 8px 16px rgba(22, 128, 61, 0.08);
+  /* ── Elevación ────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(28, 28, 26, 0.06);
+  --shadow-sm: 0 1px 3px rgba(28, 28, 26, 0.08), 0 1px 2px rgba(28, 28, 26, 0.04);
+  --shadow-md: 0 4px 12px rgba(28, 28, 26, 0.08), 0 2px 4px rgba(107, 192, 107, 0.06);
+  --shadow-lg: 0 12px 28px rgba(28, 28, 26, 0.10), 0 4px 10px rgba(107, 192, 107, 0.08);
+  --shadow-xl: 0 20px 44px rgba(28, 28, 26, 0.14), 0 8px 16px rgba(107, 192, 107, 0.10);
 
   /* ── Transiciones ─────────────────────────────────────────── */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -134,31 +128,33 @@
   --dur-slow: 200ms;
 }
 
-/* ── Tokens semánticos (Dark) ───────────────────────────────── */
+/* ── Dark ────────────────────────────────────────────────────── */
 .dark {
   --bg-canvas: #12120F;
   --bg-surface: #1C1C1A;
   --bg-surface-hover: #242420;
   --bg-subtle: #2E2E2A;
-  --bg-inset: #12120F;
+  --bg-inset: #181816;
 
   --text-primary: #ECECE7;
   --text-secondary: #B0B0A6;
   --text-muted: #8A8A80;
   --text-on-brand: #FFFFFF;
 
-  --border-subtle: #2E2E2A;
-  --border-strong: #3A3A34;
+  --border-subtle: #333330;
+  --border-strong: #404038;
 
-  --focus-ring: rgba(87, 179, 109, 0.4);
+  --focus-ring: rgba(107, 192, 107, 0.45);
 
-  /* Verde institucional desaturado para dark */
   --green-400: #5AB84D;
-  --green-500: #3EA84A;
-  --green-600: #329040;
-  --brand-strong: #3EA84A;
-  --brand-stronger: #329040;
-  --surface-brand-weak: #16301F;
+  --green-500: #4AA84A;
+  --green-600: #3E9840;
+  --brand-strong: #5AB84D;
+  --brand-stronger: #4AA84A;
+  --surface-brand-weak: #162416;
+
+  --action-primary: #5AB84D;
+  --action-primary-hover: #4AA84A;
 
   --danger: #F97066;
   --danger-bg: #2A1212;
@@ -167,7 +163,7 @@
   --success: #5ECB84;
   --success-bg: #0F2A1A;
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.5);

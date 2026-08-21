@@ -288,7 +288,7 @@ export default function EvaluationDashboard({
               <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20} label={{ position: 'right', fontSize: 11, fontWeight: 700, formatter: (v) => `${v.toFixed(1)}%` }}>
                 {chartData.map((entry) => {
                   const level = getLevel(entry.value, entry.meta)
-                  const fillMap = { bueno: '#22C55E', aceptable: '#F59E0B', critico: '#EF4444', neutral: '#94A3B8' }
+                  const fillMap = { bueno: '#5AAE5A', aceptable: '#F59E0B', critico: '#EF4444', neutral: '#94A3B8' }
                   return <Cell key={entry.fullName} fill={fillMap[level]} />
                 })}
               </Bar>
