@@ -2,36 +2,18 @@ import React, { useState } from 'react'
 import { useAuth } from '../AuthContext'
 
 const MODULES = [
-  { key: 'gestante', label: 'Gestante', desc: 'Control prenatal y ruta materno perinatal', short: 'GEST', color: '#5AAE5A' },
-  { key: 'citologia', label: 'Citología', desc: 'Tamizaje de cáncer cervicouterino', short: 'CITO', color: '#5AAE5A' },
-  { key: 'mamografia', label: 'Mamografía', desc: 'Tamizaje de cáncer de mama', short: 'MAMO', color: '#5AAE5A' },
-  { key: 'penta', label: 'Penta', desc: 'Vacunación pentavalente', short: 'PENTA', color: '#5AAE5A' },
+  { key: 'gestante', label: 'Gestante', desc: 'Control prenatal y ruta materno perinatal', short: 'GEST' },
+  { key: 'citologia', label: 'Citología', desc: 'Tamizaje de cáncer cervicouterino', short: 'CITO' },
+  { key: 'mamografia', label: 'Mamografía', desc: 'Tamizaje de cáncer de mama', short: 'MAMO' },
+  { key: 'penta', label: 'Penta', desc: 'Vacunación pentavalente', short: 'PENTA' },
 ]
 
 const MODULE_ICONS = {
-  gestante: (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  ),
-  citologia: (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v4.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z" />
-    </svg>
-  ),
-  mama: (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  ),
-  vacuna: (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M5 12h14" />
-    </svg>
-  ),
+  gestante: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+  citologia: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v4.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z',
+  mamografia: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  penta: 'M12 3v18M5 12h14',
 }
-
-const MODULE_ICON_KEY = { gestante: 'gestante', citologia: 'citologia', mamografia: 'mama', penta: 'vacuna' }
 
 export default function TemplateSelector({ templates, onSelect }) {
   const { user } = useAuth()
@@ -45,12 +27,12 @@ export default function TemplateSelector({ templates, onSelect }) {
     return (
       <div className="fade-in">
         <div className="mb-8">
-          <h1 className="page-title">{saludo}, {firstName}</h1>
-          <p className="page-subtitle mt-1">Cargando módulos de datos...</p>
+          <h1 className="text-[1.375rem] font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{saludo}, {firstName}</h1>
+          <p className="mt-1 text-[0.875rem]" style={{ color: 'var(--text-tertiary)' }}>Cargando módulos de datos...</p>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="skeleton" style={{ height: '160px', borderRadius: 'var(--radius-lg)' }} />
+            <div key={i} className="skeleton" style={{ height: '120px' }} />
           ))}
         </div>
       </div>
@@ -60,11 +42,11 @@ export default function TemplateSelector({ templates, onSelect }) {
   return (
     <div className="fade-in">
       <div className="mb-8">
-        <h1 className="page-title">{saludo}, {firstName}</h1>
-        <p className="page-subtitle mt-1">Selecciona el módulo de datos con el que vas a trabajar.</p>
+        <h1 className="text-[1.375rem] font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{saludo}, {firstName}</h1>
+        <p className="mt-1 text-[0.875rem]" style={{ color: 'var(--text-tertiary)' }}>Selecciona el módulo de datos con el que vas a trabajar.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {available.map((m) => {
           const t = templates.find((x) => x.key === m.key)
           const isHovered = hovered === m.key
@@ -74,77 +56,32 @@ export default function TemplateSelector({ templates, onSelect }) {
               onClick={() => onSelect(m.key)}
               onMouseEnter={() => setHovered(m.key)}
               onMouseLeave={() => setHovered(null)}
-              className="group flex flex-col text-left rounded-xl transition-all duration-200"
+              className="flex items-start gap-4 p-5 text-left rounded-lg transition-all group"
               style={{
-                padding: 'var(--space-6)',
                 backgroundColor: 'var(--bg-surface)',
-                border: `1px solid ${isHovered ? 'var(--green-300)' : 'var(--border-subtle)'}`,
-                boxShadow: isHovered ? '0 8px 28px rgba(28,28,26,0.10), 0 2px 8px rgba(90,174,90,0.08)' : '0 2px 8px rgba(28,28,26,0.04)',
-                transform: isHovered ? 'translateY(-2px)' : 'none',
+                border: `1px solid ${isHovered ? 'var(--green-300)' : 'var(--border-default)'}`,
+                boxShadow: isHovered ? 'var(--shadow-sm)' : 'none',
+                transitionDuration: 'var(--duration)',
               }}
             >
-              <div className="flex items-start justify-between mb-5">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{
-                    color: 'var(--green-700)',
-                    backgroundColor: 'var(--green-50)',
-                    border: '1px solid var(--green-100)',
-                    boxShadow: '0 2px 8px rgba(90,174,90,0.10)',
-                  }}>
-                  {MODULE_ICONS[MODULE_ICON_KEY[m.key]]}
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--green-subtle)', color: 'var(--green-600)' }}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d={MODULE_ICONS[m.key]} /></svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[0.8125rem] font-semibold" style={{ color: 'var(--text-primary)' }}>{m.label}</span>
+                  <span className="text-[0.5625rem] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-tertiary)' }}>{m.short}</span>
                 </div>
-                <span style={{
-                  fontSize: '0.58rem',
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: '600',
-                  letterSpacing: '0.1em',
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  color: 'var(--green-700)',
-                  backgroundColor: 'var(--green-100)',
-                  border: '1px solid var(--green-200)',
-                }}>
-                  {m.short}
-                </span>
+                <p className="text-[0.75rem] leading-snug mb-2" style={{ color: 'var(--text-tertiary)' }}>{m.desc}</p>
+                <div className="flex items-center gap-3 text-[0.6875rem]" style={{ color: 'var(--text-tertiary)' }}>
+                  {t && <span>{t.fields} variables</span>}
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--green-400)' }} />
+                    Disponible
+                  </span>
+                </div>
               </div>
-
-              <h3 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'var(--text-title)',
-                fontWeight: '600',
-                color: 'var(--text-primary)',
-                marginBottom: '4px',
-              }}>
-                {m.label}
-              </h3>
-              <p style={{
-                fontSize: 'var(--text-body-sm)',
-                color: 'var(--text-secondary)',
-                lineHeight: 'var(--leading-snug)',
-                marginBottom: 'var(--space-3)',
-              }}>
-                {m.desc}
-              </p>
-              {t && (
-                <p style={{
-                  fontSize: 'var(--text-caption)',
-                  color: 'var(--text-muted)',
-                }}>
-                  {t.fields} variables
-                </p>
-              )}
-
-              <div className="mt-auto pt-4 flex items-center gap-1.5"
-                style={{
-                  fontSize: 'var(--text-body-sm)',
-                  fontWeight: '600',
-                  color: 'var(--green-600)',
-                }}>
-                Entrar
-                <svg className="w-4 h-4 transition-transform duration-150" style={{ transform: isHovered ? 'translateX(3px)' : 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
+              <svg className="w-4 h-4 shrink-0 mt-1 transition-transform" style={{ color: 'var(--text-tertiary)', transform: isHovered ? 'translateX(2px)' : 'none', transitionDuration: 'var(--duration)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </button>
           )
         })}
