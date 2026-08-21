@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import * as pako from 'pako'
-import { fetchCargues, fetchCargue, CARGUE_TXT_URL, CARGUE_EXCEL_URL } from '../api'
+import { fetchCargues, fetchCargue, deleteCargue, CARGUE_TXT_URL, CARGUE_EXCEL_URL } from '../api'
 import AjustesView from './AjustesView'
 
 const PER_PAGE = 12
@@ -29,6 +29,33 @@ function CalidadBadge({ value }) {
   if (value >= 95) return <span className="badge-success">{value}%</span>
   if (value >= 80) return <span className="badge-warning">{value}%</span>
   return <span className="badge-error">{value}%</span>
+}
+
+function DeleteConfirmModal({ filename, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={onCancel}>
+      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          </div>
+          <div>
+            <div className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Eliminar cargue</div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Esta accion no se puede deshacer.</div>
+          </div>
+        </div>
+        <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+          Se eliminara permanentemente el cargue <strong className="font-medium" style={{ color: 'var(--text-primary)' }}>{filename}</strong> y todos sus datos asociados.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onCancel} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
+          <button onClick={onConfirm} className="text-sm px-4 py-2 rounded-lg font-medium text-white transition-all" style={{ backgroundColor: '#DC2626' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#B91C1C'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#DC2626'}>
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function CargueDetail({ cargue, onBack }) {
@@ -74,7 +101,7 @@ function CargueDetail({ cargue, onBack }) {
             </div>
           </div>
 
-          {/* Resumen en línea */}
+          {/* Resumen en linea */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-5 border-y" style={{ borderColor: 'var(--border)' }}>
             <div><div className="stat-label">Registros</div><div className="stat-value">{detail.row_count ?? 0}</div></div>
             <div><div className="stat-label">Errores</div><div className="stat-value" style={{ color: detail.errors_count ? 'var(--error)' : 'var(--success)' }}>{detail.errors_count ?? 0}</div></div>
@@ -114,16 +141,32 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
   const [selected, setSelected] = useState(null)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [deleting, setDeleting] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true); setError('')
-      try { setRecords(await fetchCargues(templateKey)) }
-      catch (e) { setError('No se pudieron cargar los cargues.') }
-      finally { setLoading(false) }
-    }
-    load()
+  const loadRecords = useCallback(async () => {
+    setLoading(true); setError('')
+    try { setRecords(await fetchCargues(templateKey)) }
+    catch (e) { setError('No se pudieron cargar los cargues.') }
+    finally { setLoading(false) }
   }, [templateKey])
+
+  useEffect(() => { loadRecords() }, [loadRecords])
+
+  const handleDelete = async () => {
+    if (!deleting) return
+    setDeleteLoading(true)
+    try {
+      await deleteCargue(deleting.id)
+      setRecords((prev) => prev.filter((r) => r.id !== deleting.id))
+      setDeleting(null)
+    } catch (e) {
+      setError('No se pudo eliminar el cargue.')
+      setDeleting(null)
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -141,7 +184,7 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
       <div className="flex items-center justify-between">
         <div>
           <div className="page-title">Verificar data</div>
-          <div className="page-subtitle">Cargues de los prestadores y su calidad de validación.</div>
+          <div className="page-subtitle">Cargues de los prestadores y su calidad de validacion.</div>
         </div>
       </div>
 
@@ -152,8 +195,8 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
           <div className="empty-icon">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           </div>
-          <div className="empty-title">Aún no hay cargues</div>
-          <div className="empty-desc">Cuando los prestadores suban su data mensual, aparecerá aquí con su resumen de validación.</div>
+          <div className="empty-title">Aun no hay cargues</div>
+          <div className="empty-desc">Cuando los prestadores suban su data mensual, aparecera aqui con su resumen de validacion.</div>
         </div>
       ) : (
         <>
@@ -177,13 +220,14 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                   <th className="text-center">Registros</th>
                   <th className="text-center">Errores</th>
                   <th className="text-center">Calidad</th>
+                  <th className="text-center" style={{ width: 50 }}>Accion</th>
                 </tr>
               </thead>
               <tbody>
                 {pageItems.map((r) => (
-                  <tr key={r.id} className="table-row-click" onClick={() => setSelected(r)}>
-                    <td className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{new Date(r.created_at).toLocaleDateString('es-CO')}</td>
-                    <td>
+                  <tr key={r.id}>
+                    <td className="table-row-click whitespace-nowrap" onClick={() => setSelected(r)} style={{ color: 'var(--text-secondary)' }}>{new Date(r.created_at).toLocaleDateString('es-CO')}</td>
+                    <td className="table-row-click" onClick={() => setSelected(r)}>
                       <div className="flex items-center gap-2">
                         <span className="flex items-center justify-center w-7 h-7 rounded-md shrink-0" style={{ color: 'var(--primary)', backgroundColor: 'var(--primary-light)' }}>
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -191,12 +235,24 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                         <span className="font-medium">{r.original_filename}</span>
                       </div>
                     </td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{r.prestador || '—'}</td>
-                    <td><span className="badge-neutral">{r.mes}</span></td>
-                    <td className="uppercase text-xs" style={{ color: 'var(--text-secondary)' }}>{r.template_key || '—'}</td>
-                    <td className="text-center font-medium">{r.row_count ?? 0}</td>
-                    <td className="text-center" style={{ color: r.errors_count ? 'var(--error)' : 'var(--success)' }}>{r.errors_count ?? 0}</td>
-                    <td className="text-center"><CalidadBadge value={r.quality_percent ?? 0} /></td>
+                    <td className="table-row-click" onClick={() => setSelected(r)} style={{ color: 'var(--text-secondary)' }}>{r.prestador || '\u2014'}</td>
+                    <td className="table-row-click" onClick={() => setSelected(r)}><span className="badge-neutral">{r.mes}</span></td>
+                    <td className="table-row-click uppercase text-xs" onClick={() => setSelected(r)} style={{ color: 'var(--text-secondary)' }}>{r.template_key || '\u2014'}</td>
+                    <td className="table-row-click text-center font-medium" onClick={() => setSelected(r)}>{r.row_count ?? 0}</td>
+                    <td className="table-row-click text-center" onClick={() => setSelected(r)} style={{ color: r.errors_count ? 'var(--error)' : 'var(--success)' }}>{r.errors_count ?? 0}</td>
+                    <td className="table-row-click text-center" onClick={() => setSelected(r)}><CalidadBadge value={r.quality_percent ?? 0} /></td>
+                    <td className="text-center">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleting(r) }}
+                        className="p-1.5 rounded-lg transition-all"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.backgroundColor = '#FEE2E2' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}
+                        title="Eliminar cargue"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -204,15 +260,23 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
-                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {safePage} de {totalPages}</span>
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Pagina {safePage} de {totalPages}</span>
                 <div className="flex gap-1">
-                  <button onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className="btn-secondary px-2.5 py-1 text-xs">←</button>
-                  <button onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className="btn-secondary px-2.5 py-1 text-xs">→</button>
+                  <button onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className="btn-secondary px-2.5 py-1 text-xs">&larr;</button>
+                  <button onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className="btn-secondary px-2.5 py-1 text-xs">&rarr;</button>
                 </div>
               </div>
             )}
           </div>
         </>
+      )}
+
+      {deleting && (
+        <DeleteConfirmModal
+          filename={deleting.original_filename}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleting(null)}
+        />
       )}
     </div>
   )

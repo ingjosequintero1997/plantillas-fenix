@@ -195,6 +195,10 @@ export async function revalidateData(raw_text, mapping, templateKey) {
   })
 }
 
+export async function deleteCargue(id) {
+  return apiFetch(`${API_BASE}/cargues/${id}`, { method: 'DELETE' })
+}
+
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 
 export async function uploadHistoria(file, paciente, templateKey = 'gestante') {

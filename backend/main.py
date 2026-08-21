@@ -1378,6 +1378,167 @@ async def download_template(template_key: str):
         headers={"Content-Disposition": f"attachment; filename=plantilla_{template_key}.xlsx"},
     )
 
+# ─── Eliminar cargue ─────────────────────────────────────────────────────
+
+@app.delete("/cargues/{cargue_id}")
+async def delete_cargue(cargue_id: int, current_user: User = Depends(get_current_user)):
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargue = db.get(Cargue, cargue_id)
+		if cargue is None:
+			raise HTTPException(status_code=404, detail="Cargue no encontrado")
+		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+			raise HTTPException(status_code=403, detail="No autorizado")
+		if current_user.role == "lider":
+			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			_assigned = [p.template_key for p in (_prest.plantillas if _prest else [])]
+			if cargue.template_key not in _assigned:
+				raise HTTPException(status_code=403, detail="No autorizado")
+		db.delete(cargue)
+		db.commit()
+		return {"ok": True, "id": cargue_id}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexion al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+# ─── Validacion sin correccion (validador estricto) ──────────────────────
+
+@app.post("/validate-data")
+async def validate_data(payload: dict):
+	template_key = payload.get("template_key", "gestante")
+	corrected_text = payload.get("corrected_text", "")
+	template_names_list = payload.get("template_names", [])
+
+	if not corrected_text or not corrected_text.strip():
+		raise HTTPException(status_code=400, detail="No hay datos para validar")
+
+	try:
+		df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+		df = df.fillna('').astype(str)
+	except Exception as e:
+		raise HTTPException(status_code=400, detail=f"Error al parsear datos: {e}")
+
+	if df.empty:
+		raise HTTPException(status_code=400, detail="No hay datos para validar")
+
+	meta = get_template_by_key(template_key)
+	tmpl = meta["template"]
+
+	if template_names_list and len(df.columns) == len(template_names_list):
+		df.columns = template_names_list
+	else:
+		tmpl_names = [t['name'] for t in tmpl]
+		if len(df.columns) == len(tmpl_names):
+			df.columns = tmpl_names
+
+	tmap = {t["name"]: t for t in tmpl}
+	template_cols = [t["name"] for t in tmpl]
+	n = len(df)
+
+	# Validar cada celda: tipo correcto, valor dentro de permitidos
+	total_cells = 0
+	errors = []
+	stats = {"total": n, "errors": 0, "valid": 0, "by_type": {}}
+
+	for ci, col_name in enumerate(template_cols):
+		if ci >= len(df.columns):
+			break
+		tdef = tmap.get(col_name)
+		if not tdef:
+			continue
+
+		values = df.iloc[:, ci].tolist()
+		type_errors = 0
+
+		for ridx, val in enumerate(values):
+			total_cells += 1
+			val_str = str(val).strip() if val else ""
+			status = "valid"
+			msg = None
+
+			if tdef["type"] == "SET":
+				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
+				normalized_allowed = [normalize_text(a) for a in allowed]
+				if val_str:
+					sn = normalize_text(val_str)
+					if sn not in normalized_allowed:
+						# Buscar alias
+						alias_match = False
+						for alias_canonical, alias_synonyms in {
+							"SI": {"S", "1", "YES", "Y"},
+							"NO": {"N", "0", "FALSE", "F"},
+							"MASCULINO": {"M"},
+							"FEMENINO": {"F"},
+							"CC": {"CEDULA", "C.C.", "C.C"},
+							"TI": {"TARJETA IDENTIDAD", "T.I."},
+							"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
+						}.items():
+							if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
+								alias_match = True
+								break
+						if not alias_match:
+							status = "error"
+							msg = f"Valor '{val_str}' no esta en la lista permitida"
+							type_errors += 1
+
+			elif tdef["type"] == "INT":
+				if val_str and val_str not in ("SIN DATO", ""):
+					clean = val_str.replace("-", "").replace(" ", "")
+					if not re.fullmatch(r'[+-]?\d+', clean):
+						status = "error"
+						msg = f"Se esperaba un entero, se encontro '{val_str}'"
+						type_errors += 1
+
+			elif tdef["type"] == "DECIMAL":
+				if val_str and val_str not in ("SIN DATO", ""):
+					s = val_str.replace(" ", "").replace(",", ".")
+					if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
+						status = "error"
+						msg = f"Se esperaba un decimal, se encontro '{val_str}'"
+						type_errors += 1
+
+			elif tdef["type"] == "DATE":
+				if val_str and val_str not in ("SIN DATO", "1900-01-01", ""):
+					if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', val_str):
+						status = "error"
+						msg = f"Formato de fecha invalido: '{val_str}' (se espera AAAA-MM-DD)"
+						type_errors += 1
+
+			elif tdef["type"] == "TEXT":
+				if not val_str or val_str in ("None", "nan", "NaN"):
+					status = "warning"
+					msg = "Campo vacio"
+
+			if status != "valid":
+				errors.append({
+					"row": ridx + 1,
+					"column": col_name,
+					"value": val_str,
+					"status": status,
+					"message": msg,
+				})
+				stats["errors"] += 1
+			else:
+				stats["valid"] += 1
+
+		stats["by_type"][col_name] = {
+			"type": tdef["type"],
+			"errors": type_errors,
+			"total": n,
+		}
+
+	return {
+		"valid": stats["errors"] == 0,
+		"stats": stats,
+		"errors": errors[:2000],
+		"total_errors": stats["errors"],
+		"template_key": template_key,
+	}
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)
