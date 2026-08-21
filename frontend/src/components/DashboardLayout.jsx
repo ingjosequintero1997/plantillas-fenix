@@ -67,63 +67,67 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid var(--border)' }}>
-        {/* Barra superior decorativa institucional */}
-        <div className="h-1.5 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #F4E72B 0%, #60C050 50%, #0D973C 100%)' }} />
+        style={{ background: 'linear-gradient(180deg, #0C7A33 0%, #0D973C 55%, #0A6B2E 100%)', boxShadow: '4px 0 24px rgba(0,0,0,0.12)' }}>
+        {/* Barra superior institucional */}
+        <div className="h-1.5 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #F4E72B 0%, #60C050 55%, #0D973C 100%)' }} />
 
         {/* Branding */}
-        <div className="flex items-center gap-3 px-5 h-[84px] border-b" style={{ borderColor: 'var(--border)' }}>
-          <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#EEF6EC] flex items-center justify-center p-1.5 shadow-sm shrink-0">
+        <div className="flex items-center gap-3.5 px-6 h-[88px] border-b border-white/10">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white flex items-center justify-center p-1.5 shadow-lg shrink-0 ring-1 ring-white/30">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="font-bold text-[16px] leading-none tracking-tight" style={{ color: 'var(--text)' }}>Fénix Data</div>
-            <div className="text-[0.6rem] font-bold tracking-[0.16em] mt-1" style={{ color: '#0D973C' }}>RECEPCIÓN DE DATOS</div>
+            <div className="text-white font-extrabold text-[17px] leading-none tracking-tight drop-shadow-sm">Fénix Data</div>
+            <div className="text-white/75 text-[0.62rem] font-bold tracking-[0.18em] mt-1.5">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 px-3.5 py-5 space-y-1 overflow-y-auto">
-          <div className="section-label px-2 mb-3">Menú principal</div>
+        <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
+          <div className="text-[0.65rem] font-bold text-white/50 uppercase tracking-[0.16em] px-3 mb-3">Menú principal</div>
           {items.map((item, idx) => {
             const active = section === item.key
             return (
               <button
                 key={item.key + idx}
                 onClick={() => { onNavigate(item.key); setOpen(false) }}
-                className={`relative w-full flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm transition-all duration-150 ${
+                className={`relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 ${
                   active
-                    ? 'font-bold'
-                    : 'font-medium hover:bg-[#EEF6EC]'
+                    ? 'text-white bg-white/20'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
-                style={active ? { backgroundColor: '#EEF6EC', color: '#0D973C' } : { color: 'var(--text)' }}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full" style={{ backgroundColor: '#0D973C' }} />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full bg-[#F4E72B]" />
                 )}
-                <span className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors ${
-                  active ? 'bg-[#60C050] text-white shadow-md' : 'text-[#0D973C]'
-                }`}
-                style={!active ? { backgroundColor: '#EEF6EC' } : undefined}>
-                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">{item.icon}</svg>
+                <span className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors duration-150 ${
+                  active ? 'bg-[#60C050] text-white shadow-md' : 'text-[#9BE07F]'
+                }`}>
+                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">{item.icon}</svg>
                 </span>
                 {item.label}
               </button>
             )
           })}
+
+          {/* Pie de navegación: versión / soporte */}
+          <div className="mt-6 mx-1 px-4 py-3 rounded-xl bg-black/10 border border-white/10">
+            <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-wider mb-0.5">Asociación de Cabildos</div>
+            <div className="text-[0.68rem] text-white/80 leading-snug">Indígenas del Cesar y La Guajira</div>
+          </div>
         </nav>
 
         {/* Usuario */}
-        <div className="px-3.5 pb-5 pt-3 border-t" style={{ borderColor: 'var(--border)' }} ref={userMenuRef}>
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ backgroundColor: '#EEF6EC' }}>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-[#0D973C] text-white">
+        <div className="px-4 pb-5 pt-3 border-t border-white/10" ref={userMenuRef}>
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-white/10">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-[#F4E72B] text-[#0D973C] shadow-sm">
               {(user?.name || '?').slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-bold truncate" style={{ color: 'var(--text)' }}>{user?.name}</div>
-              <div className="text-[0.6rem] font-bold uppercase tracking-wider" style={{ color: '#0D973C' }}>{roleLabel}</div>
+              <div className="text-[13px] font-bold truncate text-white">{user?.name}</div>
+              <div className="text-[0.62rem] font-bold uppercase tracking-wider text-white/70">{roleLabel}</div>
             </div>
-            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-[#0D973C] hover:bg-white transition-colors">
+            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/80 hover:bg-white/15 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
               </svg>
@@ -146,8 +150,8 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       {/* ═══ Contenido ═══ */}
       <div className="lg:pl-[280px] flex flex-col min-h-screen flex-1">
         {/* Header */}
-        <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-6 border-b"
-          style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', boxShadow: '0 1px 3px rgba(16,24,40,0.04)' }}>
+        <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-8 border-b"
+          style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', boxShadow: '0 1px 4px rgba(13,151,60,0.06)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -159,9 +163,9 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           </div>
           <div className="flex items-center gap-3">
             {(isAdmin || role === 'lider') && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
-                style={{ color: 'var(--primary)', backgroundColor: 'var(--primary-light)' }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
+                style={{ color: '#0D973C', backgroundColor: '#EEF6EC', border: '1px solid #D4EDC8' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#60C050' }} />
                 {roleLabel}
               </span>
             )}
