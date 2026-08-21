@@ -2,10 +2,10 @@ import React, { useState } from 'react'
 import { useAuth } from '../AuthContext'
 
 const MODULES = [
-  { key: 'gestante', label: 'Gestante', desc: 'Control prenatal y ruta materno perinatal', short: 'GEST', color: '#15803D' },
-  { key: 'citologia', label: 'Citología', desc: 'Tamizaje de cáncer cervicouterino', short: 'CITO', color: '#15803D' },
-  { key: 'mamografia', label: 'Mamografía', desc: 'Tamizaje de cáncer de mama', short: 'MAMO', color: '#15803D' },
-  { key: 'penta', label: 'Penta', desc: 'Vacunación pentavalente', short: 'PENTA', color: '#15803D' },
+  { key: 'gestante', label: 'Gestante', desc: 'Control prenatal y ruta materno perinatal', short: 'GEST', color: '#5AAE5A' },
+  { key: 'citologia', label: 'Citología', desc: 'Tamizaje de cáncer cervicouterino', short: 'CITO', color: '#5AAE5A' },
+  { key: 'mamografia', label: 'Mamografía', desc: 'Tamizaje de cáncer de mama', short: 'MAMO', color: '#5AAE5A' },
+  { key: 'penta', label: 'Penta', desc: 'Vacunación pentavalente', short: 'PENTA', color: '#5AAE5A' },
 ]
 
 const MODULE_ICONS = {
@@ -74,32 +74,35 @@ export default function TemplateSelector({ templates, onSelect }) {
               onClick={() => onSelect(m.key)}
               onMouseEnter={() => setHovered(m.key)}
               onMouseLeave={() => setHovered(null)}
-              className="group flex flex-col text-left rounded-lg transition-all duration-150"
+              className="group flex flex-col text-left rounded-xl transition-all duration-200"
               style={{
-                padding: 'var(--space-5)',
+                padding: 'var(--space-6)',
                 backgroundColor: 'var(--bg-surface)',
                 border: `1px solid ${isHovered ? 'var(--green-300)' : 'var(--border-subtle)'}`,
-                boxShadow: isHovered ? 'var(--shadow-md)' : 'var(--shadow-xs)',
-                transform: isHovered ? 'translateY(-1px)' : 'none',
+                boxShadow: isHovered ? '0 8px 28px rgba(28,28,26,0.10), 0 2px 8px rgba(90,174,90,0.08)' : '0 2px 8px rgba(28,28,26,0.04)',
+                transform: isHovered ? 'translateY(-2px)' : 'none',
               }}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+              <div className="flex items-start justify-between mb-5">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center"
                   style={{
-                    color: 'var(--green-600)',
-                    backgroundColor: 'var(--surface-brand-weak)',
+                    color: 'var(--green-700)',
+                    backgroundColor: 'var(--green-50)',
+                    border: '1px solid var(--green-100)',
+                    boxShadow: '0 2px 8px rgba(90,174,90,0.10)',
                   }}>
                   {MODULE_ICONS[MODULE_ICON_KEY[m.key]]}
                 </div>
                 <span style={{
-                  fontSize: '0.6rem',
+                  fontSize: '0.58rem',
                   fontFamily: 'var(--font-body)',
-                  fontWeight: 'var(--weight-semibold)',
-                  letterSpacing: '0.08em',
-                  padding: '2px 8px',
+                  fontWeight: '600',
+                  letterSpacing: '0.1em',
+                  padding: '3px 10px',
                   borderRadius: 'var(--radius-full)',
                   color: 'var(--green-700)',
-                  backgroundColor: 'var(--green-50)',
+                  backgroundColor: 'var(--green-100)',
+                  border: '1px solid var(--green-200)',
                 }}>
                   {m.short}
                 </span>
@@ -108,7 +111,7 @@ export default function TemplateSelector({ templates, onSelect }) {
               <h3 style={{
                 fontFamily: 'var(--font-display)',
                 fontSize: 'var(--text-title)',
-                fontWeight: 'var(--weight-semibold)',
+                fontWeight: '600',
                 color: 'var(--text-primary)',
                 marginBottom: '4px',
               }}>
@@ -131,14 +134,14 @@ export default function TemplateSelector({ templates, onSelect }) {
                 </p>
               )}
 
-              <div className="mt-auto pt-3 flex items-center gap-1"
+              <div className="mt-auto pt-4 flex items-center gap-1.5"
                 style={{
                   fontSize: 'var(--text-body-sm)',
-                  fontWeight: 'var(--weight-medium)',
+                  fontWeight: '600',
                   color: 'var(--green-600)',
                 }}>
                 Entrar
-                <svg className="w-3.5 h-3.5 transition-transform duration-150" style={{ transform: isHovered ? 'translateX(2px)' : 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <svg className="w-4 h-4 transition-transform duration-150" style={{ transform: isHovered ? 'translateX(3px)' : 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </div>

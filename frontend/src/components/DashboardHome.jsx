@@ -13,15 +13,15 @@ function Stat({ label, value, icon, isCritical = false }) {
   const iconColor = isCritical ? 'var(--accent-500)' : 'var(--green-600)'
 
   return (
-    <div className="card" style={{ borderTop: `2px solid ${borderColor}` }}>
-      <div className="flex items-center justify-between mb-3">
+    <div className="card group" style={{ borderTop: `2.5px solid ${borderColor}`, transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)' }}>
+      <div className="flex items-start justify-between mb-4">
         <span className="section-label">{label}</span>
-        <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-          style={{ color: iconColor, backgroundColor: iconBg }}>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">{icon}</svg>
+        <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ color: iconColor, backgroundColor: iconBg, boxShadow: `0 2px 8px ${isCritical ? 'rgba(209,125,89,0.12)' : 'rgba(90,174,90,0.12)'}` }}>
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">{icon}</svg>
         </span>
       </div>
-      <div className="stat-value">{value}</div>
+      <div className="stat-value" style={{ fontSize: '1.75rem' }}>{value}</div>
     </div>
   )
 }
@@ -43,37 +43,47 @@ export default function DashboardHome({ user, summary, batchResults, templates, 
 
   return (
     <div className="space-y-6 fade-in">
-      <div className="panel" style={{
-        background: 'linear-gradient(135deg, #6BC06B 0%, #5AAE5A 100%)',
-        border: 'none',
-        boxShadow: '0 4px 16px rgba(90,174,90,0.25)',
+      {/* ── Saludo principal ───────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl" style={{
+        background: 'linear-gradient(145deg, #3A863A 0%, #5AAE5A 35%, #6BC06B 70%, #8AD998 100%)',
+        boxShadow: '0 8px 32px rgba(90,174,90,0.30), 0 2px 8px rgba(0,0,0,0.06)',
       }}>
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        {/* Watermark decorativo */}
+        <svg className="absolute -bottom-16 -right-16 w-[320px] h-[320px] opacity-[0.06]" viewBox="0 0 32 32" fill="none">
+          <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="#fff" />
+          <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="#fff" />
+        </svg>
+        {/* Glow decorativo */}
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(244,231,43,0.12)' }} />
+
+        <div className="relative p-7 flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 style={{
               fontFamily: 'var(--font-display)',
               fontSize: 'var(--text-title-lg)',
-              fontWeight: 'var(--weight-bold)',
+              fontWeight: '700',
               color: '#fff',
               letterSpacing: '-0.02em',
+              lineHeight: '1.2',
             }}>
               {saludo}, {firstName}
             </h1>
-            <p className="capitalize" style={{ fontSize: 'var(--text-body)', color: 'rgba(255,255,255,0.7)', marginTop: '4px' }}>
+            <p className="capitalize mt-1.5" style={{ fontSize: 'var(--text-body)', color: 'rgba(255,255,255,0.7)' }}>
               {now}
             </p>
           </div>
-          <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg"
-            style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse-soft" />
+          <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl"
+            style={{ backgroundColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}>
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse-soft" />
             <div>
-              <div style={{ fontSize: '0.6rem', fontWeight: 'var(--weight-semibold)', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema</div>
-              <div style={{ fontSize: 'var(--text-body-sm)', fontWeight: 'var(--weight-semibold)', color: '#fff' }}>Operativo</div>
+              <div style={{ fontSize: '0.58rem', fontWeight: '600', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Sistema</div>
+              <div style={{ fontSize: 'var(--text-body-sm)', fontWeight: '600', color: '#fff' }}>Operativo</div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ── Stats ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat label="Prestadores" value={isAdmin ? '—' : '1'} icon={STAT_ICONS['Prestadores']} />
         <Stat label="Cargas pendientes" value={hasErrors ? String(summary.errors) : '0'} icon={STAT_ICONS['Cargas pendientes']} isCritical={hasErrors} />
@@ -81,9 +91,10 @@ export default function DashboardHome({ user, summary, batchResults, templates, 
         <Stat label="Calidad" value={summary ? `${summary.quality_percent ?? 0}%` : '—'} icon={STAT_ICONS['Calidad']} />
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-title)', fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)' }}>Actividad reciente</h2>
+      {/* ── Actividad reciente ─────────────────────────────────── */}
+      <div className="card" style={{ boxShadow: '0 4px 16px rgba(28,28,26,0.06), 0 1px 4px rgba(90,174,90,0.04)' }}>
+        <div className="flex items-center justify-between mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-title)', fontWeight: '600', color: 'var(--text-primary)' }}>Actividad reciente</h2>
           <span className="badge-success" style={{ fontSize: '0.6rem' }}>Esta sesión</span>
         </div>
         <div className="table-wrap">
@@ -109,9 +120,9 @@ export default function DashboardHome({ user, summary, batchResults, templates, 
               )) : (
                 <tr>
                   <td colSpan={4}>
-                    <div className="empty" style={{ padding: 'var(--space-8)' }}>
+                    <div className="empty" style={{ padding: 'var(--space-10)' }}>
                       <div className="empty-icon">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                       </div>
                       <div className="empty-title">Sin actividad esta sesión</div>
                       <div className="empty-desc">

@@ -99,20 +99,20 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid rgba(180,35,24,0.1)' }}>
+        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid rgba(180,35,24,0.1)', boxShadow: '0 2px 8px rgba(180,35,24,0.06)' }}>
           <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
           {error}
         </div>
       )}
       {message && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid rgba(21,128,61,0.1)' }}>
+        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid rgba(90,174,90,0.15)', boxShadow: '0 2px 8px rgba(90,174,90,0.06)' }}>
           <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           {message}
         </div>
       )}
 
       {/* Formulario de carga */}
-      <div className="panel">
+      <div className="card" style={{ boxShadow: '0 4px 16px rgba(28,28,26,0.06), 0 1px 4px rgba(90,174,90,0.04)' }}>
         <div className="section-label" style={{ marginBottom: 'var(--space-4)' }}>Subir historia clínica</div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 'var(--space-4)' }}>
           <div>
@@ -129,29 +129,30 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
 
         {/* Dropzone */}
         <label
-          className="flex items-center gap-4 px-5 py-4 rounded-lg cursor-pointer transition-all duration-150"
+          className="flex items-center gap-4 px-5 py-5 rounded-xl cursor-pointer transition-all duration-150"
           style={{
             border: `2px dashed ${dragOver ? 'var(--green-500)' : file ? 'var(--green-300)' : 'var(--border-strong)'}`,
             backgroundColor: dragOver ? 'var(--surface-brand-weak)' : file ? 'var(--green-50)' : 'var(--bg-canvas)',
+            boxShadow: dragOver ? '0 4px 16px rgba(90,174,90,0.12)' : 'none',
           }}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
           {file ? (
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--green-50)', color: 'var(--green-600)' }}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--green-100)', color: 'var(--green-600)', boxShadow: '0 2px 8px rgba(90,174,90,0.12)' }}>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
             </div>
           )}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium" style={{ color: file ? 'var(--green-700)' : 'var(--text-primary)' }}>
               {file ? file.name : 'Arrastra un PDF aquí o haz clic para seleccionar'}
             </div>
-            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
               {file ? formatBytes(file.size) + ' · Haz clic para cambiar' : 'Solo archivos PDF · máximo ~4.5 MB'}
             </div>
           </div>
@@ -171,8 +172,8 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
       </div>
 
       {/* Búsqueda y listado */}
-      <div>
-        <div className="flex flex-wrap items-center gap-3 mb-3">
+      <div className="card" style={{ boxShadow: '0 4px 16px rgba(28,28,26,0.06), 0 1px 4px rgba(90,174,90,0.04)' }}>
+        <div className="flex flex-wrap items-center gap-3 mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
           <div className="relative flex-1 max-w-sm">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por paciente, documento o archivo..." className="input" style={{ paddingLeft: '36px' }} />
@@ -183,7 +184,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
-          <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>{filtered.length} historias</span>
+          <span className="text-xs ml-auto font-medium" style={{ color: 'var(--text-muted)' }}>{filtered.length} historias</span>
         </div>
 
         {loading ? (
@@ -191,7 +192,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
         ) : filtered.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             </div>
             <div className="empty-title">Sin historias clínicas</div>
             <div className="empty-desc">No se encontraron historias para la búsqueda o plantilla seleccionada. Prueba con otros filtros o sube un nuevo archivo.</div>
