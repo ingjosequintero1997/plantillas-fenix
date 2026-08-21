@@ -2,20 +2,21 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 
 const NAV = [
-  { key: 'inicio', label: 'Inicio', desc: 'Panel principal', roles: ['admin', 'prestador', 'lider'],
-    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" /> },
-  { key: 'subir', label: 'Cargues de data', desc: 'Masivo o mensual', roles: ['admin', 'prestador'],
-    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /> },
-  { key: 'historial', label: 'Verificar data', desc: 'Revisar cargues', roles: ['admin', 'lider'],
-    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
-  { key: 'historial', label: 'Mis cargues', desc: 'Tu historial', roles: ['prestador'],
-    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /> },
-  { key: 'consolidar', label: 'Consolidar', desc: 'Unir datas', roles: ['admin', 'lider'],
-    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V5zM4 15a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z" /> },
-  { key: 'historias', label: 'Historias clínicas', desc: 'Expedientes', roles: ['admin', 'prestador', 'lider'],
-    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
-  { key: 'prestadores', label: 'Usuarios', desc: 'Accesos', roles: ['admin'],
-    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7" /> },
+  { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador', 'lider'],
+    icon: 'M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10' },
+  { key: 'subir', label: 'Cargues de data', roles: ['admin', 'prestador'],
+    icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
+  { key: 'historial', label: 'Verificar data', roles: ['admin', 'lider'],
+    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+  { key: 'historial', label: 'Mis cargues', roles: ['prestador'],
+    icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { key: 'consolidar', label: 'Consolidar', roles: ['admin', 'lider'],
+    icon: 'M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V5zM4 15a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z' },
+  { key: 'historias', label: 'Historias clinicas', roles: ['admin', 'prestador', 'lider'],
+    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+  { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
+
+    icon: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7' },
 ]
 
 const META = {
@@ -27,16 +28,6 @@ const META = {
   prestadores: { title: 'Usuarios', sub: 'Prestadores y líderes de programa' },
 }
 const ROLE_TITLE = { historial: { admin: 'Verificar data', lider: 'Verificar data', prestador: 'Mis cargues' } }
-
-function Logo({ size = 24 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="#fff" opacity="0.35" />
-      <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="#fff" opacity="0.65" />
-      <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="#fff" />
-    </svg>
-  )
-}
 
 export default function DashboardLayout({ section, onNavigate, children, templates = [], activeTemplate = null }) {
   const { user, logout } = useAuth()
@@ -56,7 +47,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
   const role = user?.role === 'admin' ? 'admin' : user?.role === 'lider' ? 'lider' : 'prestador'
   const roleLabel = user?.role === 'admin' ? 'EPS' : user?.role === 'lider' ? 'Líder' : 'Prestador'
   const items = NAV.filter((i) => i.roles.includes(role))
-  const meta = META[section] || META.inicio
+  const meta = { ...(META[section] || META.inicio) }
   const rt = ROLE_TITLE[section]?.[role]
   if (rt) meta.title = rt
   const activeMeta = templates.find((t) => t.key === activeTemplate)
@@ -65,55 +56,62 @@ export default function DashboardLayout({ section, onNavigate, children, templat
     <div className="min-h-screen app-bg flex flex-col">
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
 
-      {/* ═══ Header verde a todo el ancho ═══ */}
-      <header className="sticky top-0 z-30 w-full"
-        style={{ background: 'linear-gradient(90deg, #0A6B2E 0%, #0D973C 50%, #0FAA42 100%)', boxShadow: '0 4px 24px rgba(13,151,60,0.35)' }}>
-        {/* Barra fina institucional */}
+      <header className="sticky top-0 z-30 w-full" style={{ backgroundColor: 'var(--green-700)' }}>
         <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #F4E72B 0%, #60C050 60%, #0D973C 100%)' }} />
-        <div className="h-[73px] flex items-center justify-between px-6 lg:px-8 w-full">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-lg text-white/90 hover:bg-white/10">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <div className="h-[64px] flex items-center justify-between px-4 lg:px-6 w-full">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setOpen(true)} className="lg:hidden p-1.5 rounded-md text-white/80 hover:bg-white/10 transition-colors" style={{ transitionDuration: '160ms' }}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
-            {/* Logo y marca */}
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-1.5 shadow-lg shrink-0 ring-1 ring-white/40">
-                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm shrink-0">
+                <img src="/logo.png" alt="Fénix" className="w-full h-full object-contain" />
               </div>
-              <div>
-                <div className="text-white font-extrabold text-[18px] leading-none tracking-tight drop-shadow-sm">Fénix Data</div>
-                <div className="text-[#F4E72B] text-[0.6rem] font-bold tracking-[0.22em] mt-1.5">RECEPCIÓN DE DATOS</div>
+              <div className="hidden sm:block">
+                <div className="text-white font-semibold text-sm leading-none tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>Fénix Data</div>
+                <div className="text-white/50 text-[0.6rem] font-medium tracking-[0.15em] mt-0.5 uppercase">Recepción de datos</div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {(isAdmin || role === 'lider') && (
-              <span className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-white/15 text-white backdrop-blur-sm">
-                <span className="w-2 h-2 rounded-full bg-[#F4E72B] shadow-sm" />
-                {roleLabel}
-              </span>
-            )}
-            <button onClick={() => setDark(!dark)} className="p-2.5 rounded-lg text-white/85 hover:bg-white/10 transition-colors" title="Cambiar tema">
-              {dark ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1.5 mr-2 text-white/50 text-xs">
+              <span className="text-white/70 font-medium">{meta.title}</span>
+              {activeMeta && (
+                <>
+                  <svg className="w-3 h-3 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  <span className="text-white/50">{activeMeta.label}</span>
+                </>
               )}
-            </button>
+            </div>
+
+            <div className="flex items-center gap-1 rounded-lg p-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+              {(isAdmin || role === 'lider') && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-[0.65rem] font-medium px-2.5 py-1 rounded-md text-white/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                  {roleLabel}
+                </span>
+              )}
+              <button onClick={() => setDark(!dark)} className="p-1.5 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors" style={{ transitionDuration: '160ms' }} title="Cambiar tema">
+                {dark ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* ═══ Cuerpo: sidebar blanco + contenido ═══ */}
       <div className="flex flex-1 min-h-0 relative">
-        {/* Sidebar blanco */}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
-          style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid var(--border)', boxShadow: '2px 0 16px rgba(16,24,40,0.04)' }}>
-          {/* Navegación */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            <div className="px-3 mb-4">
-              <div className="text-[0.65rem] font-bold text-[var(--text-secondary)] uppercase tracking-[0.18em]">Navegación</div>
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto ${open ? 'translate-x-0' : '-translate-x-full'}`}
+          style={{ backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', top: '67px' }}
+        >
+          <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
+            <div className="px-3 mb-3">
+              <span className="section-label" style={{ fontSize: '0.6rem', letterSpacing: '0.12em' }}>Navegación</span>
             </div>
             {items.map((item, idx) => {
               const active = section === item.key
@@ -121,88 +119,77 @@ export default function DashboardLayout({ section, onNavigate, children, templat
                 <button
                   key={item.key + idx}
                   onClick={() => { onNavigate(item.key); setOpen(false) }}
-                  className={`relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 group ${
-                    active
-                      ? 'text-[#0D973C]'
-                      : 'text-[var(--text)] hover:text-[#0D973C] hover:bg-[#F2FAEF]'
-                  }`}
+                  className="relative w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-md transition-all group"
+                  style={{
+                    fontSize: 'var(--text-body-sm)',
+                    fontWeight: active ? '600' : '500',
+                    color: active ? 'var(--green-600)' : 'var(--text-secondary)',
+                    backgroundColor: active ? 'var(--surface-brand-weak)' : 'transparent',
+                    transitionDuration: '160ms',
+                  }}
+                  onMouseEnter={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
+                  onMouseLeave={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
                 >
-                  {active && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full bg-[#0D973C]" />
-                  )}
-                  <span className={`flex items-center justify-center w-9 h-9 rounded-xl shrink-0 transition-all duration-200 ${
-                    active
-                      ? 'bg-[#0D973C] text-white shadow-md shadow-[#0D973C]/30'
-                      : 'text-[#0D973C] bg-[#F2FAEF] group-hover:bg-[#E3F4DD]'
-                  }`}>
-                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">{item.icon}</svg>
+                  {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-5 rounded-r-full" style={{ backgroundColor: 'var(--green-600)' }} />}
+                  <span className="flex items-center justify-center w-7 h-7 rounded-md shrink-0 transition-colors" style={{ color: active ? 'var(--green-600)' : 'var(--text-muted)', backgroundColor: active ? 'var(--surface-brand-weak)' : 'transparent', transitionDuration: '160ms' }}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
                   </span>
-                  {item.label}
+                  <span className="truncate">{item.label}</span>
                 </button>
               )
             })}
 
-            {/* Pie informativo */}
-            <div className="mt-8 mx-2 px-4 py-3.5 rounded-2xl" style={{ background: 'linear-gradient(135deg, #F2FAEF 0%, #E3F4DD 100%)', border: '1px solid #D4EDC8' }}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <svg className="w-4 h-4 text-[#0D973C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <div className="text-[0.65rem] font-bold text-[#0D973C] uppercase tracking-wider">Soporte</div>
+            <div className="mt-6 mx-2 px-3 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)' }}>
+              <div className="flex items-center gap-2 mb-1">
+                <svg className="w-3.5 h-3.5" style={{ color: 'var(--green-600)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span className="section-label" style={{ fontSize: '0.55rem' }}>Soporte</span>
               </div>
-              <div className="text-[0.7rem] leading-snug" style={{ color: 'var(--text-secondary)' }}>Asociación de Cabildos Indígenas del Cesar y La Guajira</div>
+              <div className="text-[0.65rem] leading-snug" style={{ color: 'var(--text-muted)' }}>Asoc. Cabildos Indígenas del Cesar y La Guajira</div>
             </div>
           </nav>
 
-          {/* Usuario */}
-          <div className="px-4 pb-6 pt-3 border-t" style={{ borderColor: 'var(--border)' }} ref={userMenuRef}>
-            <div className="flex items-center gap-3 rounded-2xl px-3 py-3" style={{ backgroundColor: '#F2FAEF', border: '1px solid #E3F4DD' }}>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-[#0D973C] text-white shadow-md shadow-[#0D973C]/25">
+          <div className="px-3 pb-4 pt-3 border-t" style={{ borderColor: 'var(--border-subtle)' }} ref={userMenuRef}>
+            <button onClick={() => setUserMenu((v) => !v)}
+              className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors"
+              style={{ backgroundColor: userMenu ? 'var(--bg-surface-hover)' : 'transparent', transitionDuration: '160ms' }}
+              onMouseEnter={(e) => { if (!userMenu) e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
+              onMouseLeave={(e) => { if (!userMenu) e.currentTarget.style.backgroundColor = 'transparent' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0" style={{ backgroundColor: 'var(--green-600)', color: 'var(--text-on-brand)' }}>
                 {(user?.name || '?').slice(0, 1).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-bold truncate" style={{ color: 'var(--text)' }}>{user?.name}</div>
-                <div className="text-[0.62rem] font-bold uppercase tracking-wider text-[#0D973C]">{roleLabel}</div>
+                <div className="text-[0.8rem] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user?.name}</div>
+                <div className="text-[0.6rem] font-medium uppercase tracking-wider" style={{ color: 'var(--green-600)' }}>{roleLabel}</div>
               </div>
-              <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-[#0D973C] hover:bg-white transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
-                </svg>
-              </button>
-            </div>
+              <svg className="w-3.5 h-3.5 shrink-0 transition-transform" style={{ color: 'var(--text-muted)', transform: userMenu ? 'rotate(180deg)' : 'rotate(0deg)', transitionDuration: '160ms' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-            {/* Menú contextual de usuario */}
             {userMenu && (
-              <div className="mt-2 rounded-lg py-1" style={{ backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}>
-                <div className="px-3 py-2 border-b text-[0.65rem] text-gray-500 border-gray-100">{user?.name} · {roleLabel}</div>
-                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
-                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Configuración</button>
+              <div className="mt-1 rounded-lg py-1 animate-scale-in" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-lg)' }}>
+                <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--border-subtle)', fontSize: '0.65rem', color: 'var(--text-muted)' }}>{user?.name} &middot; {roleLabel}</div>
+                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm transition-colors" style={{ color: 'var(--text-primary)', transitionDuration: '160ms' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>Mi perfil</button>
+                <button onClick={() => { setUserMenu(false); onNavigate('inicio') }} className="w-full text-left px-3 py-2 text-sm transition-colors" style={{ color: 'var(--text-primary)', transitionDuration: '160ms' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>Configuración</button>
                 <div className="divider" />
-                <button onClick={() => { setUserMenu(false); logout() }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">Cerrar sesión</button>
+                <button onClick={() => { setUserMenu(false); logout() }} className="w-full text-left px-3 py-2 text-sm transition-colors" style={{ color: 'var(--danger)', transitionDuration: '160ms' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--danger-bg)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>Cerrar sesión</button>
               </div>
             )}
           </div>
         </aside>
 
-        {/* Contenido */}
         <div className="flex flex-col flex-1 min-w-0">
-          {/* Título de sección */}
-          <div className="px-6 lg:px-8 pt-6 pb-2">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-wider text-[#0D973C]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0D973C]" />
-                Panel de control
-              </span>
-            </div>
-            <div className="text-[1.6rem] font-bold" style={{ color: 'var(--text)', fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.02em' }}>{meta.title}</div>
-            <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{meta.sub}{activeMeta ? ` · ${activeMeta.label}` : ''}</div>
-          </div>
-
           <main className="flex-1 px-6 lg:px-8 py-6 w-full max-w-[1200px]">
             {children}
           </main>
-
-          {/* Footer */}
-          <footer className="px-6 py-4 border-t text-center" style={{ borderColor: 'var(--border)' }}>
-            <p className="text-[0.68rem] text-[var(--text-secondary)]">
+          <footer className="px-6 py-4 border-t text-center" style={{ borderColor: 'var(--border-subtle)' }}>
+            <p style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)' }}>
               Asociación de Cabildos Indígenas del Cesar y La Guajira &mdash; Ing. José Quintero &copy; {new Date().getFullYear()}
             </p>
           </footer>

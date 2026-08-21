@@ -1,0 +1,176 @@
+/* ═══════════════════════════════════════════════════════════════
+   Fénix Data — Design Tokens
+   Sistema de diseño institucional para datos en salud.
+   Verde institucional como marca · neutros cálidos · acento crítico.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Color: Verde institucional (escala 50–900) ────────────── */
+  --green-50:  #F0F9F1;
+  --green-100: #DCF1DF;
+  --green-200: #B8E3C0;
+  --green-300: #8ACD98;
+  --green-400: #57B36D;
+  --green-500: #2F9E52;
+  --green-600: #15803D;
+  --green-700: #166534;
+  --green-800: #14532D;
+  --green-900: #14532D;
+
+  /* Verde institucional de marca (equivalente al header actual) */
+  --brand-strong: #16A34A;
+  --brand-stronger: #15803D;
+
+  /* ── Color: Neutros cálidos ────────────────────────────────── */
+  --warm-50:  #F7F7F5;
+  --warm-100: #EDEDE9;
+  --warm-200: #DCDCD6;
+  --warm-300: #C2C2BA;
+  --warm-400: #9B9B92;
+  --warm-500: #7A7A71;
+  --warm-600: #5B5B54;
+  --warm-700: #454540;
+  --warm-800: #2E2E2A;
+  --warm-900: #1C1C1A;
+  --warm-950: #12120F;
+
+  /* ── Color: Acento crítico (estados de atención en datos) ──── */
+  /* Terracota apagado: reservado para "requiere atención", nunca
+     para acciones normales. Complementa al verde, no compite. */
+  --accent-50:  #FBF2EE;
+  --accent-100: #F6E2D8;
+  --accent-200: #EDC6B3;
+  --accent-300: #E0A184;
+  --accent-400: #D17D59;
+  --accent-500: #C25E37;
+  --accent-600: #A8482A;
+  --accent-700: #8C3A22;
+  --accent-800: #6E2E1C;
+  --accent-900: #542516;
+
+  /* ── Tokens semánticos (Light) ─────────────────────────────── */
+  --bg-canvas: #F7F7F5;
+  --bg-surface: #FFFFFF;
+  --bg-surface-hover: #F0F0EC;
+  --bg-subtle: #EDEDE9;
+  --bg-inset: #EDEDE9;
+
+  --text-primary: #1C1C1A;
+  --text-secondary: #5B5B54;
+  --text-muted: #7A7A71;
+  --text-on-brand: #FFFFFF;
+
+  --border-subtle: #E4E4DE;
+  --border-strong: #D0D0C8;
+
+  --focus-ring: rgba(22, 128, 61, 0.35);
+
+  --action-primary: var(--brand-strong);
+  --action-primary-hover: var(--brand-stronger);
+  --action-primary-text: #FFFFFF;
+
+  --surface-brand-weak: var(--green-50);
+
+  --danger: #B42318;
+  --danger-bg: #FEF3F2;
+  --warning: #B54708;
+  --warning-bg: #FFFAEB;
+  --success: #15803D;
+  --success-bg: #ECFDF3;
+
+  /* ── Tipografía ───────────────────────────────────────────── */
+  --font-display: 'Sora', 'Manrope', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-numeric: 'Inter', system-ui, sans-serif; /* con tabular-nums */
+
+  /* Escala modular (basada en 14px de base) */
+  --text-display: 1.875rem;   /* 30px  H1 */
+  --text-title-lg: 1.375rem;  /* 22px  H2 */
+  --text-title: 1.125rem;     /* 18px  H3 */
+  --text-body: 0.875rem;      /* 14px  body */
+  --text-body-sm: 0.8125rem;  /* 13px  body compacto */
+  --text-caption: 0.75rem;    /* 12px  caption */
+  --text-label: 0.6875rem;    /* 11px  label de formulario */
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Radios (diferenciados por jerarquía) ─────────────────── */
+  --radius-sm: 6px;     /* inputs, botones, badges, chips */
+  --radius-md: 10px;    /* controles medianos, dropdowns */
+  --radius-lg: 14px;    /* cards, paneles */
+  --radius-xl: 20px;    /* contenedores grandes, modales */
+  --radius-full: 9999px;
+
+  /* ── Espaciado (grid de 4px) ──────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── Elevación (sombras suaves con tinte cálido-verde) ────── */
+  --shadow-xs: 0 1px 2px rgba(28, 28, 26, 0.05);
+  --shadow-sm: 0 1px 3px rgba(28, 28, 26, 0.06), 0 1px 2px rgba(28, 28, 26, 0.04);
+  --shadow-md: 0 4px 12px rgba(28, 28, 26, 0.06), 0 2px 4px rgba(22, 128, 61, 0.05);
+  --shadow-lg: 0 12px 28px rgba(28, 28, 26, 0.08), 0 4px 10px rgba(22, 128, 61, 0.06);
+  --shadow-xl: 0 20px 44px rgba(28, 28, 26, 0.12), 0 8px 16px rgba(22, 128, 61, 0.08);
+
+  /* ── Transiciones ─────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --dur-slow: 200ms;
+}
+
+/* ── Tokens semánticos (Dark) ───────────────────────────────── */
+.dark {
+  --bg-canvas: #12120F;
+  --bg-surface: #1C1C1A;
+  --bg-surface-hover: #242420;
+  --bg-subtle: #2E2E2A;
+  --bg-inset: #12120F;
+
+  --text-primary: #ECECE7;
+  --text-secondary: #B0B0A6;
+  --text-muted: #8A8A80;
+  --text-on-brand: #FFFFFF;
+
+  --border-subtle: #2E2E2A;
+  --border-strong: #3A3A34;
+
+  --focus-ring: rgba(87, 179, 109, 0.4);
+
+  /* Verde institucional ligeramente desaturado para dark,
+     evita el efecto "neón" sobre fondo oscuro. */
+  --green-400: #6BBF83;
+  --green-500: #4FAE68;
+  --green-600: #3D9B5A;
+  --brand-strong: #4FAE68;
+  --brand-stronger: #3D9B5A;
+  --surface-brand-weak: #16301F;
+
+  --danger: #F97066;
+  --danger-bg: #2A1212;
+  --warning: #F5A524;
+  --warning-bg: #2A200B;
+  --success: #5ECB84;
+  --success-bg: #0F2A1A;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 44px rgba(0, 0, 0, 0.55);
+}

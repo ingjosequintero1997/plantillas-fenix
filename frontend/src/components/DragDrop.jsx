@@ -20,27 +20,28 @@ export default function DragDrop({ onFile }) {
         onDragLeave={() => setHover(false)}
         onDrop={(e) => { e.preventDefault(); setHover(false); emitFiles(e.dataTransfer.files) }}
         onClick={() => inputRef.current?.click()}
-        className="flex flex-col items-center justify-center text-center py-14 px-6 rounded-lg border-2 border-dashed transition-colors cursor-pointer"
+        className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-lg border-2 border-dashed cursor-pointer transition-all"
         style={{
-          borderColor: hover ? 'var(--primary)' : 'var(--border)',
-          backgroundColor: hover ? 'var(--primary-light)' : 'transparent',
+          borderColor: hover ? 'var(--green-500)' : 'var(--border-strong)',
+          backgroundColor: hover ? 'var(--surface-brand-weak)' : 'var(--bg-canvas)',
+          transitionDuration: '160ms',
         }}
       >
-        <div className="flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary-dark)' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <div className="flex items-center justify-center w-12 h-12 rounded-xl mb-4"
+          style={{ backgroundColor: 'var(--surface-brand-weak)', color: 'var(--green-600)' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
         </div>
-        <div className="text-base font-semibold" style={{ color: 'var(--text)' }}>Arrastra tu archivo aquí</div>
-        <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>o selecciona un archivo desde tu equipo</div>
+        <div className="font-semibold" style={{ fontSize: 'var(--text-body)', color: 'var(--text-primary)' }}>Arrastra tu archivo aqui</div>
+        <div className="mt-1" style={{ fontSize: 'var(--text-body-sm)', color: 'var(--text-secondary)' }}>o selecciona un archivo desde tu equipo</div>
         <button type="button" onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}
-          className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors"
-          style={{ backgroundColor: 'var(--primary-dark)', boxShadow: '0 2px 8px rgba(13,151,60,0.25)' }}>
+          className="mt-4 btn-primary">
           Seleccionar archivo
         </button>
-        <div className="mt-3 text-[0.68rem]" style={{ color: 'var(--text-secondary)' }}>.xlsx · .xls · .txt</div>
+        <div className="mt-3" style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)' }}>.xlsx &middot; .xls &middot; .txt</div>
         <input
           ref={inputRef}
           type="file"
