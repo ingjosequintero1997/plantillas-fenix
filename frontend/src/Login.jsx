@@ -27,7 +27,7 @@ export default function Login() {
     <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Panel de marca (izquierda) */}
       <div className="hidden lg:flex flex-col justify-between w-[45%] p-12 relative overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #54A844 0%, #3E8A32 100%)' }}>
+        style={{ background: 'linear-gradient(160deg, #0D973C 0%, #60C050 100%)' }}>
         {/* Watermark phoenix */}
         <svg className="absolute -bottom-20 -right-20 w-[420px] h-[420px] opacity-[0.07]" viewBox="0 0 32 32" fill="none">
           <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="#fff" opacity="0.35" />

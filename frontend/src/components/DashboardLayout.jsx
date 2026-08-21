@@ -2,19 +2,19 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 
 const NAV = [
-  { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador', 'lider'],
+  { key: 'inicio', label: 'Inicio', desc: 'Panel principal', roles: ['admin', 'prestador', 'lider'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" /> },
-  { key: 'subir', label: 'Cargues de data', roles: ['admin', 'prestador'],
+  { key: 'subir', label: 'Cargues de data', desc: 'Masivo o mensual', roles: ['admin', 'prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /> },
-  { key: 'historial', label: 'Verificar data', roles: ['admin', 'lider'],
+  { key: 'historial', label: 'Verificar data', desc: 'Revisar cargues', roles: ['admin', 'lider'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
-  { key: 'historial', label: 'Mis cargues', roles: ['prestador'],
+  { key: 'historial', label: 'Mis cargues', desc: 'Tu historial', roles: ['prestador'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /> },
-  { key: 'consolidar', label: 'Consolidar', roles: ['admin', 'lider'],
+  { key: 'consolidar', label: 'Consolidar', desc: 'Unir datas', roles: ['admin', 'lider'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V5zM4 15a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z" /> },
-  { key: 'historias', label: 'Historias clínicas', roles: ['admin', 'prestador', 'lider'],
+  { key: 'historias', label: 'Historias clínicas', desc: 'Expedientes', roles: ['admin', 'prestador', 'lider'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
-  { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
+  { key: 'prestadores', label: 'Usuarios', desc: 'Accesos', roles: ['admin'],
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7" /> },
 ]
 
@@ -67,33 +67,41 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
       {/* ═══ Sidebar ═══ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: '#69C455' }}>
+        style={{ background: 'linear-gradient(180deg, #0D973C 0%, #60C050 100%)' }}>
+        {/* Barra superior decorativa institucional */}
+        <div className="h-1.5 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #F4E72B 0%, #60C050 50%, #0D973C 100%)' }} />
+
         {/* Branding */}
-        <div className="flex items-center gap-3 px-5 h-[72px] border-b border-white/20">
-          <div className="w-11 h-11 rounded-xl overflow-hidden bg-white flex items-center justify-center p-1 shadow-sm shrink-0">
+        <div className="flex items-center gap-3 px-5 h-[72px] border-b border-white/15">
+          <div className="w-11 h-11 rounded-xl overflow-hidden bg-white flex items-center justify-center p-1 shadow-sm shrink-0 ring-2 ring-white/30">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="text-white font-bold text-[15px] leading-none tracking-tight">Fénix Data</div>
-            <div className="text-white/70 text-[0.6rem] font-bold tracking-[0.16em] mt-1">RECEPCIÓN DE DATOS</div>
+            <div className="text-white/80 text-[0.6rem] font-bold tracking-[0.16em] mt-1">RECEPCIÓN DE DATOS</div>
           </div>
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <div className="text-[0.6rem] font-bold text-white/60 uppercase tracking-[0.14em] px-3 mb-2">Menú</div>
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+          <div className="text-[0.6rem] font-bold text-white/70 uppercase tracking-[0.14em] px-3 mb-2">Menú</div>
           {items.map((item, idx) => {
             const active = section === item.key
             return (
               <button
                 key={item.key + idx}
                 onClick={() => { onNavigate(item.key); setOpen(false) }}
-                className={`relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 ${
-                  active ? 'font-bold text-white bg-white/25' : 'font-semibold text-white hover:bg-white/15'
+                className={`relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 ${
+                  active
+                    ? 'font-bold text-white bg-white/25 shadow-md'
+                    : 'font-semibold text-white/90 hover:bg-white/15 hover:text-white'
                 }`}
               >
-                <span className="flex items-center justify-center w-5 h-5 shrink-0">
-                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7">{item.icon}</svg>
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-white" />
+                )}
+                <span className={`flex items-center justify-center w-5 h-5 shrink-0 transition-colors ${active ? 'text-white' : 'text-white/80'}`}>
+                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">{item.icon}</svg>
                 </span>
                 {item.label}
               </button>
@@ -102,16 +110,16 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         </nav>
 
         {/* Usuario */}
-        <div className="px-3 pb-4 border-t border-white/20 pt-3" ref={userMenuRef}>
-          <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-white/20 text-white">
+        <div className="px-3 pb-4 border-t border-white/15 pt-3" ref={userMenuRef}>
+          <div className="flex items-center gap-3 rounded-lg px-2 py-2 bg-white/10">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-white text-[#0D973C]">
               {(user?.name || '?').slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-bold truncate text-white">{user?.name}</div>
-              <div className="text-[0.6rem] font-bold uppercase tracking-wider text-white/70">{roleLabel}</div>
+              <div className="text-[0.6rem] font-bold uppercase tracking-wider text-white/75">{roleLabel}</div>
             </div>
-            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/70 hover:bg-white/15 transition-colors">
+            <button onClick={() => setUserMenu((v) => !v)} className="p-1.5 rounded-md text-white/80 hover:bg-white/15 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" />
               </svg>
