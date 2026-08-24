@@ -83,7 +83,11 @@ function PorMunicipioView({ porMunicipio }) {
 }
 
 function ChartCard({ title, data, isPie }) {
-  const chartData = Object.entries(data || {}).map(([name, value]) => ({ name, value }))
+  // Normalizar datos para que recharts no falle con valores raros.
+  const chartData = Object.entries(data || {}).map(([name, value]) => ({
+    name: String(name),
+    value: Number(value) || 0,
+  }))
   if (chartData.length === 0) return null
 
   return (
@@ -142,16 +146,21 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
         try { stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null') } catch (e) {}
         if (!stored) { try { stored = JSON.parse(localStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
         if (stored && stored.template_key === selectedTemplate) {
-          const storedText = stored.corrected_text || stored.raw_text || ''
+          let storedText = stored.corrected_text || stored.raw_text || ''
           if (storedText) {
-            if (stored.compressed) {
-              const pako = await import('pako')
-              const bin = atob(storedText)
-              const bytes = new Uint8Array(bin.length)
-              for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
-              text = pako.ungzip(bytes, { to: 'string' })
+            // Si el texto esta comprimido, descomprimir. Si falla, usarlo plano.
+            if (stored.compressed && typeof storedText === 'string' && /^[A-Za-z0-9+/=]+$/.test(storedText)) {
+              try {
+                const pako = await import('pako')
+                const bin = atob(storedText)
+                const bytes = new Uint8Array(bin.length)
+                for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
+                text = pako.ungzip(bytes, { to: 'string' })
+              } catch (e) {
+                text = storedText
+              }
             } else {
-              text = storedText
+              text = typeof storedText === 'string' ? storedText : String(storedText || '')
             }
             source = 'session'
           }
@@ -184,13 +193,15 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
         source = 'bd'
       }
 
-      if (!text || !text.trim()) {
+      if (!text || typeof text !== 'string' || !text.trim()) {
         setError('La data validada esta vacia. Valida una data primero.')
         setLoading(false)
         return
       }
 
-      const result = await fetchIndicadores(selectedTemplate, text)
+      // Asegurar que el texto sea un string pipe-delimited valido.
+      const payload = String(text).trim()
+      const result = await fetchIndicadores(selectedTemplate, payload)
       setIndicadores(result)
       setLoaded(true)
     } catch (e) {
