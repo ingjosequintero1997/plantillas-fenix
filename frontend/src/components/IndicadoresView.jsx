@@ -128,15 +128,60 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
   const [selectedTemplate, setSelectedTemplate] = useState(templateKey || 'gestante')
   const [loaded, setLoaded] = useState(false)
   const [verPorMunicipio, setVerPorMunicipio] = useState(false)
+  const [cargues, setCargues] = useState([])
+  const [cargueId, setCargueId] = useState('')
+  const [carguesLoaded, setCarguesLoaded] = useState(false)
 
   // Sincronizar la plantilla seleccionada con la plantilla activa del layout.
   useEffect(() => {
     if (templateKey) setSelectedTemplate(templateKey)
   }, [templateKey])
 
+  // Cargar la lista de cargues validados desde la BD.
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const list = await fetchCargues(selectedTemplate)
+        if (!mounted) return
+        setCargues(list)
+        if (list.length && !cargueId) setCargueId(String(list[0].id))
+      } catch (e) {
+        if (mounted) setError('No se pudo cargar el historial de cargues: ' + (e.message || 'error'))
+      } finally {
+        if (mounted) setCarguesLoaded(true)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [selectedTemplate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Obtener el texto pipe-delimited de un cargue por su id.
+  const obtenerTextoDeCargue = useCallback(async (id) => {
+    const resp = await fetch(`${window.location.origin}/api/cargues/${id}`, {
+      headers: { Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('auth') || '{}').token}` },
+    })
+    const data = await resp.json()
+    let t = data.corrected_text || data.raw_text || ''
+    if (data.compressed && t) {
+      try {
+        const pako = await import('pako')
+        const bin = atob(t)
+        const bytes = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
+        t = pako.ungzip(bytes, { to: 'string' })
+      } catch (e) { /* usar como esta */ }
+    }
+    return t
+  }, [])
+
   const handleGenerateRef = useRef(null)
   const dataValidadaRef = useRef(dataValidada)
   dataValidadaRef.current = dataValidada
+  const cargueIdRef = useRef(cargueId)
+  cargueIdRef.current = cargueId
+  const carguesRef = useRef(cargues)
+  carguesRef.current = cargues
 
   const handleGenerate = useCallback(async () => {
     setLoading(true); setError(''); setIndicadores(null); setVerPorMunicipio(false)
@@ -144,30 +189,31 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
       let text = ''
       let source = ''
 
-      // 0. Usar la data validada pasada directamente desde App.jsx (estado en
-      //    memoria). Es la fuente mas confiable porque App mantiene correctedText.
-      if (dataValidadaRef.current && typeof dataValidadaRef.current === 'string' && dataValidadaRef.current.trim()) {
+      // 1. Si hay un cargue seleccionado (de la BD), usar su data.
+      if (cargueIdRef.current) {
+        try {
+          text = await obtenerTextoDeCargue(cargueIdRef.current)
+          if (text && text.trim()) source = 'bd-cargue'
+        } catch (e) { text = '' }
+      }
+
+      // 2. Si no, usar la data validada pasada directamente desde App.jsx.
+      if (!text && dataValidadaRef.current && typeof dataValidadaRef.current === 'string' && dataValidadaRef.current.trim()) {
         text = dataValidadaRef.current
         source = 'prop'
       }
 
-      // 1. Si no hay prop, intentar leer la ultima data validada desde el store.
+      // 3. Si no, intentar el store global / storage.
       if (!text) {
         try {
           let stored = null
-          // Store global en memoria (dataStore): mas confiable, compartido
-          // entre App.jsx e IndicadoresView sin depender de storage.
           try { stored = leerUltimaData() } catch (e) {}
-          // Variable global window (sesion actual)
           if (!stored) { try { stored = JSON.parse(window.__ultimaDataValidada || 'null') } catch (e) {} }
-          // sessionStorage
           if (!stored) { try { stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
-          // localStorage
           if (!stored) { try { stored = JSON.parse(localStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
           if (stored && (stored.template_key === selectedTemplate || !stored.template_key)) {
             let storedText = stored.corrected_text || stored.raw_text || ''
             if (storedText) {
-              // Si el texto esta comprimido, descomprimir. Si falla, usarlo plano.
               if (stored.compressed && typeof storedText === 'string' && /^[A-Za-z0-9+/=]+$/.test(storedText)) {
                 try {
                   const pako = await import('pako')
@@ -175,9 +221,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
                   const bytes = new Uint8Array(bin.length)
                   for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
                   text = pako.ungzip(bytes, { to: 'string' })
-                } catch (e) {
-                  text = storedText
-                }
+                } catch (e) { text = storedText }
               } else {
                 text = typeof storedText === 'string' ? storedText : String(storedText || '')
               }
@@ -187,46 +231,21 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
         } catch (e) { /* ignore */ }
       }
 
-      // 2. Si no hay en sessionStorage, buscar el ultimo cargue en la BD.
-      if (!text) {
-        const cargues = await fetchCargues(selectedTemplate)
-        if (!cargues.length) {
-          setError('No hay data validada para esta plantilla. Valida una data primero.')
-          setLoading(false)
-          return
-        }
-        const latest = cargues[0]
-        const resp = await fetch(`${window.location.origin}/api/cargues/${latest.id}`, {
-          headers: { Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('auth') || '{}').token}` },
-        })
-        const data = await resp.json()
-        text = data.corrected_text || ''
-        if (data.compressed && text) {
-          try {
-            const pako = await import('pako')
-            const bin = atob(text)
-            const bytes = new Uint8Array(bin.length)
-            for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
-            text = pako.ungzip(bytes, { to: 'string' })
-          } catch { /* ignore */ }
-        }
-        source = 'bd'
+      // 4. Si no hay texto pero hay cargues en la BD, usar el mas reciente.
+      if (!text && carguesRef.current.length) {
+        try {
+          text = await obtenerTextoDeCargue(carguesRef.current[0].id)
+          if (text && text.trim()) source = 'bd'
+        } catch (e) { text = '' }
       }
 
       if (!text || typeof text !== 'string' || !text.trim()) {
-        // Diagnostico para entender que hay en cada fuente
-        let diag = ''
-        try {
-          const ls = JSON.parse(localStorage.getItem('ultima_data_validada') || 'null')
-          const ss = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null')
-          diag = `prop=${dataValidada ? dataValidada.length : 0} ls=${ls && ls.corrected_text ? ls.corrected_text.length : 0} ss=${ss && ss.corrected_text ? ss.corrected_text.length : 0} fuente=${source || 'ninguna'}`
-        } catch (e) { diag = 'error diag' }
-        setError('La data validada esta vacia. Detalle: ' + diag)
+        const nCargues = carguesRef.current ? carguesRef.current.length : 0
+        setError(`No se encontro data valida (cargues disponibles: ${nCargues}). Valida una data primero o selecciona un cargue.` + (source ? ` Fuente: ${source}` : ''))
         setLoading(false)
         return
       }
 
-      // Asegurar que el texto sea un string pipe-delimited valido.
       const payload = String(text).trim()
       const result = await fetchIndicadores(selectedTemplate, payload)
       setIndicadores(result)
@@ -236,12 +255,11 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     } finally {
       setLoading(false)
     }
-  }, [selectedTemplate])
+  }, [selectedTemplate, obtenerTextoDeCargue])
 
-  // Mantener la ref apuntando a la funcion mas reciente.
   handleGenerateRef.current = handleGenerate
 
-  // Cargar automaticamente cuando llega data nueva (o al abrir el modulo).
+  // Cargar automaticamente cuando llega data nueva.
   useEffect(() => {
     if (dataValidada && typeof dataValidada === 'string' && dataValidada.trim()) {
       handleGenerateRef.current()
@@ -273,6 +291,20 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
             {templateOptions.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
           </select>
         </div>
+
+        {cargues.length > 0 && (
+          <div>
+            <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>Data validada (cargue)</label>
+            <select value={cargueId} onChange={(e) => setCargueId(e.target.value)} className="input" style={{ minWidth: 220 }}>
+              {cargues.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.original_filename} - {c.row_count} reg - {c.quality_percent}% calidad
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <button onClick={handleGenerate} disabled={loading} className="btn-primary">
           {loading ? (
             <span className="flex items-center gap-2">
@@ -298,7 +330,6 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
             <StatCard label="Fecha referencia" value={pare?.fecha_referencia ?? '—'} />
           </div>
 
-          {/* Toggle nivel */}
           {porMunicipio.length > 0 && (
             <div className="flex gap-2">
               <button onClick={() => setVerPorMunicipio(false)} className={!verPorMunicipio ? 'btn-primary text-sm' : 'btn-secondary text-sm'}>
@@ -338,20 +369,11 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
             <div className="empty-title">Genera los indicadores de la cohorte</div>
             <div className="empty-desc">Se mostraran los indicadores PARE MM a nivel departamental y municipal.</div>
           </div>
-          <div className="panel flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Data validada detectada</div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                {dataValidada && dataValidada.trim()
-                  ? `${dataValidada.length} caracteres de data disponible.`
-                  : 'No hay data en esta vista. Usa el boton para cargar desde el historial.'}
-              </div>
+          {carguesLoaded && cargues.length === 0 && !dataValidada && (
+            <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>
+              No hay cargues guardados para esta plantilla. Valida una data primero (se guardara automaticamente en el historial) y luego genera los indicadores.
             </div>
-            <button onClick={handleGenerate} disabled={loading} className="btn-primary text-sm">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              {loading ? 'Generando...' : 'Generar indicadores'}
-            </button>
-          </div>
+          )}
         </div>
       )}
     </div>
