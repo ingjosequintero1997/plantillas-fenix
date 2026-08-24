@@ -504,6 +504,9 @@ async def upload_file(
 			except ImportError:
 				from validators import validate_only
 			validation_result = validate_only(df, map_suggest, active_template)
+			# En modo validador la data va SIN encabezado (solo filas en orden
+			# de plantilla) para que sea consistente con la tabla editable.
+			canonical_raw_text = df.to_csv(sep='|', index=False, header=False)
 			raw_text_compressed = _gz_compress(canonical_raw_text)
 			return JSONResponse({
 				"success": True,

@@ -4,7 +4,7 @@ const PER_PAGE = 25
 
 function parseData(rawText, templateNames) {
   if (!rawText || !templateNames || templateNames.length === 0) return []
-  const lines = rawText.trim().split('\n')
+  const lines = rawText.trim().split('\n').filter((l) => l.trim().length > 0)
   return lines.map((line, idx) => {
     const cols = line.split('|')
     const row = {}
@@ -21,11 +21,11 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [editingCell, setEditingCell] = useState(null)
-  const [lastMessage, setLastMessage] = useState('')
+  const [editedCells, setEditedCells] = useState(() => new Set())
   const prevRawRef = useRef(rawText)
 
-  // Sincronizar la tabla cuando rawText cambia (despues de re-validar),
-  // sin perder las ediciones del usuario mientras no haya re-validado.
+  // Sincronizar la tabla cuando rawText cambia (despues de re-validar).
+  // Las celdas que el usuario edito se conservan porque rawText ya las contiene.
   useEffect(() => {
     if (rawText !== prevRawRef.current) {
       setData(parseData(rawText, templateNames))
@@ -66,16 +66,21 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
   const pageItems = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE)
 
   const handleCellEdit = useCallback((rowIdx, colName, value) => {
+    const realRowIdx = (safePage - 1) * PER_PAGE + rowIdx
     setData((prev) => {
       const next = [...prev]
-      const realRowIdx = (safePage - 1) * PER_PAGE + rowIdx
       if (realRowIdx < next.length) {
+        const rowNum = next[realRowIdx]._rowNum
         next[realRowIdx] = { ...next[realRowIdx], [colName]: value }
+        setEditedCells((prevSet) => {
+          const s = new Set(prevSet)
+          s.add(rowNum + '-' + colName)
+          return s
+        })
       }
       return next
     })
     setEditingCell(null)
-    setLastMessage('')
   }, [safePage])
 
   const buildRawText = useCallback(() => {
@@ -88,7 +93,6 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
 
   const handleRevalidate = useCallback(() => {
     const newText = buildRawText()
-    setLastMessage('')
     if (onRevalidate) onRevalidate(newText)
   }, [buildRawText, onRevalidate])
 
@@ -110,7 +114,7 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5" style={{ color: 'var(--success)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>La data quedó validada correctamente</div>
+              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>La data qued&oacute; validada correctamente</div>
               <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>No hay errores pendientes. Puedes descargar el reporte o validar otra data.</div>
             </div>
           </div>
@@ -120,7 +124,7 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5" style={{ color: 'var(--error)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
             <div>
-              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Aún hay errores que corregir</div>
+              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>A&uacute;n hay errores que corregir</div>
               <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Las celdas con error se marcan en rojo. Corrige y vuelve a pulsar Re-validar.</div>
             </div>
           </div>
@@ -149,6 +153,7 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
             </div>
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{data.length} registros</span>
             {errorRows.size > 0 && <span className="badge-error">{errorRows.size} filas con error</span>}
+            {editedCells.size > 0 && <span className="badge-success">{editedCells.size} celdas editadas</span>}
           </div>
           <button onClick={handleRevalidate} disabled={loading} className="btn-primary text-sm" title="Vuelve a validar la data con los cambios que hiciste manualmente en las celdas.">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -176,14 +181,19 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
                       const cellKey = row._rowNum + '-' + col
                       const hasError = !!errorCells[cellKey]
                       const isEditing = editingCell === cellKey
+                      const wasEdited = editedCells.has(cellKey)
+                      const isAccepted = wasEdited && !hasError
                       const val = row[col] || ''
+                      let bg = 'transparent'
+                      if (isAccepted) bg = '#ECFDF5'
+                      if (hasError) bg = '#FEF2F2'
                       return (
                         <td
                           key={col}
                           onClick={() => setEditingCell(cellKey)}
                           className="cursor-pointer"
                           style={{
-                            backgroundColor: hasError ? '#FEF2F2' : 'transparent',
+                            backgroundColor: bg,
                             minWidth: 120,
                             maxWidth: 200,
                           }}
@@ -198,8 +208,9 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
                               style={{ borderColor: 'var(--green-400)', outline: 'none' }}
                             />
                           ) : (
-                            <span className="text-xs block truncate" style={{ color: hasError ? '#B91C1C' : 'var(--text-primary)' }}>
+                            <span className="text-xs block truncate" style={{ color: hasError ? '#B91C1C' : isAccepted ? '#047857' : 'var(--text-primary)' }}>
                               {val || <span style={{ color: 'var(--text-muted)' }}>vac&iacute;o</span>}
+                              {isAccepted && <span className="ml-1" style={{ color: '#059669' }}>&#10003;</span>}
                             </span>
                           )}
                           {hasError && !isEditing && (
