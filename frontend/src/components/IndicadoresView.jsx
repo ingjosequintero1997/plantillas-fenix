@@ -214,7 +214,14 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
       }
 
       if (!text || typeof text !== 'string' || !text.trim()) {
-        setError('La data validada esta vacia. Valida una data primero.')
+        // Diagnostico para entender que hay en cada fuente
+        let diag = ''
+        try {
+          const ls = JSON.parse(localStorage.getItem('ultima_data_validada') || 'null')
+          const ss = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null')
+          diag = `prop=${dataValidada ? dataValidada.length : 0} ls=${ls && ls.corrected_text ? ls.corrected_text.length : 0} ss=${ss && ss.corrected_text ? ss.corrected_text.length : 0} fuente=${source || 'ninguna'}`
+        } catch (e) { diag = 'error diag' }
+        setError('La data validada esta vacia. Detalle: ' + diag)
         setLoading(false)
         return
       }
