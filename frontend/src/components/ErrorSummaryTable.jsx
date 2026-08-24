@@ -2,6 +2,15 @@ import React, { useMemo, useState } from 'react'
 
 const PER_PAGE = 20
 
+// Si el valor parece fecha con hora (AAAA-MM-DD HH:MM:SS), la recorta a solo
+// la fecha para mostrarla sin el componente de hora.
+function mostrarValor(v) {
+  const s = String(v ?? '').trim()
+  if (!s) return '\u2014'
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})\s+\d{2}:\d{2}/)
+  return m ? m[1] : s
+}
+
 export default function ErrorSummaryTable({ logs }) {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -109,12 +118,12 @@ export default function ErrorSummaryTable({ logs }) {
                   </td>
                   <td>
                     <span className="text-xs px-2 py-1 rounded-md break-all" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
-                      {String(l.original ?? '').trim() || '\u2014'}
+                      {mostrarValor(l.original)}
                     </span>
                   </td>
                   <td>
                     <span className="text-xs px-2 py-1 rounded-md break-all" style={{ color: '#166534', backgroundColor: '#DCFCE7' }}>
-                      {String(l.corrected ?? '').trim() || 'SIN DATO'}
+                      {mostrarValor(l.corrected)}
                     </span>
                   </td>
                 </tr>
