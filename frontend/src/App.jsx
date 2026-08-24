@@ -114,6 +114,8 @@ export default function App() {
   const canExport = Boolean(correctedText)
 
   useEffect(() => {
+    // Cargar plantillas cuando el usuario esta autenticado (y al montar si ya hay sesion).
+    if (!user) return
     const loadTemplates = async (attempt = 0) => {
       try {
         const data = await fetchTemplates()
@@ -124,16 +126,16 @@ export default function App() {
           }
         }
       } catch (e) {
-        // Reintenta una vez si el token aún no está listo (evita "No autorizado" al cargar)
-        if (attempt < 2) {
-          setTimeout(() => loadTemplates(attempt + 1), 600)
+        // Reintenta si el token aún no está listo (evita "No autorizado" al cargar)
+        if (attempt < 3) {
+          setTimeout(() => loadTemplates(attempt + 1), 500)
           return
         }
         setError('No fue posible cargar las plantillas. Verifica tu sesión.')
       }
     }
     loadTemplates()
-  }, [])
+  }, [user])
 
   const selectedTemplateMeta = useMemo(() => {
     return templates.find((item) => item.key === selectedTemplate) || null
