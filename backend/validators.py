@@ -608,7 +608,7 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 						err_msg = f"Se esperaba decimal"
 
 			elif tdef["type"] == "DATE":
-				if val_str and val_str not in ("SIN DATO", "1900-01-01", ""):
+				if val_str and val_str not in ("SIN DATO", "NO APLICA", "No Aplica", "N/A", "1900-01-01", ""):
 					if to_date_iso(val_str) is None:
 						expected = "AAAA-MM-DD"
 						err_msg = f"Fecha invalida"

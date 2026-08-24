@@ -2,91 +2,133 @@ def field(name: str, type_: str, required: bool = True, allowed: list[str] | Non
     return {"name": name, "type": type_, "required": required, "allowed": allowed or []}
 
 SI_NO = ["SI", "NO"]
-SI_NO_SD = ["SI", "NO", "SIN DATO"]
+
+BIRADS = [
+    "BIRADS 0",
+    "BIRADS 1",
+    "BIRADS 2",
+    "BIRADS 3",
+    "BIRADS 4",
+    "BIRADS 5",
+    "BIRADS 6",
+]
+
+TIPO_DOCUMENTO = [
+    "RC",
+    "TI",
+    "CC",
+    "CE",
+    "PA",
+    "MS",
+    "AS",
+    "CD",
+    "SC",
+    "PE",
+]
+
+GENERO = ["FEMENINO"]
+
+ZONA = ["RURAL", "URBANA"]
+
+ESTADO_USUARIO = ["ACTIVO", "PROTECCION LABORAL", "INACTIVO"]
+
+PERTENENCIA_ETNICA = [
+    "ARHUACO",
+    "KANKUAMO",
+    "WIWA",
+    "WAYUU",
+    "YUKPA",
+    "KOGI",
+    "INGA",
+    "CHIMILA",
+    "ZENU",
+    "SIN ETNIA",
+]
+
+TIPO_SEGUIMIENTO = ["1", "2", "3", "4"]
+
+DIAGNOSTICOS_ESPECIALES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
 
 RAW_FIELDS = [
-    # ── Básicos (1-6) ──
-    ("TIPO DE DOCUMENTO DE IDENTIDAD", "SET"),
-    ("NUMERO DE IDENTIFICACION", "INT"),
+    # ── 1-10 Básicos y programación ──
+    ("CONSECUTIVO", "INT"),
+    ("TIPO IDENTIFICACION DEL PACIENTE", "SET"),
+    ("NUMERO DE IDENTIFICACION DEL PACIENTE", "TEXT"),
     ("PRIMER APELLIDO", "TEXT"),
     ("SEGUNDO APELLIDO", "TEXT"),
     ("PRIMER NOMBRE", "TEXT"),
     ("SEGUNDO NOMBRE", "TEXT"),
-
-    # ── Pendiente / Objeto / Próxima mamografía (7-9) ──
-    ("PENDIENTE SI/NO", "TEXT"),
-    ("OBJETO", "SET"),
+    ("PENDIENTE SI/NO", "SET"),
+    ("OBJETO 2025", "INT"),
     ("FECHA PROXIMA MAMOGRAFIA", "DATE"),
 
-    # ── Mamografía 1 (10-12) ──
-    ("IPS QUE TOMA LA MAMOGRAFIA 2", "TEXT"),
-    ("FECHA MAMOGRAFIA", "DATE"),
-    ("RESULTADO", "TEXT"),
+    # ── Mamografía 1 ──
+    ("IPS QUE TOMA LA MAMOGRAFIA 1", "TEXT"),
+    ("FECHA MAMOGRAFIA 1", "DATE"),
+    ("RESULTADO 1", "SET"),
 
-    # ── Mamografía 2 (13-15) ──
+    # ── Mamografía 2 ──
     ("IPS QUE TOMA LA MAMOGRAFIA 2", "TEXT"),
     ("FECHA MAMOGRAFIA 2", "DATE"),
-    ("RESULTADO", "TEXT"),
+    ("RESULTADO 2", "SET"),
 
-    # ── Mamografía 3 (16-18) ──
+    # ── Mamografía 3 ──
     ("IPS QUE TOMA LA MAMOGRAFIA 3", "TEXT"),
     ("FECHA MAMOGRAFIA 3", "DATE"),
-    ("RESULTADO", "TEXT"),
+    ("RESULTADO 3", "SET"),
 
-    # ── Datos demográficos adicionales (19-32) ──
-    ("FECHA DE NACIMIENTO", "TEXT"),
-    ("EDAD(AÑOS)", "INT"),
+    # ── Datos demográficos ──
+    ("FECHA DE NACIMIENTO", "DATE"),
+    ("EDAD", "INT"),
     ("GENERO", "SET"),
     ("DEPARTAMENTO", "TEXT"),
-    ("MUNICIPIO", "INT"),
-    ("ZONA AFILIACION", "SET"),
-    ("ESTADO ACTUAL", "TEXT"),
+    ("MUNICIPIO", "TEXT"),
+    ("ZONA", "SET"),
+    ("ESTADO DEL USUARIO", "SET"),
     ("IPS PRIMARIA", "TEXT"),
-    ("NIT IPS PRIMARIA", "INT"),
+    ("NIT DE LA IPS PRIMARIA", "INT"),
     ("PERTENENCIA ETNICA", "SET"),
     ("RESGUARDO", "TEXT"),
-    ("ASENTAMIENTO/RANCHERIA/COMUNIDAD", "TEXT"),
-    ("DIRECCION", "TEXT"),
-    ("NUMERO DE TELEFONO", "INT"),
+    ("ASENTAMIENTO/COMUNIDAD O RANCHERIA", "TEXT"),
+    ("DIRECCION DE RESIDENCIA DEL PACIENTE", "TEXT"),
+    ("NUMERO TELEFONICO DEL PACIENTE", "INT"),
 
-    # ── Seguimiento (33-46) ──
+    # ── Seguimiento ──
     ("HORA DE SEGUIMIENTO", "TEXT"),
     ("SEGUIMIENTO EFECTIVO", "SET"),
     ("FECHA DE SEGUIMIENTO", "DATE"),
-    ("NUMERO DE SEGUIMIENTO", "TEXT"),
+    ("NUMERO DE SEGUIMIENTO", "INT"),
     ("DESCRIPCION DEL SEGUIMIENTO", "TEXT"),
     ("TIPO DE SEGUIMIENTO", "SET"),
-    ("ASIGNACION DE VIATICOS", "SET"),
-    ("SERVICIO DE CASA DEPASO", "SET"),
+    ("ASIGNACION DE VIATICO SI/NO", "SET"),
+    ("SERVICIO DE CASA DE PASO SI/NO", "SET"),
     ("FECHA DE AGENDAMIENTO", "DATE"),
-    ("OBSERVACION DEL SEGUIMIENTO", "TEXT"),
+    ("OBSERVACIONES DEL SEGUIMIENTO", "TEXT"),
     ("NOMBRE DE QUIEN REALIZA EL SEGUIMIENTO", "TEXT"),
-    ("DIAGNOSTICOS ESPECIALES", "TEXT"),
+    ("DIAGNOSTICOS ESPECIALES", "SET"),
     ("FECHA DE MUERTE", "DATE"),
     ("OBSERVACION", "TEXT"),
 ]
 
-SI_NO_NA = ["SI", "NO", "NO APLICA"]
-
 ALLOWED_BY_NAME = {
-    "TIPO DE DOCUMENTO DE IDENTIDAD": [
-        "CEDULA DE CIUDADANIA", "TARJETA DE IDENTIDAD", "MENOR SIN IDENTIFICACION",
-        "ADULTO SIN IDENTIFICACION", "PASAPORTE", "PERMISO PROTECCION TEMPORAL",
-        "CARNE DIPLOMATICO", "CEDULA DE EXTRANJERIA", "SALVOCONDUCTO",
-        "PASAPORTE DE LA ONU",
-    ],
-    "GENERO": ["MASCULINO", "FEMENINO", "TRANSGENERO"],
-    "ZONA AFILIACION": ["RURAL", "URBANA"],
-    "PERTENENCIA ETNICA": ["INDIGENA", "MESTIZO", "NINGUNAS DE LAS ANTERIORES"],
-    "OBJETO": SI_NO_NA,
+    "TIPO IDENTIFICACION DEL PACIENTE": TIPO_DOCUMENTO,
+    "PENDIENTE SI/NO": SI_NO,
+    "RESULTADO 1": BIRADS,
+    "RESULTADO 2": BIRADS,
+    "RESULTADO 3": BIRADS,
+    "GENERO": GENERO,
+    "ZONA": ZONA,
+    "ESTADO DEL USUARIO": ESTADO_USUARIO,
+    "PERTENENCIA ETNICA": PERTENENCIA_ETNICA,
     "SEGUIMIENTO EFECTIVO": SI_NO,
-    "TIPO DE SEGUIMIENTO": ["TELEFONICO", "HISTORIAS CLINICAS", "VISITA DOMICILIARIA", "SEGUIMIENTO POR IPS"],
-    "ASIGNACION DE VIATICOS": SI_NO_NA,
-    "SERVICIO DE CASA DEPASO": SI_NO_NA,
+    "TIPO DE SEGUIMIENTO": TIPO_SEGUIMIENTO,
+    "ASIGNACION DE VIATICO SI/NO": SI_NO,
+    "SERVICIO DE CASA DE PASO SI/NO": SI_NO,
+    "DIAGNOSTICOS ESPECIALES": DIAGNOSTICOS_ESPECIALES,
 }
 
 def allowed_for(field_name: str):
-    return ALLOWED_BY_NAME.get(field_name, SI_NO)
+    return ALLOWED_BY_NAME.get(field_name, [])
 
 def build_mamografia_template():
     template = []

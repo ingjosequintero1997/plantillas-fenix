@@ -1553,7 +1553,7 @@ async def validate_data(payload: dict):
 						col_errors += 1
 
 			elif tdef["type"] == "DATE":
-				if val_str and val_str not in ("SIN DATO", "1900-01-01", ""):
+				if val_str and val_str not in ("SIN DATO", "NO APLICA", "No Aplica", "N/A", "1900-01-01", ""):
 					if to_date_iso(val_str) is None:
 						err_msg = f"[{col_name}] Fecha invalida: '{val_str}' (formato: AAAA-MM-DD)"
 						col_errors += 1
