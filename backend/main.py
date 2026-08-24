@@ -172,7 +172,19 @@ async def debug_db():
 		insp = inspect(engine)
 		tables = insp.get_table_names()
 		info["conectado"] = True
-		info["tablas"] = tables
+		info["tablas"] = tables[:100]
+		# Conteo de cargues y columnas de la tabla cargues
+		try:
+			with engine.connect() as conn:
+				cnt = conn.execute(text("SELECT COUNT(*) FROM cargues")).scalar()
+			info["cargues_count"] = cnt
+		except Exception as e:
+			info["cargues_count"] = f"error: {str(e)[:150]}"
+		try:
+			cols = [c['name'] for c in inspect(engine).get_columns('cargues')]
+			info["cargues_columnas"] = cols
+		except Exception as e:
+			info["cargues_columnas"] = f"error: {str(e)[:150]}"
 	except Exception as e:
 		info["conectado"] = False
 		info["error_conexion"] = str(e)[:300]
