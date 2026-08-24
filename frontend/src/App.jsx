@@ -84,6 +84,14 @@ export default function App() {
   const [tipoCargue, setTipoCargue] = useState('mensual')
   const [processingMode, setProcessingMode] = useState('limpiador')
 
+  const isAdmin = user?.role === 'admin'
+  // Los prestadores y lideres solo validan: forzar modo validador para ellos.
+  useEffect(() => {
+    if (!isAdmin && processingMode === 'limpiador') {
+      setProcessingMode('validador')
+    }
+  }, [isAdmin, processingMode])
+
   const hasDataLoaded = Boolean(rawText)
   const canExport = Boolean(correctedText)
 
@@ -372,23 +380,31 @@ export default function App() {
                             </div>
                           </div>
                         </button>
-                        <button
-                          onClick={() => setProcessingMode('limpiador')}
-                          className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
-                          style={{
-                            borderColor: processingMode === 'limpiador' ? 'var(--green-500)' : 'var(--border)',
-                            backgroundColor: processingMode === 'limpiador' ? 'var(--green-50)' : 'transparent',
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4" style={{ color: processingMode === 'limpiador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                            <div>
-                              <div className="text-sm font-semibold" style={{ color: processingMode === 'limpiador' ? 'var(--green-700)' : 'var(--text)' }}>Limpiador</div>
-                              <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Ajusta segun instructivo</div>
+                        {isAdmin && (
+                          <button
+                            onClick={() => setProcessingMode('limpiador')}
+                            className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
+                            style={{
+                              borderColor: processingMode === 'limpiador' ? 'var(--green-500)' : 'var(--border)',
+                              backgroundColor: processingMode === 'limpiador' ? 'var(--green-50)' : 'transparent',
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4" style={{ color: processingMode === 'limpiador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              <div>
+                                <div className="text-sm font-semibold" style={{ color: processingMode === 'limpiador' ? 'var(--green-700)' : 'var(--text)' }}>Limpiador</div>
+                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Ajusta segun instructivo</div>
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
+                        )}
                       </div>
+                      {!isAdmin && (
+                        <div className="mt-2 text-xs flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
+                          <svg className="w-3.5 h-3.5" style={{ color: 'var(--green-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          Como prestador validas la data contra el instructivo. Solo el administrador puede aplicar el modo limpiador.
+                        </div>
+                      )}
                     </div>
 
                     {/* Barra de progreso */}
@@ -486,8 +502,16 @@ export default function App() {
                       />
                     )}
 
-                    <div className="flex justify-end">
-                      <button onClick={handleReset} className="btn-ghost text-sm">Validar otro archivo</button>
+                    {/* Barra de acciones al final */}
+                    <div className="panel flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium" style={{ color: 'var(--text)' }}>¿Terminaste esta validación?</div>
+                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Vuelve al inicio para validar otra data con el mismo módulo.</div>
+                      </div>
+                      <button onClick={handleReset} className="btn-primary">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        Validar otra data
+                      </button>
                     </div>
                   </div>
                 )}
