@@ -175,11 +175,11 @@ export async function createPrestador(payload) {
   })
 }
 
-export async function revalidateData(raw_text, mapping, templateKey) {
+export async function revalidateData(raw_text, mapping, templateKey, mode = 'limpiador') {
   return apiFetch(`${API_BASE}/revalidate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ raw_text, mapping, template_key: templateKey || 'gestante' }),
+    body: JSON.stringify({ raw_text, mapping, template_key: templateKey || 'gestante', mode }),
   })
 }
 

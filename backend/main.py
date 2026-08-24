@@ -30,6 +30,7 @@ class RevalidatePayload(BaseModel):
 	raw_text: str
 	mapping: dict[str, str | None]
 	template_key: str = "gestante"
+	mode: str = "limpiador"
 
 def template_names(template: list[dict]):
 	return [t['name'] for t in template]
@@ -654,7 +655,34 @@ async def revalidate(payload: RevalidatePayload):
 		meta = get_template_by_key(payload.template_key)
 		active_template = meta["template"]
 		template_key = meta["key"]
-		df = pd.read_csv(io.StringIO(payload.raw_text), sep='|', dtype=str, engine='python')
+		# En modo validador la data llega sin fila de encabezado (solo datos en
+		# orden de plantilla). En limpiador llega con encabezado.
+		if payload.mode == "validador":
+			df = pd.read_csv(io.StringIO(payload.raw_text), sep='|', dtype=str, engine='python', header=None, keep_default_na=False)
+			df = df.fillna('').astype(str)
+			if len(df) == 0:
+				raise HTTPException(status_code=400, detail="Archivo vacío")
+			try:
+				from .validators import validate_only
+			except ImportError:
+				from validators import validate_only
+			validation_result = validate_only(df, payload.mapping, active_template)
+			raw_text_compressed = _gz_compress(payload.raw_text)
+			return JSONResponse({
+				"success": True,
+				"template_key": template_key,
+				"mode": "validador",
+				"mapping_suggested": payload.mapping,
+				"mapping": payload.mapping,
+				"summary": validation_result["stats"],
+				"logs_sample": validation_result["logs"],
+				"corrected_text": raw_text_compressed,
+				"raw_text": raw_text_compressed,
+				"template_names": [t['name'] for t in active_template],
+				"compressed": True,
+			})
+
+		df = pd.read_csv(io.StringIO(payload.raw_text), sep='|', dtype=str, engine='python', keep_default_na=False)
 		df = df.fillna('').astype(str)
 		if len(df) == 0:
 			raise HTTPException(status_code=400, detail="Archivo vacío")

@@ -540,11 +540,17 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	n = int(len(df))
 	stats = {"total": n, "errors": 0, "corrected": 0, "ok": 0}
 
+	# Fallback posicional: si la data ya viene en orden de plantilla (misma
+	# cantidad de columnas), valida la columna i contra el campo i.
+	positional = len(df.columns) == len(template_cols)
+
 	src_values = []
-	for col in template_cols:
+	for ci, col in enumerate(template_cols):
 		src = inverse.get(col)
 		if src and src in df.columns:
 			src_values.append(df[src].tolist())
+		elif positional:
+			src_values.append(df.iloc[:, ci].tolist())
 		else:
 			src_values.append(None)
 

@@ -231,7 +231,7 @@ export default function App() {
     if (!rawText) return
     setReprocessing(true); setError('')
     try {
-      const data = maybeDecompress(await revalidateData(rawText, mapping, selectedTemplate))
+      const data = maybeDecompress(await revalidateData(rawText, mapping, selectedTemplate, processingMode))
       applyResponse(data)
     } catch (e) {
       setError(e.message || 'Error al revalidar')
@@ -501,7 +501,7 @@ export default function App() {
                         onRevalidate={async (newText) => {
                           setLoading(true); setError('')
                           try {
-                            const data = maybeDecompress(await revalidateData(newText, mapping, selectedTemplate))
+                            const data = maybeDecompress(await revalidateData(newText, mapping, selectedTemplate, processingMode))
                             applyResponse(data)
                           } catch (e) {
                             setError(e.message || 'Error al re-validar')
