@@ -163,7 +163,13 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     let mounted = true
     const load = async () => {
       try {
-        const list = await fetchCargues(selectedTemplate)
+        // Primero con filtro por plantilla; si no hay, traer todos y filtrar.
+        let list = await fetchCargues(selectedTemplate)
+        if (!list.length) {
+          const todos = await fetchCargues('')
+          list = todos.filter((c) => !c.template_key || c.template_key === selectedTemplate)
+          if (!list.length) list = todos
+        }
         if (!mounted) return
         setCargues(list)
         if (list.length && !cargueId) setCargueId(String(list[0].id))
