@@ -609,7 +609,7 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 
 			elif tdef["type"] == "DATE":
 				if val_str and val_str not in ("SIN DATO", "1900-01-01", ""):
-					if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', val_str):
+					if to_date_iso(val_str) is None:
 						expected = "AAAA-MM-DD"
 						err_msg = f"Fecha invalida"
 

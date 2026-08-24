@@ -13,12 +13,12 @@ from sqlalchemy.exc import OperationalError
 try:
 	from .utils import fuzzy_map, normalize_text
 	from .templates_registry import get_template_by_key, list_templates_meta
-	from .validators import validate_and_correct
+	from .validators import validate_and_correct, to_date_iso
 	from .evaluator import evaluate, build_evaluation_excel
 except ImportError:
 	from utils import fuzzy_map, normalize_text
 	from templates_registry import get_template_by_key, list_templates_meta
-	from validators import validate_and_correct
+	from validators import validate_and_correct, to_date_iso
 	from evaluator import evaluate, build_evaluation_excel
 
 import os
@@ -1554,7 +1554,7 @@ async def validate_data(payload: dict):
 
 			elif tdef["type"] == "DATE":
 				if val_str and val_str not in ("SIN DATO", "1900-01-01", ""):
-					if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', val_str):
+					if to_date_iso(val_str) is None:
 						err_msg = f"[{col_name}] Fecha invalida: '{val_str}' (formato: AAAA-MM-DD)"
 						col_errors += 1
 

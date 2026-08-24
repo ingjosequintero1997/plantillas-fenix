@@ -53,25 +53,32 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
     return set
   }, [logs])
 
+  // Solo mostrar las filas que tienen errores (dinamiza la correccion:
+  // las filas validas no aparecen, solo las que hay que corregir).
+  const errorOnly = useMemo(() => {
+    if (errorRows.size === 0) return []
+    return data.filter((row) => errorRows.has(row._rowNum))
+  }, [data, errorRows])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return data
-    return data.filter((row) =>
+    let base = errorOnly
+    if (!q) return base
+    return base.filter((row) =>
       Object.values(row).some((v) => String(v ?? '').toLowerCase().includes(q))
     )
-  }, [data, query])
+  }, [errorOnly, query])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const safePage = Math.min(page, totalPages)
   const pageItems = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE)
 
-  const handleCellEdit = useCallback((rowIdx, colName, value) => {
-    const realRowIdx = (safePage - 1) * PER_PAGE + rowIdx
+  const handleCellEdit = useCallback((rowNum, colName, value) => {
     setData((prev) => {
       const next = [...prev]
-      if (realRowIdx < next.length) {
-        const rowNum = next[realRowIdx]._rowNum
-        next[realRowIdx] = { ...next[realRowIdx], [colName]: value }
+      const idx = next.findIndex((r) => r._rowNum === rowNum)
+      if (idx >= 0) {
+        next[idx] = { ...next[idx], [colName]: value }
         setEditedCells((prevSet) => {
           const s = new Set(prevSet)
           s.add(rowNum + '-' + colName)
@@ -81,7 +88,7 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
       return next
     })
     setEditingCell(null)
-  }, [safePage])
+  }, [])
 
   const buildRawText = useCallback(() => {
     if (!templateNames || templateNames.length === 0) return ''
@@ -104,7 +111,30 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
     )
   }
 
+  // Cuando no hay errores, no se muestra la tabla (solo el banner verde de arriba).
   const visibleCols = templateNames || Object.keys(data[0] || {}).filter((k) => !k.startsWith('_'))
+
+  if (errorOnly.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="panel" style={{ borderColor: 'var(--green-300)', backgroundColor: 'var(--green-50)' }}>
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5" style={{ color: 'var(--success)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div>
+              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>No hay errores pendientes</div>
+              <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Toda la data qued&oacute; validada correctamente contra el instructivo.</div>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <button onClick={handleRevalidate} disabled={loading} className="btn-primary text-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            {loading ? 'Re-validando...' : 'Re-validar'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -202,8 +232,8 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
                             <input
                               autoFocus
                               defaultValue={val}
-                              onBlur={(e) => handleCellEdit(ri, col, e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') handleCellEdit(ri, col, e.target.value) }}
+                              onBlur={(e) => handleCellEdit(row._rowNum, col, e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleCellEdit(row._rowNum, col, e.target.value) }}
                               className="w-full text-xs px-1.5 py-1 rounded border"
                               style={{ borderColor: 'var(--green-400)', outline: 'none' }}
                             />
