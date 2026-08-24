@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import { fetchIndicadores, fetchCargues } from '../api'
 import { leerUltimaData } from '../dataStore'
@@ -134,6 +134,10 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     if (templateKey) setSelectedTemplate(templateKey)
   }, [templateKey])
 
+  const handleGenerateRef = useRef(null)
+  const dataValidadaRef = useRef(dataValidada)
+  dataValidadaRef.current = dataValidada
+
   const handleGenerate = useCallback(async () => {
     setLoading(true); setError(''); setIndicadores(null); setVerPorMunicipio(false)
     try {
@@ -142,8 +146,8 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
 
       // 0. Usar la data validada pasada directamente desde App.jsx (estado en
       //    memoria). Es la fuente mas confiable porque App mantiene correctedText.
-      if (dataValidada && typeof dataValidada === 'string' && dataValidada.trim()) {
-        text = dataValidada
+      if (dataValidadaRef.current && typeof dataValidadaRef.current === 'string' && dataValidadaRef.current.trim()) {
+        text = dataValidadaRef.current
         source = 'prop'
       }
 
@@ -227,12 +231,15 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     }
   }, [selectedTemplate])
 
-  // Cargar automaticamente al abrir el modulo o cuando llega data nueva.
+  // Mantener la ref apuntando a la funcion mas reciente.
+  handleGenerateRef.current = handleGenerate
+
+  // Cargar automaticamente cuando llega data nueva (o al abrir el modulo).
   useEffect(() => {
     if (dataValidada && typeof dataValidada === 'string' && dataValidada.trim()) {
-      handleGenerate()
+      handleGenerateRef.current()
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dataValidada, selectedTemplate])
 
   const templateOptions = [
     { key: 'gestante', label: 'Gestante' },
@@ -316,12 +323,28 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
       )}
 
       {!loaded && !loading && (
-        <div className="empty">
-          <div className="empty-icon">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+        <div className="space-y-4">
+          <div className="empty">
+            <div className="empty-icon">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </div>
+            <div className="empty-title">Genera los indicadores de la cohorte</div>
+            <div className="empty-desc">Se mostraran los indicadores PARE MM a nivel departamental y municipal.</div>
           </div>
-          <div className="empty-title">Genera los indicadores de la cohorte</div>
-          <div className="empty-desc">Se mostraran los indicadores PARE MM a nivel departamental y municipal.</div>
+          <div className="panel flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Data validada detectada</div>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                {dataValidada && dataValidada.trim()
+                  ? `${dataValidada.length} caracteres de data disponible.`
+                  : 'No hay data en esta vista. Usa el boton para cargar desde el historial.'}
+              </div>
+            </div>
+            <button onClick={handleGenerate} disabled={loading} className="btn-primary text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              {loading ? 'Generando...' : 'Generar indicadores'}
+            </button>
+          </div>
         </div>
       )}
     </div>
