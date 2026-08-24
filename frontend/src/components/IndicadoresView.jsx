@@ -227,6 +227,13 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     }
   }, [selectedTemplate])
 
+  // Cargar automaticamente al abrir el modulo o cuando llega data nueva.
+  useEffect(() => {
+    if (dataValidada && typeof dataValidada === 'string' && dataValidada.trim()) {
+      handleGenerate()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const templateOptions = [
     { key: 'gestante', label: 'Gestante' },
     { key: 'citologia', label: 'Citologia' },
