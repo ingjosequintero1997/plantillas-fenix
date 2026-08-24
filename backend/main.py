@@ -498,7 +498,10 @@ async def upload_file(
 		canonical_raw_text = df.to_csv(sep='|', index=False, header=True)
 
 		if mode == "validador":
-			from validators import validate_only
+			try:
+				from .validators import validate_only
+			except ImportError:
+				from validators import validate_only
 			validation_result = validate_only(df, map_suggest, active_template)
 			raw_text_compressed = _gz_compress(canonical_raw_text)
 			return JSONResponse({
