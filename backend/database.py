@@ -3,6 +3,12 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Carga backend/.env si existe (config local)
+except ImportError:
+    pass
+
 from sqlalchemy import (
     Boolean,
     Column,
