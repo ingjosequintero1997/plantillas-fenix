@@ -127,27 +127,62 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
   const handleGenerate = useCallback(async () => {
     setLoading(true); setError(''); setIndicadores(null); setVerPorMunicipio(false)
     try {
-      const cargues = await fetchCargues(selectedTemplate)
-      if (!cargues.length) {
-        setError('No hay cargues para esta plantilla. Sube data primero.')
+      let text = ''
+      let source = ''
+
+      // 1. Intentar leer la ultima data validada desde sessionStorage
+      //    (funciona en Vercel aunque la BD sea efimera).
+      try {
+        const stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null')
+        if (stored && stored.template_key === selectedTemplate) {
+          const storedText = stored.corrected_text || stored.raw_text || ''
+          if (storedText) {
+            if (stored.compressed) {
+              const pako = await import('pako')
+              const bin = atob(storedText)
+              const bytes = new Uint8Array(bin.length)
+              for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
+              text = pako.ungzip(bytes, { to: 'string' })
+            } else {
+              text = storedText
+            }
+            source = 'session'
+          }
+        }
+      } catch (e) { /* ignore */ }
+
+      // 2. Si no hay en sessionStorage, buscar el ultimo cargue en la BD.
+      if (!text) {
+        const cargues = await fetchCargues(selectedTemplate)
+        if (!cargues.length) {
+          setError('No hay data validada para esta plantilla. Valida una data primero.')
+          setLoading(false)
+          return
+        }
+        const latest = cargues[0]
+        const resp = await fetch(`${window.location.origin}/api/cargues/${latest.id}`, {
+          headers: { Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('auth') || '{}').token}` },
+        })
+        const data = await resp.json()
+        text = data.corrected_text || ''
+        if (data.compressed && text) {
+          try {
+            const pako = await import('pako')
+            const bin = atob(text)
+            const bytes = new Uint8Array(bin.length)
+            for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
+            text = pako.ungzip(bytes, { to: 'string' })
+          } catch { /* ignore */ }
+        }
+        source = 'bd'
+      }
+
+      if (!text || !text.trim()) {
+        setError('La data validada esta vacia. Valida una data primero.')
         setLoading(false)
         return
       }
-      const latest = cargues[0]
-      const resp = await fetch(`${window.location.origin}/api/cargues/${latest.id}`, {
-        headers: { Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('auth') || '{}').token}` },
-      })
-      const data = await resp.json()
-      let text = data.corrected_text || ''
-      if (data.compressed && text) {
-        try {
-          const pako = await import('pako')
-          const bin = atob(text)
-          const bytes = new Uint8Array(bin.length)
-          for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
-          text = pako.ungzip(bytes, { to: 'string' })
-        } catch { /* ignore */ }
-      }
+
       const result = await fetchIndicadores(selectedTemplate, text)
       setIndicadores(result)
       setLoaded(true)

@@ -154,6 +154,22 @@ export default function App() {
     setTemplateNames(data.template_names || [])
     setMappingStats(data.mapping_stats || null)
     setStructureValidation(data.structure_validation || null)
+
+    // Guardar la data validada en sessionStorage para que el modulo de
+    // indicadores pueda leerla sin depender de la BD (que en Vercel es efimera).
+    try {
+      const corrected = data.corrected_text || ''
+      const raw = data.raw_text || rawText || ''
+      if (corrected || raw) {
+        sessionStorage.setItem('ultima_data_validada', JSON.stringify({
+          template_key: incomingTemplateKey,
+          corrected_text: corrected,
+          raw_text: raw,
+          template_names: data.template_names || [],
+          saved_at: new Date().toISOString(),
+        }))
+      }
+    } catch (e) { /* ignore */ }
   }
 
   const selectBatchItem = (item) => {
