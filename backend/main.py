@@ -179,8 +179,8 @@ async def debug_db():
 				cnt = conn.execute(text("SELECT COUNT(*) FROM cargues")).scalar()
 			info["cargues_count"] = cnt
 			try:
-				rows = conn.execute(text("SELECT id, template_key, user_id, original_filename, created_at FROM cargues ORDER BY id DESC LIMIT 5")).fetchall()
-				info["cargues_recientes"] = [dict(r._mapping) for r in rows]
+				rows = conn.execute(text("SELECT id, template_key, user_id, original_filename, status, created_at FROM cargues ORDER BY id DESC LIMIT 5")).fetchall()
+				info["cargues_recientes"] = [list(r) for r in rows]
 			except Exception as e:
 				info["cargues_recientes"] = f"error: {str(e)[:150]}"
 		except Exception as e:
