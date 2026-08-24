@@ -353,45 +353,43 @@ export default function App() {
                     <DragDrop onFile={handleFile} />
 
                     {/* Modo de procesamiento */}
-                    {user?.role === 'admin' && (
-                      <div className="panel">
-                        <div className="section-label mb-3">Modo de procesamiento</div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setProcessingMode('validador')}
-                            className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
-                            style={{
-                              borderColor: processingMode === 'validador' ? 'var(--green-500)' : 'var(--border)',
-                              backgroundColor: processingMode === 'validador' ? 'var(--green-50)' : 'transparent',
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4" style={{ color: processingMode === 'validador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              <div>
-                                <div className="text-sm font-semibold" style={{ color: processingMode === 'validador' ? 'var(--green-700)' : 'var(--text)' }}>Validador</div>
-                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Solo valida, sin ajustar</div>
-                              </div>
+                    <div className="panel">
+                      <div className="section-label mb-3">Modo de procesamiento</div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setProcessingMode('validador')}
+                          className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
+                          style={{
+                            borderColor: processingMode === 'validador' ? 'var(--green-500)' : 'var(--border)',
+                            backgroundColor: processingMode === 'validador' ? 'var(--green-50)' : 'transparent',
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4" style={{ color: processingMode === 'validador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <div>
+                              <div className="text-sm font-semibold" style={{ color: processingMode === 'validador' ? 'var(--green-700)' : 'var(--text)' }}>Validador</div>
+                              <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Solo valida, sin ajustar</div>
                             </div>
-                          </button>
-                          <button
-                            onClick={() => setProcessingMode('limpiador')}
-                            className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
-                            style={{
-                              borderColor: processingMode === 'limpiador' ? 'var(--green-500)' : 'var(--border)',
-                              backgroundColor: processingMode === 'limpiador' ? 'var(--green-50)' : 'transparent',
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4" style={{ color: processingMode === 'limpiador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              <div>
-                                <div className="text-sm font-semibold" style={{ color: processingMode === 'limpiador' ? 'var(--green-700)' : 'var(--text)' }}>Limpiador</div>
-                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Ajusta segun instructivo</div>
-                              </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setProcessingMode('limpiador')}
+                          className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
+                          style={{
+                            borderColor: processingMode === 'limpiador' ? 'var(--green-500)' : 'var(--border)',
+                            backgroundColor: processingMode === 'limpiador' ? 'var(--green-50)' : 'transparent',
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4" style={{ color: processingMode === 'limpiador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            <div>
+                              <div className="text-sm font-semibold" style={{ color: processingMode === 'limpiador' ? 'var(--green-700)' : 'var(--text)' }}>Limpiador</div>
+                              <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Ajusta segun instructivo</div>
                             </div>
-                          </button>
-                        </div>
+                          </div>
+                        </button>
                       </div>
-                    )}
+                    </div>
 
                     {/* Barra de progreso */}
                     {loading && (
@@ -433,6 +431,9 @@ export default function App() {
                         <div className="page-subtitle">{selectedFileName}</div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <span className={`badge ${processingMode === 'validador' ? 'badge-warning' : 'badge-success'}`}>
+                          Modo: {processingMode === 'validador' ? 'Validador' : 'Limpiador'}
+                        </span>
                         {currentTemplateLabel && <span className="badge-neutral">Data detectada: {currentTemplateLabel}</span>}
                       </div>
                     </div>
