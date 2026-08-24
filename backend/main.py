@@ -152,6 +152,32 @@ def ensure_db_ready():
 async def health():
 	return {"status": "ok"}
 
+@app.get("/debug-db")
+async def debug_db():
+	"""Diagnostica el estado de la conexion a la base de datos."""
+	try:
+		from .database import engine, DB_AVAILABLE, DATABASE_URL
+	except ImportError:
+		from database import engine, DB_AVAILABLE, DATABASE_URL
+	info = {
+		"db_available": DB_AVAILABLE,
+		"engine": str(engine.url).split("@")[-1] if "@" in str(engine.url) else str(engine.url),
+		"es_postgres": str(engine.url).startswith("postgresql"),
+		"es_sqlite": str(engine.url).startswith("sqlite"),
+	}
+	try:
+		from sqlalchemy import inspect, text
+		with engine.connect() as conn:
+			conn.execute(text("SELECT 1"))
+		insp = inspect(engine)
+		tables = insp.get_table_names()
+		info["conectado"] = True
+		info["tablas"] = tables
+	except Exception as e:
+		info["conectado"] = False
+		info["error_conexion"] = str(e)[:300]
+	return info
+
 @app.post("/setup-gestantes")
 async def setup_gestantes(current_user: User = Depends(require_admin)):
 	"""Crea el esquema public y la tabla gestantes con todos los encabezados."""
