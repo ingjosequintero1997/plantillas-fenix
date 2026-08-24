@@ -1,0 +1,179 @@
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+
+import pandas as pd
+
+
+def _val(series, idx):
+    try:
+        v = series.iloc[idx]
+        return str(v).strip() if v is not None else ''
+    except Exception:
+        return ''
+
+
+def _norm(v):
+    if v is None:
+        return ''
+    return str(v).strip().upper()
+
+
+def _to_num(v):
+    try:
+        return float(str(v).replace(',', '.').replace(' ', ''))
+    except (ValueError, TypeError):
+        return None
+
+
+def _is_date(value):
+    try:
+        if value and str(value).strip() and str(value).strip().lower() not in ('sin dato', 'no aplica', 'n/a', '1900-01-01'):
+            from dateutil import parser
+            parser.parse(str(value).strip(), dayfirst=True)
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _parse_date(value):
+    try:
+        if value and str(value).strip() and str(value).strip().lower() not in ('sin dato', 'no aplica', 'n/a', '1900-01-01'):
+            from dateutil import parser
+            return parser.parse(str(value).strip(), dayfirst=True)
+    except Exception:
+        return None
+    return None
+
+
+def _pct(num, den):
+    if den <= 0:
+        return None
+    return round(num / den * 100, 4)
+
+
+def _indicador(denominador, numerador, label, nivel=None, variable=None):
+    return {
+        'label': label,
+        'nivel': nivel or 'DEPARTAMENTAL',
+        'variable': variable or '',
+        'numerador': numerador,
+        'denominador': denominador,
+        'coeficiente': 100,
+        'resultado': _pct(numerador, denominador),
+    }
+
+
+def calcular_indicadores_gestante(df: pd.DataFrame, ref_date: datetime | None = None):
+    """Calcula los indicadores PARE MM para la cohorte de gestantes."""
+    if ref_date is None:
+        ref_date = datetime.now()
+
+    n = len(df)
+
+    def col(name):
+        if name in df.columns:
+            return df[name]
+        return pd.Series([''] * n, index=df.index)
+
+    # ── 1. Cohortes y tamizajes ──
+    total = n
+
+    # Control prenatal ultimos 45 dias (mensual)
+    ultimo_control = col('ULTIMO CONTROL PRENATAL')
+    control_45 = 0
+    for i in range(n):
+        d = _parse_date(_val(ultimo_control, i))
+        if d and (ref_date - d).days <= 45 and (ref_date - d).days >= 0:
+            control_45 += 1
+
+    # Tercer trimestre (>32 semanas) con 4+ controles
+    edad_gest = col('EDAD GESTACIONAL ACTUAL')
+    num_controles = col('NUMERO TOTAL DE CONTROLES PRENATALES')
+    tercer_trim_4mas = 0
+    gest_tercer_trim = 0
+    for i in range(n):
+        eg = _to_num(_val(edad_gest, i))
+        nc = _to_num(_val(num_controles, i))
+        if eg is not None and eg > 32:
+            gest_tercer_trim += 1
+            if nc is not None and nc >= 4:
+                tercer_trim_4mas += 1
+
+    # Tamizajes
+    vih = col('RESULTADO PRIMER TAMIZAJE PRUEBA DE VIH')
+    sifilis = col('RESULTADO PRIMERA PRUEBA TREPONEMICA RAPIDA SIFILIS')
+    hepb = col('RESULTADO ANTIGENO SUPERFICIE HEPATITIS B')
+    chagas = col('RESULTADO CHAGAS')
+
+    def tamizadas(series):
+        c = 0
+        for i in range(n):
+            vn = _norm(_val(series, i))
+            if vn in ('POSITIVO', 'NEGATIVO'):
+                c += 1
+        return c
+
+    tam_vih = tamizadas(vih)
+    tam_sifilis = tamizadas(sifilis)
+    tam_hepb = tamizadas(hepb)
+    tam_chagas = tamizadas(chagas)
+
+    # ── ARO con atencion prenatal por GO ──
+    riesgo = col('CLASIFICACION DEL RIESGO')
+    gineco1 = col('FECHA PRIMERA CONSULTA GINECOLOGIA')
+    aro_total = 0
+    aro_go = 0
+    for i in range(n):
+        rn = _norm(_val(riesgo, i))
+        es_aro = 'ALTO' in rn
+        if es_aro:
+            aro_total += 1
+            if _is_date(_val(gineco1, i)):
+                aro_go += 1
+
+    # ── Riesgo preclamsia con profilaxis ASA ──
+    puntaje = col('PUNTAJE DE CLASIFICACION SEGUN ESCALA DE HERRERA Y HURTADO')
+    asa = col('FECHA SUMINISTRO ASA')
+    riesgo_preclamsia = 0
+    asa_garantizada = 0
+    for i in range(n):
+        pn = _norm(_val(puntaje, i))
+        es_preclamsia = bool(pn) and pn not in ('SIN DATO', 'N/A', 'NO APLICA', '0')
+        if es_preclamsia:
+            riesgo_preclamsia += 1
+            if _is_date(_val(asa, i)):
+                asa_garantizada += 1
+
+    # ── Anemia (hemoglobina < 11) y anemia tratada ──
+    hemoglobina = col('RESULTADO HEMOGLOBINA')
+    tratamiento = col('TRATAMIENTO INSTAURADO')
+    con_anemia = 0
+    anemia_tratada = 0
+    for i in range(n):
+        hb = _to_num(_val(hemoglobina, i))
+        if hb is not None and hb < 11 and hb > 0:
+            con_anemia += 1
+            if _norm(_val(tratamiento, i)) and _norm(_val(tratamiento, i)) not in ('SIN DATO', 'NONE', 'NO APLICA'):
+                anemia_tratada += 1
+
+    indicadores = [
+        _indicador(total, total, 'Porcentaje de gestantes en la cohorte', nivel='DEPARTAMENTAL', variable='Poblacion objeto 50-69 anios'),
+        _indicador(total, control_45, 'Porcentaje de gestantes con control prenatal en los ultimos 45 dias (Mensual)', nivel='DEPARTAMENTAL', variable='Control prenatal'),
+        _indicador(gest_tercer_trim, tercer_trim_4mas, 'Porcentaje de Gestantes en tercer trimestre con 4 o mas prenatales', nivel='DEPARTAMENTAL', variable='>32 semanas y >=4 controles'),
+        _indicador(total, tam_vih, 'Porcentaje de gestantes tamizadas para VIH durante la atencion para el cuidado prenatal', nivel='DEPARTAMENTAL', variable='Tamizaje VIH'),
+        _indicador(total, tam_sifilis, 'Porcentaje de gestantes tamizadas para SIFILIS durante la atencion para el cuidado prenatal', nivel='DEPARTAMENTAL', variable='Tamizaje SIFILIS'),
+        _indicador(total, tam_hepb, 'Porcentaje de gestantes tamizadas para HEPATITIS B durante la atencion para el cuidado prenatal', nivel='DEPARTAMENTAL', variable='Tamizaje HEPATITIS B'),
+        _indicador(total, tam_chagas, 'Porcentaje de gestantes tamizadas para CHAGAS durante la atencion para el cuidado prenatal', nivel='DEPARTAMENTAL', variable='Tamizaje CHAGAS'),
+        _indicador(aro_total, aro_go, 'Porcentaje de gestantes clasificadas con Alto Riesgo Obstetrico (ARO) que tienen atencion prenatal por Ginecoobstetra (GO)', nivel='DEPARTAMENTAL', variable='ARO con GO'),
+        _indicador(riesgo_preclamsia, asa_garantizada, 'Porcentaje de gestantes con riesgo para preclamsia que se les garantiza profilaxis con acido acetil salicilico (ASA)', nivel='DEPARTAMENTAL', variable='Riesgo preclamsia con ASA'),
+        _indicador(total, con_anemia, 'Proporcion de gestantes con anemia', nivel='DEPARTAMENTAL', variable='Hemoglobina < 11'),
+        _indicador(con_anemia, anemia_tratada, 'Proporcion de gestantes con anemia tratada', nivel='DEPARTAMENTAL', variable='Anemia con tratamiento'),
+    ]
+
+    return {
+        'total_gestantes': total,
+        'fecha_referencia': ref_date.strftime('%Y-%m-%d'),
+        'indicadores': indicadores,
+    }

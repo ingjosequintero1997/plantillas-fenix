@@ -1651,6 +1651,12 @@ async def indicadores_endpoint(payload: dict):
 	}
 
 	if template_key == "gestante":
+		try:
+			from .indicadores_pare import calcular_indicadores_gestante
+		except ImportError:
+			from indicadores_pare import calcular_indicadores_gestante
+		pare = calcular_indicadores_gestante(df)
+		# Descriptivos complementarios (conteos)
 		sexo = count_values(safe_col("SEXO"))
 		regimen = count_values(safe_col("REGIMEN DE AFILIACION"))
 		etnia = count_values(safe_col("ETNIA"))
@@ -1667,20 +1673,33 @@ async def indicadores_endpoint(payload: dict):
 		vacuna_hepb = count_values(safe_col("VACUNACION ANTIHEPATITIS B"))
 
 		result["indicadores"] = {
-			"sexo": {"label": "Distribucion por sexo", "data": sexo, "total": totalregistros},
-			"regimen": {"label": "Regimen de afiliacion", "data": regimen, "total": totalregistros},
-			"etnia": {"label": "Pertenencia etnica", "data": etnia, "total": totalregistros},
-			"zona": {"label": "Zona de residencia", "data": zona, "total": totalregistros},
-			"riesgo": {"label": "Clasificacion del riesgo", "data": riesgo, "total": totalregistros},
-			"vih_tamizaje": {"label": "Tamizaje VIH (1er tamizaje)", "data": vih, "total": totalregistros},
-			"sifilis_tamizaje": {"label": "Tamizaje Sifilis (1era prueba)", "data": sifilis, "total": totalregistros},
-			"hipertension": {"label": "Hipertension arterial", "data": hipertension, "total": totalregistros},
-			"diabetes": {"label": "Diabetes", "data": diabetes, "total": totalregistros},
-			"trimestre_control": {"label": "Trimestre inicio control", "data": trimestre, "total": totalregistros},
-			"tipo_parto": {"label": "Tipo de parto", "data": parto, "total": totalregistros},
-			"condicion_rn": {"label": "Condicion recien nacido", "data": condicion_rn, "total": totalregistros},
-			"vacuna_bcg": {"label": "Vacunacion BCG", "data": vacuna_bcg, "total": totalregistros},
-			"vacuna_hepb": {"label": "Vacunacion antihepatitis B", "data": vacuna_hepb, "total": totalregistros},
+			"pare_mm": {
+				"label": "Indicadores PARE MM (Cohorte de Gestantes)",
+				"type": "pare",
+				"total_gestantes": pare["total_gestantes"],
+				"fecha_referencia": pare["fecha_referencia"],
+				"lista": pare["indicadores"],
+			},
+			"descriptivos": {
+				"label": "Distribucion de la cohorte",
+				"type": "descriptivos",
+				"data": {
+					"sexo": sexo,
+					"regimen": regimen,
+					"etnia": etnia,
+					"zona": zona,
+					"riesgo": riesgo,
+					"vih": vih,
+					"sifilis": sifilis,
+					"hipertension": hipertension,
+					"diabetes": diabetes,
+					"trimestre": trimestre,
+					"tipo_parto": parto,
+					"condicion_rn": condicion_rn,
+					"vacuna_bcg": vacuna_bcg,
+					"vacuna_hepb": vacuna_hepb,
+				},
+			},
 		}
 
 	elif template_key == "citologia":

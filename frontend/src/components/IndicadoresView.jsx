@@ -13,28 +13,71 @@ function StatCard({ label, value, color }) {
   )
 }
 
-function ChartCard({ title, data, dataKey, nameKey, isPie }) {
+function formatResult(v) {
+  if (v === null || v === undefined) return '#DIV/0!'
+  return String(v).replace('.', ',')
+}
+
+function PareTable({ pare }) {
+  const lista = pare?.lista || []
+  if (!lista.length) return null
+  return (
+    <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+            Cohorte de Gestantes PARE MM
+          </div>
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Nivel Departamental - {pare.fecha_referencia}
+          </span>
+        </div>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Indicador</th>
+              <th className="text-center">Numerador (a)</th>
+              <th className="text-center">Denominador (b)</th>
+              <th className="text-center">Coeficiente</th>
+              <th className="text-center">Resultado (a/b*100)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map((ind, i) => (
+              <tr key={i}>
+                <td>
+                  <div className="font-medium text-xs" style={{ color: 'var(--text-primary)' }}>{ind.label}</div>
+                  {ind.variable && <div className="text-[0.6rem] mt-0.5" style={{ color: 'var(--text-muted)' }}>{ind.variable}</div>}
+                </td>
+                <td className="text-center font-medium">{ind.numerador}</td>
+                <td className="text-center">{ind.denominador}</td>
+                <td className="text-center">{ind.coeficiente}%</td>
+                <td className="text-center">
+                  <span className={ind.resultado === null ? 'badge-error' : 'badge-success'}>{formatResult(ind.resultado)}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function ChartCard({ title, data, isPie }) {
   const chartData = Object.entries(data || {}).map(([name, value]) => ({ name, value }))
   if (chartData.length === 0) return null
 
   return (
     <div className="bg-white rounded-xl p-5" style={{ border: '1px solid var(--border-subtle)' }}>
       <div className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>{title}</div>
-      <div style={{ height: 260 }}>
+      <div style={{ height: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
           {isPie ? (
             <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                outerRadius={90}
-                innerRadius={45}
-                dataKey="value"
-                nameKey="name"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                labelLine={false}
-              >
+              <Pie data={chartData} cx="50%" cy="50%" outerRadius={90} innerRadius={45} dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
                 {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Tooltip formatter={(v) => [v, 'Registros']} />
@@ -105,14 +148,16 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
     { key: 'penta', label: 'Penta' },
   ]
 
+  const pare = indicadores?.indicadores?.pare_mm
+  const descriptivos = indicadores?.indicadores?.descriptivos
+
   return (
     <div className="space-y-6 fade-in">
       <div>
         <div className="page-title">Indicadores</div>
-        <div className="page-subtitle">Analisis estadistico y graficos de los datos cargados.</div>
+        <div className="page-subtitle">Cohorte de gestantes PARE MM - nivel departamental.</div>
       </div>
 
-      {/* Selector de plantilla y boton generar */}
       <div className="flex items-end gap-4 flex-wrap">
         <div>
           <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>Plantilla</label>
@@ -139,23 +184,23 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
 
       {loaded && indicadores && (
         <>
-          {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard label="Total registros" value={indicadores.total_registros} color="#3A863A" />
-            <StatCard label="Plantilla" value={indicadores.template_key} />
+            <StatCard label="Total gestantes" value={pare?.total_gestantes ?? indicadores.total_registros} color="#3A863A" />
+            <StatCard label="Fecha referencia" value={pare?.fecha_referencia ?? '—'} />
           </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {Object.entries(indicadores.indicadores || {}).map(([key, ind]) => (
-              <ChartCard
-                key={key}
-                title={ind.label}
-                data={ind.data}
-                isPie={Object.keys(ind.data).length <= 5}
-              />
-            ))}
-          </div>
+          {pare && <PareTable pare={pare} />}
+
+          {descriptivos && Object.entries(descriptivos.data || {}).length > 0 && (
+            <div>
+              <div className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Distribucion de la cohorte</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {Object.entries(descriptivos.data).map(([key, data]) => (
+                  <ChartCard key={key} title={key} data={data} isPie={Object.keys(data).length <= 4} />
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -164,8 +209,8 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
           <div className="empty-icon">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
           </div>
-          <div className="empty-title">Selecciona una plantilla y genera los indicadores</div>
-          <div className="empty-desc">Los graficos se generaran automaticamente con los datos cargados mas recientes.</div>
+          <div className="empty-title">Genera los indicadores de la cohorte</div>
+          <div className="empty-desc">Se mostraran los indicadores PARE MM con la data cargada mas reciente.</div>
         </div>
       )}
     </div>
