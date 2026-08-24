@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import { fetchIndicadores, fetchCargues } from '../api'
+import { leerUltimaData } from '../dataStore'
 
 const COLORS = ['#3A863A', '#6BC06B', '#4A9A4A', '#5AAE5A', '#22C55E', '#86EFAC', '#16A34A', '#15803D', '#166534', '#14532D', '#A7F3D0', '#BBF7D0']
 
@@ -143,8 +144,11 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
       //    (funciona en Vercel aunque la BD sea efimera).
       try {
         let stored = null
-        // 1. Variable global en memoria (sesion actual, mas confiable)
-        try { stored = JSON.parse(window.__ultimaDataValidada || 'null') } catch (e) {}
+        // 0. Store global en memoria (dataStore): mas confiable, compartido
+        //    entre App.jsx e IndicadoresView sin depender de storage.
+        try { stored = leerUltimaData() } catch (e) {}
+        // 1. Variable global window (sesion actual)
+        if (!stored) { try { stored = JSON.parse(window.__ultimaDataValidada || 'null') } catch (e) {} }
         // 2. sessionStorage
         if (!stored) { try { stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
         // 3. localStorage

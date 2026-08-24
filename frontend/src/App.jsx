@@ -20,6 +20,7 @@ import DataGridTable from './components/DataGridTable'
 import EvaluationDashboard from './components/EvaluationDashboard'
 import Pagination from './components/Pagination'
 import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue, downloadValidationReport } from './api'
+import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
 
 const AUDIT_PER_PAGE = 50
@@ -196,6 +197,15 @@ export default function App() {
         // Variable global en memoria: siempre disponible en la sesion actual,
         // sin limites de tamano ni problemas de persistencia.
         try { window.__ultimaDataValidada = payload } catch (e) { /* ignore */ }
+        // Store global en memoria (dataStore): mas confiable que window,
+        // compartido entre App.jsx e IndicadoresView.
+        guardarUltimaData({
+          template_key: incomingTemplateKey,
+          corrected_text: texto,
+          compressed: false,
+          template_names: data.template_names || [],
+          saved_at: new Date().toISOString(),
+        })
       }
     } catch (e) { /* ignore */ }
   }
