@@ -1780,6 +1780,34 @@ async def indicadores_endpoint(payload: dict):
 	return result
 
 
+@app.post("/indicadores-de-cargue/{cargue_id}")
+async def indicadores_de_cargue(cargue_id: int, current_user: User = Depends(get_current_user)):
+	"""Calcula los indicadores directamente desde un cargue guardado en la BD."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargue = db.get(Cargue, cargue_id)
+		if cargue is None:
+			raise HTTPException(status_code=404, detail="Cargue no encontrado")
+		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+			raise HTTPException(status_code=403, detail="No autorizado")
+		text = cargue.corrected_text or cargue.raw_text or ""
+		if cargue.compressed and text:
+			try:
+				text = gzip.decompress(base64.b64decode(text)).decode("utf-8")
+			except Exception:
+				pass
+		if not text or not text.strip():
+			raise HTTPException(status_code=400, detail="El cargue no tiene datos validos")
+		# Reutilizar la logica del endpoint /indicadores con el texto del cargue
+		return await indicadores_endpoint({
+			"template_key": cargue.template_key or "gestante",
+			"corrected_text": text,
+		})
+	finally:
+		db.close()
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)

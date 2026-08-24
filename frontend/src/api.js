@@ -243,6 +243,15 @@ export async function setupGestantes() {
   })
 }
 
+// Calcula los indicadores directamente desde un cargue guardado en la BD.
+// El backend lee y descomprime el cargue, evitando problemas de transferencia.
+export async function fetchIndicadoresDeCargue(cargueId) {
+  return apiFetch(`${API_BASE}/indicadores-de-cargue/${cargueId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 
 export async function uploadHistoria(file, paciente, templateKey = 'gestante') {

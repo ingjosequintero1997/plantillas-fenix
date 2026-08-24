@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import { fetchIndicadores, fetchCargues, setupGestantes } from '../api'
+import { fetchIndicadores, fetchCargues, setupGestantes, fetchIndicadoresDeCargue } from '../api'
 import { leerUltimaData } from '../dataStore'
 import { useAuth } from '../AuthContext'
 
@@ -214,33 +214,30 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
   const handleGenerate = useCallback(async () => {
     setLoading(true); setError(''); setIndicadores(null); setVerPorMunicipio(false)
     try {
-      let text = ''
+      let result = null
       let source = ''
 
-      // 1. Si hay un cargue seleccionado (de la BD), usar su data.
-      if (cargueIdRef.current) {
+      // 1. PRINCIPAL: calcular desde un cargue de la BD (el backend lee y
+      //    descomprime el cargue, sin transferir el texto al frontend).
+      const id = cargueIdRef.current || (carguesRef.current.length ? carguesRef.current[0].id : '')
+      if (id) {
         try {
-          text = await obtenerTextoDeCargue(cargueIdRef.current)
-          if (text && text.trim()) source = 'bd-cargue'
-        } catch (e) { text = '' }
+          result = await fetchIndicadoresDeCargue(id)
+          source = 'bd-cargue'
+        } catch (e) {
+          result = null
+        }
       }
 
-      // 1b. Si no hay cargue seleccionado pero hay cargues en la BD, usar el mas reciente.
-      if (!text && carguesRef.current.length) {
-        try {
-          text = await obtenerTextoDeCargue(carguesRef.current[0].id)
-          if (text && text.trim()) source = 'bd'
-        } catch (e) { text = '' }
-      }
-
-      // 2. Si no hay en BD, usar la data validada pasada directamente desde App.jsx.
-      if (!text && dataValidadaRef.current && typeof dataValidadaRef.current === 'string' && dataValidadaRef.current.trim()) {
-        text = dataValidadaRef.current
+      // 2. Si no hay cargue, usar la data validada pasada desde App.jsx.
+      if (!result && dataValidadaRef.current && typeof dataValidadaRef.current === 'string' && dataValidadaRef.current.trim()) {
+        const payload = String(dataValidadaRef.current).trim()
+        result = await fetchIndicadores(selectedTemplate, payload)
         source = 'prop'
       }
 
       // 3. Si no, intentar el store global / storage.
-      if (!text) {
+      if (!result) {
         try {
           let stored = null
           try { stored = leerUltimaData() } catch (e) {}
@@ -256,26 +253,26 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
                   const bin = atob(storedText)
                   const bytes = new Uint8Array(bin.length)
                   for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
-                  text = pako.ungzip(bytes, { to: 'string' })
-                } catch (e) { text = storedText }
-              } else {
-                text = typeof storedText === 'string' ? storedText : String(storedText || '')
+                  storedText = pako.ungzip(bytes, { to: 'string' })
+                } catch (e) { /* usar como esta */ }
               }
-              source = 'session'
+              if (storedText && storedText.trim()) {
+                const payload = String(storedText).trim()
+                result = await fetchIndicadores(selectedTemplate, payload)
+                source = 'session'
+              }
             }
           }
         } catch (e) { /* ignore */ }
       }
 
-      if (!text || typeof text !== 'string' || !text.trim()) {
+      if (!result) {
         const nCargues = carguesRef.current ? carguesRef.current.length : 0
         setError(`No se encontro data valida (cargues disponibles: ${nCargues}). Valida una data primero o selecciona un cargue.` + (source ? ` Fuente: ${source}` : ''))
         setLoading(false)
         return
       }
 
-      const payload = String(text).trim()
-      const result = await fetchIndicadores(selectedTemplate, payload)
       setIndicadores(result)
       setLoaded(true)
     } catch (e) {
@@ -283,7 +280,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     } finally {
       setLoading(false)
     }
-  }, [selectedTemplate, obtenerTextoDeCargue])
+  }, [selectedTemplate])
 
   handleGenerateRef.current = handleGenerate
 
