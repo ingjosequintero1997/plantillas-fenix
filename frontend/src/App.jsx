@@ -610,7 +610,7 @@ export default function App() {
 
             {/* ─── INDICADORES ─── */}
             {section === 'indicadores' && (
-              <IndicadoresView templateKey={activeTemplate} />
+              <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} />
             )}
 
           </DashboardLayout>

@@ -121,7 +121,7 @@ function ChartCard({ title, data, isPie }) {
   )
 }
 
-export default function IndicadoresView({ templateKey = 'gestante' }) {
+export default function IndicadoresView({ templateKey = 'gestante', dataValidada = '', templateNames = [] }) {
   const [indicadores, setIndicadores] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -140,40 +140,48 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
       let text = ''
       let source = ''
 
-      // 1. Intentar leer la ultima data validada desde sessionStorage/localStorage
-      //    (funciona en Vercel aunque la BD sea efimera).
-      try {
-        let stored = null
-        // 0. Store global en memoria (dataStore): mas confiable, compartido
-        //    entre App.jsx e IndicadoresView sin depender de storage.
-        try { stored = leerUltimaData() } catch (e) {}
-        // 1. Variable global window (sesion actual)
-        if (!stored) { try { stored = JSON.parse(window.__ultimaDataValidada || 'null') } catch (e) {} }
-        // 2. sessionStorage
-        if (!stored) { try { stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
-        // 3. localStorage
-        if (!stored) { try { stored = JSON.parse(localStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
-        if (stored && (stored.template_key === selectedTemplate || !stored.template_key)) {
-          let storedText = stored.corrected_text || stored.raw_text || ''
-          if (storedText) {
-            // Si el texto esta comprimido, descomprimir. Si falla, usarlo plano.
-            if (stored.compressed && typeof storedText === 'string' && /^[A-Za-z0-9+/=]+$/.test(storedText)) {
-              try {
-                const pako = await import('pako')
-                const bin = atob(storedText)
-                const bytes = new Uint8Array(bin.length)
-                for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
-                text = pako.ungzip(bytes, { to: 'string' })
-              } catch (e) {
-                text = storedText
+      // 0. Usar la data validada pasada directamente desde App.jsx (estado en
+      //    memoria). Es la fuente mas confiable porque App mantiene correctedText.
+      if (dataValidada && typeof dataValidada === 'string' && dataValidada.trim()) {
+        text = dataValidada
+        source = 'prop'
+      }
+
+      // 1. Si no hay prop, intentar leer la ultima data validada desde el store.
+      if (!text) {
+        try {
+          let stored = null
+          // Store global en memoria (dataStore): mas confiable, compartido
+          // entre App.jsx e IndicadoresView sin depender de storage.
+          try { stored = leerUltimaData() } catch (e) {}
+          // Variable global window (sesion actual)
+          if (!stored) { try { stored = JSON.parse(window.__ultimaDataValidada || 'null') } catch (e) {} }
+          // sessionStorage
+          if (!stored) { try { stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
+          // localStorage
+          if (!stored) { try { stored = JSON.parse(localStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
+          if (stored && (stored.template_key === selectedTemplate || !stored.template_key)) {
+            let storedText = stored.corrected_text || stored.raw_text || ''
+            if (storedText) {
+              // Si el texto esta comprimido, descomprimir. Si falla, usarlo plano.
+              if (stored.compressed && typeof storedText === 'string' && /^[A-Za-z0-9+/=]+$/.test(storedText)) {
+                try {
+                  const pako = await import('pako')
+                  const bin = atob(storedText)
+                  const bytes = new Uint8Array(bin.length)
+                  for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
+                  text = pako.ungzip(bytes, { to: 'string' })
+                } catch (e) {
+                  text = storedText
+                }
+              } else {
+                text = typeof storedText === 'string' ? storedText : String(storedText || '')
               }
-            } else {
-              text = typeof storedText === 'string' ? storedText : String(storedText || '')
+              source = 'session'
             }
-            source = 'session'
           }
-        }
-      } catch (e) { /* ignore */ }
+        } catch (e) { /* ignore */ }
+      }
 
       // 2. Si no hay en sessionStorage, buscar el ultimo cargue en la BD.
       if (!text) {
