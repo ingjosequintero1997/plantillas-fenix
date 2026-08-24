@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import { fetchIndicadores, fetchCargues } from '../api'
 
@@ -124,16 +124,23 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
   const [loaded, setLoaded] = useState(false)
   const [verPorMunicipio, setVerPorMunicipio] = useState(false)
 
+  // Sincronizar la plantilla seleccionada con la plantilla activa del layout.
+  useEffect(() => {
+    if (templateKey) setSelectedTemplate(templateKey)
+  }, [templateKey])
+
   const handleGenerate = useCallback(async () => {
     setLoading(true); setError(''); setIndicadores(null); setVerPorMunicipio(false)
     try {
       let text = ''
       let source = ''
 
-      // 1. Intentar leer la ultima data validada desde sessionStorage
+      // 1. Intentar leer la ultima data validada desde sessionStorage/localStorage
       //    (funciona en Vercel aunque la BD sea efimera).
       try {
-        const stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null')
+        let stored = null
+        try { stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null') } catch (e) {}
+        if (!stored) { try { stored = JSON.parse(localStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
         if (stored && stored.template_key === selectedTemplate) {
           const storedText = stored.corrected_text || stored.raw_text || ''
           if (storedText) {
