@@ -30,7 +30,9 @@ def _utcnow():
     return datetime.now(timezone.utc)
 
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./validador.db")
+# La variable puede llamarse DATABASE_URL o DATABASE (nombre usado en Vercel).
+# Se da prioridad a DATABASE_URL y se acepta DATABASE como alternativa.
+DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("DATABASE") or "sqlite:///./validador.db"
 
 # SQLAlchemy 2.x requiere postgresql:// (no acepta el alias postgres://)
 if DATABASE_URL.startswith("postgres://"):
