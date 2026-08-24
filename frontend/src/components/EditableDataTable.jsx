@@ -82,6 +82,14 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
 
   return (
     <div className="space-y-4">
+      <div className="panel">
+        <div className="flex items-start gap-2">
+          <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--green-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Haz clic sobre una celda para corregirla manualmente. Despu&eacute;s pulsa <strong style={{ color: 'var(--text-primary)' }}>Re-validar</strong> para volver a validar la data contra el instructivo y ver si quedaron errores.
+          </div>
+        </div>
+      </div>
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="px-4 py-3 border-b flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-subtle)' }}>
           <div className="flex items-center gap-3">
@@ -96,7 +104,8 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
             </div>
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{data.length} registros</span>
           </div>
-          <button onClick={handleRevalidate} disabled={loading} className="btn-primary text-sm">
+          <button onClick={handleRevalidate} disabled={loading} className="btn-primary text-sm" title="Vuelve a validar la data con los cambios que hiciste manualmente en las celdas.">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             {loading ? 'Re-validando...' : 'Re-validar'}
           </button>
         </div>
@@ -160,13 +169,13 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              P\u00e1gina {safePage} de {totalPages}
+              Página {safePage} de {totalPages}
             </span>
             <div className="flex gap-1">
-              <button onClick={() => setPage(1)} disabled={safePage <= 1} className="btn-secondary px-2 py-1 text-xs">\u00AB</button>
-              <button onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className="btn-secondary px-2 py-1 text-xs">\u2190</button>
-              <button onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className="btn-secondary px-2 py-1 text-xs">\u2192</button>
-              <button onClick={() => setPage(totalPages)} disabled={safePage >= totalPages} className="btn-secondary px-2 py-1 text-xs">\u00BB</button>
+              <button onClick={() => setPage(1)} disabled={safePage <= 1} className="btn-secondary px-2 py-1 text-xs">«</button>
+              <button onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className="btn-secondary px-2 py-1 text-xs">←</button>
+              <button onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className="btn-secondary px-2 py-1 text-xs">→</button>
+              <button onClick={() => setPage(totalPages)} disabled={safePage >= totalPages} className="btn-secondary px-2 py-1 text-xs">»</button>
             </div>
           </div>
         )}

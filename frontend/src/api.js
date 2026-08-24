@@ -195,6 +195,38 @@ export async function validateData(corrected_text, templateKey, templateNames = 
   })
 }
 
+// Descarga el reporte de validacion en TXT: misma estructura pipe-delimited
+// de la data mas una columna final "ERRORES" con los errores de cada fila.
+export async function downloadValidationReport(corrected_text, templateKey, templateNames = [], filename = 'reporte_errores.txt') {
+  // El endpoint /validate-data espera la data sin fila de encabezado
+  // (asigna template_names como nombres de columna). Si la data trae
+  // encabezado, se quita la primera linea.
+  let payloadText = corrected_text || ''
+  const lines = payloadText.split('\n').filter((l) => l.trim().length > 0)
+  if (lines.length > 0 && templateNames && templateNames.length > 0) {
+    const headerCells = lines[0].split('|').map((h) => h.trim())
+    const headerMatches = headerCells.length === templateNames.length &&
+      headerCells.every((h, i) => h === templateNames[i])
+    if (headerMatches) {
+      payloadText = lines.slice(1).join('\n')
+    }
+  }
+
+  const data = await validateData(payloadText, templateKey, templateNames)
+  if (!data.report_text) throw new Error('El servidor no genero el reporte de errores.')
+  const bin = atob(data.report_text)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
+  const blob = new Blob([bytes], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+  return data
+}
+
 export async function fetchIndicadores(templateKey, correctedText) {
   return apiFetch(`${API_BASE}/indicadores`, {
     method: 'POST',

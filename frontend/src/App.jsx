@@ -19,7 +19,7 @@ import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
 import EvaluationDashboard from './components/EvaluationDashboard'
 import Pagination from './components/Pagination'
-import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue } from './api'
+import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue, downloadValidationReport } from './api'
 import * as pako from 'pako'
 
 const AUDIT_PER_PAGE = 50
@@ -291,6 +291,17 @@ export default function App() {
     }
   }
 
+  const handleDownloadReport = async () => {
+    if (!rawText || !rawText.trim()) return
+    try {
+      setError('')
+      const filename = `reporte_errores_${selectedTemplate}_${new Date().toISOString().slice(0, 10)}.txt`
+      await downloadValidationReport(rawText, selectedTemplate, templateNames, filename)
+    } catch (e) {
+      setError(e.message || 'Error al descargar el reporte de errores')
+    }
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -506,12 +517,18 @@ export default function App() {
                     <div className="panel flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="font-medium" style={{ color: 'var(--text)' }}>¿Terminaste esta validación?</div>
-                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Vuelve al inicio para validar otra data con el mismo módulo.</div>
+                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Descarga el reporte con los errores o vuelve para validar otra data.</div>
                       </div>
-                      <button onClick={handleReset} className="btn-primary">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                        Validar otra data
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={handleDownloadReport} disabled={!rawText} className="btn-secondary">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                          Descargar reporte de errores (TXT)
+                        </button>
+                        <button onClick={handleReset} className="btn-primary">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                          Validar otra data
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
