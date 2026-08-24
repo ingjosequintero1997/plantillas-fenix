@@ -18,19 +18,15 @@ function formatResult(v) {
   return String(v).replace('.', ',')
 }
 
-function PareTable({ pare }) {
-  const lista = pare?.lista || []
+function PareTable({ pare, titulo, subTitulo, soloIndicadores }) {
+  const lista = soloIndicadores || pare?.lista || []
   if (!lista.length) return null
   return (
     <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
       <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
-            Cohorte de Gestantes PARE MM
-          </div>
-          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            Nivel Departamental - {pare.fecha_referencia}
-          </span>
+          <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{titulo || 'Cohorte de Gestantes PARE MM'}</div>
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{subTitulo || 'Nivel Departamental'}</span>
         </div>
       </div>
       <div style={{ overflowX: 'auto' }}>
@@ -62,6 +58,26 @@ function PareTable({ pare }) {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+function PorMunicipioView({ porMunicipio }) {
+  if (!porMunicipio || !porMunicipio.length) return null
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Indicadores por municipio</div>
+        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Desglose de la cohorte a nivel municipal.</div>
+      </div>
+      {porMunicipio.map((m) => (
+        <PareTable
+          key={m.codigo || m.municipio}
+          titulo={m.municipio}
+          subTitulo={`Nivel MUNICIPAL - ${m.total} gestantes`}
+          soloIndicadores={m.indicadores}
+        />
+      ))}
     </div>
   )
 }
@@ -106,9 +122,10 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
   const [error, setError] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState(templateKey)
   const [loaded, setLoaded] = useState(false)
+  const [verPorMunicipio, setVerPorMunicipio] = useState(false)
 
   const handleGenerate = useCallback(async () => {
-    setLoading(true); setError(''); setIndicadores(null)
+    setLoading(true); setError(''); setIndicadores(null); setVerPorMunicipio(false)
     try {
       const cargues = await fetchCargues(selectedTemplate)
       if (!cargues.length) {
@@ -150,12 +167,13 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
 
   const pare = indicadores?.indicadores?.pare_mm
   const descriptivos = indicadores?.indicadores?.descriptivos
+  const porMunicipio = pare?.por_municipio || []
 
   return (
     <div className="space-y-6 fade-in">
       <div>
         <div className="page-title">Indicadores</div>
-        <div className="page-subtitle">Cohorte de gestantes PARE MM - nivel departamental.</div>
+        <div className="page-subtitle">Cohorte de gestantes PARE MM - nivel departamental y municipal.</div>
       </div>
 
       <div className="flex items-end gap-4 flex-wrap">
@@ -186,12 +204,29 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard label="Total gestantes" value={pare?.total_gestantes ?? indicadores.total_registros} color="#3A863A" />
+            <StatCard label="Municipios" value={porMunicipio.length} color="#4A9A4A" />
             <StatCard label="Fecha referencia" value={pare?.fecha_referencia ?? '—'} />
           </div>
 
-          {pare && <PareTable pare={pare} />}
+          {/* Toggle nivel */}
+          {porMunicipio.length > 0 && (
+            <div className="flex gap-2">
+              <button onClick={() => setVerPorMunicipio(false)} className={!verPorMunicipio ? 'btn-primary text-sm' : 'btn-secondary text-sm'}>
+                Nivel Departamental
+              </button>
+              <button onClick={() => setVerPorMunicipio(true)} className={verPorMunicipio ? 'btn-primary text-sm' : 'btn-secondary text-sm'}>
+                Nivel Municipal
+              </button>
+            </div>
+          )}
 
-          {descriptivos && Object.entries(descriptivos.data || {}).length > 0 && (
+          {verPorMunicipio ? (
+            <PorMunicipioView porMunicipio={porMunicipio} />
+          ) : (
+            pare && <PareTable pare={pare} titulo="Cohorte de Gestantes PARE MM" subTitulo={`Nivel Departamental - ${pare.fecha_referencia}`} />
+          )}
+
+          {!verPorMunicipio && descriptivos && Object.entries(descriptivos.data || {}).length > 0 && (
             <div>
               <div className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Distribucion de la cohorte</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -210,7 +245,7 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
           </div>
           <div className="empty-title">Genera los indicadores de la cohorte</div>
-          <div className="empty-desc">Se mostraran los indicadores PARE MM con la data cargada mas reciente.</div>
+          <div className="empty-desc">Se mostraran los indicadores PARE MM a nivel departamental y municipal.</div>
         </div>
       )}
     </div>
