@@ -53,7 +53,7 @@ try:
         require_admin,
         verify_credentials,
     )
-    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla
+    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes
     from . import gcs_storage
 except ImportError:
     from auth_utils import (
@@ -63,7 +63,7 @@ except ImportError:
         require_admin,
         verify_credentials,
     )
-    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla
+    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes
     import gcs_storage
 
 class LoginPayload(BaseModel):
@@ -151,6 +151,15 @@ def ensure_db_ready():
 @app.get("/health")
 async def health():
 	return {"status": "ok"}
+
+@app.post("/setup-gestantes")
+async def setup_gestantes(current_user: User = Depends(require_admin)):
+	"""Crea el esquema public y la tabla gestantes con todos los encabezados."""
+	try:
+		ncols = crear_tabla_gestantes()
+		return {"ok": True, "tabla": "public.gestantes", "columnas": ncols}
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=f"No se pudo crear la tabla: {e}")
 
 @app.get("/debug-oidc")
 async def debug_oidc(request: Request):
