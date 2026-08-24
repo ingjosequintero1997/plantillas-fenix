@@ -43,7 +43,7 @@ function bytesToB64(bytes) {
 // Comprime un string con gzip (pako) y lo devuelve como base64.
 // Se usa para guardar la data validada en localStorage sin exceder el limite.
 function compressToB64(text) {
-  const bytes = pako.gzip(text, { to: 'string' })
+  const bytes = pako.gzip(text)
   return bytesToB64(bytes)
 }
 
