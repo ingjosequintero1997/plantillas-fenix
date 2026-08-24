@@ -124,7 +124,7 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
   const [indicadores, setIndicadores] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState(templateKey)
+  const [selectedTemplate, setSelectedTemplate] = useState(templateKey || 'gestante')
   const [loaded, setLoaded] = useState(false)
   const [verPorMunicipio, setVerPorMunicipio] = useState(false)
 
@@ -143,9 +143,13 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
       //    (funciona en Vercel aunque la BD sea efimera).
       try {
         let stored = null
-        try { stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null') } catch (e) {}
+        // 1. Variable global en memoria (sesion actual, mas confiable)
+        try { stored = JSON.parse(window.__ultimaDataValidada || 'null') } catch (e) {}
+        // 2. sessionStorage
+        if (!stored) { try { stored = JSON.parse(sessionStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
+        // 3. localStorage
         if (!stored) { try { stored = JSON.parse(localStorage.getItem('ultima_data_validada') || 'null') } catch (e) {} }
-        if (stored && stored.template_key === selectedTemplate) {
+        if (stored && (stored.template_key === selectedTemplate || !stored.template_key)) {
           let storedText = stored.corrected_text || stored.raw_text || ''
           if (storedText) {
             // Si el texto esta comprimido, descomprimir. Si falla, usarlo plano.

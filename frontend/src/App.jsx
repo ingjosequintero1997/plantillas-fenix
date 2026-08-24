@@ -193,6 +193,9 @@ export default function App() {
         })
         try { sessionStorage.setItem('ultima_data_validada', payload) } catch (e) { /* limite excedido */ }
         try { localStorage.setItem('ultima_data_validada', payload) } catch (e) { /* limite excedido */ }
+        // Variable global en memoria: siempre disponible en la sesion actual,
+        // sin limites de tamano ni problemas de persistencia.
+        try { window.__ultimaDataValidada = payload } catch (e) { /* ignore */ }
       }
     } catch (e) { /* ignore */ }
   }
