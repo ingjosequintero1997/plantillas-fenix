@@ -31,6 +31,22 @@ function b64ToBytes(b64) {
   return bytes
 }
 
+function bytesToB64(bytes) {
+  let bin = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk))
+  }
+  return btoa(bin)
+}
+
+// Comprime un string con gzip (pako) y lo devuelve como base64.
+// Se usa para guardar la data validada en localStorage sin exceder el limite.
+function compressToB64(text) {
+  const bytes = pako.gzip(text, { to: 'string' })
+  return bytesToB64(bytes)
+}
+
 // Las respuestas grandes vienen comprimidas con gzip desde el backend.
 function maybeDecompress(data) {
   if (!data || !data.compressed) return data
@@ -156,15 +172,22 @@ export default function App() {
     setStructureValidation(data.structure_validation || null)
 
     // Guardar la data validada para que el modulo de indicadores pueda leerla
-    // sin depender de la BD. Se guarda en sessionStorage y localStorage.
+    // sin depender de la BD. Se comprime con gzip para caber en localStorage.
     try {
       const corrected = data.corrected_text || ''
       const raw = data.raw_text || rawText || ''
       if (corrected || raw) {
+        const texto = corrected || raw
+        let compressedText = ''
+        let esCompresion = false
+        try {
+          compressedText = compressToB64(String(texto))
+          esCompresion = true
+        } catch (e) { /* no se pudo comprimir */ }
         const payload = JSON.stringify({
           template_key: incomingTemplateKey,
-          corrected_text: corrected,
-          raw_text: raw,
+          corrected_text: esCompresion ? compressedText : String(texto),
+          compressed: esCompresion,
           template_names: data.template_names || [],
           saved_at: new Date().toISOString(),
         })
