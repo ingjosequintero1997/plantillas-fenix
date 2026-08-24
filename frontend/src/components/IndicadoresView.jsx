@@ -200,6 +200,9 @@ export default function IndicadoresView({ templateKey = 'gestante' }) {
     }
   }, [selectedTemplate])
 
+  // Cargar automaticamente al abrir el modulo.
+  useEffect(() => { handleGenerate() }, [])
+
   const templateOptions = [
     { key: 'gestante', label: 'Gestante' },
     { key: 'citologia', label: 'Citologia' },
