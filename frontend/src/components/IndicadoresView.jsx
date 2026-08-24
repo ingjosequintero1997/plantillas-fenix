@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import { fetchIndicadores, fetchCargues } from '../api'
+import { fetchIndicadores, fetchCargues, setupGestantes } from '../api'
 import { leerUltimaData } from '../dataStore'
+import { useAuth } from '../AuthContext'
 
 const COLORS = ['#3A863A', '#6BC06B', '#4A9A4A', '#5AAE5A', '#22C55E', '#86EFAC', '#16A34A', '#15803D', '#166534', '#14532D', '#A7F3D0', '#BBF7D0']
 
@@ -122,6 +123,8 @@ function ChartCard({ title, data, isPie }) {
 }
 
 export default function IndicadoresView({ templateKey = 'gestante', dataValidada = '', templateNames = [] }) {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [indicadores, setIndicadores] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -131,6 +134,24 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
   const [cargues, setCargues] = useState([])
   const [cargueId, setCargueId] = useState('')
   const [carguesLoaded, setCarguesLoaded] = useState(false)
+  const [setupState, setSetupState] = useState('')
+
+  const handleSetupTabla = useCallback(async () => {
+    setSetupState('creando'); setError('')
+    try {
+      const r = await setupGestantes()
+      setSetupState(`ok:${r.columnas}`)
+      // Recargar cargues
+      try {
+        const list = await fetchCargues(selectedTemplate)
+        setCargues(list)
+        if (list.length && !cargueId) setCargueId(String(list[0].id))
+      } catch (e) { /* ignore */ }
+    } catch (e) {
+      setError('No se pudo crear la tabla: ' + (e.message || 'error'))
+      setSetupState('error')
+    }
+  }, [selectedTemplate, cargueId])
 
   // Sincronizar la plantilla seleccionada con la plantilla activa del layout.
   useEffect(() => {
@@ -372,6 +393,21 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
           {carguesLoaded && cargues.length === 0 && !dataValidada && (
             <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>
               No hay cargues guardados para esta plantilla. Valida una data primero (se guardara automaticamente en el historial) y luego genera los indicadores.
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="panel flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Configuracion de la base de datos</div>
+                <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                  Crea la tabla de gestantes en PostgreSQL (esquema public) con los 207 encabezados del modulo.
+                  {setupState === 'ok' && <span style={{ color: 'var(--success)' }}> Tabla creada correctamente.</span>}
+                </div>
+              </div>
+              <button onClick={handleSetupTabla} disabled={setupState === 'creando'} className="btn-primary text-sm">
+                {setupState === 'creando' ? 'Creando...' : 'Crear tabla de gestantes'}
+              </button>
             </div>
           )}
         </div>

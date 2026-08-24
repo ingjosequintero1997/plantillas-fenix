@@ -235,6 +235,14 @@ export async function fetchIndicadores(templateKey, correctedText) {
   })
 }
 
+// Crea el esquema public y la tabla gestantes con todos los encabezados.
+export async function setupGestantes() {
+  return apiFetch(`${API_BASE}/setup-gestantes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 
 export async function uploadHistoria(file, paciente, templateKey = 'gestante') {
