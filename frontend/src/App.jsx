@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, Suspense, lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import Login from './Login'
@@ -7,18 +7,19 @@ import DashboardLayout from './components/DashboardLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 import DashboardHome from './components/DashboardHome'
 import TemplateSelector from './components/TemplateSelector'
-import HistorialView from './components/HistorialView'
-import PrestadoresView from './components/PrestadoresView'
-import IndicadoresView from './components/IndicadoresView'
 import ErrorSummaryTable from './components/ErrorSummaryTable'
 import EditableDataTable from './components/EditableDataTable'
-import ConsolidacionView from './components/ConsolidacionView'
-import HistoriasView from './components/HistoriasView'
 import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
-import EvaluationDashboard from './components/EvaluationDashboard'
 import Pagination from './components/Pagination'
+// Vistas pesadas con carga diferida (se cargan solo al navegar a ellas)
+const HistorialView = lazy(() => import('./components/HistorialView'))
+const PrestadoresView = lazy(() => import('./components/PrestadoresView'))
+const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
+const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
+const HistoriasView = lazy(() => import('./components/HistoriasView'))
+const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
 import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue, downloadValidationReport } from './api'
 import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
@@ -590,27 +591,37 @@ export default function App() {
             )}
             {/* ─── HISTORIAL / VERIFICAR DATA ─── */}
             {section === 'historial' && (
-              <HistorialView onNavigate={setSection} templateKey={activeTemplate} />
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <HistorialView onNavigate={setSection} templateKey={activeTemplate} />
+              </Suspense>
             )}
 
             {/* ─── CONSOLIDAR ─── */}
             {section === 'consolidar' && (
-              <ConsolidacionView templates={templates} templateKey={activeTemplate} />
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <ConsolidacionView templates={templates} templateKey={activeTemplate} />
+              </Suspense>
             )}
 
             {/* ─── HISTORIAS CLÍNICAS ─── */}
             {section === 'historias' && (
-              <HistoriasView templateKey={activeTemplate} />
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <HistoriasView templateKey={activeTemplate} />
+              </Suspense>
             )}
 
             {/* ─── PRESTADORES (admin) ─── */}
             {section === 'prestadores' && (
-              <PrestadoresView />
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <PrestadoresView />
+              </Suspense>
             )}
 
             {/* ─── INDICADORES ─── */}
             {section === 'indicadores' && (
-              <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} />
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} />
+              </Suspense>
             )}
 
           </DashboardLayout>

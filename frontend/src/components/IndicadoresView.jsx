@@ -188,6 +188,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     const resp = await fetch(`${window.location.origin}/api/cargues/${id}`, {
       headers: { Authorization: `Bearer ${JSON.parse(sessionStorage.getItem('auth') || '{}').token}` },
     })
+    if (!resp.ok) throw new Error('HTTP ' + resp.status)
     const data = await resp.json()
     let t = data.corrected_text || data.raw_text || ''
     if (data.compressed && t) {
@@ -224,7 +225,15 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
         } catch (e) { text = '' }
       }
 
-      // 2. Si no, usar la data validada pasada directamente desde App.jsx.
+      // 1b. Si no hay cargue seleccionado pero hay cargues en la BD, usar el mas reciente.
+      if (!text && carguesRef.current.length) {
+        try {
+          text = await obtenerTextoDeCargue(carguesRef.current[0].id)
+          if (text && text.trim()) source = 'bd'
+        } catch (e) { text = '' }
+      }
+
+      // 2. Si no hay en BD, usar la data validada pasada directamente desde App.jsx.
       if (!text && dataValidadaRef.current && typeof dataValidadaRef.current === 'string' && dataValidadaRef.current.trim()) {
         text = dataValidadaRef.current
         source = 'prop'
@@ -256,14 +265,6 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
             }
           }
         } catch (e) { /* ignore */ }
-      }
-
-      // 4. Si no hay texto pero hay cargues en la BD, usar el mas reciente.
-      if (!text && carguesRef.current.length) {
-        try {
-          text = await obtenerTextoDeCargue(carguesRef.current[0].id)
-          if (text && text.trim()) source = 'bd'
-        } catch (e) { text = '' }
       }
 
       if (!text || typeof text !== 'string' || !text.trim()) {
@@ -402,21 +403,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
             </div>
           )}
 
-          {isAdmin && (
-            <div className="panel flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Configuracion de la base de datos</div>
-                <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                  Crea la tabla de gestantes en PostgreSQL (esquema public) con los 207 encabezados del modulo.
-                  {setupState === 'ok' && <span style={{ color: 'var(--success)' }}> Tabla creada correctamente.</span>}
-                </div>
-              </div>
-              <button onClick={handleSetupTabla} disabled={setupState === 'creando'} className="btn-primary text-sm">
-                {setupState === 'creando' ? 'Creando...' : 'Crear tabla de gestantes'}
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
       )}
     </div>
   )
