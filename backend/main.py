@@ -1650,7 +1650,8 @@ async def validate_data(payload: dict):
 		err_col = "; ".join(errs) if errs else "\u2713 VALIDADO"
 		output_lines.append("|".join(row_vals) + "|" + err_col)
 
-	report_text = "\r\n".join(output_lines)
+	# BOM UTF-8 para que Excel reconozca la codificacion y muestre el chulo (✓).
+	report_text = "\ufeff" + "\r\n".join(output_lines)
 
 	return {
 		"valid": stats["rows_with_errors"] == 0,

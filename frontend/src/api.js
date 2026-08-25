@@ -217,13 +217,21 @@ export async function downloadValidationReport(corrected_text, templateKey, temp
   const bin = atob(data.report_text)
   const bytes = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
-  const blob = new Blob([bytes], { type: 'text/plain;charset=utf-8' })
+  // Garantizar BOM UTF-8 al inicio para que Excel muestre el chulo (✓) correctamente.
+  let blobBytes = bytes
+  if (!(bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF)) {
+    blobBytes = new Uint8Array(bytes.length + 3)
+    blobBytes[0] = 0xEF; blobBytes[1] = 0xBB; blobBytes[2] = 0xBF
+    blobBytes.set(bytes, 3)
+  }
+  const blob = new Blob([blobBytes], { type: 'text/plain;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
   return data
 }
 
