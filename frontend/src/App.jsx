@@ -20,7 +20,7 @@ const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
-import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue, downloadValidationReport, descargarReporteErrores, generarReporteErroresLocal } from './api'
+import { fetchTemplates, revalidateData, uploadFile, saveCargue, downloadValidationReport, descargarReporteErrores, generarReporteErroresLocal } from './api'
 import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
 
@@ -112,7 +112,6 @@ export default function App() {
   }, [isAdmin, processingMode])
 
   const hasDataLoaded = Boolean(rawText)
-  const canExport = Boolean(correctedText)
 
   useEffect(() => {
     // Cargar plantillas cuando el usuario esta autenticado (y al montar si ya hay sesion).
@@ -339,22 +338,6 @@ export default function App() {
     setActiveTemplate(key)
   }
 
-  const handleExportExcel = async () => {
-    if (!correctedText || !correctedText.trim()) return
-    try {
-      const filename = `data_corregida_${selectedTemplate}_${new Date().toISOString().slice(0, 10)}.xlsx`
-      const blob = await exportExcelFile(correctedText, selectedTemplate, filename)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      setError(e.message || 'Error al exportar Excel')
-    }
-  }
-
   const handleDownloadReport = async () => {
     try {
       setError('')
@@ -557,20 +540,6 @@ export default function App() {
                       <div><div className="stat-label">Calidad</div><div className="stat-value">{summary.quality_percent}%</div></div>
                     </div>
 
-                    {/* Descarga de data ajustada (solo modo limpiador) */}
-                    {processingMode === 'limpiador' && (
-                      <div className="panel flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <div className="font-medium" style={{ color: 'var(--text)' }}>Tu data quedó ajustada</div>
-                          <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Descarga el archivo con los datos corregidos y las fórmulas aplicadas.</div>
-                        </div>
-                        <button onClick={handleExportExcel} disabled={!canExport} className="btn-primary">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                          Descargar data ajustada
-                        </button>
-                      </div>
-                    )}
-
                     {/* Tabla de errores */}
                     <ErrorSummaryTable logs={logs} />
 
@@ -599,13 +568,19 @@ export default function App() {
                     <div className="panel flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="font-medium" style={{ color: 'var(--text)' }}>¿Terminaste esta validación?</div>
-                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Descarga el reporte con los errores o vuelve para validar otra data.</div>
+                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                          {(summary.rows_with_errors ?? summary.errors) > 0
+                            ? 'Descarga el reporte con los errores o vuelve para validar otra data.'
+                            : 'Tu data quedó al 100%. Descárgala desde Verificar data.'}
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <button onClick={handleDownloadReport} disabled={!rawText} className="btn-secondary">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                          Descargar reporte de errores (TXT)
-                        </button>
+                        {(summary.rows_with_errors ?? summary.errors) > 0 && (
+                          <button onClick={handleDownloadReport} disabled={!rawText} className="btn-secondary">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            Descargar reporte de errores (TXT)
+                          </button>
+                        )}
                         <button onClick={handleReset} className="btn-primary">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           Validar otra data
