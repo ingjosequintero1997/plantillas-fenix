@@ -1526,7 +1526,14 @@ async def delete_cargue(cargue_id: int, current_user: User = Depends(get_current
 		db.commit()
 		return {"ok": True, "id": cargue_id}
 	except OperationalError:
+		db.rollback()
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexion al servidor PostgreSQL.")
+	except HTTPException:
+		db.rollback()
+		raise
+	except Exception as exc:
+		db.rollback()
+		raise HTTPException(status_code=500, detail=f"Error al eliminar el cargue: {exc}")
 	finally:
 		db.close()
 

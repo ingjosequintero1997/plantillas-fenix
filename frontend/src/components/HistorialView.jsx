@@ -191,7 +191,12 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
       setRecords((prev) => prev.filter((r) => r.id !== deleting.id))
       setDeleting(null)
     } catch (e) {
-      setError('No se pudo eliminar el cargue.')
+      let msg = 'No se pudo eliminar el cargue.'
+      try {
+        const parsed = JSON.parse(e.message)
+        if (parsed.detail) msg = parsed.detail
+      } catch { /* ignore */ }
+      setError(msg)
       setDeleting(null)
     } finally {
       setDeleteLoading(false)
