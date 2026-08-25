@@ -735,14 +735,12 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		tdef = tmap[col]
 		values = src_values[ci]
 
-		# Fast path: columna de plantilla SIN fuente en el archivo.
-		# No hay datos que corregir; solo se rellena con el valor seguro.
+		# Columna de plantilla SIN fuente en el archivo: es un error (falta la variable).
 		if values is None:
-			default = safe_default_for_required(tdef)
-			out_vals = [default] * n
-			statuses = ["corrected"] * n
+			out_vals = ["SIN DATO"] * n
+			statuses = ["error"] * n
 			origins = [None] * n
-			stats["corrected"] += n
+			stats["errors"] += n
 			corrected_cols.append((col, out_vals, statuses, origins))
 			continue
 
@@ -753,37 +751,43 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		for ridx in range(n):
 			val = values[ridx] if values is not None else None
 			orig_val = None if val is None or pd.isna(val) else str(val)
+			val_str = str(orig_val).strip() if orig_val else ""
 			status = "ok"
 			corrected = None
 
-			if tdef["type"] == "TEXT":
-				raw_val = None if val is None or pd.isna(val) else str(val).strip()
-				if raw_val in (None, "None", "", "nan", "NAN"):
-					corrected = "SIN DATO"
+			# Regla estricta: un valor vacio o "SIN DATO" es un ERROR en cualquier tipo.
+			es_ausente = (not val_str) or val_str.upper() in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL")
+			if es_ausente:
+				status = "error"
+				corrected = "REQUERIDO"
+
+			elif tdef["type"] == "TEXT":
+				corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", val_str)
+				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+				if not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', corrected.replace(",", ".")):
+					status = "error"
+					corrected = "TEXTO REQUERIDO"
+				elif not campo_numerico and to_date_iso(corrected) is not None:
+					status = "error"
+					corrected = "TEXTO REQUERIDO"
+				elif corrected != val_str:
 					status = "corrected"
-				else:
-					# Solo quitar timestamps accidentales (ej: "NOMBRE 14:30:00"), no números válidos
-					corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", raw_val)
-					if orig_val is not None and corrected != orig_val.strip():
-						status = "corrected"
 
 			elif tdef["type"] == "INT":
 				corrected_int = to_municipality_code(val) if normalize_text(col) == "MUNICIPIO DE RESIDENCIA" else to_int_safe(val)
 				if corrected_int is None:
-					status = "corrected"
-					corrected = safe_default_for_required(tdef)
+					status = "error"
+					corrected = "ENTERO REQUERIDO"
 				else:
 					corrected = str(corrected_int)
-					if orig_val is not None:
-						orig_int = to_int_safe(orig_val)
-						if orig_int is None or corrected_int != orig_int:
-							status = "corrected"
+					if orig_val is not None and (to_int_safe(orig_val) is None or corrected_int != to_int_safe(orig_val)):
+						status = "corrected"
 
 			elif tdef["type"] == "DECIMAL":
 				corrected_dec = correct_decimal_by_field(col, val)
 				if corrected_dec is None:
-					status = "corrected"
-					corrected = safe_default_for_required(tdef)
+					status = "error"
+					corrected = "DECIMAL REQUERIDO"
 				else:
 					corrected = format_decimal(corrected_dec)
 					if orig_val is not None:
@@ -794,8 +798,8 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			elif tdef["type"] == "DATE":
 				corrected_date = to_date_iso(val)
 				if corrected_date is None:
-					status = "corrected"
-					corrected = safe_default_for_required(tdef)
+					status = "error"
+					corrected = "FECHA REQUERIDA"
 				else:
 					corrected = corrected_date
 					if orig_val is not None and corrected != orig_val.strip():
@@ -804,11 +808,22 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			elif tdef["type"] == "SET":
 				corrected_set = normalize_set(val, tdef.get("allowed", []), col)
 				if corrected_set is None:
-					# No se encontró un match confiable: preservar el valor
-					# original para no reemplazar con una opción incoherente
-					# (ej: "SOBREPESO" → "BAJO PESO (<18.5)")
-					corrected = orig_val if orig_val and orig_val.strip() else "SIN DATO"
-					status = "corrected"
+					# Buscar alias del instructivo (FIELD_SET_ALIASES)
+					canonical = None
+					sn = normalize_text(val_str)
+					field_aliases = FIELD_SET_ALIASES.get(col)
+					if field_aliases:
+						for canon, synonyms in field_aliases.items():
+							if sn in {normalize_text(a) for a in synonyms}:
+								canonical = canon
+								break
+					if canonical:
+						corrected = canonical
+						if normalize_text(val_str) != normalize_text(canonical):
+							status = "corrected"
+					else:
+						corrected = orig_val
+						status = "error"
 				else:
 					corrected = corrected_set
 					if orig_val is not None and normalize_text(orig_val) != normalize_text(corrected):
