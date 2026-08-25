@@ -19,7 +19,8 @@ export default function ErrorSummaryTable({ logs }) {
 
   const errors = useMemo(() => {
     if (!Array.isArray(logs)) return []
-    return logs.filter((l) => l.status === 'error' || l.status === 'corrected')
+    // Solo mostrar celdas realmente incorrectas (no corregidas automaticamente).
+    return logs.filter((l) => l.status === 'error')
   }, [logs])
 
   const filtered = useMemo(() => {
