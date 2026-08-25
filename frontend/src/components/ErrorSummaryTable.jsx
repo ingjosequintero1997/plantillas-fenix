@@ -35,8 +35,8 @@ function EsperadoCell({ value }) {
 export default function ErrorSummaryTable({ logs }) {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
-  const [sortCol, setSortCol] = useState('row')
-  const [sortDir, setSortDir] = useState('asc')
+  const [sortCol, setSortCol] = useState('count')
+  const [sortDir, setSortDir] = useState('desc')
 
   const errors = useMemo(() => {
     if (!Array.isArray(logs)) return []
@@ -44,27 +44,40 @@ export default function ErrorSummaryTable({ logs }) {
     return logs.filter((l) => l.status === 'error')
   }, [logs])
 
+  // Agrupar errores iguales: misma variable + mismo dato + misma correccion.
+  // Asi el mismo error en muchas filas se muestra UNA sola vez, con su conteo.
+  const grouped = useMemo(() => {
+    const map = {}
+    errors.forEach((l) => {
+      const key = `${l.column}||${String(l.original ?? '')}||${String(l.corrected ?? '')}`
+      if (!map[key]) {
+        map[key] = { column: l.column, original: l.original, corrected: l.corrected, count: 0, ejemploFila: l.row }
+      }
+      map[key].count += 1
+    })
+    return Object.values(map)
+  }, [errors])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    let result = errors
+    let result = grouped
     if (q) {
-      result = result.filter((l) =>
-        String(l.row).includes(q) ||
-        (l.column || '').toLowerCase().includes(q) ||
-        String(l.original ?? '').toLowerCase().includes(q) ||
-        String(l.corrected ?? '').toLowerCase().includes(q)
+      result = result.filter((g) =>
+        (g.column || '').toLowerCase().includes(q) ||
+        String(g.original ?? '').toLowerCase().includes(q) ||
+        String(g.corrected ?? '').toLowerCase().includes(q)
       )
     }
     result.sort((a, b) => {
       let va = a[sortCol], vb = b[sortCol]
-      if (sortCol === 'row') { va = Number(va); vb = Number(vb) }
+      if (sortCol === 'count') { va = Number(va); vb = Number(vb) }
       if (sortCol === 'original' || sortCol === 'corrected') { va = String(va ?? ''); vb = String(vb ?? '') }
       if (va < vb) return sortDir === 'asc' ? -1 : 1
       if (va > vb) return sortDir === 'asc' ? 1 : -1
       return 0
     })
     return result
-  }, [errors, query, sortCol, sortDir])
+  }, [grouped, query, sortCol, sortDir])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const safePage = Math.min(page, totalPages)
@@ -98,7 +111,8 @@ export default function ErrorSummaryTable({ logs }) {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="badge-error">{filtered.length} error{filtered.length !== 1 ? 'es' : ''}</span>
+            <span className="badge-error">{errors.length} error{errors.length !== 1 ? 'es' : ''}</span>
+            <span className="badge-neutral">{grouped.length} tipo{grouped.length !== 1 ? 's' : ''} de error</span>
           </div>
         </div>
       </div>
@@ -110,12 +124,12 @@ export default function ErrorSummaryTable({ logs }) {
             <input
               value={query}
               onChange={(e) => { setQuery(e.target.value); setPage(1) }}
-              placeholder="Buscar por fila, variable o dato..."
+              placeholder="Buscar por variable o dato..."
               className="input pl-9 text-sm"
             />
           </div>
           <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+            {filtered.length} tipo{filtered.length !== 1 ? 's' : ''} de error
           </span>
         </div>
 
@@ -123,28 +137,28 @@ export default function ErrorSummaryTable({ logs }) {
           <table className="table">
             <thead>
               <tr>
-                <th onClick={() => toggleSort('row')} className="cursor-pointer select-none">Fila {sortCol === 'row' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
+                <th onClick={() => toggleSort('count')} className="cursor-pointer select-none">Filas {sortCol === 'count' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
                 <th onClick={() => toggleSort('column')} className="cursor-pointer select-none">Variable {sortCol === 'column' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
                 <th onClick={() => toggleSort('original')} className="cursor-pointer select-none">Lo que pusiste {sortCol === 'original' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
                 <th onClick={() => toggleSort('corrected')} className="cursor-pointer select-none">Cómo corregirlo {sortCol === 'corrected' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((l, i) => (
-                <tr key={l.row + '-' + l.column + '-' + i}>
-                  <td className="font-medium whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{l.row}</td>
+              {pageItems.map((g, i) => (
+                <tr key={g.column + '-' + i}>
+                  <td className="font-medium whitespace-nowrap" style={{ color: 'var(--error)' }}>{g.count}</td>
                   <td>
                     <span className="text-xs font-medium px-2 py-1 rounded-md" style={{ backgroundColor: 'var(--green-50)', color: 'var(--green-700)' }}>
-                      {l.column}
+                      {g.column}
                     </span>
                   </td>
                   <td>
                     <span className="text-xs px-2 py-1 rounded-md break-all" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
-                      {mostrarValor(l.original)}
+                      {mostrarValor(g.original) || <em style={{ color: '#B91C1C' }}>vacío</em>}
                     </span>
                   </td>
                   <td>
-                    <EsperadoCell value={l.corrected} />
+                    <EsperadoCell value={g.corrected} />
                   </td>
                 </tr>
               ))}
