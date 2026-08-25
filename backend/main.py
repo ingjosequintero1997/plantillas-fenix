@@ -1579,9 +1579,10 @@ async def validate_data(payload: dict):
 					sn = normalize_text(val_str)
 					if sn not in normalized_allowed:
 						alias_match = False
+						expected = None
 						for alias_canonical, alias_synonyms in {
-							"SI": {"S", "1", "YES", "Y"},
-							"NO": {"N", "0", "FALSE", "F"},
+							"SI": {"S", "1", "YES", "Y", "SI"},
+							"NO": {"N", "0", "FALSE", "F", "NO"},
 							"MASCULINO": {"M"},
 							"FEMENINO": {"F"},
 							"CC": {"CEDULA", "C.C.", "C.C"},
@@ -1589,32 +1590,60 @@ async def validate_data(payload: dict):
 							"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
 						}.items():
 							if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
+								expected = alias_canonical
 								alias_match = True
 								break
+						if not alias_match:
+							from validators import FIELD_SET_ALIASES
+							field_aliases = FIELD_SET_ALIASES.get(col_name)
+							if field_aliases:
+								for canonical, synonyms in field_aliases.items():
+									if sn in {normalize_text(a) for a in synonyms}:
+										if normalize_text(canonical) in normalized_allowed:
+											expected = canonical
+											alias_match = True
+											break
 						if not alias_match:
 							allowed_str = ", ".join(allowed[:8])
 							err_msg = f"[{col_name}] Valor '{val_str}' no permitido. Opciones: {allowed_str}"
 							col_errors += 1
 
 			elif tdef["type"] == "INT":
-				if val_str and val_str not in ("SIN DATO", ""):
-					clean = val_str.replace("-", "").replace(" ", "")
-					if not re.fullmatch(r'[+-]?\d+', clean):
-						err_msg = f"[{col_name}] Se esperaba entero, se encontro '{val_str}'"
-						col_errors += 1
+				# Estricto: solo enteros. "SIN DATO", texto y vacio son errores.
+				clean = val_str.replace("-", "").replace(" ", "")
+				if not re.fullmatch(r'[+-]?\d+', clean):
+					err_msg = f"[{col_name}] Se esperaba entero, se encontro '{val_str}'"
+					col_errors += 1
 
 			elif tdef["type"] == "DECIMAL":
-				if val_str and val_str not in ("SIN DATO", ""):
-					s = val_str.replace(" ", "").replace(",", ".")
-					if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
-						err_msg = f"[{col_name}] Se esperaba decimal, se encontro '{val_str}'"
-						col_errors += 1
+				# Estricto: solo numeros decimales.
+				s = val_str.replace(" ", "").replace(",", ".")
+				if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
+					err_msg = f"[{col_name}] Se esperaba decimal, se encontro '{val_str}'"
+					col_errors += 1
 
 			elif tdef["type"] == "DATE":
-				if val_str and val_str not in ("SIN DATO", "NO APLICA", "No Aplica", "N/A", "1900-01-01", ""):
-					if to_date_iso(val_str) is None:
-						err_msg = f"[{col_name}] Fecha invalida: '{val_str}' (formato: AAAA-MM-DD)"
-						col_errors += 1
+				# Estricto: solo fechas validas. "SIN DATO" u otros textos son errores.
+				if not val_str:
+					err_msg = f"[{col_name}] Fecha vacia. Requerida (formato: AAAA-MM-DD)"
+					col_errors += 1
+				elif to_date_iso(val_str) is None:
+					err_msg = f"[{col_name}] Fecha invalida: '{val_str}' (formato: AAAA-MM-DD)"
+					col_errors += 1
+
+			elif tdef["type"] == "TEXT":
+				# Estricto: solo texto. No acepta vacios, numeros puros ni fechas,
+				# salvo campos naturalmente numericos (identificacion, telefono, etc.).
+				campo_numerico = any(k in col_name.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+				if not val_str:
+					err_msg = f"[{col_name}] Valor vacio. Requerido"
+					col_errors += 1
+				elif not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', val_str.replace(",", ".")):
+					err_msg = f"[{col_name}] Se esperaba texto, se encontro numero '{val_str}'"
+					col_errors += 1
+				elif not campo_numerico and to_date_iso(val_str) is not None:
+					err_msg = f"[{col_name}] Se esperaba texto, se encontro fecha '{val_str}'"
+					col_errors += 1
 
 			if err_msg:
 				if ridx not in row_errors:

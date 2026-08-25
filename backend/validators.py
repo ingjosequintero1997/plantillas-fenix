@@ -600,7 +600,9 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			if tdef["type"] == "SET":
 				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
 				normalized_allowed = [normalize_text(a) for a in allowed]
-				if val_str:
+				if not val_str:
+					err_msg = "Valor vacio"
+				else:
 					sn = normalize_text(val_str)
 					if sn not in normalized_allowed:
 						alias_match = False
@@ -634,24 +636,38 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 							err_msg = f"Valor no permitido"
 
 			elif tdef["type"] == "INT":
-				if val_str and val_str not in ("SIN DATO", ""):
-					clean = val_str.replace("-", "").replace(" ", "")
-					if not re.fullmatch(r'[+-]?\d+', clean):
-						expected = "Entero valido"
-						err_msg = f"Se esperaba entero"
+				# Estricto: solo enteros. Vacio y "SIN DATO" son errores.
+				clean = val_str.replace("-", "").replace(" ", "")
+				if not re.fullmatch(r'[+-]?\d+', clean):
+					expected = "Entero valido"
+					err_msg = f"Se esperaba entero" if val_str else "Valor vacio"
 
 			elif tdef["type"] == "DECIMAL":
-				if val_str and val_str not in ("SIN DATO", ""):
-					s = val_str.replace(" ", "").replace(",", ".")
-					if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
-						expected = "Decimal valido"
-						err_msg = f"Se esperaba decimal"
+				# Estricto: solo decimales. Vacio y "SIN DATO" son errores.
+				s = val_str.replace(" ", "").replace(",", ".")
+				if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
+					expected = "Decimal valido"
+					err_msg = f"Se esperaba decimal" if val_str else "Valor vacio"
 
 			elif tdef["type"] == "DATE":
-				if val_str and val_str not in ("SIN DATO", "NO APLICA", "No Aplica", "N/A", "1900-01-01", ""):
-					if to_date_iso(val_str) is None:
-						expected = "AAAA-MM-DD"
-						err_msg = f"Fecha invalida"
+				# Estricto: solo fechas validas. Vacio, "SIN DATO" y textos son errores.
+				if not val_str:
+					expected = "AAAA-MM-DD"
+					err_msg = "Fecha vacia"
+				elif to_date_iso(val_str) is None:
+					expected = "AAAA-MM-DD"
+					err_msg = f"Fecha invalida"
+
+			elif tdef["type"] == "TEXT":
+				# Estricto: solo texto. No acepta vacios, numeros puros ni fechas,
+				# salvo campos naturalmente numericos (identificacion, telefono, etc.).
+				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+				if not val_str:
+					err_msg = "Valor vacio"
+				elif not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', val_str.replace(",", ".")):
+					err_msg = f"Se esperaba texto, se encontro numero"
+				elif not campo_numerico and to_date_iso(val_str) is not None:
+					err_msg = f"Se esperaba texto, se encontro fecha"
 
 			if err_msg:
 				filas_error.add(ridx + 1)
