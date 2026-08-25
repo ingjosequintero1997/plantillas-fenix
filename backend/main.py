@@ -371,6 +371,12 @@ def normalize_source_dataframe(raw_df: pd.DataFrame, expected_names: list[str]) 
 		df = raw_df.reset_index(drop=True).copy()
 		df.columns = [f"C{i + 1}" for i in range(df.shape[1])]
 
+	# Si el archivo trae la columna "RESULTADO DE VALIDACION" (de una descarga
+	# previa del reporte), se elimina para poder re-validar la data corregida.
+	col_validacion = [c for c in df.columns if "RESULTADO DE VALIDACION" in str(c).upper() or str(c).upper() == "ERRORES"]
+	if col_validacion:
+		df = df.drop(columns=col_validacion[0])
+
 	# Compatibilidad con pandas 2.x/3.x sin usar applymap.
 	df = df.apply(lambda col: col.map(clean_string))
 
@@ -1620,13 +1626,14 @@ async def validate_data(payload: dict):
 
 	stats["rows_with_errors"] = len(row_errors)
 
-	# Construir el TXT con errores: misma estructura pipe-delimited + columna ERRORES
-	header_line = "|".join(template_cols) + "|ERRORES"
+	# Construir el TXT con errores: misma estructura pipe-delimited + columna
+	# RESULTADO DE VALIDACION (✓ VALIDADO si la fila esta correcta, o los errores).
+	header_line = "|".join(template_cols) + "|RESULTADO DE VALIDACION"
 	output_lines = [header_line]
 	for ridx in range(n):
 		row_vals = [str(df.iloc[ridx, ci]) if ci < len(df.columns) else "" for ci in range(len(template_cols))]
 		errs = row_errors.get(ridx, [])
-		err_col = "; ".join(errs) if errs else "OK"
+		err_col = "; ".join(errs) if errs else "\u2713 VALIDADO"
 		output_lines.append("|".join(row_vals) + "|" + err_col)
 
 	report_text = "\r\n".join(output_lines)
