@@ -298,7 +298,28 @@ export function generarReporteErroresLocal(rawText, templateNames, logs, filenam
     }
   })
 
-  // Construir header + filas
+  // Normaliza fechas a AAAA-MM-DD. Acepta DD/MM/AAAA, DD-MM-AAAA, AAAA/MM/DD,
+  // AAAA-MM-DD y con o sin componente de hora (ej: "3/04/2000 0:00").
+  function normalizarFecha(v) {
+    const s = String(v ?? '').trim()
+    if (!s) return s
+    const limpiar = (anio, mes, dia) => {
+      const pad = (n) => String(parseInt(n, 10)).padStart(2, '0')
+      return `${parseInt(anio, 10)}-${pad(mes)}-${pad(dia)}`
+    }
+    // AAAA-MM-DD (con o sin hora)
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?$/)
+    if (m) return limpiar(m[1], m[2], m[3])
+    // DD/MM/AAAA o DD-MM-AAAA (con o sin hora)
+    m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[ T].*)?$/)
+    if (m) return limpiar(m[3], m[2], m[1])
+    // AAAA/MM/DD
+    m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:[ T].*)?$/)
+    if (m) return limpiar(m[1], m[2], m[3])
+    return s
+  }
+
+  // Construir header + filas (normalizando fechas en todas las celdas)
   const header = [...templateNames, 'RESULTADO DE VALIDACION'].join('|')
   const filas = (rawText || '').split('\n').filter((l) => l.trim().length > 0)
   const lineas = [header]
@@ -306,7 +327,9 @@ export function generarReporteErroresLocal(rawText, templateNames, logs, filenam
     const numFila = idx + 1
     const errores = erroresPorFila[numFila] || []
     const resultado = errores.length > 0 ? errores.join('; ') : 'VALIDADO'
-    lineas.push(`${linea}|${resultado}`)
+    // Normalizar cada celda que parezca fecha
+    const celdas = linea.split('|').map((c) => normalizarFecha(c))
+    lineas.push(`${celdas.join('|')}|${resultado}`)
   })
 
   // Blob con BOM UTF-8
