@@ -44,18 +44,30 @@ export default function ErrorSummaryTable({ logs }) {
     return logs.filter((l) => l.status === 'error')
   }, [logs])
 
-  // Agrupar errores iguales: misma variable + mismo dato + misma correccion.
-  // Asi el mismo error en muchas filas se muestra UNA sola vez, con su conteo.
+  // Agrupar por VARIABLE: una sola fila por variable con errores.
+  // Muestra cuantas filas afecta y los valores incorrectos encontrados,
+  // para que el prestador identifique el error en la variable de un vistazo.
   const grouped = useMemo(() => {
     const map = {}
     errors.forEach((l) => {
-      const key = `${l.column}||${String(l.original ?? '')}||${String(l.corrected ?? '')}`
-      if (!map[key]) {
-        map[key] = { column: l.column, original: l.original, corrected: l.corrected, count: 0, ejemploFila: l.row }
+      const col = l.column
+      if (!map[col]) {
+        map[col] = { column: col, count: 0, originales: new Set(), corrected: '' }
       }
-      map[key].count += 1
+      map[col].count += 1
+      const orig = String(l.original ?? '').trim()
+      if (orig) map[col].originales.add(orig)
+      else map[col].originales.add('vacío')
+      // Conservar la correccion mas util (la que da instrucciones/opciones)
+      const corr = String(l.corrected ?? '').trim()
+      if (corr && !map[col].corrected) map[col].corrected = corr
     })
-    return Object.values(map)
+    return Object.values(map).map((g) => ({
+      column: g.column,
+      count: g.count,
+      originales: [...g.originales].slice(0, 6),
+      corrected: g.corrected,
+    }))
   }, [errors])
 
   const filtered = useMemo(() => {
@@ -64,7 +76,7 @@ export default function ErrorSummaryTable({ logs }) {
     if (q) {
       result = result.filter((g) =>
         (g.column || '').toLowerCase().includes(q) ||
-        String(g.original ?? '').toLowerCase().includes(q) ||
+        g.originales.some((o) => String(o).toLowerCase().includes(q)) ||
         String(g.corrected ?? '').toLowerCase().includes(q)
       )
     }
@@ -153,9 +165,13 @@ export default function ErrorSummaryTable({ logs }) {
                     </span>
                   </td>
                   <td>
-                    <span className="text-xs px-2 py-1 rounded-md break-all" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
-                      {mostrarValor(g.original) || <em style={{ color: '#B91C1C' }}>vacío</em>}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {g.originales.map((o, j) => (
+                        <span key={j} className="text-xs px-2 py-0.5 rounded-md font-medium" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
+                          {mostrarValor(o)}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td>
                     <EsperadoCell value={g.corrected} />
