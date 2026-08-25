@@ -864,6 +864,17 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 	# NUNCA inventar valores: si la celda quedo sin valor, se deja vacia.
 	out_df = out_df.fillna("")
 
+	# Aplicar formulas de la plantilla (edad, FPP, IMC, trimestres, controles, etc.)
+	try:
+		from .formulas import aplicar_formulas
+	except ImportError:
+		from formulas import aplicar_formulas
+	rows_calc = []
+	for _, row in out_df.iterrows():
+		rows_calc.append(aplicar_formulas(row.to_dict()))
+	if rows_calc:
+		out_df = pd.DataFrame(rows_calc, columns=template_cols)
+
 	# Bitácora en orden fila-mayor (igual que antes), limitada a 1000 registros
 	logs = []
 	MAX_LOGS = 1000
