@@ -241,26 +241,27 @@ export default function App() {
       templateNames: data.template_names || [],
       valido: !tieneErrores,
     }
-    // Guardar en el historial de cargues SOLO si la data esta 100% validada.
-    if (!tieneErrores) {
-      try {
-        const saved = await saveCargue({
-          corrected_text: raw.corrected_text || '',
-          raw_text: raw.raw_text || '',
-          compressed: true,
-          template_key: data.template_key || selectedTemplate,
-          filename: file.name,
-          summary,
-          logs: data.logs_sample || [],
-          row_count: summary.total || 0,
-          errors_count: summary.errors || 0,
-          corrected_count: summary.corrected || 0,
-          quality_percent: summary.quality_percent || 0,
-        })
-        if (saved && saved.id) setLastCargueId(String(saved.id))
-      } catch (e) {
-        console.warn('No se pudo guardar el cargue en el historial:', e)
-      }
+    // Guardar el cargue en la BD SIEMPRE (para poder descargar el reporte rapido).
+    // El status distingue validado vs con_errores. Historial/indicadores solo
+    // muestran los "validado" (regla todo o nada).
+    try {
+      const saved = await saveCargue({
+        corrected_text: raw.corrected_text || '',
+        raw_text: raw.raw_text || '',
+        compressed: true,
+        template_key: data.template_key || selectedTemplate,
+        filename: file.name,
+        summary,
+        logs: data.logs_sample || [],
+        row_count: summary.total || 0,
+        errors_count: summary.errors || 0,
+        corrected_count: summary.corrected || 0,
+        quality_percent: summary.quality_percent || 0,
+        status: tieneErrores ? 'con_errores' : 'validado',
+      })
+      if (saved && saved.id) setLastCargueId(String(saved.id))
+    } catch (e) {
+      console.warn('No se pudo guardar el cargue en el historial:', e)
     }
     setBatchResults((prev) => {
       const filtered = prev.filter((entry) => entry.fileName !== item.fileName)

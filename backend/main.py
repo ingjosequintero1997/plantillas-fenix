@@ -801,6 +801,7 @@ class CarguePayload(BaseModel):
 	errors_count: int = 0
 	corrected_count: int = 0
 	quality_percent: float = 0.0
+	status: str = "validado"
 
 
 def _current_month() -> str:
@@ -829,7 +830,7 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 			errors_count=payload.errors_count,
 			corrected_count=payload.corrected_count,
 			quality_percent=payload.quality_percent,
-			status="validado",
+			status=payload.status if payload.status in ("validado", "con_errores") else "validado",
 		)
 		db.add(cargue)
 		db.commit()
@@ -862,6 +863,8 @@ async def list_cargues(
 				q = q.filter(Cargue.id == -1)
 		if template_key:
 			q = q.filter(Cargue.template_key == template_key)
+		# Regla "todo o nada": solo mostrar cargues validados (sin errores).
+		q = q.filter(Cargue.status == "validado")
 		q = q.order_by(Cargue.created_at.desc())
 		items = q.limit(100).all()
 		result = []
