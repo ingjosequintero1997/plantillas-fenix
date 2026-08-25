@@ -20,7 +20,7 @@ const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
-import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue, downloadValidationReport } from './api'
+import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue, downloadValidationReport, descargarReporteErrores } from './api'
 import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
 
@@ -101,6 +101,7 @@ export default function App() {
   const [showEvaluation, setShowEvaluation] = useState(false)
   const [tipoCargue, setTipoCargue] = useState('mensual')
   const [processingMode, setProcessingMode] = useState('limpiador')
+  const [lastCargueId, setLastCargueId] = useState('')
 
   const isAdmin = user?.role === 'admin'
   // Los prestadores y lideres solo validan: forzar modo validador para ellos.
@@ -243,7 +244,7 @@ export default function App() {
     // Guardar en el historial de cargues SOLO si la data esta 100% validada.
     if (!tieneErrores) {
       try {
-        await saveCargue({
+        const saved = await saveCargue({
           corrected_text: raw.corrected_text || '',
           raw_text: raw.raw_text || '',
           compressed: true,
@@ -256,6 +257,7 @@ export default function App() {
           corrected_count: summary.corrected || 0,
           quality_percent: summary.quality_percent || 0,
         })
+        if (saved && saved.id) setLastCargueId(String(saved.id))
       } catch (e) {
         console.warn('No se pudo guardar el cargue en el historial:', e)
       }
@@ -353,11 +355,17 @@ export default function App() {
   }
 
   const handleDownloadReport = async () => {
-    if (!rawText || !rawText.trim()) return
     try {
       setError('')
-      const filename = `reporte_errores_${selectedTemplate}_${new Date().toISOString().slice(0, 10)}.txt`
-      await downloadValidationReport(rawText, selectedTemplate, templateNames, filename)
+      const fecha = new Date().toISOString().slice(0, 10)
+      // Si el cargue se guardo en la BD, descargar rapido desde el backend.
+      if (lastCargueId) {
+        await descargarReporteErrores(lastCargueId, `reporte_errores_${selectedTemplate}_${fecha}.txt`)
+        return
+      }
+      // Fallback: usar el texto en memoria (mas lento).
+      if (!rawText || !rawText.trim()) return
+      await downloadValidationReport(rawText, selectedTemplate, templateNames, `reporte_errores_${selectedTemplate}_${fecha}.txt`)
     } catch (e) {
       setError(e.message || 'Error al descargar el reporte de errores')
     }

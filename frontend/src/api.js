@@ -286,6 +286,29 @@ export async function descargarIndicadoresExcel(cargueId, filename = 'indicadore
 
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 
+// Descarga el reporte de errores TXT directamente desde un cargue en la BD.
+// Es mas rapido porque el backend lee el cargue y genera el archivo sin
+// transferir el texto completo al frontend.
+export async function descargarReporteErrores(cargueId, filename = 'reporte_errores.txt') {
+  const resp = await fetch(`${API_BASE}/cargues/${cargueId}/reporte-errores`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!resp.ok) {
+    let msg = 'Error al descargar'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
+}
+
 export async function uploadHistoria(file, paciente, templateKey = 'gestante') {
   const form = new FormData()
   form.append('file', file)
