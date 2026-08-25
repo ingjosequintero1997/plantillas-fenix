@@ -525,9 +525,14 @@ export default function App() {
                     {/* Resumen en línea (no tarjetas llenas) */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-5 border-y" style={{ borderColor: 'var(--border)' }}>
                       <div><div className="stat-label">Registros</div><div className="stat-value">{summary.total}</div></div>
-                      <div><div className="stat-label">Errores</div><div className="stat-value" style={{ color: summary.errors ? 'var(--error)' : 'var(--success)' }}>{summary.errors}</div></div>
+                      <div>
+                        <div className="stat-label">Registros con errores</div>
+                        <div className="stat-value" style={{ color: (summary.rows_with_errors ?? summary.errors) ? 'var(--error)' : 'var(--success)' }}>
+                          {summary.rows_with_errors ?? 0} / {summary.total}
+                        </div>
+                      </div>
                       {processingMode === 'limpiador' && (
-                        <div><div className="stat-label">Corregidos</div><div className="stat-value">{summary.corrected}</div></div>
+                        <div><div className="stat-label">Celdas corregidas</div><div className="stat-value">{summary.corrected ?? 0}</div></div>
                       )}
                       <div><div className="stat-label">Calidad</div><div className="stat-value">{summary.quality_percent}%</div></div>
                     </div>

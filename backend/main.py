@@ -1647,7 +1647,7 @@ async def validate_data(payload: dict):
 	for ridx in range(n):
 		row_vals = [normalizar_celda(df.iloc[ridx, ci], template_cols[ci]) if ci < len(df.columns) else "" for ci in range(len(template_cols))]
 		errs = row_errors.get(ridx, [])
-		err_col = "; ".join(errs) if errs else "\u2713 VALIDADO"
+		err_col = "; ".join(errs) if errs else "VALIDADO"
 		output_lines.append("|".join(row_vals) + "|" + err_col)
 
 	# BOM UTF-8 para que Excel reconozca la codificacion y muestre el chulo (✓).
