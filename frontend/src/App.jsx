@@ -20,7 +20,7 @@ const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
-import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue, downloadValidationReport, descargarReporteErrores } from './api'
+import { fetchTemplates, revalidateData, uploadFile, exportExcelFile, saveCargue, downloadValidationReport, descargarReporteErrores, generarReporteErroresLocal } from './api'
 import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
 
@@ -241,27 +241,26 @@ export default function App() {
       templateNames: data.template_names || [],
       valido: !tieneErrores,
     }
-    // Guardar el cargue en la BD SIEMPRE (para poder descargar el reporte rapido).
-    // El status distingue validado vs con_errores. Historial/indicadores solo
-    // muestran los "validado" (regla todo o nada).
-    try {
-      const saved = await saveCargue({
-        corrected_text: raw.corrected_text || '',
-        raw_text: raw.raw_text || '',
-        compressed: true,
-        template_key: data.template_key || selectedTemplate,
-        filename: file.name,
-        summary,
-        logs: data.logs_sample || [],
-        row_count: summary.total || 0,
-        errors_count: summary.errors || 0,
-        corrected_count: summary.corrected || 0,
-        quality_percent: summary.quality_percent || 0,
-        status: tieneErrores ? 'con_errores' : 'validado',
-      })
-      if (saved && saved.id) setLastCargueId(String(saved.id))
-    } catch (e) {
-      console.warn('No se pudo guardar el cargue en el historial:', e)
+    // Regla "todo o nada": solo se guarda en la BD la data validada sin errores.
+    if (!tieneErrores) {
+      try {
+        const saved = await saveCargue({
+          corrected_text: raw.corrected_text || '',
+          raw_text: raw.raw_text || '',
+          compressed: true,
+          template_key: data.template_key || selectedTemplate,
+          filename: file.name,
+          summary,
+          logs: data.logs_sample || [],
+          row_count: summary.total || 0,
+          errors_count: summary.errors || 0,
+          corrected_count: summary.corrected || 0,
+          quality_percent: summary.quality_percent || 0,
+        })
+        if (saved && saved.id) setLastCargueId(String(saved.id))
+      } catch (e) {
+        console.warn('No se pudo guardar el cargue en el historial:', e)
+      }
     }
     setBatchResults((prev) => {
       const filtered = prev.filter((entry) => entry.fileName !== item.fileName)
@@ -359,14 +358,21 @@ export default function App() {
     try {
       setError('')
       const fecha = new Date().toISOString().slice(0, 10)
-      // Si el cargue se guardo en la BD, descargar rapido desde el backend.
-      if (lastCargueId) {
-        await descargarReporteErrores(lastCargueId, `reporte_errores_${selectedTemplate}_${fecha}.txt`)
+      const filename = `reporte_errores_${selectedTemplate}_${fecha}.txt`
+      // 1) Generar en el FRONTEND: rapido, sin red ni BD. Usa la data en memoria.
+      if (rawText && rawText.trim() && templateNames && templateNames.length) {
+        generarReporteErroresLocal(rawText, templateNames, logs, filename)
         return
       }
-      // Fallback: usar el texto en memoria (mas lento).
-      if (!rawText || !rawText.trim()) return
-      await downloadValidationReport(rawText, selectedTemplate, templateNames, `reporte_errores_${selectedTemplate}_${fecha}.txt`)
+      // 2) Si hay un cargue validado en BD, descargar desde el backend.
+      if (lastCargueId) {
+        await descargarReporteErrores(lastCargueId, filename)
+        return
+      }
+      // 3) Fallback con el backend (lento).
+      if (rawText && rawText.trim()) {
+        await downloadValidationReport(rawText, selectedTemplate, templateNames, filename)
+      }
     } catch (e) {
       setError(e.message || 'Error al descargar el reporte de errores')
     }

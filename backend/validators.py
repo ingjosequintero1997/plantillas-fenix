@@ -579,7 +579,7 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			src_values.append(None)
 
 	logs = []
-	MAX_LOGS = 5000
+	MAX_LOGS = 50000
 
 	for ci, col in enumerate(template_cols):
 		tdef = tmap[col]

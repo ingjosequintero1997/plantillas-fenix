@@ -286,6 +286,41 @@ export async function descargarIndicadoresExcel(cargueId, filename = 'indicadore
 
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 
+// Genera el reporte de errores TXT en el FRONTEND (rapido, sin llamar al backend).
+// Usa la data pipe-delimited (rawText) y los logs de validacion ya obtenidos.
+export function generarReporteErroresLocal(rawText, templateNames, logs, filename = 'reporte_errores.txt') {
+  // Errores agrupados por fila
+  const erroresPorFila = {}
+  ;(logs || []).forEach((l) => {
+    if (l.status === 'error') {
+      if (!erroresPorFila[l.row]) erroresPorFila[l.row] = []
+      erroresPorFila[l.row].push(`[${l.column}] ${l.original ?? ''} -> ${l.corrected ?? ''}`)
+    }
+  })
+
+  // Construir header + filas
+  const header = [...templateNames, 'RESULTADO DE VALIDACION'].join('|')
+  const filas = (rawText || '').split('\n').filter((l) => l.trim().length > 0)
+  const lineas = [header]
+  filas.forEach((linea, idx) => {
+    const numFila = idx + 1
+    const errores = erroresPorFila[numFila] || []
+    const resultado = errores.length > 0 ? errores.join('; ') : 'VALIDADO'
+    lineas.push(`${linea}|${resultado}`)
+  })
+
+  // Blob con BOM UTF-8
+  const contenido = '\ufeff' + lineas.join('\r\n')
+  const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
+}
+
 // Descarga el reporte de errores TXT directamente desde un cargue en la BD.
 // Es mas rapido porque el backend lee el cargue y genera el archivo sin
 // transferir el texto completo al frontend.
