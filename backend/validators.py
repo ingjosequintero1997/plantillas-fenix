@@ -156,6 +156,17 @@ FIELD_SET_ALIASES = {
 		"MASCULINO": {"M", "MASCULINO", "HOMBRE"},
 		"FEMENINO": {"F", "FEMENINO", "MUJER"},
 	},
+	"NIVEL EDUCATIVO": {
+		"ANALFABETA": {"ANALFABETA", "ANALFABETO", "NO SABE LEER", "NO LEE"},
+		"SABE LEER O ESCRIBIR": {"SABE LEER", "LEER Y ESCRIBIR", "SABE LEER Y ESCRIBIR", "LEE Y ESCRIBE"},
+		"PRIMARIA COMPLETA": {"PRIMARIA COMPLETA", "PRIMARIA", "PRIMARIA COMPLETADA"},
+		"PRIMARIA INCOMPLETA": {"PRIMARIA INCOMPLETA", "PRIMARIA INCOMPLETO"},
+		"SECUNDARIA COMPLETA": {"SECUNDARIA", "SECUNDARIA COMPLETA", "BACHILLER", "BACHILLERATO", "BACHILLER COMPLETO", "BACHILLERATO COMPLETO", "11", "GRADO 11", "SECNDARIA", "SECUNDARIA COMPLETA", "SECUNDARIA COMPLETA "},
+		"SECUNDARIA INCOMPLETA": {"SECUNDARIA INCOMPLETA", "SECUNDARIA INCOMPLETO", "BACHILLERATO INCOMPLETO", "BACHILLER INCOMPLETO", "SECUNDARIA INCOMPLETA "},
+		"TECNICO": {"TECNICO", "TECNICA", "TECNICO LABORAL"},
+		"TECNOLOGO": {"TECNOLOGO", "TECNOLOGA", "TECNOLOGIA"},
+		"PROFESIONAL UNIVERSITARIO": {"PROFESIONAL", "UNIVERSITARIO", "PROFESIONAL UNIVERSITARIO", "UNIVERSIDAD", "UNIVERSITARIA", "PROFESIONAL UNIVERSITARIA"},
+	},
 }
 
 FIELD_FUZZY_MIN_SCORE = {
@@ -757,8 +768,14 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			# segun el instructivo que lo permite como valor estandar.
 			es_ausente = (not val_str) or val_str.upper() in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL")
 			if es_ausente:
-				status = "corrected"
-				corrected = "SIN DATO"
+				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+				if campo_numerico and not val_str:
+					# Campos numericos obligatorios: sin dato se asigna 0
+					status = "corrected"
+					corrected = "0"
+				else:
+					status = "corrected"
+					corrected = "SIN DATO"
 
 			elif tdef["type"] == "TEXT":
 				corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", val_str)
@@ -776,9 +793,15 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			elif tdef["type"] == "INT":
 				corrected_int = to_municipality_code(val) if normalize_text(col) == "MUNICIPIO DE RESIDENCIA" else to_int_safe(val)
 				if corrected_int is None:
-					# El limpiador ajusta: texto en campo numerico -> SIN DATO
-					status = "corrected"
-					corrected = "SIN DATO"
+					campo_numerico_oblig = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO"))
+					if campo_numerico_oblig:
+						# Campos numericos obligatorios: se asigna 0
+						status = "corrected"
+						corrected = "0"
+					else:
+						# El limpiador ajusta: texto en campo numerico -> SIN DATO
+						status = "corrected"
+						corrected = "SIN DATO"
 				else:
 					corrected = str(corrected_int)
 					if orig_val is not None and (to_int_safe(orig_val) is None or corrected_int != to_int_safe(orig_val)):
@@ -845,10 +868,17 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 					if normalize_text(val_str) != normalize_text(corregido):
 						status = "corrected"
 				else:
-					# Sin mapeo veraz: el limpiador ajusta a SIN DATO (correccion),
-					# nunca deja la fila bloqueada por un valor no reconocido.
-					corrected = "SIN DATO"
-					status = "corrected"
+					# Respaldo fuzzy para errores de digitacion (ej: secndaria -> SECUNDARIA).
+					# Solo se aplica si la mejor coincidencia supera el umbral minimo.
+					fuzzy_match = normalize_set(val, allowed, normalize_text(col))
+					if fuzzy_match is not None:
+						corrected = fuzzy_match
+						status = "corrected"
+					else:
+						# Sin mapeo veraz: el limpiador ajusta a SIN DATO (correccion),
+						# nunca deja la fila bloqueada por un valor no reconocido.
+						corrected = "SIN DATO"
+						status = "corrected"
 
 			out_vals[ridx] = corrected
 			statuses[ridx] = status
