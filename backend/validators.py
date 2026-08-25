@@ -257,9 +257,6 @@ def to_municipality_code(v):
 		return None
 	if normalized in MUNICIPALITY_CODE_ALIASES:
 		return MUNICIPALITY_CODE_ALIASES[normalized]
-	for alias, municipality_code in MUNICIPALITY_CODE_ALIASES.items():
-		if alias in normalized or normalized in alias:
-			return municipality_code
 	return None
 
 def to_decimal_safe(v):
@@ -759,17 +756,17 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			es_ausente = (not val_str) or val_str.upper() in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL")
 			if es_ausente:
 				status = "error"
-				corrected = "REQUERIDO"
+				corrected = orig_val if orig_val else ""  # conservar original, no inventar
 
 			elif tdef["type"] == "TEXT":
 				corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", val_str)
 				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
 				if not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', corrected.replace(",", ".")):
 					status = "error"
-					corrected = "TEXTO REQUERIDO"
+					corrected = orig_val  # conservar original, no inventar
 				elif not campo_numerico and to_date_iso(corrected) is not None:
 					status = "error"
-					corrected = "TEXTO REQUERIDO"
+					corrected = orig_val  # conservar original
 				elif corrected != val_str:
 					status = "corrected"
 
@@ -777,7 +774,7 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 				corrected_int = to_municipality_code(val) if normalize_text(col) == "MUNICIPIO DE RESIDENCIA" else to_int_safe(val)
 				if corrected_int is None:
 					status = "error"
-					corrected = "ENTERO REQUERIDO"
+					corrected = orig_val if orig_val else ""  # conservar original
 				else:
 					corrected = str(corrected_int)
 					if orig_val is not None and (to_int_safe(orig_val) is None or corrected_int != to_int_safe(orig_val)):
@@ -787,7 +784,7 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 				corrected_dec = correct_decimal_by_field(col, val)
 				if corrected_dec is None:
 					status = "error"
-					corrected = "DECIMAL REQUERIDO"
+					corrected = orig_val if orig_val else ""  # conservar original
 				else:
 					corrected = format_decimal(corrected_dec)
 					if orig_val is not None:
@@ -799,35 +796,52 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 				corrected_date = to_date_iso(val)
 				if corrected_date is None:
 					status = "error"
-					corrected = "FECHA REQUERIDA"
+					corrected = orig_val if orig_val else ""  # conservar original
 				else:
 					corrected = corrected_date
 					if orig_val is not None and corrected != orig_val.strip():
 						status = "corrected"
 
 			elif tdef["type"] == "SET":
-				corrected_set = normalize_set(val, tdef.get("allowed", []), col)
-				if corrected_set is None:
-					# Buscar alias del instructivo (FIELD_SET_ALIASES)
-					canonical = None
-					sn = normalize_text(val_str)
-					field_aliases = FIELD_SET_ALIASES.get(col)
-					if field_aliases:
-						for canon, synonyms in field_aliases.items():
-							if sn in {normalize_text(a) for a in synonyms}:
-								canonical = canon
-								break
-					if canonical:
-						corrected = canonical
-						if normalize_text(val_str) != normalize_text(canonical):
-							status = "corrected"
-					else:
-						corrected = orig_val
-						status = "error"
+				# SOLO ajustar con alias veraz del instructivo o coincidencia exacta.
+				# NUNCA usar fuzzy ni subcadena que puedan dañar el dato.
+				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
+				normalized_allowed = [normalize_text(a) for a in allowed]
+				sn = normalize_text(val_str)
+				corregido = None
+				if sn in normalized_allowed:
+					corregido = allowed[normalized_allowed.index(sn)]
 				else:
-					corrected = corrected_set
-					if orig_val is not None and normalize_text(orig_val) != normalize_text(corrected):
+					# Alias genericos SI/NO/M/F/CC/TI...
+					for alias_canonical, alias_synonyms in {
+						"SI": {"S", "1", "YES", "Y", "SI"},
+						"NO": {"N", "0", "FALSE", "F", "NO"},
+						"MASCULINO": {"M"},
+						"FEMENINO": {"F"},
+						"CC": {"CEDULA", "C.C.", "C.C"},
+						"TI": {"TARJETA IDENTIDAD", "T.I."},
+						"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
+					}.items():
+						if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
+							corregido = alias_canonical
+							break
+					# Alias del instructivo (FIELD_SET_ALIASES) - solo coincidencia exacta
+					if corregido is None:
+						field_aliases = FIELD_SET_ALIASES.get(col)
+						if field_aliases:
+							for canonical, synonyms in field_aliases.items():
+								if sn in {normalize_text(a) for a in synonyms}:
+									if normalize_text(canonical) in normalized_allowed:
+										corregido = canonical
+									break
+				if corregido is not None:
+					corrected = corregido
+					if normalize_text(val_str) != normalize_text(corregido):
 						status = "corrected"
+				else:
+					# Sin mapeo veraz: NO cambiar el dato, marcar error.
+					corrected = orig_val
+					status = "error"
 
 			out_vals[ridx] = corrected
 			statuses[ridx] = status
@@ -844,8 +858,9 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 	# Reconstruir el DataFrame por columnas (más rápido que por filas)
 	data = {col: vals for col, vals, _, _ in corrected_cols}
 	out_df = pd.DataFrame(data, columns=template_cols)
-	# Rellenar cualquier NaN residual para evitar campos vacíos en exportación
-	out_df = out_df.fillna("SIN DATO").astype(str)
+	# Rellenar NaN residual con el valor original si existe, si no con vacio.
+	# NUNCA inventar valores: si la celda quedo sin valor, se deja vacia.
+	out_df = out_df.fillna("")
 
 	# Bitácora en orden fila-mayor (igual que antes), limitada a 1000 registros
 	logs = []
