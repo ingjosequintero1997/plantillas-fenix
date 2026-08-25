@@ -9,6 +9,7 @@ import DashboardHome from './components/DashboardHome'
 import TemplateSelector from './components/TemplateSelector'
 import ErrorSummaryTable from './components/ErrorSummaryTable'
 import EditableDataTable from './components/EditableDataTable'
+import QualityBanner from './components/QualityBanner'
 import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
@@ -539,6 +540,9 @@ export default function App() {
                       )}
                       <div><div className="stat-label">Calidad</div><div className="stat-value">{summary.quality_percent}%</div></div>
                     </div>
+
+                    {/* Resumen visual de calidad (modo validador) */}
+                    {processingMode === 'validador' && <QualityBanner summary={summary} mode="validador" />}
 
                     {/* Tabla de errores */}
                     <ErrorSummaryTable logs={logs} />
