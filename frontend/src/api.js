@@ -289,15 +289,6 @@ export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 // Genera el reporte de errores TXT en el FRONTEND (rapido, sin llamar al backend).
 // Usa la data pipe-delimited (rawText) y los logs de validacion ya obtenidos.
 export function generarReporteErroresLocal(rawText, templateNames, logs, filename = 'reporte_errores.txt') {
-  // Errores agrupados por fila
-  const erroresPorFila = {}
-  ;(logs || []).forEach((l) => {
-    if (l.status === 'error') {
-      if (!erroresPorFila[l.row]) erroresPorFila[l.row] = []
-      erroresPorFila[l.row].push(`[${l.column}] ${l.original ?? ''} -> ${l.corrected ?? ''}`)
-    }
-  })
-
   // Normaliza fechas a AAAA-MM-DD. Acepta DD/MM/AAAA, DD-MM-AAAA, AAAA/MM/DD,
   // AAAA-MM-DD y con o sin componente de hora (ej: "3/04/2000 0:00").
   function normalizarFecha(v) {
@@ -318,6 +309,17 @@ export function generarReporteErroresLocal(rawText, templateNames, logs, filenam
     if (m) return limpiar(m[1], m[2], m[3])
     return s
   }
+
+  // Errores agrupados por fila (normalizando fechas en original/corrected)
+  const erroresPorFila = {}
+  ;(logs || []).forEach((l) => {
+    if (l.status === 'error') {
+      if (!erroresPorFila[l.row]) erroresPorFila[l.row] = []
+      const orig = normalizarFecha(l.original)
+      const corr = normalizarFecha(l.corrected)
+      erroresPorFila[l.row].push(`[${l.column}] ${orig} -> ${corr}`)
+    }
+  })
 
   // Construir header + filas (normalizando fechas en todas las celdas)
   const header = [...templateNames, 'RESULTADO DE VALIDACION'].join('|')
