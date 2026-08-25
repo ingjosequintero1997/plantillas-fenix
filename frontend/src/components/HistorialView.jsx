@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import ReactDOM from 'react-dom'
 import * as pako from 'pako'
-import { fetchCargues, fetchCargue, deleteCargue, CARGUE_TXT_URL, CARGUE_EXCEL_URL } from '../api'
+import { fetchCargues, fetchCargue, deleteCargue, descargarCargueExcel, descargarCargueTxt } from '../api'
 import ErrorSummaryTable from './ErrorSummaryTable'
 
 const PER_PAGE = 12
@@ -78,6 +78,7 @@ function CargueDetail({ cargue, onBack }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [downloading, setDownloading] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -92,6 +93,19 @@ function CargueDetail({ cargue, onBack }) {
     load()
     return () => { mounted = false }
   }, [cargue.id])
+
+  const handleDownload = async (tipo) => {
+    setDownloading(tipo); setError('')
+    try {
+      const base = (cargue.original_filename || 'data_validada').replace(/\.(xlsx|xls|txt)$/i, '')
+      if (tipo === 'excel') await descargarCargueExcel(cargue.id, `${base}_ajustada.xlsx`)
+      else await descargarCargueTxt(cargue.id, `${base}_ajustada.txt`)
+    } catch (e) {
+      setError(e.message || 'Error al descargar')
+    } finally {
+      setDownloading('')
+    }
+  }
 
   return (
     <div className="space-y-6 fade-in">
@@ -132,14 +146,14 @@ function CargueDetail({ cargue, onBack }) {
               <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Descarga el archivo con los datos corregidos.</div>
             </div>
             <div className="flex gap-2">
-              <a href={CARGUE_EXCEL_URL(cargue.id)} className="btn-primary">
+              <button onClick={() => handleDownload('excel')} disabled={downloading !== ''} className="btn-primary">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Descargar Excel
-              </a>
-              <a href={CARGUE_TXT_URL(cargue.id)} className="btn-secondary">
+                {downloading === 'excel' ? 'Descargando...' : 'Descargar Excel'}
+              </button>
+              <button onClick={() => handleDownload('txt')} disabled={downloading !== ''} className="btn-secondary">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                TXT
-              </a>
+                {downloading === 'txt' ? 'Descargando...' : 'TXT'}
+              </button>
             </div>
           </div>
 
@@ -183,6 +197,16 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
       setDeleteLoading(false)
     }
   }, [deleting])
+
+  const handleDownloadRow = useCallback(async (r) => {
+    setError('')
+    try {
+      const base = (r.original_filename || 'data_validada').replace(/\.(xlsx|xls|txt)$/i, '')
+      await descargarCargueExcel(r.id, `${base}_ajustada.xlsx`)
+    } catch (e) {
+      setError(e.message || 'Error al descargar')
+    }
+  }, [])
 
   const handleCloseDelete = useCallback(() => setDeleting(null), [])
 
@@ -268,11 +292,15 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                     </td>
                     <td className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <a href={CARGUE_EXCEL_URL(r.id)} title="Descargar data validada (Excel)" className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-muted)' }}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDownloadRow(r) }}
+                          title="Descargar data validada (Excel)"
+                          className="p-1.5 rounded-lg transition-all"
+                          style={{ color: 'var(--text-muted)' }}
                           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#E6F0FA' }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        </a>
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeleting(r) }}
                           className="p-1.5 rounded-lg transition-all"

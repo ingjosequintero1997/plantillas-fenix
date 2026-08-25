@@ -145,8 +145,51 @@ export async function fetchCargue(id) {
   return apiFetch(`${API_BASE}/cargues/${id}`)
 }
 
-export const CARGUE_TXT_URL = (id) => `${API_BASE}/cargues/${id}/download-txt`
-export const CARGUE_EXCEL_URL = (id) => `${API_BASE}/cargues/${id}/download-excel`
+// Descarga el Excel de la data validada de un cargue (con autenticacion).
+export async function descargarCargueExcel(cargueId, filename = 'data_validada.xlsx') {
+  const resp = await fetch(`${API_BASE}/cargues/${cargueId}/download-excel`, {
+    headers: authHeaders(),
+  })
+  if (!resp.ok) {
+    let msg = 'Error al descargar'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 200)
+}
+
+// Descarga el TXT de la data validada de un cargue (con autenticacion).
+export async function descargarCargueTxt(cargueId, filename = 'data_validada.txt') {
+  const resp = await fetch(`${API_BASE}/cargues/${cargueId}/download-txt`, {
+    headers: authHeaders(),
+  })
+  if (!resp.ok) {
+    let msg = 'Error al descargar'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 200)
+}
 
 export async function consolidateCargues(templateKey, mes) {
   const resp = await fetch(`${API_BASE}/consolidate`, {
