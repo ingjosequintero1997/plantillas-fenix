@@ -794,10 +794,11 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 
 	total_cells = max(1, stats["total"] * len(template_cols))
 	stats["quality_percent"] = round(100 * (1 - stats["errors"] / total_cells), 2)
-	# Filas que tienen al menos un error (para que el resumen sea comprensible)
+	# Filas que tienen al menos un error REAL (no correcciones automaticas).
 	filas_error = set()
 	for l in logs:
-		filas_error.add(l["row"])
+		if l.get("status") == "error":
+			filas_error.add(l["row"])
 	stats["rows_with_errors"] = len(filas_error)
 	stats["rows_ok"] = max(0, stats["total"] - len(filas_error))
 	stats["error_cells"] = stats["errors"]

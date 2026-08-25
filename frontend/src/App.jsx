@@ -229,32 +229,36 @@ export default function App() {
       strictMode, minTemplateCoverage, requireExactColumns: true, mode: processingMode,
     })
     const data = maybeDecompress(raw)
+    const summary = data.summary || {}
+    // Regla "todo o nada": solo se valida/guarda la data si no tiene errores.
+    const tieneErrores = (summary.rows_with_errors ?? summary.errors ?? 0) > 0
     const item = {
       fileName: file.name, templateKey: selectedTemplate,
       mapping: data.mapping_suggested || data.mapping || {},
-      summary: data.summary || null, logs: data.logs_sample || [],
+      summary, logs: data.logs_sample || [],
       correctedText: data.corrected_text || '', rawText: data.raw_text || '',
       templateNames: data.template_names || [],
+      valido: !tieneErrores,
     }
-    // Guardar en el historial de cargues (envía el corrected_text comprimido
-    // para no exceder el límite de body en el entorno desplegado).
-    try {
-      const summary = data.summary || {}
-      await saveCargue({
-        corrected_text: raw.corrected_text || '',
-        raw_text: raw.raw_text || '',
-        compressed: true,
-        template_key: data.template_key || selectedTemplate,
-        filename: file.name,
-        summary,
-        logs: data.logs_sample || [],
-        row_count: summary.total || 0,
-        errors_count: summary.errors || 0,
-        corrected_count: summary.corrected || 0,
-        quality_percent: summary.quality_percent || 0,
-      })
-    } catch (e) {
-      console.warn('No se pudo guardar el cargue en el historial:', e)
+    // Guardar en el historial de cargues SOLO si la data esta 100% validada.
+    if (!tieneErrores) {
+      try {
+        await saveCargue({
+          corrected_text: raw.corrected_text || '',
+          raw_text: raw.raw_text || '',
+          compressed: true,
+          template_key: data.template_key || selectedTemplate,
+          filename: file.name,
+          summary,
+          logs: data.logs_sample || [],
+          row_count: summary.total || 0,
+          errors_count: summary.errors || 0,
+          corrected_count: summary.corrected || 0,
+          quality_percent: summary.quality_percent || 0,
+        })
+      } catch (e) {
+        console.warn('No se pudo guardar el cargue en el historial:', e)
+      }
     }
     setBatchResults((prev) => {
       const filtered = prev.filter((entry) => entry.fileName !== item.fileName)
