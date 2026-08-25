@@ -562,6 +562,14 @@ async def upload_file(
 			except ImportError:
 				from validators import validate_only
 			validation_result = validate_only(df, map_suggest, active_template)
+			# Si la data quedo validada sin errores, aplicar las formulas de la
+			# plantilla (edad, FPP, IMC, trimestres, controles) para tener la data al 100%.
+			if validation_result["stats"]["rows_with_errors"] == 0:
+				try:
+					from .formulas import aplicar_formulas_df
+				except ImportError:
+					from formulas import aplicar_formulas_df
+				df = aplicar_formulas_df(df)
 			# En modo validador la data va SIN encabezado (solo filas en orden
 			# de plantilla) para que sea consistente con la tabla editable.
 			canonical_raw_text = df.to_csv(sep='|', index=False, header=False)

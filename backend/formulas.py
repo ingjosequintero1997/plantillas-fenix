@@ -232,3 +232,14 @@ def aplicar_formulas(fila: dict) -> dict:
     _calc_trimestre(FECHA_CONFIRMATORIA, TRIMESTRE_CONFIRMATORIO, confirmatorio=True)
 
     return fila
+
+
+def aplicar_formulas_df(df):
+    """Aplica todas las formulas de la plantilla gestante a un DataFrame."""
+    import pandas as pd
+    rows = []
+    for _, row in df.iterrows():
+        rows.append(aplicar_formulas(row.to_dict()))
+    if rows:
+        return pd.DataFrame(rows, columns=df.columns)
+    return df
