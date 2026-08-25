@@ -3,10 +3,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { fetchIndicadores, fetchCargues, fetchIndicadoresDeCargue, descargarIndicadoresExcel } from '../api'
 import { leerUltimaData } from '../dataStore'
 
-const VERDE = '#3A863A'
-const VERDE_MEDIO = '#5AAE5A'
-const VERDE_CLARO = '#6BC06B'
-const COLORS = ['#3A863A', '#6BC06B', '#4A9A4A', '#5AAE5A', '#22C55E', '#86EFAC', '#16A34A', '#15803D', '#166534', '#14532D', '#A7F3D0', '#BBF7D0']
+const AZUL = '#2C4A6F'
+const AZUL_MEDIO = '#4A6FA5'
+const AZUL_CLARO = '#E6F0FA'
+const COLORS = ['#2C4A6F', '#4A6FA5', '#6B8FBF', '#8FA9D1', '#5A87B5', '#7FA8D9', '#A3C2E8', '#3E5C85', '#6E8FB8', '#91B3D8']
 
 function formatResult(v) {
   if (v === null || v === undefined) return '#DIV/0!'
@@ -14,34 +14,57 @@ function formatResult(v) {
   return s
 }
 
-function colorResultado(v) {
-  if (v === null) return '#DC2626'
-  if (v >= 95) return '#15803D'
-  if (v >= 80) return '#B45309'
-  return '#B91C1C'
-}
-
-function fondoResultado(v) {
-  if (v === null) return '#FEE2E2'
-  if (v >= 95) return '#DCFCE7'
-  if (v >= 80) return '#FEF3C7'
-  return '#FEE2E2'
+function estadoResultado(v) {
+  if (v === null) return { color: '#DC2626', bg: '#FEE2E2', label: 'Sin dato' }
+  if (v >= 95) return { color: '#15803D', bg: '#DCFCE7', label: 'Cumplido' }
+  if (v >= 80) return { color: '#B45309', bg: '#FEF3C7', label: 'En mejora' }
+  return { color: '#B91C1C', bg: '#FEE2E2', label: 'Critico' }
 }
 
 // ─── KPI Card estilo dashboard ───
 function KpiCard({ label, value, sub, icon, gradiente }) {
   return (
     <div className="relative overflow-hidden rounded-2xl p-5" style={{
-      background: gradiente || `linear-gradient(145deg, #2E7D32 0%, #4A9A4A 55%, #6BC06B 100%)`,
-      boxShadow: '0 8px 24px rgba(58,134,58,0.25)',
+      background: gradiente || `linear-gradient(145deg, #1E3A5F 0%, #2C4A6F 55%, #4A6FA5 100%)`,
+      boxShadow: '0 8px 24px rgba(44,74,111,0.25)',
     }}>
       <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-20" style={{ backgroundColor: '#fff' }} />
-      <div className="absolute right-8 bottom-2 opacity-10" style={{ color: '#fff' }}>
-        {icon}
-      </div>
+      <div className="absolute right-6 bottom-2 opacity-10" style={{ color: '#fff' }}>{icon}</div>
       <div className="text-[0.62rem] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.75)' }}>{label}</div>
       <div className="text-3xl font-bold mt-1" style={{ color: '#fff', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{value}</div>
       {sub && <div className="text-[0.68rem] mt-1" style={{ color: 'rgba(255,255,255,0.7)' }}>{sub}</div>}
+    </div>
+  )
+}
+
+// ─── Resumen de semaforo ───
+function ResumenSemaforo({ lista }) {
+  if (!lista || !lista.length) return null
+  let verdes = 0, ambar = 0, rojos = 0, sinDato = 0
+  lista.forEach((ind) => {
+    const r = ind.resultado
+    if (r === null) sinDato += 1
+    else if (r >= 95) verdes += 1
+    else if (r >= 80) ambar += 1
+    else rojos += 1
+  })
+  const items = [
+    { label: 'Cumplidos', n: verdes, color: '#15803D', bg: '#DCFCE7' },
+    { label: 'En mejora', n: ambar, color: '#B45309', bg: '#FEF3C7' },
+    { label: 'Criticos', n: rojos, color: '#B91C1C', bg: '#FEE2E2' },
+    { label: 'Sin dato', n: sinDato, color: '#6B7280', bg: '#F3F4F6' },
+  ]
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {items.map((it) => (
+        <div key={it.label} className="rounded-2xl px-4 py-3 flex items-center justify-between" style={{ backgroundColor: it.bg }}>
+          <div>
+            <div className="text-[0.62rem] font-medium uppercase tracking-wider" style={{ color: it.color }}>{it.label}</div>
+            <div className="text-xl font-bold mt-0.5" style={{ color: it.color }}>{it.n}</div>
+          </div>
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: it.color }} />
+        </div>
+      ))}
     </div>
   )
 }
@@ -83,30 +106,32 @@ function ChartCard({ title, data, isPie, height }) {
   )
 }
 
-// ─── Tabla de indicadores con barras de progreso ───
+// ─── Tabla de indicadores ───
 function PareTable({ lista, titulo, subTitulo }) {
   if (!lista || !lista.length) return null
   return (
     <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
-      <div className="px-5 py-4 border-b flex items-center justify-between flex-wrap gap-2" style={{ borderColor: 'var(--border-subtle)' }}>
+      <div className="px-5 py-4 border-b flex items-center justify-between flex-wrap gap-2" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
         <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{titulo || 'Cohorte de Gestantes PARE MM'}</div>
         <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{subTitulo || ''}</span>
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <table className="table" style={{ minWidth: 700 }}>
+        <table className="table" style={{ minWidth: 720 }}>
           <thead>
             <tr>
               <th>Indicador</th>
-              <th className="text-center" style={{ width: 90 }}>Num (a)</th>
-              <th className="text-center" style={{ width: 90 }}>Den (b)</th>
-              <th style={{ width: 220 }}>Cumplimiento</th>
-              <th className="text-center" style={{ width: 90 }}>Resultado</th>
+              <th className="text-center" style={{ width: 70 }}>Num (a)</th>
+              <th className="text-center" style={{ width: 70 }}>Den (b)</th>
+              <th style={{ width: 200 }}>Cumplimiento</th>
+              <th className="text-center" style={{ width: 80 }}>Resultado</th>
+              <th className="text-center" style={{ width: 90 }}>Estado</th>
             </tr>
           </thead>
           <tbody>
             {lista.map((ind, i) => {
               const r = ind.resultado
               const pctBar = r === null ? 0 : Math.min(r, 100)
+              const est = estadoResultado(r)
               return (
                 <tr key={i}>
                   <td>
@@ -118,18 +143,16 @@ function PareTable({ lista, titulo, subTitulo }) {
                   <td>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-subtle)' }}>
-                        <div className="h-full rounded-full" style={{
-                          width: pctBar + '%',
-                          background: r === null ? '#DC2626' : r >= 95 ? 'linear-gradient(90deg,#16A34A,#22C55E)' : r >= 80 ? 'linear-gradient(90deg,#D97706,#F59E0B)' : 'linear-gradient(90deg,#DC2626,#EF4444)',
-                        }} />
+                        <div className="h-full rounded-full" style={{ width: pctBar + '%', background: est.color }} />
                       </div>
                       <span className="text-[0.62rem] font-medium" style={{ color: 'var(--text-secondary)' }}>{pctBar.toFixed(0)}%</span>
                     </div>
                   </td>
                   <td className="text-center">
-                    <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-lg" style={{ color: colorResultado(r), backgroundColor: fondoResultado(r) }}>
-                      {formatResult(r)}%
-                    </span>
+                    <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-lg" style={{ color: est.color, backgroundColor: est.bg }}>{formatResult(r)}%</span>
+                  </td>
+                  <td className="text-center">
+                    <span className="inline-block text-[0.62rem] font-medium px-2 py-0.5 rounded-md" style={{ color: est.color, backgroundColor: est.bg }}>{est.label}</span>
                   </td>
                 </tr>
               )
@@ -141,13 +164,13 @@ function PareTable({ lista, titulo, subTitulo }) {
   )
 }
 
-// ─── Grafico de barras del resultado de indicadores (nivel departamental) ───
+// ─── Grafico de barras del resultado ───
 function ResultadoChart({ lista }) {
   if (!lista || !lista.length) return null
-  const data = lista.map((ind, i) => ({
-    name: ind.label.length > 55 ? ind.label.slice(0, 55) + '...' : ind.label,
+  const data = lista.map((ind) => ({
+    name: ind.label.length > 50 ? ind.label.slice(0, 50) + '...' : ind.label,
     resultado: ind.resultado === null ? 0 : Math.round(ind.resultado * 10) / 10,
-    fill: colorResultado(ind.resultado),
+    fill: estadoResultado(ind.resultado).color,
   }))
   return (
     <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
@@ -157,7 +180,7 @@ function ResultadoChart({ lista }) {
           <BarChart data={data} layout="vertical" margin={{ top: 5, right: 45, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
-            <YAxis type="category" dataKey="name" width={260} tick={{ fontSize: 9 }} />
+            <YAxis type="category" dataKey="name" width={270} tick={{ fontSize: 9 }} />
             <Tooltip formatter={(v) => [v + '%', 'Resultado']} />
             <Bar dataKey="resultado" radius={[0, 4, 4, 0]} barSize={16} label={{ position: 'right', fontSize: 9, fill: '#666' }}>
               {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
@@ -181,12 +204,8 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
   const [cargueId, setCargueId] = useState('')
   const [carguesLoaded, setCarguesLoaded] = useState(false)
 
-  // Sincronizar la plantilla seleccionada con la plantilla activa del layout.
-  useEffect(() => {
-    if (templateKey) setSelectedTemplate(templateKey)
-  }, [templateKey])
+  useEffect(() => { if (templateKey) setSelectedTemplate(templateKey) }, [templateKey])
 
-  // Cargar la lista de cargues validados desde la BD.
   useEffect(() => {
     let mounted = true
     const load = async () => {
@@ -202,9 +221,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
         if (list.length && !cargueId) setCargueId(String(list[0].id))
       } catch (e) {
         if (mounted) setError('No se pudo cargar el historial de cargues: ' + (e.message || 'error'))
-      } finally {
-        if (mounted) setCarguesLoaded(true)
-      }
+      } finally { if (mounted) setCarguesLoaded(true) }
     }
     load()
     return () => { mounted = false }
@@ -223,9 +240,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     try {
       let result = null
       const id = cargueIdRef.current || (carguesRef.current.length ? carguesRef.current[0].id : '')
-      if (id) {
-        try { result = await fetchIndicadoresDeCargue(id) } catch (e) { result = null }
-      }
+      if (id) { try { result = await fetchIndicadoresDeCargue(id) } catch (e) { result = null } }
       if (!result && dataValidadaRef.current && typeof dataValidadaRef.current === 'string' && dataValidadaRef.current.trim()) {
         try { result = await fetchIndicadores(selectedTemplate, String(dataValidadaRef.current).trim()) } catch (e) { result = null }
       }
@@ -249,18 +264,11 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
           }
         } catch (e) { /* ignore */ }
       }
-      if (!result) {
-        setError(`No se encontro data valida (cargues disponibles: ${carguesRef.current.length}). Valida una data primero.`)
-        setLoading(false)
-        return
-      }
+      if (!result) { setError(`No se encontro data valida (cargues disponibles: ${carguesRef.current.length}). Valida una data primero.`); setLoading(false); return }
       setIndicadores(result)
       setLoaded(true)
-    } catch (e) {
-      setError('Error al generar indicadores: ' + (e.message || 'Error desconocido'))
-    } finally {
-      setLoading(false)
-    }
+    } catch (e) { setError('Error al generar indicadores: ' + (e.message || 'Error desconocido')) }
+    finally { setLoading(false) }
   }, [selectedTemplate])
 
   handleGenerateRef.current = handleGenerate
@@ -272,25 +280,16 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
       if (!id) throw new Error('Selecciona una data validada primero.')
       const fecha = new Date().toISOString().slice(0, 10)
       await descargarIndicadoresExcel(id, `indicadores_pare_mm_${fecha}.xlsx`)
-    } catch (e) {
-      setError('Error al descargar Excel: ' + (e.message || 'error'))
-    } finally {
-      setExporting(false)
-    }
+    } catch (e) { setError('Error al descargar Excel: ' + (e.message || 'error')) }
+    finally { setExporting(false) }
   }, [])
 
-  // Cargar automaticamente si llega data nueva.
   useEffect(() => {
-    if (dataValidada && typeof dataValidada === 'string' && dataValidada.trim()) {
-      handleGenerateRef.current()
-    }
+    if (dataValidada && typeof dataValidada === 'string' && dataValidada.trim()) handleGenerateRef.current()
   }, [dataValidada, selectedTemplate])
 
   const templateOptions = [
-    { key: 'gestante', label: 'Gestante' },
-    { key: 'citologia', label: 'Citologia' },
-    { key: 'mamografia', label: 'Mamografia' },
-    { key: 'penta', label: 'Penta' },
+    { key: 'gestante', label: 'Gestante' }, { key: 'citologia', label: 'Citologia' }, { key: 'mamografia', label: 'Mamografia' }, { key: 'penta', label: 'Penta' },
   ]
 
   const pare = indicadores?.indicadores?.pare_mm
@@ -300,21 +299,24 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
 
   return (
     <div className="space-y-6 fade-in">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="page-title">Indicadores PARE MM</div>
-          <div className="page-subtitle">Cohorte de gestantes - nivel departamental y municipal.</div>
+      {/* Header con gradiente */}
+      <div className="relative overflow-hidden rounded-2xl" style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, #2C4A6F 50%, #4A6FA5 100%)', boxShadow: '0 8px 32px rgba(44,74,111,0.30)' }}>
+        <div className="absolute -bottom-16 -right-16 w-72 h-72 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="relative p-7 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold" style={{ fontFamily: 'var(--font-display)', color: '#fff', letterSpacing: '-0.02em' }}>Indicadores PARE MM</h1>
+            <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>Cohorte de gestantes - nivel departamental y municipal</p>
+          </div>
+          {loaded && (
+            <button onClick={handleExport} disabled={exporting || loading} className="btn-primary">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              {exporting ? 'Descargando...' : 'Descargar Excel'}
+            </button>
+          )}
         </div>
-        {loaded && (
-          <button onClick={handleExport} disabled={exporting || loading} className="btn-primary">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            {exporting ? 'Descargando...' : 'Descargar Excel'}
-          </button>
-        )}
       </div>
 
-      {/* Selector de cargues */}
+      {/* Selector */}
       <div className="flex flex-wrap items-end gap-4">
         <div>
           <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>Plantilla</label>
@@ -326,17 +328,11 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
           <div className="flex-1">
             <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>Data validada (cargue)</label>
             <select value={cargueId} onChange={(e) => setCargueId(e.target.value)} className="input" style={{ minWidth: 280, width: '100%' }}>
-              {cargues.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.original_filename} - {c.row_count} registros - {c.quality_percent}% calidad
-                </option>
-              ))}
+              {cargues.map((c) => <option key={c.id} value={String(c.id)}>{c.original_filename} - {c.row_count} registros - {c.quality_percent}% calidad</option>)}
             </select>
           </div>
         )}
-        <button onClick={handleGenerate} disabled={loading} className="btn-primary">
-          {loading ? 'Generando...' : 'Generar indicadores'}
-        </button>
+        <button onClick={handleGenerate} disabled={loading} className="btn-primary">{loading ? 'Generando...' : 'Generar indicadores'}</button>
       </div>
 
       {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
@@ -345,34 +341,14 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard
-              label="Total gestantes"
-              value={pare?.total_gestantes ?? indicadores.total_registros}
-              sub="Cohorte completa"
-              icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7" /></svg>}
-            />
-            <KpiCard
-              label="Municipios"
-              value={porMunicipio.length}
-              sub="Con data cargada"
-              gradiente="linear-gradient(145deg,#166534 0%,#15803D 55%,#22C55E 100%)"
-              icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6a2 2 0 012 2v12m-10 0h10m0 0V9a2 2 0 012-2h4a2 2 0 012 2v10" /></svg>}
-            />
-            <KpiCard
-              label="Registros validados"
-              value={indicadores.total_registros}
-              sub="Al 100% calidad"
-              gradiente="linear-gradient(145deg,#14532D 0%,#166534 55%,#4ADE80 100%)"
-              icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
-            />
-            <KpiCard
-              label="Fecha referencia"
-              value={pare?.fecha_referencia ?? '—'}
-              sub="Corte de los datos"
-              gradiente="linear-gradient(145deg,#065F46 0%,#059669 55%,#34D399 100%)"
-              icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-            />
+            <KpiCard label="Total gestantes" value={pare?.total_gestantes ?? indicadores.total_registros} sub="Cohorte completa" icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7" /></svg>} />
+            <KpiCard label="Municipios" value={porMunicipio.length} sub="Con data cargada" gradiente="linear-gradient(145deg,#1E3A5F 0%,#2C4A6F 55%,#4A6FA5 100%)" icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6a2 2 0 012 2v12m-10 0h10m0 0V9a2 2 0 012-2h4a2 2 0 012 2v10" /></svg>} />
+            <KpiCard label="Registros validados" value={indicadores.total_registros} sub="Al 100% calidad" gradiente="linear-gradient(145deg,#153A5F 0%,#1E4A7A 55%,#4A8FC5 100%)" icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>} />
+            <KpiCard label="Fecha referencia" value={pare?.fecha_referencia ?? '—'} sub="Corte de los datos" gradiente="linear-gradient(145deg,#0F2E4E 0%,#16395F 55%,#2C6EA8 100%)" icon={<svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
           </div>
+
+          {/* Resumen semaforo */}
+          <ResumenSemaforo lista={listaDept} />
 
           {/* Toggle nivel */}
           <div className="flex gap-2">
@@ -382,36 +358,25 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
 
           {!verPorMunicipio ? (
             <>
-              {/* Grafico de resultados + tabla departamental */}
               <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-                <div className="xl:col-span-3">
-                  <ResultadoChart lista={listaDept} />
-                </div>
+                <div className="xl:col-span-3"><ResultadoChart lista={listaDept} /></div>
                 <div className="xl:col-span-2 flex flex-col gap-4">
-                  {descriptivos && Object.entries(descriptivos.data || {}).slice(0, 2).map(([key, data]) => (
-                    <ChartCard key={key} title={key} data={data} isPie={Object.keys(data).length <= 4} height={200} />
-                  ))}
+                  {descriptivos && Object.entries(descriptivos.data || {}).slice(0, 2).map(([key, data]) => (<ChartCard key={key} title={key} data={data} isPie={Object.keys(data).length <= 4} height={200} />))}
                 </div>
               </div>
-              {/* Tabla completa departamental */}
               <PareTable lista={listaDept} titulo="Cohorte de Gestantes PARE MM" subTitulo={`Nivel Departamental - ${pare?.fecha_referencia}`} />
             </>
           ) : (
             <div className="space-y-6">
-              {porMunicipio.map((m) => (
-                <PareTable key={m.codigo || m.municipio} lista={m.indicadores} titulo={m.municipio} subTitulo={`Nivel MUNICIPAL - ${m.total} gestantes`} />
-              ))}
+              {porMunicipio.map((m) => (<PareTable key={m.codigo || m.municipio} lista={m.indicadores} titulo={m.municipio} subTitulo={`Nivel MUNICIPAL - ${m.total} gestantes`} />))}
             </div>
           )}
 
-          {/* Descriptivos restantes */}
           {!verPorMunicipio && descriptivos && Object.keys(descriptivos.data || {}).length > 2 && (
             <div>
               <div className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Distribucion de la cohorte</div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {Object.entries(descriptivos.data).slice(2).map(([key, data]) => (
-                  <ChartCard key={key} title={key} data={data} isPie={Object.keys(data).length <= 4} />
-                ))}
+                {Object.entries(descriptivos.data).slice(2).map(([key, data]) => (<ChartCard key={key} title={key} data={data} isPie={Object.keys(data).length <= 4} />))}
               </div>
             </div>
           )}
