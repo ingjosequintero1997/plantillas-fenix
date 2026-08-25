@@ -334,7 +334,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
             </select>
           </div>
         )}
-        <button onClick={handleGenerate} disabled={loading} className="btn-secondary">
+        <button onClick={handleGenerate} disabled={loading} className="btn-primary">
           {loading ? 'Generando...' : 'Generar indicadores'}
         </button>
       </div>
