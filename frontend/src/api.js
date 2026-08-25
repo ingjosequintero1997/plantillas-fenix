@@ -268,8 +268,12 @@ export async function descargarIndicadoresExcel(cargueId, filename = 'indicadore
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 200)
 }
 
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`

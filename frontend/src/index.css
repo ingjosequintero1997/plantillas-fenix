@@ -77,8 +77,8 @@
     font-family: var(--font-body);
     font-size: var(--text-body-sm);
     font-weight: var(--weight-medium);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-5);
+    border-radius: 999px;
     transition: all var(--dur-base) var(--ease-out);
     cursor: pointer;
     line-height: 1;
@@ -91,37 +91,33 @@
     @apply btn;
     background-color: var(--action-primary);
     color: var(--action-primary-text);
-    border: 1px solid transparent;
+    border: 1px solid var(--action-secondary-border);
     font-weight: var(--weight-semibold);
-    box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255,255,255,0.1);
   }
   .btn-primary:hover:not(:disabled) {
     background-color: var(--action-primary-hover);
-    box-shadow: var(--shadow-sm);
   }
   .btn-primary:focus-visible { outline-color: var(--focus-ring); }
 
   .btn-secondary {
     @apply btn;
     background-color: var(--bg-surface);
-    color: var(--text-primary);
-    border: 1px solid var(--border-strong);
+    color: var(--action-primary-text);
+    border: 1px solid var(--action-secondary-border);
   }
   .btn-secondary:hover:not(:disabled) {
-    background-color: var(--bg-surface-hover);
-    border-color: var(--green-400);
-    color: var(--green-600);
+    background-color: var(--action-secondary-hover);
+    border-color: var(--action-primary-text);
   }
 
   .btn-ghost {
     @apply btn;
     background: transparent;
-    color: var(--text-secondary);
+    color: var(--action-primary-text);
     border: 1px solid transparent;
   }
   .btn-ghost:hover:not(:disabled) {
-    background-color: var(--surface-brand-weak);
-    color: var(--green-600);
+    background-color: var(--action-secondary-hover);
   }
 
   .btn-danger {
