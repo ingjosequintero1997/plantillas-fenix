@@ -356,6 +356,55 @@ def to_date_iso(v):
 			return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
 		except Exception:
 			pass
+	# Fechas con mes en texto (español o ingles): "3-abr-2000", "10 ene 2026",
+	# "3 de abril de 2000", "Enero 10 de 2026". Comun en prestadores no tecnicos.
+	meses = {
+		"ENERO": 1, "ENE": 1, "JANUARY": 1, "JAN": 1,
+		"FEBRERO": 2, "FEB": 2, "FEBRUARY": 2,
+		"MARZO": 3, "MAR": 3, "MARCH": 3,
+		"ABRIL": 4, "ABR": 4, "APRIL": 4, "APR": 4,
+		"MAYO": 5, "MAY": 5,
+		"JUNIO": 6, "JUN": 6, "JUNE": 6,
+		"JULIO": 7, "JUL": 7, "JULY": 7,
+		"AGOSTO": 8, "AGO": 8, "AUGUST": 8, "AUG": 8,
+		"SEPTIEMBRE": 9, "SEP": 9, "SEPT": 9, "SEPTEMBER": 9,
+		"OCTUBRE": 10, "OCT": 10, "OCTOBER": 10,
+		"NOVIEMBRE": 11, "NOV": 11, "NOVEMBER": 11,
+		"DICIEMBRE": 12, "DIC": 12, "DECEMBER": 12, "DEC": 12,
+	}
+	try:
+		s_mes = re.sub(r"\bde\b|\bdel\b|\bo\b|\bof\b", " ", s, flags=re.IGNORECASE)
+		s_mes = re.sub(r"[^A-Za-z0-9 ]+", " ", s_mes)
+		partes = [p for p in s_mes.split() if p]
+		dia = None
+		mes = None
+		anio = None
+		nums = []
+		for p in partes:
+			up = p.upper()
+			if up in meses:
+				mes = meses[up]
+			elif re.fullmatch(r"\d{1,2}", p):
+				nums.append(int(p))
+			elif re.fullmatch(r"\d{3,4}", p):
+				anio = int(p)
+		if len(nums) == 1:
+			dia = nums[0]
+		elif len(nums) == 2:
+			dia, anio = nums[0], nums[1]
+			if anio < 100:
+				anio += 2000 if anio < 50 else 1900
+		elif len(nums) == 3:
+			dia, mes_n, anio = nums[0], nums[1], nums[2]
+			if mes_n > 12:
+				dia, mes_n = mes_n, dia
+			mes = mes or mes_n
+		if dia and mes and anio:
+			if anio < 100:
+				anio += 2000 if anio < 50 else 1900
+			return datetime(anio, mes, dia).strftime("%Y-%m-%d")
+	except Exception:
+		pass
 	try:
 		return parser.parse(s, dayfirst=True).strftime("%Y-%m-%d")
 	except Exception:
@@ -610,6 +659,7 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				normalized_allowed = [normalize_text(a) for a in allowed]
 				if not val_str:
 					err_msg = "Valor vacio"
+					expected = "Complete este campo" if allowed else "SIN DATO"
 				else:
 					sn = normalize_text(val_str)
 					if sn not in normalized_allowed:
@@ -638,32 +688,37 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 										if normalize_text(canonical) in normalized_allowed:
 											expected = canonical
 											alias_match = True
-											break
+										break
 						if not alias_match:
-							expected = allowed[0] if allowed else "SIN DATO"
+							expected = "Debe ser uno de: " + ", ".join(allowed)
 							err_msg = f"Valor no permitido"
 
 			elif tdef["type"] == "INT":
 				# Estricto: solo enteros. Vacio y "SIN DATO" son errores.
+				# Acepta "25.0" (Excel exporta enteros como decimales .0).
 				clean = val_str.replace("-", "").replace(" ", "")
-				if not re.fullmatch(r'[+-]?\d+', clean):
-					expected = "Entero valido"
+				if re.fullmatch(r'[+-]?\d+', clean):
+					pass
+				elif re.fullmatch(r'[+-]?\d+\.0+', clean):
+					pass
+				else:
+					expected = "Complete con un numero entero" if not val_str else "Entero valido"
 					err_msg = f"Se esperaba entero" if val_str else "Valor vacio"
 
 			elif tdef["type"] == "DECIMAL":
 				# Estricto: solo decimales. Vacio y "SIN DATO" son errores.
 				s = val_str.replace(" ", "").replace(",", ".")
 				if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
-					expected = "Decimal valido"
+					expected = "Complete con un numero" if not val_str else "Decimal valido"
 					err_msg = f"Se esperaba decimal" if val_str else "Valor vacio"
 
 			elif tdef["type"] == "DATE":
 				# Estricto: solo fechas validas. Vacio, "SIN DATO" y textos son errores.
 				if not val_str:
-					expected = "AAAA-MM-DD"
+					expected = "Complete con una fecha (ej: 03/04/2000)"
 					err_msg = "Fecha vacia"
 				elif to_date_iso(val_str) is None:
-					expected = "AAAA-MM-DD"
+					expected = "Fecha valida (ej: 03/04/2000)"
 					err_msg = f"Fecha invalida"
 
 			elif tdef["type"] == "TEXT":
@@ -672,10 +727,13 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
 				if not val_str:
 					err_msg = "Valor vacio"
+					expected = "Complete este campo"
 				elif not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', val_str.replace(",", ".")):
 					err_msg = f"Se esperaba texto, se encontro numero"
+					expected = "Escriba el dato en texto"
 				elif not campo_numerico and to_date_iso(val_str) is not None:
 					err_msg = f"Se esperaba texto, se encontro fecha"
+					expected = "Escriba el dato en texto"
 
 			if err_msg:
 				filas_error.add(ridx + 1)

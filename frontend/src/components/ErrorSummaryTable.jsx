@@ -11,6 +11,27 @@ function mostrarValor(v) {
   return m ? m[1] : s
 }
 
+// Si el "dato esperado" es una lista (ej: "Debe ser uno de: CC, TI, CE"),
+// separa el mensaje y muestra las opciones como etiquetas.
+function EsperadoCell({ value }) {
+  const s = String(value ?? '').trim()
+  if (!s) return <span className="text-xs px-2 py-1 rounded-md break-all" style={{ color: '#166534', backgroundColor: '#DCFCE7' }}>&mdash;</span>
+  if (s.startsWith('Debe ser uno de:')) {
+    const opciones = s.replace('Debe ser uno de:', '').split(',').map((o) => o.trim()).filter(Boolean)
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-xs" style={{ color: '#166534' }}>Debe ser uno de:</span>
+        <div className="flex flex-wrap gap-1">
+          {opciones.map((op, i) => (
+            <span key={i} className="text-xs px-2 py-0.5 rounded-md font-medium" style={{ color: '#166534', backgroundColor: '#DCFCE7' }}>{op}</span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return <span className="text-xs px-2 py-1 rounded-md break-all" style={{ color: '#166534', backgroundColor: '#DCFCE7' }}>{s}</span>
+}
+
 export default function ErrorSummaryTable({ logs }) {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -104,8 +125,8 @@ export default function ErrorSummaryTable({ logs }) {
               <tr>
                 <th onClick={() => toggleSort('row')} className="cursor-pointer select-none">Fila {sortCol === 'row' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
                 <th onClick={() => toggleSort('column')} className="cursor-pointer select-none">Variable {sortCol === 'column' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
-                <th onClick={() => toggleSort('original')} className="cursor-pointer select-none">Dato incorrecto {sortCol === 'original' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
-                <th onClick={() => toggleSort('corrected')} className="cursor-pointer select-none">Dato esperado (instructivo) {sortCol === 'corrected' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
+                <th onClick={() => toggleSort('original')} className="cursor-pointer select-none">Lo que pusiste {sortCol === 'original' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
+                <th onClick={() => toggleSort('corrected')} className="cursor-pointer select-none">Cómo corregirlo {sortCol === 'corrected' ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : ''}</th>
               </tr>
             </thead>
             <tbody>
@@ -123,9 +144,7 @@ export default function ErrorSummaryTable({ logs }) {
                     </span>
                   </td>
                   <td>
-                    <span className="text-xs px-2 py-1 rounded-md break-all" style={{ color: '#166534', backgroundColor: '#DCFCE7' }}>
-                      {mostrarValor(l.corrected)}
-                    </span>
+                    <EsperadoCell value={l.corrected} />
                   </td>
                 </tr>
               ))}
