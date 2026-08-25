@@ -259,7 +259,8 @@ export default function App() {
         })
         if (saved && saved.id) setLastCargueId(String(saved.id))
       } catch (e) {
-        console.warn('No se pudo guardar el cargue en el historial:', e)
+        console.warn('No se pudo guardar el cargue:', e)
+        setError('No se pudo guardar el cargue en el historial: ' + (e.message || 'error'))
       }
     }
     setBatchResults((prev) => {
