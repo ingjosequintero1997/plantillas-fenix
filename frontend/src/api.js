@@ -252,6 +252,26 @@ export async function fetchIndicadoresDeCargue(cargueId) {
   })
 }
 
+// Descarga el Excel con los indicadores PARE MM de un cargue.
+export async function descargarIndicadoresExcel(cargueId, filename = 'indicadores_pare_mm.xlsx') {
+  const resp = await fetch(`${API_BASE}/indicadores-excel/${cargueId}`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!resp.ok) {
+    let msg = 'Error al descargar'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export const HISTORIA_URL = (id) => `${API_BASE}/historias/${id}`
 
 export async function uploadHistoria(file, paciente, templateKey = 'gestante') {
