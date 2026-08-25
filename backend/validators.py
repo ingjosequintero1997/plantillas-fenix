@@ -864,17 +864,6 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 	# NUNCA inventar valores: si la celda quedo sin valor, se deja vacia.
 	out_df = out_df.fillna("")
 
-	# Aplicar formulas de la plantilla (edad, FPP, IMC, trimestres, controles, etc.)
-	try:
-		from .formulas import aplicar_formulas
-	except ImportError:
-		from formulas import aplicar_formulas
-	rows_calc = []
-	for _, row in out_df.iterrows():
-		rows_calc.append(aplicar_formulas(row.to_dict()))
-	if rows_calc:
-		out_df = pd.DataFrame(rows_calc, columns=template_cols)
-
 	# Bitácora en orden fila-mayor (igual que antes), limitada a 1000 registros
 	logs = []
 	MAX_LOGS = 1000
@@ -907,4 +896,18 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 	stats["error_cells"] = stats["errors"]
 	# Calidad basada en FILAS sin errores (todo o nada por fila), no en celdas.
 	stats["quality_percent"] = round(100 * stats["rows_ok"] / max(1, stats["total"]), 2)
+
+	# Aplicar formulas SOLO cuando la data quedo 100% limpia (sin errores).
+	# Orden correcto: primero limpiar segun instructivo, luego aplicar formulas.
+	if len(filas_error) == 0:
+		try:
+			from .formulas import aplicar_formulas
+		except ImportError:
+			from formulas import aplicar_formulas
+		rows_calc = []
+		for _, row in out_df.iterrows():
+			rows_calc.append(aplicar_formulas(row.to_dict()))
+		if rows_calc:
+			out_df = pd.DataFrame(rows_calc, columns=template_cols)
+
 	return out_df, logs, stats

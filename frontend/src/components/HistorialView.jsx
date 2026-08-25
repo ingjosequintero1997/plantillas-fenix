@@ -238,7 +238,8 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                   <th className="text-center">Registros</th>
                   <th className="text-center">Errores</th>
                   <th className="text-center">Calidad</th>
-                  <th className="text-center" style={{ width: 50 }}>Accion</th>
+                  <th className="text-center">Estado</th>
+                  <th className="text-center" style={{ width: 90 }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -260,16 +261,29 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                     <td className="table-row-click text-center" onClick={() => setSelected(r)} style={{ color: r.errors_count ? 'var(--error)' : 'var(--success)' }}>{r.errors_count ?? 0}</td>
                     <td className="table-row-click text-center" onClick={() => setSelected(r)}><CalidadBadge value={r.quality_percent ?? 0} /></td>
                     <td className="text-center">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDeleting(r) }}
-                        className="p-1.5 rounded-lg transition-all"
-                        style={{ color: 'var(--text-muted)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.backgroundColor = '#FEE2E2' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}
-                        title="Eliminar cargue"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: '#DCFCE7', color: '#15803D' }}>
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22C55E' }} />
+                        Validado
+                      </span>
+                    </td>
+                    <td className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <a href={CARGUE_EXCEL_URL(r.id)} title="Descargar data validada (Excel)" className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#E6F0FA' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        </a>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleting(r) }}
+                          className="p-1.5 rounded-lg transition-all"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.backgroundColor = '#FEE2E2' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}
+                          title="Eliminar cargue"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
