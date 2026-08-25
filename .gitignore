@@ -49,3 +49,6 @@ generar_pruebas.py
 
 .vercel
 .env*
+*.xlsx
+*.xls
+~$*.xlsx
