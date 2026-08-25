@@ -732,12 +732,13 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		tdef = tmap[col]
 		values = src_values[ci]
 
-		# Columna de plantilla SIN fuente en el archivo: es un error (falta la variable).
+		# Columna de plantilla SIN fuente en el archivo: se rellena con "SIN DATO"
+		# como correccion (el limpiador completa la data segun el instructivo).
 		if values is None:
 			out_vals = ["SIN DATO"] * n
-			statuses = ["error"] * n
+			statuses = ["corrected"] * n
 			origins = [None] * n
-			stats["errors"] += n
+			stats["corrected"] += n
 			corrected_cols.append((col, out_vals, statuses, origins))
 			continue
 
@@ -752,11 +753,12 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			status = "ok"
 			corrected = None
 
-			# Regla estricta: un valor vacio o "SIN DATO" es un ERROR en cualquier tipo.
+			# Valor vacio o "SIN DATO": el limpiador rellena con "SIN DATO" (correccion),
+			# segun el instructivo que lo permite como valor estandar.
 			es_ausente = (not val_str) or val_str.upper() in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL")
 			if es_ausente:
-				status = "error"
-				corrected = orig_val if orig_val else ""  # conservar original, no inventar
+				status = "corrected"
+				corrected = "SIN DATO"
 
 			elif tdef["type"] == "TEXT":
 				corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", val_str)
