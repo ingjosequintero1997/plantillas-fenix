@@ -462,7 +462,7 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 		"mapping_suggested": mapping,
 		"mapping": mapping,
 		"summary": stats,
-		"logs_sample": logs[:1000],
+		"logs_sample": logs[:50000],
 		"corrected_text": _gz_compress(corrected_text),
 		"preview_rows": preview_rows,
 		"raw_text": _gz_compress(raw_text),
@@ -554,7 +554,7 @@ async def upload_file(
 				"reasons": strict_reasons,
 			})
 
-		canonical_raw_text = df.to_csv(sep='|', index=False, header=True)
+		canonical_raw_text = df.to_csv(sep='|', index=False, header=False)
 
 		if mode == "validador":
 			try:
