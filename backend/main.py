@@ -1626,12 +1626,26 @@ async def validate_data(payload: dict):
 
 	stats["rows_with_errors"] = len(row_errors)
 
+	# Tipos por columna para normalizar fechas en el reporte
+	tipos_por_col = {t["name"]: t["type"] for t in tmpl}
+
+	def normalizar_celda(valor, nombre_col):
+		s = str(valor) if valor is not None else ""
+		s = s.strip()
+		if not s or s.upper() in ("SIN DATO", "NO APLICA", "N/A", "NONE"):
+			return s
+		if tipos_por_col.get(nombre_col) == "DATE":
+			iso = to_date_iso(s)
+			if iso:
+				return iso
+		return s
+
 	# Construir el TXT con errores: misma estructura pipe-delimited + columna
 	# RESULTADO DE VALIDACION (✓ VALIDADO si la fila esta correcta, o los errores).
 	header_line = "|".join(template_cols) + "|RESULTADO DE VALIDACION"
 	output_lines = [header_line]
 	for ridx in range(n):
-		row_vals = [str(df.iloc[ridx, ci]) if ci < len(df.columns) else "" for ci in range(len(template_cols))]
+		row_vals = [normalizar_celda(df.iloc[ridx, ci], template_cols[ci]) if ci < len(df.columns) else "" for ci in range(len(template_cols))]
 		errs = row_errors.get(ridx, [])
 		err_col = "; ".join(errs) if errs else "\u2713 VALIDADO"
 		output_lines.append("|".join(row_vals) + "|" + err_col)
