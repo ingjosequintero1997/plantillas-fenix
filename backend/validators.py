@@ -130,6 +130,32 @@ FIELD_SET_ALIASES = {
 	"TOMA DE PRUEBAS ITS INTRAPARTO": {
 		"NO": {"SIN DATO"},
 	},
+	"DISCAPACIDAD": {
+		"SI": {"SI", "S", "DISCAPACIDAD", "CON DISCAPACIDAD"},
+		"NO": {"NO", "N", "NINGUNA", "NINGUNO", "SIN DISCAPACIDAD", "NO TIENE", "NO APLICA"},
+	},
+	"CONTROL TRADICIONAL": {
+		"SABEDOR ANCESTRAL": {"SABEDOR", "SABEDORA", "SABEDOR ANCESTRAL", "SABEDORA ANCESTRAL"},
+		"PARTERA (O)": {"PARTERA", "PARTERO", "PARTERA (O)"},
+		"SOBANDERA (O)": {"SOBANDERA", "SOBANDERO", "SOBANDERA (O)"},
+		"NO APLICA": {"NINGUNA", "NINGUNO", "NO", "N/A", "NA", "SIN CONTROL", "NO TIENE"},
+	},
+	"ZONA": {
+		"RURAL": {"R", "RURAL", "RURAL DISPERSO", "CABECERA MUNICIPAL", "CENTRO POBLADO"},
+		"URBANA": {"U", "URBANA", "URBANO", "CABECERA"},
+	},
+	"SEXO": {
+		"MASCULINO": {"M", "MASCULINO", "HOMBRE"},
+		"FEMENINO": {"F", "FEMENINO", "MUJER"},
+	},
+	"REGIMEN DE AFILIACION": {
+		"SUBSIDIADO": {"SUBSIDIADO", "SUBSIDIADA", "SUBS", "SUB", "SISBEN", "SISBENIZADO"},
+		"CONTRIBUTIVO": {"CONTRIBUTIVO", "CONTRIBUTIBA", "CONTRIB", "COTIZANTE", "EPS"},
+	},
+	"GENERO": {
+		"MASCULINO": {"M", "MASCULINO", "HOMBRE"},
+		"FEMENINO": {"F", "FEMENINO", "MUJER"},
+	},
 }
 
 FIELD_FUZZY_MIN_SCORE = {
@@ -539,6 +565,7 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 
 	n = int(len(df))
 	stats = {"total": n, "errors": 0, "corrected": 0, "ok": 0}
+	filas_error = set()
 
 	# Fallback posicional: si la data ya viene en orden de plantilla (misma
 	# cantidad de columnas), valida la columna i contra el campo i.
@@ -577,9 +604,11 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 					sn = normalize_text(val_str)
 					if sn not in normalized_allowed:
 						alias_match = False
+						expected = None
+						# 1) Alias genericos SI/NO/M/F/CC/TI/CE
 						for alias_canonical, alias_synonyms in {
-							"SI": {"S", "1", "YES", "Y"},
-							"NO": {"N", "0", "FALSE", "F"},
+							"SI": {"S", "1", "YES", "Y", "SI"},
+							"NO": {"N", "0", "FALSE", "F", "NO"},
 							"MASCULINO": {"M"},
 							"FEMENINO": {"F"},
 							"CC": {"CEDULA", "C.C.", "C.C"},
@@ -587,8 +616,19 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 							"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
 						}.items():
 							if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
+								expected = alias_canonical
 								alias_match = True
 								break
+						# 2) Alias por campo (FIELD_SET_ALIASES): sinonimo -> canonical
+						if not alias_match:
+							field_aliases = FIELD_SET_ALIASES.get(col)
+							if field_aliases:
+								for canonical, synonyms in field_aliases.items():
+									if sn in {normalize_text(a) for a in synonyms}:
+										if normalize_text(canonical) in normalized_allowed:
+											expected = canonical
+											alias_match = True
+											break
 						if not alias_match:
 							expected = allowed[0] if allowed else "SIN DATO"
 							err_msg = f"Valor no permitido"
@@ -613,20 +653,23 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 						expected = "AAAA-MM-DD"
 						err_msg = f"Fecha invalida"
 
-			if err_msg and len(logs) < MAX_LOGS:
-				logs.append({
-					"row": ridx + 1,
-					"column": col,
-					"original": orig_val or "",
-					"corrected": expected or "",
-					"status": "error",
-				})
+			if err_msg:
+				filas_error.add(ridx + 1)
+				if len(logs) < MAX_LOGS:
+					logs.append({
+						"row": ridx + 1,
+						"column": col,
+						"original": orig_val or "",
+						"corrected": expected or "",
+						"status": "error",
+					})
 				stats["errors"] += 1
 
-	total_cells = max(1, stats["total"] * len(template_cols))
-	stats["quality_percent"] = round(100 * (1 - stats["errors"] / total_cells), 2)
-	stats["rows_with_errors"] = len(set(l["row"] for l in logs))
-	stats["rows_ok"] = stats["total"] - stats["rows_with_errors"]
+	stats["rows_with_errors"] = len(filas_error)
+	stats["rows_ok"] = max(0, stats["total"] - len(filas_error))
+	stats["error_cells"] = stats["errors"]
+	# Calidad basada en FILAS sin errores (todo o nada por fila), no en celdas.
+	stats["quality_percent"] = round(100 * stats["rows_ok"] / max(1, stats["total"]), 2)
 	return {"stats": stats, "logs": logs}
 
 def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
@@ -792,14 +835,17 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		if len(logs) >= MAX_LOGS:
 			break
 
-	total_cells = max(1, stats["total"] * len(template_cols))
-	stats["quality_percent"] = round(100 * (1 - stats["errors"] / total_cells), 2)
 	# Filas que tienen al menos un error REAL (no correcciones automaticas).
+	# Se usa corrected_cols (sin limite de MAX_LOGS) para no perder filas.
 	filas_error = set()
-	for l in logs:
-		if l.get("status") == "error":
-			filas_error.add(l["row"])
+	for ridx in range(n):
+		for col, out_vals, statuses, origins in corrected_cols:
+			if statuses[ridx] == "error":
+				filas_error.add(ridx + 1)
+				break
 	stats["rows_with_errors"] = len(filas_error)
 	stats["rows_ok"] = max(0, stats["total"] - len(filas_error))
 	stats["error_cells"] = stats["errors"]
+	# Calidad basada en FILAS sin errores (todo o nada por fila), no en celdas.
+	stats["quality_percent"] = round(100 * stats["rows_ok"] / max(1, stats["total"]), 2)
 	return out_df, logs, stats
