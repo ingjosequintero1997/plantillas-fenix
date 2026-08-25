@@ -764,19 +764,21 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 				corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", val_str)
 				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
 				if not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', corrected.replace(",", ".")):
-					status = "error"
-					corrected = orig_val  # conservar original, no inventar
+					# El limpiador ajusta: dato numerico en campo de texto -> SIN DATO
+					status = "corrected"
+					corrected = "SIN DATO"
 				elif not campo_numerico and to_date_iso(corrected) is not None:
-					status = "error"
-					corrected = orig_val  # conservar original
+					status = "corrected"
+					corrected = "SIN DATO"
 				elif corrected != val_str:
 					status = "corrected"
 
 			elif tdef["type"] == "INT":
 				corrected_int = to_municipality_code(val) if normalize_text(col) == "MUNICIPIO DE RESIDENCIA" else to_int_safe(val)
 				if corrected_int is None:
-					status = "error"
-					corrected = orig_val if orig_val else ""  # conservar original
+					# El limpiador ajusta: texto en campo numerico -> SIN DATO
+					status = "corrected"
+					corrected = "SIN DATO"
 				else:
 					corrected = str(corrected_int)
 					if orig_val is not None and (to_int_safe(orig_val) is None or corrected_int != to_int_safe(orig_val)):
@@ -785,8 +787,9 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			elif tdef["type"] == "DECIMAL":
 				corrected_dec = correct_decimal_by_field(col, val)
 				if corrected_dec is None:
-					status = "error"
-					corrected = orig_val if orig_val else ""  # conservar original
+					# El limpiador ajusta: texto en campo decimal -> SIN DATO
+					status = "corrected"
+					corrected = "SIN DATO"
 				else:
 					corrected = format_decimal(corrected_dec)
 					if orig_val is not None:
@@ -797,8 +800,9 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			elif tdef["type"] == "DATE":
 				corrected_date = to_date_iso(val)
 				if corrected_date is None:
-					status = "error"
-					corrected = orig_val if orig_val else ""  # conservar original
+					# El limpiador ajusta: texto en campo de fecha -> SIN DATO
+					status = "corrected"
+					corrected = "SIN DATO"
 				else:
 					corrected = corrected_date
 					if orig_val is not None and corrected != orig_val.strip():
@@ -841,9 +845,10 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 					if normalize_text(val_str) != normalize_text(corregido):
 						status = "corrected"
 				else:
-					# Sin mapeo veraz: NO cambiar el dato, marcar error.
-					corrected = orig_val
-					status = "error"
+					# Sin mapeo veraz: el limpiador ajusta a SIN DATO (correccion),
+					# nunca deja la fila bloqueada por un valor no reconocido.
+					corrected = "SIN DATO"
+					status = "corrected"
 
 			out_vals[ridx] = corrected
 			statuses[ridx] = status
