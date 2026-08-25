@@ -15,17 +15,29 @@ function authHeaders() {
   } catch { return {} }
 }
 
+const TIMEOUT_MS = 20000
+
 async function apiFetch(url, options = {}) {
-  const resp = await fetch(url, {
-    ...options,
-    headers: { ...options.headers, ...authHeaders() },
-  })
-  const text = await resp.text()
-  if (!resp.ok) throw new Error(text)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   try {
-    return JSON.parse(text)
-  } catch {
-    throw new Error(`Respuesta inválida desde ${url}`)
+    const resp = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: { ...options.headers, ...authHeaders() },
+    })
+    const text = await resp.text()
+    if (!resp.ok) throw new Error(text)
+    try {
+      return JSON.parse(text)
+    } catch {
+      throw new Error(`Respuesta inválida desde ${url}`)
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('La petición tardó demasiado. Intenta de nuevo.')
+    throw e
+  } finally {
+    clearTimeout(timer)
   }
 }
 

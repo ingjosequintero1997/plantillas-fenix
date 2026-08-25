@@ -117,25 +117,32 @@ export default function App() {
   useEffect(() => {
     // Cargar plantillas cuando el usuario esta autenticado (y al montar si ya hay sesion).
     if (!user) return
+    let cancelled = false
     const loadTemplates = async (attempt = 0) => {
       try {
         const data = await fetchTemplates()
+        if (cancelled) return
         if (data.length > 0) {
           setTemplates(data)
           if (!data.find((item) => item.key === selectedTemplate)) {
             setSelectedTemplate(data[0].key)
           }
+          setError('')
+        } else {
+          throw new Error('Sin plantillas')
         }
       } catch (e) {
-        // Reintenta si el token aún no está listo (evita "No autorizado" al cargar)
+        if (cancelled) return
         if (attempt < 3) {
-          setTimeout(() => loadTemplates(attempt + 1), 500)
-          return
+          setTimeout(() => loadTemplates(attempt + 1), 400)
+        } else {
+          setError('No fue posible cargar los módulos. Verifica tu conexión e intenta de nuevo.')
+          setTimeout(() => loadTemplates(0), 8000)
         }
-        setError('No fue posible cargar las plantillas. Verifica tu sesión.')
       }
     }
     loadTemplates()
+    return () => { cancelled = true }
   }, [user])
 
   const selectedTemplateMeta = useMemo(() => {
@@ -383,6 +390,7 @@ export default function App() {
                 templates={templates}
                 onSelect={handleSelectTemplate}
                 activeTemplate={activeTemplate}
+                error={error}
               />
             )}
 

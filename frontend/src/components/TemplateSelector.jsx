@@ -33,7 +33,7 @@ const MODULE_ICONS = {
 
 const MODULE_ICON_KEY = { gestante: 'gestante', citologia: 'citologia', mamografia: 'mama', penta: 'vacuna' }
 
-export default function TemplateSelector({ templates, onSelect, activeTemplate }) {
+export default function TemplateSelector({ templates, onSelect, activeTemplate, error }) {
   const { user } = useAuth()
   const [hovered, setHovered] = useState(null)
   const firstName = (user?.name || 'usuario').split(' ')[0]
@@ -48,6 +48,11 @@ export default function TemplateSelector({ templates, onSelect, activeTemplate }
           <h1 className="page-title">{saludo}, {firstName}</h1>
           <p className="page-subtitle mt-1">Cargando módulos de datos...</p>
         </div>
+        {error && (
+          <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ color: '#B91C1C', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+            {error}
+          </div>
+        )}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="skeleton" style={{ height: '160px', borderRadius: 'var(--radius-lg)' }} />

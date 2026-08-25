@@ -18,21 +18,31 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     const base = (import.meta.env.VITE_API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api')).trim().replace(/\/+$/, '')
-    const resp = await fetch(`${base}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    })
-    const text = await resp.text()
-    if (!resp.ok) {
-      let detail = 'Error de conexión'
-      try { detail = JSON.parse(text).detail || detail } catch { detail = text || detail }
-      throw new Error(detail)
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 25000)
+    try {
+      const resp = await fetch(`${base}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        signal: controller.signal,
+      })
+      const text = await resp.text()
+      if (!resp.ok) {
+        let detail = 'Error de conexión'
+        try { detail = JSON.parse(text).detail || detail } catch { detail = text || detail }
+        throw new Error(detail)
+      }
+      const data = JSON.parse(text)
+      const userData = { ...data.user, token: data.token }
+      sessionStorage.setItem('auth', JSON.stringify(userData))
+      setUser(userData)
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('La conexión tardó demasiado. Intenta de nuevo.')
+      throw e
+    } finally {
+      clearTimeout(timer)
     }
-    const data = JSON.parse(text)
-    const userData = { ...data.user, token: data.token }
-    sessionStorage.setItem('auth', JSON.stringify(userData))
-    setUser(userData)
   }, [])
 
   const logout = useCallback(() => {
