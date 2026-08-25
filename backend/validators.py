@@ -617,8 +617,40 @@ def safe_default_for_required(tdef: dict):
 	if type_name == "DECIMAL":
 		return "0"
 	if type_name == "DATE":
-		return "1900-01-01"
+		return "1845-01-01"
 	if type_name == "TEXT":
+		return "SIN DATO"
+	return "SIN DATO"
+
+
+def rellenar_vacios(df: pd.DataFrame, template: list) -> pd.DataFrame:
+	"""Rellena toda celda vacia con un valor por tipo segun el instructivo:
+	texto -> SIN DATO, numerico -> 0, fecha -> 1845-01-01, SET -> SIN DATO.
+	Nunca se deja validar un dato vacio."""
+	tmap = {t["name"]: t for t in template}
+	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
+	out = df.copy()
+	for col in out.columns:
+		canonical = normalized_tmap.get(normalize_text(col))
+		tdef = tmap.get(canonical) if canonical else None
+		if tdef is None:
+			continue
+		tipo = tdef.get("type")
+		es_ausente = lambda v: v is None or pd.isna(v) or str(v).strip() == "" or str(v).strip().upper() in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA")
+		out[col] = out[col].map(lambda v: _default_para(tipo, tdef) if es_ausente(v) else v)
+	return out
+
+
+def _default_para(tipo: str, tdef: dict):
+	if tipo == "INT":
+		return "0"
+	if tipo == "DECIMAL":
+		return "0"
+	if tipo == "DATE":
+		return "1845-01-01"
+	if tipo == "TEXT":
+		return "SIN DATO"
+	if tipo == "SET":
 		return "SIN DATO"
 	return "SIN DATO"
 
@@ -627,6 +659,8 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	tmap = {t["name"]: t for t in template}
 	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
 	template_cols = [t["name"] for t in template]
+	# Rellenar vacios con el valor por tipo (nunca se valida un dato vacio).
+	df = rellenar_vacios(df, template)
 	inverse = {}
 	for orig, templ in (mapping or {}).items():
 		if not templ:
@@ -683,35 +717,41 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				else:
 					sn = normalize_text(val_str)
 					if sn not in normalized_allowed:
-						alias_match = False
-						expected = None
-						# 1) Alias genericos SI/NO/M/F/CC/TI/CE
-						for alias_canonical, alias_synonyms in {
-							"SI": {"S", "1", "YES", "Y", "SI"},
-							"NO": {"N", "0", "FALSE", "F", "NO"},
-							"MASCULINO": {"M"},
-							"FEMENINO": {"F"},
-							"CC": {"CEDULA", "C.C.", "C.C"},
-							"TI": {"TARJETA IDENTIDAD", "T.I."},
-							"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
-						}.items():
-							if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
-								expected = alias_canonical
-								alias_match = True
-								break
-						# 2) Alias por campo (FIELD_SET_ALIASES): sinonimo -> canonical
-						if not alias_match:
-							field_aliases = FIELD_SET_ALIASES.get(col)
-							if field_aliases:
-								for canonical, synonyms in field_aliases.items():
-									if sn in {normalize_text(a) for a in synonyms}:
-										if normalize_text(canonical) in normalized_allowed:
-											expected = canonical
-											alias_match = True
-										break
-						if not alias_match:
-							expected = "Debe ser uno de: " + ", ".join(allowed)
-							err_msg = f"Valor no permitido"
+						if sn == "SIN DATO":
+							# Comodin universal del sistema: acepta "SIN DATO" en SET
+							# aunque el campo no lo liste (se usa cuando no hay dato).
+							alias_match = True
+							expected = "SIN DATO"
+						else:
+							alias_match = False
+							expected = None
+							# 1) Alias genericos SI/NO/M/F/CC/TI/CE
+							for alias_canonical, alias_synonyms in {
+								"SI": {"S", "1", "YES", "Y", "SI"},
+								"NO": {"N", "0", "FALSE", "F", "NO"},
+								"MASCULINO": {"M"},
+								"FEMENINO": {"F"},
+								"CC": {"CEDULA", "C.C.", "C.C"},
+								"TI": {"TARJETA IDENTIDAD", "T.I."},
+								"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
+							}.items():
+								if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
+									expected = alias_canonical
+									alias_match = True
+									break
+							# 2) Alias por campo (FIELD_SET_ALIASES): sinonimo -> canonical
+							if not alias_match:
+								field_aliases = FIELD_SET_ALIASES.get(col)
+								if field_aliases:
+									for canonical, synonyms in field_aliases.items():
+										if sn in {normalize_text(a) for a in synonyms}:
+											if normalize_text(canonical) in normalized_allowed:
+												expected = canonical
+												alias_match = True
+											break
+							if not alias_match:
+								expected = "Debe ser uno de: " + ", ".join(allowed)
+								err_msg = f"Valor no permitido"
 
 			elif tdef["type"] == "INT":
 				# Estricto: solo enteros. Vacio y "SIN DATO" son errores.
@@ -796,7 +836,9 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		df = df.map(clean_malformed)
 	except AttributeError:
 		df = df.applymap(clean_malformed)
-	
+	# Rellenar vacios con el valor por tipo (nunca se valida un dato vacio).
+	df = rellenar_vacios(df, template)
+
 	tmap = {t["name"]: t for t in template}
 	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
 	template_cols = [t["name"] for t in template]

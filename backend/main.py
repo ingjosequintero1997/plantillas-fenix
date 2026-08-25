@@ -519,6 +519,15 @@ async def upload_file(
 		if len(df) == 0:
 			raise HTTPException(status_code=400, detail="Archivo vacío")
 
+		# Regla de integridad: ningun dato puede quedar vacio. Se rellena con
+		# el valor por tipo segun el instructivo: texto->SIN DATO, numerico->0,
+		# fecha->1845-01-01, SET->SIN DATO. Asi la data queda 100% completa.
+		try:
+			from .validators import rellenar_vacios
+		except ImportError:
+			from validators import rellenar_vacios
+		df = rellenar_vacios(df, active_template)
+
 		orig_headers = list(df.columns)
 		map_suggest = infer_mapping(orig_headers, active_template)
 		mapping_stats = build_mapping_stats(orig_headers, map_suggest, len(active_names))
