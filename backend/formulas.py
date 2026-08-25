@@ -74,23 +74,23 @@ def _clasif_imc(imc):
 
 def _trimestre(semanas):
     if semanas is None:
-        return 'SIN DATO'
+        return 0
     if semanas < 14:
-        return 'PRIMER TRIMESTRE'
+        return 1
     if semanas < 28:
-        return 'SEGUNDO TRIMESTRE'
-    return 'TERCER TRIMESTRE'
+        return 2
+    return 3
 
 
 def _trimestre_confirmatorio(semanas):
     """Límites distintos para prueba confirmatoria (1 Trim <13, 2 Trim <=26)."""
     if semanas is None:
-        return 'SIN DATO'
+        return 0
     if semanas < 13:
-        return 'PRIMER TRIMESTRE'
+        return 1
     if semanas <= 26:
-        return 'SEGUNDO TRIMESTRE'
-    return 'TERCER TRIMESTRE'
+        return 2
+    return 3
 
 
 def _alarma(dias):
@@ -214,12 +214,15 @@ def aplicar_formulas(fila: dict) -> dict:
         fila[IMC_ACTUAL] = _fmt_num(round(imc_act, 2))
 
     # 11. Trimestres de tamizajes VIH / Sifilis: FUM + fecha de la prueba
-    #     (1 Trim <14, 2 Trim <28, 3 Trim). Solo si la fecha de la prueba existe.
+    #     (1 <14 sem, 2 <28 sem, 3 >=28). Numerico obligatorio: si no hay
+    #     fecha para calcular se asigna 0.
     def _calc_trimestre(fecha_prueba, col_trimestre, confirmatorio=False):
         fp = _fecha(fila.get(fecha_prueba))
-        if fp and (not fila.get(col_trimestre) or str(fila.get(col_trimestre)).strip() in ('', 'SIN DATO', '0')):
+        if fp:
             sem = _semanas(fum, fp)
             fila[col_trimestre] = _trimestre_confirmatorio(sem) if confirmatorio else _trimestre(sem)
+        else:
+            fila[col_trimestre] = 0
 
     _calc_trimestre(FECHA_ASESORIA_VIH, TRIMESTRE_ASESORIA_VIH)
     _calc_trimestre(FECHA_VIH_1, TRIMESTRE_VIH_1)

@@ -341,6 +341,17 @@ export function generarReporteErroresLocal(rawText, templateNames, logs, filenam
       const pad = (n) => String(parseInt(n, 10)).padStart(2, '0')
       return `${parseInt(anio, 10)}-${pad(mes)}-${pad(dia)}`
     }
+    // Serial de Excel (dias desde 1899-12-30): ej. 36615 -> 2000-04-03
+    // Solo si parece un numero de 5 digitos dentro de rango razonable.
+    if (/^\d{5}(\.\d+)?$/.test(s)) {
+      const serial = parseFloat(s)
+      if (serial >= 1 && serial <= 60000) {
+        const base = Date.UTC(1899, 11, 30)
+        const fecha = new Date(base + serial * 86400000)
+        const pad2 = (n) => String(n).padStart(2, '0')
+        return `${fecha.getUTCFullYear()}-${pad2(fecha.getUTCMonth() + 1)}-${pad2(fecha.getUTCDate())}`
+      }
+    }
     // AAAA-MM-DD (con o sin hora)
     let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?$/)
     if (m) return limpiar(m[1], m[2], m[3])

@@ -174,6 +174,21 @@ FIELD_FUZZY_MIN_SCORE = {
 	"ETNIA": 0.60,
 }
 
+# Columnas calculadas automaticamente por las formulas de la plantilla.
+# En el validador no se exige que esten llenas (la formula las genera al 100%).
+FORMULA_COLUMNS = {
+	"EDAD", "FPP", "DIAS PARA EL PARTO", "ALARMA", "EDAD GEST INICIO CONTROL",
+	"TRIMESTRE INICIO CONTROL", "INDICE DE MASA CORPORAL (IMC)", "CLASIFICACION DE IMC",
+	"NUMERO TOTAL DE CONTROLES PRENATALES", "ULTIMO CONTROL PRENATAL",
+	"EDAD GESTACIONAL ACTUAL", "IMC",
+	"TRIMESTRE ASESORIA VIH", "TRIMESTRE TOMA PRUEBA VIH PRIMER TAMIZAJE",
+	"TRIMESTRE TOMA PRUEBA VIH SEGUNDO TAMIZAJE", "TRIMESTRE TOMA PRUEBA VIH TERCER TAMIZAJE",
+	"TRIMESTRE PRIMERA PRUEBA TREPONEMICA RAPIDA SIFILIS",
+	"TRIMESTRE SEGUNDA PRUEBA TREPONEMICA RAPIDA SIFILIS",
+	"TRIMESTRE TERCERA PRUEBA TREPONEMICA RAPIDA SIFILIS",
+	"TRIMESTRE TOMA SEGUNDA PRUEBA VIH", "TRIMESTRE PRUEBA CONFIRMATORIA SEGUN ALGORITMO",
+}
+
 FIELD_NUMERIC_CODE_MAP = {
 	"GRUPO POBLACIONAL": [
 		"CABEZA DE FAMILIA",
@@ -654,6 +669,11 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			err_msg = None
 			expected = None
 
+			# Columnas calculadas por la formula (edad, trimestres, IMC...):
+			# si estan vacias NO son error, la formula las genera automaticamente.
+			col_normalizada = normalize_text(col)
+			es_formula = col_normalizada in FORMULA_COLUMNS or normalize_text(col) in {normalize_text(c) for c in FORMULA_COLUMNS}
+
 			if tdef["type"] == "SET":
 				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
 				normalized_allowed = [normalize_text(a) for a in allowed]
@@ -734,6 +754,11 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				elif not campo_numerico and to_date_iso(val_str) is not None:
 					err_msg = f"Se esperaba texto, se encontro fecha"
 					expected = "Escriba el dato en texto"
+
+			# Columnas de formula vacias: la formula las genera, no son error.
+			if err_msg and es_formula and not val_str:
+				err_msg = None
+				expected = None
 
 			if err_msg:
 				filas_error.add(ridx + 1)
