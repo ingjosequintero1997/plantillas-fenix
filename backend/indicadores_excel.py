@@ -90,7 +90,7 @@ def build_indicadores_excel(pare, descriptivos=None, nombre_cargue=""):
     ws.row_dimensions[row].height = 24
     row += 1
 
-    for ind in pare.get("indicadores", []):
+    for ind in pare.get("lista", []):
         ws.cell(row=row, column=1, value=ind.get("label", "")).alignment = Alignment(wrap_text=True, vertical="center")
         ws.cell(row=row, column=2, value=ind.get("numerador", 0)).alignment = Alignment(horizontal="center")
         ws.cell(row=row, column=3, value=ind.get("denominador", 0)).alignment = Alignment(horizontal="center")

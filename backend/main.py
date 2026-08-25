@@ -1731,6 +1731,7 @@ async def indicadores_endpoint(payload: dict):
 				"total_gestantes": pare["total_gestantes"],
 				"fecha_referencia": pare["fecha_referencia"],
 				"lista": pare["indicadores"],
+				"por_municipio": pare.get("por_municipio", []),
 			},
 			"descriptivos": {
 				"label": "Distribucion de la cohorte",
