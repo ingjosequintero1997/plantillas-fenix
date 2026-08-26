@@ -534,7 +534,7 @@ export default function App() {
                     </div>
 
                     {/* Resumen en tarjetas */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className={`grid gap-3 ${processingMode === 'limpiador' ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
                       <div className="rounded-xl px-4 py-3.5" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', boxShadow: '0 1px 3px rgba(28,28,26,0.05)' }}>
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ color: 'var(--green-700)', backgroundColor: 'var(--green-50)' }}>
