@@ -607,7 +607,9 @@ async def upload_file(
 			except ImportError:
 				from validators import normalizar_fechas_df
 			df = normalizar_fechas_df(df, active_template)
-			canonical_raw_text = df.to_csv(sep='|', index=False, header=False)
+			# Evitar NaN en preview (Excel produce nan en celdas vacias/formulas)
+			df_safe = df.fillna("SIN DATO").astype(str)
+			canonical_raw_text = df_safe.to_csv(sep='|', index=False, header=False)
 			raw_text_compressed = _gz_compress(canonical_raw_text)
 			return JSONResponse({
 				"success": True,
@@ -619,7 +621,7 @@ async def upload_file(
 				"logs_sample": validation_result["logs"],
 				"corrected_text": raw_text_compressed,
 				"raw_text": raw_text_compressed,
-				"preview_rows": df.head(30).to_dict(orient='records'),
+				"preview_rows": df_safe.head(30).to_dict(orient='records'),
 				"template_names": template_names(active_template),
 				"mapping_stats": mapping_stats,
 				"structure_validation": structure_validation,
