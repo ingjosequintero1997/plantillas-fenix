@@ -153,22 +153,13 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
         <div className="panel" style={{ borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' }}>
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5" style={{ color: 'var(--error)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-            <div>
-              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>A&uacute;n hay errores que corregir</div>
-              <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Las celdas con error se marcan en rojo. Corrige y vuelve a pulsar Re-validar.</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Haz clic sobre una celda para corregirla. Luego pulsa <strong style={{ color: 'var(--text-primary)' }}>Re-validar</strong>.
             </div>
           </div>
         </div>
       ) : null}
 
-      <div className="panel">
-        <div className="flex items-start gap-2">
-          <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--green-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Haz clic sobre una celda para corregirla manualmente. Despu&eacute;s pulsa <strong style={{ color: 'var(--text-primary)' }}>Re-validar</strong> para volver a validar la data contra el instructivo.
-          </div>
-        </div>
-      </div>
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="px-4 py-3 border-b flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-subtle)' }}>
           <div className="flex items-center gap-3">
