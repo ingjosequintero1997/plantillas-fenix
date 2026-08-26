@@ -456,6 +456,28 @@ export async function descargarReporteErroresExcel(cargueId, filename = 'reporte
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
 }
 
+// Descarga el Excel de errores desde la data en memoria (pantalla de validacion).
+export async function descargarReporteErroresExcelData(correctedText, templateKey, filename = 'reporte_errores.xlsx') {
+  const resp = await fetch(`${API_BASE}/reporte-errores-excel-data`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ template_key: templateKey || 'gestante', corrected_text: correctedText || '' }),
+  })
+  if (!resp.ok) {
+    let msg = 'Error al descargar'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
+}
+
 export async function uploadHistoria(file, paciente, templateKey = 'gestante') {
   const form = new FormData()
   form.append('file', file)

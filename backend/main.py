@@ -2106,6 +2106,37 @@ async def descargar_reporte_errores_excel(cargue_id: int, current_user: User = D
 		db.close()
 
 
+@app.post("/reporte-errores-excel-data")
+async def reporte_errores_excel_data(payload: dict):
+	"""Genera el Excel de errores directamente desde un texto (sin cargue en BD).
+	Usado desde la pantalla de validacion."""
+	template_key = payload.get("template_key", "gestante")
+	corrected_text = payload.get("corrected_text", "")
+	if not corrected_text or not corrected_text.strip():
+		raise HTTPException(status_code=400, detail="No hay datos para validar")
+	resp = await validate_data({
+		"template_key": template_key,
+		"corrected_text": corrected_text,
+	})
+	errors_by_cell = {}
+	for k, v in (resp.get("errors_by_cell") or {}).items():
+		row_s, col_s = k.split("|", 1)
+		errors_by_cell[(int(row_s), col_s)] = v
+	meta = get_template_by_key(template_key)
+	tmpl = meta["template"]
+	try:
+		from .excel_export import build_reporte_errores_excel
+	except ImportError:
+		from excel_export import build_reporte_errores_excel
+	buf = build_reporte_errores_excel(corrected_text, tmpl, errors_by_cell)
+	filename = f"reporte_errores_{template_key}.xlsx"
+	return StreamingResponse(
+		buf,
+		media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		headers={"Content-Disposition": f"attachment; filename={filename}"},
+	)
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)

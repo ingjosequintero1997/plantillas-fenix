@@ -21,7 +21,7 @@ const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
-import { fetchTemplates, revalidateData, uploadFile, saveCargue, downloadValidationReport, descargarReporteErrores, generarReporteErroresLocal } from './api'
+import { fetchTemplates, revalidateData, uploadFile, saveCargue, descargarReporteErroresExcelData, descargarReporteErroresExcel } from './api'
 import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
 
@@ -350,20 +350,16 @@ export default function App() {
     try {
       setError('')
       const fecha = new Date().toISOString().slice(0, 10)
-      const filename = `reporte_errores_${selectedTemplate}_${fecha}.txt`
-      // 1) Generar en el FRONTEND: rapido, sin red ni BD. Usa la data en memoria.
-      if (rawText && rawText.trim() && templateNames && templateNames.length) {
-        generarReporteErroresLocal(rawText, templateNames, logs, filename)
-        return
-      }
-      // 2) Si hay un cargue validado en BD, descargar desde el backend.
-      if (lastCargueId) {
-        await descargarReporteErrores(lastCargueId, filename)
-        return
-      }
-      // 3) Fallback con el backend (lento).
+      const filename = `reporte_errores_${selectedTemplate}_${fecha}.xlsx`
+      // 1) Si hay data en memoria (validacion actual), generar Excel directo.
       if (rawText && rawText.trim()) {
-        await downloadValidationReport(rawText, selectedTemplate, templateNames, filename)
+        await descargarReporteErroresExcelData(rawText, selectedTemplate, filename)
+        return
+      }
+      // 2) Si hay un cargue validado en BD, descargar el Excel desde el backend.
+      if (lastCargueId) {
+        await descargarReporteErroresExcel(lastCargueId, filename)
+        return
       }
     } catch (e) {
       setError(e.message || 'Error al descargar el reporte de errores')
@@ -590,7 +586,7 @@ export default function App() {
                         {(summary.rows_with_errors ?? summary.errors) > 0 && (
                           <button onClick={handleDownloadReport} disabled={!rawText} className="btn-secondary">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Descargar reporte de errores (TXT)
+                            Descargar errores (Excel)
                           </button>
                         )}
                         <button onClick={handleReset} className="btn-primary">
