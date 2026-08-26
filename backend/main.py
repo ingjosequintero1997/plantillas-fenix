@@ -447,6 +447,12 @@ def _gz_compress(text: str) -> str:
 
 def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, template_key: str, active_template: list[dict]):
 	corrected_df, logs, stats = validate_and_correct(df, mapping, active_template)
+	# Normalizar todas las fechas a AAAA-MM-DD (ej: 3/04/2000 -> 2000-04-03)
+	try:
+		from .validators import normalizar_fechas_df
+	except ImportError:
+		from validators import normalizar_fechas_df
+	corrected_df = normalizar_fechas_df(corrected_df, active_template)
 	# Asegurar que no hay NaN antes de exportar
 	corrected_df = corrected_df.fillna("SIN DATO").astype(str)
 	# Reemplazar saltos de linea en celdas para no romper el formato pipe-delimited
@@ -571,6 +577,13 @@ async def upload_file(
 			from validators import reordenar_a_template
 		df = reordenar_a_template(df, map_suggest, active_template)
 
+		# Normalizar todas las fechas a AAAA-MM-DD antes de exportar cualquier texto
+		try:
+			from .validators import normalizar_fechas_df
+		except ImportError:
+			from validators import normalizar_fechas_df
+		df = normalizar_fechas_df(df, active_template)
+
 		canonical_raw_text = df.to_csv(sep='|', index=False, header=False)
 
 		if mode == "validador":
@@ -589,6 +602,11 @@ async def upload_file(
 				df = aplicar_formulas_df(df)
 			# En modo validador la data va SIN encabezado (solo filas en orden
 			# de plantilla) para que sea consistente con la tabla editable.
+			try:
+				from .validators import normalizar_fechas_df
+			except ImportError:
+				from validators import normalizar_fechas_df
+			df = normalizar_fechas_df(df, active_template)
 			canonical_raw_text = df.to_csv(sep='|', index=False, header=False)
 			raw_text_compressed = _gz_compress(canonical_raw_text)
 			return JSONResponse({

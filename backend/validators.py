@@ -774,6 +774,25 @@ def _en_orden_plantilla(df: pd.DataFrame, template: list) -> bool:
 	return coinciden / max(1, len(template)) >= 0.95
 
 
+def normalizar_fechas_df(df: pd.DataFrame, template: list) -> pd.DataFrame:
+	"""Convierte todas las celdas de columnas tipo DATE a formato AAAA-MM-DD.
+	Garantiza que el texto exportado (TXT/Excel) siempre tenga fechas ISO."""
+	tmap = {t["name"]: t for t in template}
+	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
+	out = df.copy()
+	for col in out.columns:
+		canonical = normalized_tmap.get(normalize_text(col))
+		tdef = tmap.get(canonical) if canonical else None
+		if tdef is None or tdef.get("type") != "DATE":
+			continue
+		ser = out[col]
+		if ser.dtype == object:
+			out[col] = ser.map(lambda v: to_date_iso(v) if v is not None and str(v).strip() and str(v).strip().upper() not in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA") else v)
+		else:
+			out[col] = ser.map(lambda v: to_date_iso(v))
+	return out
+
+
 def reordenar_a_template(df: pd.DataFrame, mapping: dict, template: list) -> pd.DataFrame:
 	"""Reordena las columnas del df al orden del template usando el mapping.
 	Evita corrimientos cuando el archivo trae las columnas en otro orden."""
