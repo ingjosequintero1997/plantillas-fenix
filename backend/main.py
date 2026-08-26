@@ -563,6 +563,14 @@ async def upload_file(
 				"reasons": strict_reasons,
 			})
 
+# Reordenar el df al orden de la plantilla (evita corrimiento de datos
+		# cuando el archivo trae las columnas en otro orden).
+		try:
+			from .validators import reordenar_a_template
+		except ImportError:
+			from validators import reordenar_a_template
+		df = reordenar_a_template(df, map_suggest, active_template)
+
 		canonical_raw_text = df.to_csv(sep='|', index=False, header=False)
 
 		if mode == "validador":

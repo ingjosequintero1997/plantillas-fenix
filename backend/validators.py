@@ -51,8 +51,8 @@ MUNICIPALITY_CODE_ALIASES = {
 
 FIELD_SET_ALIASES = {
 	"REGIMEN DE AFILIACION": {
-		"SUBSIDIADO": {"SUBSIDIADO", "SUBSIDIADA", "SUBS", "SUB", "SISBEN", "SISBENIZADO"},
-		"CONTRIBUTIVO": {"CONTRIBUTIVO", "CONTRIBUTIBA", "CONTRIB", "COTIZANTE", "EPS"},
+		"SUBSIDIADO": {"SUBSIDIADO", "SUBSIDIADA", "SUBS", "SUB", "SISBEN", "SISBENIZADO", "S"},
+		"CONTRIBUTIVO": {"CONTRIBUTIVO", "CONTRIBUTIBA", "CONTRIB", "COTIZANTE", "EPS", "C"},
 	},
 	"GRUPO POBLACIONAL": {
 		"CABEZA DE FAMILIA": {"CABEZA DE FAMILIA", "CABEZA FAMILIA"},
@@ -89,7 +89,7 @@ FIELD_SET_ALIASES = {
 		"KANKUAMO": {"KANKUAMO", "KANKUAM"},
 		"CHIMILA": {"CHIMILA", "ETTE ENNAKA", "ETTE", "ETTEENNKA"},
 		"ZENU": {"ZENU", "ZENUES"},
-		"SIN ETNIA": {"NINGUNO", "NINGUNA", "NINGUNAS", "NINGUNAS DE LAS ANTERIORES", "NO TIENE", "NO APLICA", "N/A", "SIN", "NINGUN GRUPO ETNICO"},
+		"SIN ETNIA": {"NINGUNO", "NINGUNA", "NINGUNAS", "NINGUNAS DE LAS ANTERIORES", "NO TIENE", "NO APLICA", "N/A", "SIN", "NINGUN GRUPO ETNICO", "NEGRO(A), MULATO(A), AFROCOLOMBIANO O AFRODECENDIENTE", "NEGRO(A), MULATO(A), AFROCOLOMBIANO", "AFROCOLOMBIANO", "AFROCOLOMBIANA", "NEGRO", "NEGRA", "MULATO", "MULATA", "AFRODECENDIENTE", "AFRODESCENDIENTE", "GITANO", "GITANA", "ROM", "ROOM", "PALENQUERO", "PALENQUERA", "RAIZAL"},
 	},
 	"CLASIFICACION DEL RIESGO": {
 		"CLASIFICACION DEL RIESGO ALTO": {"ALTO", "RIESGO ALTO", "ALTO RIESGO", "ALTO RIESGO OBSTETRICO", "RIESGO OBSTETRICO", "ALTO RIESGO OBSTETRICO", "RIESGO ALTO OBSTETRICO"},
@@ -149,8 +149,8 @@ FIELD_SET_ALIASES = {
 		"FEMENINO": {"F", "FEMENINO", "MUJER"},
 	},
 	"REGIMEN DE AFILIACION": {
-		"SUBSIDIADO": {"SUBSIDIADO", "SUBSIDIADA", "SUBS", "SUB", "SISBEN", "SISBENIZADO"},
-		"CONTRIBUTIVO": {"CONTRIBUTIVO", "CONTRIBUTIBA", "CONTRIB", "COTIZANTE", "EPS"},
+		"SUBSIDIADO": {"SUBSIDIADO", "SUBSIDIADA", "SUBS", "SUB", "SISBEN", "SISBENIZADO", "S"},
+		"CONTRIBUTIVO": {"CONTRIBUTIVO", "CONTRIBUTIBA", "CONTRIB", "COTIZANTE", "EPS", "C"},
 	},
 	"GENERO": {
 		"MASCULINO": {"M", "MASCULINO", "HOMBRE"},
@@ -161,12 +161,46 @@ FIELD_SET_ALIASES = {
 		"SABE LEER O ESCRIBIR": {"SABE LEER", "LEER Y ESCRIBIR", "SABE LEER Y ESCRIBIR", "LEE Y ESCRIBE"},
 		"PRIMARIA COMPLETA": {"PRIMARIA COMPLETA", "PRIMARIA", "PRIMARIA COMPLETADA", "BASICA PRIMARIA", "BASICA PRIMARIA COMPLETA", "PRIMARIA COMPLETO"},
 		"PRIMARIA INCOMPLETA": {"PRIMARIA INCOMPLETA", "PRIMARIA INCOMPLETO", "BASICA PRIMARIA INCOMPLETA"},
-		"SECUNDARIA COMPLETA": {"SECUNDARIA", "SECUNDARIA COMPLETA", "BACHILLER", "BACHILLERATO", "BACHILLER COMPLETO", "BACHILLERATO COMPLETO", "11", "GRADO 11", "SECNDARIA", "SECUNDARIA COMPLETA", "SECUNDARIA COMPLETA "},
+		"SECUNDARIA COMPLETA": {"SECUNDARIA", "SECUNDARIA COMPLETA", "BACHILLER", "BACHILLERATO", "BACHILLER COMPLETO", "BACHILLERATO COMPLETO", "11", "GRADO 11", "SECNDARIA", "SECUNDARIA COMPLETA", "SECUNDARIA COMPLETA ", "BASICA SECUNDARIA", "BASICA SECUNDARIA COMPLETA", "SECUNDARIA COMPLETO"},
 		"SECUNDARIA INCOMPLETA": {"SECUNDARIA INCOMPLETA", "SECUNDARIA INCOMPLETO", "BACHILLERATO INCOMPLETO", "BACHILLER INCOMPLETO", "SECUNDARIA INCOMPLETA "},
 		"TECNICO": {"TECNICO", "TECNICA", "TECNICO LABORAL"},
 		"TECNOLOGO": {"TECNOLOGO", "TECNOLOGA", "TECNOLOGIA"},
 		"PROFESIONAL UNIVERSITARIO": {"PROFESIONAL", "UNIVERSITARIO", "PROFESIONAL UNIVERSITARIO", "UNIVERSIDAD", "UNIVERSITARIA", "PROFESIONAL UNIVERSITARIA"},
 		"SIN DATO": {"NO DEFINIDO", "NO DEFINED", "NO DEFINIDO (NINGUNO)", "NO DEFINIDO (NINGUNA)", "OTRO", "SIN INFORMACION", "NO REPORTA", "NINGUNO", "NINGUNA"},
+	},
+	"ANTECEDENTES DE EVENTOS OBSTETRICOS DESFAVORABLES": {
+		"NINGUNO": {"NINGUNO", "NINGUNA", "NO", "N", "NONE", "SIN ANTECEDENTES", "NO PRESENTA", "NO APLICA"},
+		"PREMATUREZ": {"PREMATUREZ", "PREMATURO"},
+		"PLACENTA PREVIA": {"PLACENTA PREVIA", "PLACENTA"},
+		"MUERTE FETAL O NEONATAL": {"MUERTE FETAL", "MUERTE NEONATAL", "MORTINATO"},
+		"BAJO PESO AL NACER": {"BAJO PESO AL NACER", "BAJO PESO"},
+	},
+	"HABITOS DE RIESGO": {
+		"NINGUNO": {"NINGUNO", "NINGUNA", "NO", "N", "NONE", "NO FUMA", "NO CONSUME"},
+		"FUMA": {"FUMA", "FUMADOR", "FUMADORA", "TABACO"},
+		"TOMA ALCOHOL": {"TOMA ALCOHOL", "ALCOHOL", "BEBEDOR"},
+		"CONSUMO DE DROGAS": {"CONSUMO DE DROGAS", "DROGAS", "CONSUME DROGAS"},
+		"SIN DATO": {"NO DEFINIDO", "NO DEFINED", "SIN INFORMACION"},
+	},
+	"PERTENECIA ETNICA": {
+		"INDIGENA": {"INDIGENA", "INDIGENAS"},
+		"MESTIZO": {"MESTIZO", "MESTIZA"},
+		"NINGUNAS DE LAS ANTERIORES": {"NINGUNAS DE LAS ANTERIORES", "NINGUNA DE LAS ANTERIORES", "NEGRO (A)", "NEGRO(A)", "NEGRA", "NEGRO", "AFROCOLOMBIANO", "AFROCOLOMBIANA", "OTRO", "OTRA", "NINGUNA"},
+	},
+	"RESULTADO GOTA GRUESA (MALARIA)": {
+		"POSITIVO": {"POSITIVO", "POSITIVA", "REACTIVO"},
+		"NEGATIVO": {"NEGATIVO", "NEGATIVA", "NO REACTIVO", "NO REACTIVA"},
+		"SIN DATO": {"NO DEFINIDO", "NO DEFINED", "SIN INFORMACION", "NO REPORTA"},
+	},
+	"RESULTADO TAMIZAJE DE CUELLO UTERINO": {
+		"NORMAL": {"NORMAL", "NEGATIVO", "NEGATIVA", "SIN ALTERACIONES"},
+		"ALTERADO": {"ALTERADO", "ALTERADA", "POSITIVO", "POSITIVA", "ANORMAL"},
+		"SIN DATO": {"NO DEFINIDO", "NO DEFINED", "SIN INFORMACION", "NO REPORTA"},
+	},
+	"RESULTADO RUBEOLA": {
+		"POSITIVO": {"POSITIVO", "POSITIVA", "REACTIVO", "12.5"},
+		"NEGATIVO": {"NEGATIVO", "NEGATIVA", "NO REACTIVO"},
+		"SIN DATO": {"NO DEFINIDO", "NO DEFINED", "SIN INFORMACION"},
 	},
 }
 
@@ -667,14 +701,23 @@ def rellenar_vacios(df: pd.DataFrame, template: list) -> pd.DataFrame:
 	tmap = {t["name"]: t for t in template}
 	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
 	out = df.copy()
+	ausentes_upper = {"SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"}
 	for col in out.columns:
 		canonical = normalized_tmap.get(normalize_text(col))
 		tdef = tmap.get(canonical) if canonical else None
 		if tdef is None:
 			continue
-		tipo = tdef.get("type")
-		es_ausente = lambda v: v is None or pd.isna(v) or str(v).strip() == "" or str(v).strip().upper() in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA")
-		out[col] = out[col].map(lambda v: _default_para(tipo, tdef) if es_ausente(v) else v)
+		ser = out[col]
+		# Vectorizado: marca celdas ausentes (None/NaN/vacio/valores comodin)
+		if ser.dtype == object:
+			vals = ser.astype("string")
+			es_vacio = vals.str.strip().eq("")
+			es_comodin = vals.str.strip().str.upper().isin(ausentes_upper)
+			mask = vals.isna() | es_vacio | es_comodin
+		else:
+			mask = pd.isna(ser)
+		if mask.any():
+			out[col] = ser.mask(mask, _default_para(tdef.get("type"), tdef))
 	return out
 
 
@@ -713,11 +756,60 @@ def _mensaje_esperado(tipo: str, tdef: dict, col: str, val_str: str):
 	return "SIN DATO"
 
 
+def _en_orden_plantilla(df: pd.DataFrame, template: list) -> bool:
+	"""True si las columnas del archivo estan en el mismo orden que la plantilla.
+	Compara encabezado a encabezado de forma normalizada. Requiere >=95% de acierto
+	para evitar corrimientos cuando el archivo tiene las columnas en otro orden."""
+	if df.shape[1] != len(template):
+		return False
+	cols = list(df.columns)
+	coinciden = 0
+	for i, tdef in enumerate(template):
+		if i >= len(cols):
+			break
+		if normalize_text(cols[i]) == normalize_text(tdef["name"]):
+			coinciden += 1
+		elif normalize_text(cols[i]).replace(" ", "") == normalize_text(tdef["name"]).replace(" ", ""):
+			coinciden += 1
+	return coinciden / max(1, len(template)) >= 0.95
+
+
+def reordenar_a_template(df: pd.DataFrame, mapping: dict, template: list) -> pd.DataFrame:
+	"""Reordena las columnas del df al orden del template usando el mapping.
+	Evita corrimientos cuando el archivo trae las columnas en otro orden."""
+	template_cols = [t["name"] for t in template]
+	# Si ya esta en orden exacto de plantilla, no reordenar (rapido)
+	if list(df.columns) == template_cols:
+		return df
+	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
+	inverse = {}
+	for orig, templ in (mapping or {}).items():
+		if not templ:
+			continue
+		canonical = normalized_tmap.get(normalize_text(templ))
+		if canonical:
+			inverse[canonical] = orig
+	# Construir df en orden de template usando las columnas fuente mapeadas
+	col_src = []
+	for col in template_cols:
+		src = inverse.get(col)
+		if src and src in df.columns:
+			col_src.append(df[src])
+		else:
+			# Sin fuente: columna vacia (el relleno pone SIN DATO/0/fecha)
+			col_src.append(pd.Series([None] * len(df)))
+	out = pd.concat(col_src, axis=1)
+	out.columns = template_cols
+	return out
+
+
 def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	"""Valida la data sin corregirla. Retorna los errores encontrados."""
 	tmap = {t["name"]: t for t in template}
 	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
 	template_cols = [t["name"] for t in template]
+	# Reordenar al orden del template (evita corrimientos si el archivo viene en otro orden)
+	df = reordenar_a_template(df, mapping, template)
 	# Rellenar vacios con el valor por tipo (nunca se valida un dato vacio).
 	df = rellenar_vacios(df, template)
 	inverse = {}
@@ -732,19 +824,8 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	stats = {"total": n, "errors": 0, "corrected": 0, "ok": 0}
 	filas_error = set()
 
-	# Fallback posicional: si la data ya viene en orden de plantilla (misma
-	# cantidad de columnas), valida la columna i contra el campo i.
-	positional = len(df.columns) == len(template_cols)
-
-	src_values = []
-	for ci, col in enumerate(template_cols):
-		src = inverse.get(col)
-		if src and src in df.columns:
-			src_values.append(df[src].tolist())
-		elif positional:
-			src_values.append(df.iloc[:, ci].tolist())
-		else:
-			src_values.append(None)
+	# Tras reordenar, el df ya tiene las columnas en orden de plantilla.
+	src_values = [df[col].tolist() for col in template_cols]
 
 	logs = []
 	MAX_LOGS = 50000
@@ -806,11 +887,18 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			error_mask = (~vacio_mask) & (~en_allowed) & (~es_alias) & ser_norm.ne("SIN DATO")
 
 		elif tipo == "INT":
+			# MUNICIPIO DE RESIDENCIA acepta nombre de municipio (ej: RIOHACHA) o codigo
+			es_municipio = False
+			if col_norm == "MUNICIPIO DE RESIDENCIA":
+				es_municipio = ser_raw.str.len().gt(0) & ~ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False)
 			clean = ser_raw.str.replace("-", "", regex=False).str.replace(" ", "", regex=False)
 			es_entero = clean.str.fullmatch(r"[+-]?\d+").fillna(False) | clean.str.fullmatch(r"[+-]?\d+\.0+").fillna(False)
 			# Aceptar formato "1 TRIM"/"2TRIM"/"1er Trim" (valores de formula de trimestre)
 			es_trim = ser_raw.str.upper().str.replace(" ", "", regex=False).str.replace(".", "", regex=False).str.replace("ER", "", regex=False).str.fullmatch(r"\d+TRIM").fillna(False)
-			error_mask = (~vacio_mask) & (~es_entero) & (~es_trim)
+			# Aceptar decimales (ej: 80.2, 78,4) y multiples valores separados por "/"
+			# (ej: 67,1/80,77/104,11 en glicemia/tolerancia)
+			es_dec = ser_raw.str.replace(",", ".", regex=False).str.fullmatch(r"[+-]?\d+(\.\d+)?([/][+-]?\d+(\.\d+)?)*").fillna(False)
+			error_mask = (~vacio_mask) & (~es_entero) & (~es_trim) & (~es_dec) & (~es_municipio)
 
 		elif tipo == "DECIMAL":
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
@@ -857,7 +945,8 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		# Registrar errores (solo las celdas marcadas, no todo el rango)
 		idx_error = error_mask[error_mask].index.tolist()
 		for ridx in idx_error:
-			if es_formula and vacio_mask.iloc[ridx]:
+			# Columnas calculadas por formula: nunca son error (la formula las recalcula)
+			if es_formula:
 				continue
 			val_str = ser_raw.iloc[ridx]
 			filas_error.add(ridx + 1)
@@ -890,6 +979,8 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			return "SIN DATO"
 		return x
 	
+	# Reordenar al orden del template (evita corrimientos si el archivo viene en otro orden)
+	df = reordenar_a_template(df, mapping, template)
 	# Usar map() en lugar de applymap() (pandas 2.1+)
 	try:
 		df = df.map(clean_malformed)
@@ -912,14 +1003,8 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 	n = int(len(df))
 	stats = {"total": n, "errors": 0, "corrected": 0, "ok": 0}
 
-	# Precomputar las columnas fuente para evitar iterrows() (muy lento)
-	src_values = []
-	for col in template_cols:
-		src = inverse.get(col)
-		if src and src in df.columns:
-			src_values.append(df[src].tolist())
-		else:
-			src_values.append(None)
+	# Tras reordenar, el df ya tiene las columnas en orden de plantilla.
+	src_values = [df[col].tolist() for col in template_cols]
 
 	corrected_cols = []  # (col, valores, estados, originales)
 
@@ -972,7 +1057,6 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			corrected = None
 
 			# Valor vacio o "SIN DATO": el limpiador rellena con "SIN DATO" (correccion),
-			# segun el instructivo que lo permite como valor estandar.
 			es_ausente = (not val_str) or val_str.upper() in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL")
 			if es_ausente:
 				if campo_numerico_col and not val_str:
