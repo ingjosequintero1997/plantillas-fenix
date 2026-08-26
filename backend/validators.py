@@ -906,18 +906,31 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			error_mask = (~vacio_mask) & (~en_allowed) & (~es_alias) & ser_norm.ne("SIN DATO")
 
 		elif tipo == "INT":
-			# MUNICIPIO DE RESIDENCIA acepta nombre de municipio (ej: RIOHACHA) o codigo
-			es_municipio = False
-			if col_norm == "MUNICIPIO DE RESIDENCIA":
-				es_municipio = ser_raw.str.len().gt(0) & ~ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False)
-			clean = ser_raw.str.replace("-", "", regex=False).str.replace(" ", "", regex=False)
-			es_entero = clean.str.fullmatch(r"[+-]?\d+").fillna(False) | clean.str.fullmatch(r"[+-]?\d+\.0+").fillna(False)
-			# Aceptar formato "1 TRIM"/"2TRIM"/"1er Trim" (valores de formula de trimestre)
-			es_trim = ser_raw.str.upper().str.replace(" ", "", regex=False).str.replace(".", "", regex=False).str.replace("ER", "", regex=False).str.fullmatch(r"\d+TRIM").fillna(False)
-			# Aceptar decimales (ej: 80.2, 78,4) y multiples valores separados por "/"
-			# (ej: 67,1/80,77/104,11 en glicemia/tolerancia)
-			es_dec = ser_raw.str.replace(",", ".", regex=False).str.fullmatch(r"[+-]?\d+(\.\d+)?([/][+-]?\d+(\.\d+)?)*").fillna(False)
-			error_mask = (~vacio_mask) & (~es_entero) & (~es_trim) & (~es_dec) & (~es_municipio)
+			# Estricto: solo enteros validos (con .0 de Excel aceptado).
+			# Para campos especiales (trimestre de formula, glicemia, tolerancia,
+			# municipio) se usan reglas especificas.
+			es_trimestre = any(k in col_norm for k in ("TRIMESTRE", "TRIM"))
+			es_medicion = ("GLICEMIA" in col_norm) or ("TOLERANCIA" in col_norm)
+			es_municipio = (col_norm == "MUNICIPIO DE RESIDENCIA")
+
+			clean = ser_raw.str.replace(" ", "", regex=False).str.replace("-", "", regex=False)
+			# Entero valido (acepta 25 y 25.0 que produce Excel)
+			es_entero = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False) | ser_raw.str.fullmatch(r"[+-]?\d+\.0+").fillna(False)
+
+			# Trimestre de formula: acepta "1", "2", "3", "1 Trim", "2Trim", "1er Trim"
+			es_trim = ser_raw.str.upper().str.replace(" ", "", regex=False).str.replace(".", "", regex=False).str.replace("ER", "", regex=False).str.replace("TRIM", "", regex=False).str.fullmatch(r"[123]").fillna(False)
+
+			# Glicemia/tolerancia: acepta decimales (80.2, 78,4) y multiples con "/"
+			es_dec = False
+			if es_medicion:
+				es_dec = ser_raw.str.replace(",", ".", regex=False).str.fullmatch(r"[+-]?\d+(\.\d+)?([/][+-]?\d+(\.\d+)?)*").fillna(False)
+
+			# Municipio: solo codigo numerico valido
+			es_muni = False
+			if es_municipio:
+				es_muni = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False)
+
+			error_mask = (~vacio_mask) & (~es_entero) & (~es_trim) & (~es_dec) & (~es_muni)
 
 		elif tipo == "DECIMAL":
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
@@ -964,8 +977,10 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		# Registrar errores (solo las celdas marcadas, no todo el rango)
 		idx_error = error_mask[error_mask].index.tolist()
 		for ridx in idx_error:
-			# Columnas calculadas por formula: nunca son error (la formula las recalcula)
-			if es_formula:
+			# Columnas calculadas por formula: solo se ignoran si estan VACIAS
+			# (la formula las recalcula). Si tienen un valor erroneo escrito,
+			# si se marca como error.
+			if es_formula and vacio_mask.iloc[ridx]:
 				continue
 			val_str = ser_raw.iloc[ridx]
 			filas_error.add(ridx + 1)
