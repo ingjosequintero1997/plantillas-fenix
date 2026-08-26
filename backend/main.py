@@ -1003,7 +1003,8 @@ def _normalizar_fechas_texto(text: str, template_key: str) -> str:
 	try:
 		meta = get_template_by_key(template_key)
 		tmpl = meta["template"]
-		date_cols = {t["name"] for t in tmpl if t["type"] == "DATE"}
+		# Indices de columnas DATE del template (para normalizar SOLO fechas)
+		date_idx = {i for i, t in enumerate(tmpl) if t["type"] == "DATE"}
 		lines = text.replace("\r\n", "\n").split("\n")
 		out = []
 		for line in lines:
@@ -1016,7 +1017,8 @@ def _normalizar_fechas_texto(text: str, template_key: str) -> str:
 				val = val.replace("|", " ").replace("\r", " ").replace("\n", " ").replace("\t", " ")
 				val = val.replace("_x000D_", " ").replace("_x000B_", " ")
 				val = re.sub(r"\s+", " ", val).strip()
-				if val and val.upper() not in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"):
+				# Normalizar SOLO columnas de fecha (nunca numeros/EDAD)
+				if i in date_idx and val and val.upper() not in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"):
 					iso = to_date_iso(val)
 					if iso:
 						val = iso
