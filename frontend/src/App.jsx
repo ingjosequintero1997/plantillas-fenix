@@ -101,7 +101,7 @@ export default function App() {
   const [evaluating, setEvaluating] = useState(false)
   const [showEvaluation, setShowEvaluation] = useState(false)
   const [tipoCargue, setTipoCargue] = useState('mensual')
-  const [processingMode, setProcessingMode] = useState('limpiador')
+  const [processingMode, setProcessingMode] = useState('validador')
   const [lastCargueId, setLastCargueId] = useState('')
 
   const isAdmin = user?.role === 'admin'
@@ -178,7 +178,7 @@ export default function App() {
     setSummary(data.summary || null)
     setLogs(data.logs_sample || [])
     setCorrectedText(data.corrected_text || '')
-    setRawText(data.raw_text || rawText)
+    setRawText(data.raw_text || '')
     setTemplateNames(data.template_names || [])
     setMappingStats(data.mapping_stats || null)
     setStructureValidation(data.structure_validation || null)

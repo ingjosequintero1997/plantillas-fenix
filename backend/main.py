@@ -992,6 +992,34 @@ def _decompress_cargue(cargue) -> str:
 	return ct
 
 
+def _normalizar_fechas_texto(text: str, template_key: str) -> str:
+	"""Parsea un texto pipe-delimited y normaliza las fechas de las columnas
+	tipo DATE a AAAA-MM-DD (ej: 3/04/2000 -> 2000-04-03). Usado al descargar
+	para que cualquier cargue guardado salga siempre con fechas ISO."""
+	from validators import to_date_iso
+	try:
+		meta = get_template_by_key(template_key)
+		tmpl = meta["template"]
+		date_cols = {t["name"] for t in tmpl if t["type"] == "DATE"}
+		lines = text.replace("\r\n", "\n").split("\n")
+		out = []
+		for line in lines:
+			if not line.strip():
+				continue
+			parts = line.split("|")
+			for i, col in enumerate(date_cols):
+				if i < len(parts):
+					val = parts[i].strip()
+					if val and val.upper() not in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"):
+						iso = to_date_iso(val)
+						if iso:
+							parts[i] = iso
+			out.append("|".join(parts))
+		return "\r\n".join(out)
+	except Exception:
+		return text.replace('\r\n', '\n').replace('\n', '\r\n')
+
+
 @app.get("/cargues/{cargue_id}/download-txt")
 async def download_cargue_txt(cargue_id: int, current_user: User = Depends(get_current_user)):
 	ensure_db_ready()
@@ -1008,6 +1036,7 @@ async def download_cargue_txt(cargue_id: int, current_user: User = Depends(get_c
 			if cargue.template_key not in _assigned:
 				raise HTTPException(status_code=403, detail="No autorizado")
 		text = _decompress_cargue(cargue)
+		text = _normalizar_fechas_texto(text, cargue.template_key or "gestante")
 		filename = cargue.original_filename.replace(".xlsx", "_corregido.txt").replace(".xls", "_corregido.txt")
 		text_normalized = text.replace('\r\n', '\n').replace('\n', '\r\n')
 		return StreamingResponse(
