@@ -774,6 +774,30 @@ def _en_orden_plantilla(df: pd.DataFrame, template: list) -> bool:
 	return coinciden / max(1, len(template)) >= 0.95
 
 
+def limpiar_celdas_export(df: pd.DataFrame) -> pd.DataFrame:
+	"""Limpia todas las celdas de caracteres que rompen el formato pipe-delimited:
+	pipes, saltos de linea, tabulaciones, _x000D_ (carriage return de Excel),
+	_x000B_ (vertical tab). Garantiza que el TXT/Excel salga sin filas corridas."""
+	out = df.copy()
+	for col in out.columns:
+		ser = out[col]
+		if ser.dtype == object:
+			out[col] = ser.map(_limpiar_valor)
+		else:
+			out[col] = ser.map(lambda v: _limpiar_valor(v))
+	return out
+
+
+def _limpiar_valor(v):
+	if v is None or pd.isna(v):
+		return v
+	s = str(v)
+	s = s.replace("|", " ").replace("\r", " ").replace("\n", " ").replace("\t", " ")
+	s = s.replace("_x000D_", " ").replace("_x000B_", " ")
+	s = re.sub(r"\s+", " ", s).strip()
+	return s
+
+
 def normalizar_fechas_df(df: pd.DataFrame, template: list) -> pd.DataFrame:
 	"""Convierte todas las celdas de columnas tipo DATE a formato AAAA-MM-DD.
 	Garantiza que el texto exportado (TXT/Excel) siempre tenga fechas ISO."""

@@ -449,10 +449,11 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 	corrected_df, logs, stats = validate_and_correct(df, mapping, active_template)
 	# Normalizar todas las fechas a AAAA-MM-DD (ej: 3/04/2000 -> 2000-04-03)
 	try:
-		from .validators import normalizar_fechas_df
+		from .validators import normalizar_fechas_df, limpiar_celdas_export
 	except ImportError:
-		from validators import normalizar_fechas_df
+		from validators import normalizar_fechas_df, limpiar_celdas_export
 	corrected_df = normalizar_fechas_df(corrected_df, active_template)
+	corrected_df = limpiar_celdas_export(corrected_df)
 	# Asegurar que no hay NaN antes de exportar
 	corrected_df = corrected_df.fillna("SIN DATO").astype(str)
 	# Reemplazar saltos de linea en celdas para no romper el formato pipe-delimited
@@ -603,10 +604,11 @@ async def upload_file(
 			# En modo validador la data va SIN encabezado (solo filas en orden
 			# de plantilla) para que sea consistente con la tabla editable.
 			try:
-				from .validators import normalizar_fechas_df
+				from .validators import normalizar_fechas_df, limpiar_celdas_export
 			except ImportError:
-				from validators import normalizar_fechas_df
+				from validators import normalizar_fechas_df, limpiar_celdas_export
 			df = normalizar_fechas_df(df, active_template)
+			df = limpiar_celdas_export(df)
 			# Evitar NaN en preview (Excel produce nan en celdas vacias/formulas)
 			df_safe = df.fillna("SIN DATO").astype(str)
 			canonical_raw_text = df_safe.to_csv(sep='|', index=False, header=False)
@@ -995,7 +997,8 @@ def _decompress_cargue(cargue) -> str:
 def _normalizar_fechas_texto(text: str, template_key: str) -> str:
 	"""Parsea un texto pipe-delimited y normaliza las fechas de las columnas
 	tipo DATE a AAAA-MM-DD (ej: 3/04/2000 -> 2000-04-03). Usado al descargar
-	para que cualquier cargue guardado salga siempre con fechas ISO."""
+	para que cualquier cargue guardado salga siempre con fechas ISO y sin
+	caracteres que rompan la estructura pipe-delimited."""
 	from validators import to_date_iso
 	try:
 		meta = get_template_by_key(template_key)
@@ -1007,13 +1010,17 @@ def _normalizar_fechas_texto(text: str, template_key: str) -> str:
 			if not line.strip():
 				continue
 			parts = line.split("|")
-			for i, col in enumerate(date_cols):
-				if i < len(parts):
-					val = parts[i].strip()
-					if val and val.upper() not in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"):
-						iso = to_date_iso(val)
-						if iso:
-							parts[i] = iso
+			for i in range(len(parts)):
+				val = parts[i].strip()
+				# Limpiar caracteres que rompen el formato pipe-delimited
+				val = val.replace("|", " ").replace("\r", " ").replace("\n", " ").replace("\t", " ")
+				val = val.replace("_x000D_", " ").replace("_x000B_", " ")
+				val = re.sub(r"\s+", " ", val).strip()
+				if val and val.upper() not in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"):
+					iso = to_date_iso(val)
+					if iso:
+						val = iso
+				parts[i] = val
 			out.append("|".join(parts))
 		return "\r\n".join(out)
 	except Exception:
@@ -1745,6 +1752,11 @@ async def validate_data(payload: dict):
 	def normalizar_celda(valor, nombre_col):
 		s = str(valor) if valor is not None else ""
 		s = s.strip()
+		# Limpiar caracteres que rompen el formato pipe-delimited:
+		# pipes, saltos de linea, tabulaciones y _x000D_ (carriage return de Excel)
+		s = s.replace("|", " ").replace("\r", " ").replace("\n", " ").replace("\t", " ")
+		s = s.replace("_x000D_", " ").replace("_x000B_", " ")
+		s = re.sub(r"\s+", " ", s).strip()
 		if not s or s.upper() in ("SIN DATO", "NO APLICA", "N/A", "NONE"):
 			return s
 		if tipos_por_col.get(nombre_col) == "DATE":
