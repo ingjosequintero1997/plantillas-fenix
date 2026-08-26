@@ -211,10 +211,8 @@ def build_data_excel(corrected_text: str, template: list[dict]) -> io.BytesIO:
 
 def build_reporte_errores_excel(corrected_text: str, template: list[dict], errors_by_cell: dict) -> io.BytesIO:
     """Genera un Excel de la data validada con las celdas con error marcadas
-    en ROJO y un comentario con la correccion que se debe ingresar.
-    El prestador corrige en el Excel y re-subve el archivo (xlsx)."""
-    from openpyxl.comments import Comment
-
+    en ROJO y una hoja 'Errores' que lista cada error (fila, variable, dato,
+    correccion) para corregir y re-validar. Rapido incluso con miles de filas."""
     headers = [t["name"] for t in template]
     types = [t["type"] for t in template]
     types_by_col = {i + 1: t["type"] for i, t in enumerate(template)}
@@ -240,14 +238,23 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
         cell.alignment = Alignment(wrap_text=True, vertical="center")
         cell.border = thin
 
+    # Columnas RESULTADO y ERRORES
+    for extra, label in ((len(headers) + 1, "RESULTADO"), (len(headers) + 2, "ERRORES")):
+        cell = ws.cell(row=1, column=extra, value=label)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(wrap_text=True, vertical="center")
+        cell.border = thin
+
     # Instrucciones en una hoja adicional
     ws_instr = wb.create_sheet("Instrucciones")
     ws_instr.cell(row=1, column=1, value="INSTRUCCIONES PARA CORREGIR Y RE-VALIDAR").font = Font(bold=True, size=12)
     instrucciones = [
         "",
-        "1. Las celdas en ROJO tienen errores. Pasa el mouse sobre la celda para ver el comentario con la correccion.",
-        "2. Corrige el dato de cada celda roja segun el comentario.",
-        "3. Guarda el archivo y vuelve a subirlo en la aplicacion para validarlo de nuevo.",
+        "1. En la hoja DATA, las celdas en ROJO tienen errores.",
+        "2. En la hoja ERRORE S (o Errores) esta la lista completa: fila, variable, dato actual y la correccion.",
+        "3. Corrige cada dato segun la hoja de errores.",
+        "4. Guarda el archivo y vuelve a subirlo en la aplicacion para validarlo de nuevo.",
         "",
         "Las fechas deben escribirse como AAAA-MM-DD (ej: 2000-04-03).",
         "Los campos numericos deben contener solo numeros.",
@@ -258,7 +265,7 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
 
     # Construir filas rapidas con append (openpyxl es lento con cell() en bucles grandes)
     for ridx, row in enumerate(rows, start=2):
-        out_row = [None] * (len(types) + 1)
+        out_row = [None] * (len(types) + 2)
         for c, (ttype, val) in enumerate(zip(types, row), start=1):
             val = (val or "").strip()
             if ttype == "DATE":
@@ -266,13 +273,7 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
                     out_row[c - 1] = "1845-01-01"
                 else:
                     iso = to_date_iso(val)
-                    if iso:
-                        try:
-                            out_row[c - 1] = datetime.strptime(iso, "%Y-%m-%d")
-                        except Exception:
-                            out_row[c - 1] = val
-                    else:
-                        out_row[c - 1] = val
+                    out_row[c - 1] = iso if iso else val
             elif ttype in ("INT", "DECIMAL"):
                 num = re.sub(r"[^0-9.\-]", "", val)
                 try:
@@ -281,45 +282,81 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
                     out_row[c - 1] = val
             else:
                 out_row[c - 1] = val if val else "SIN DATO"
-        # RESULTADO de la fila
         fila_idx = ridx - 2  # 0-based dentro de rows
-        tiene = any((fila_idx, h) in errors_by_cell for h in headers)
+        errores_fila = [(h, errors_by_cell[(fila_idx, h)]) for h in headers if (fila_idx, h) in errors_by_cell]
+        tiene = len(errores_fila) > 0
         out_row[len(types)] = "CON ERRORES" if tiene else "VALIDADO"
+        # Columna ERRORES: mensajes de correccion por fila
+        if errores_fila:
+            msgs = [f"{h}: {msg}" for h, msg in errores_fila]
+            out_row[len(types) + 1] = "; ".join(msgs[:8]) + ("; ..." if len(msgs) > 8 else "")
+        else:
+            out_row[len(types) + 1] = ""
         ws.append(out_row)
 
-    # Aplicar formato rapido a celdas: solo las celdas con error y las fechas
-    # (evita tocar las 331k celdas).
+    # Marcar celdas con error en rojo (solo las que tienen error)
+    col_idx = {h: i + 1 for i, h in enumerate(headers)}
+    for (fila_idx, h), msg in errors_by_cell.items():
+        if fila_idx >= len(rows):
+            continue
+        c = col_idx.get(h)
+        if c is None:
+            continue
+        cell = ws.cell(row=fila_idx + 2, column=c)
+        cell.fill = error_fill
+        cell.font = error_font
+
+    # Columna RESULTADO por fila
     for ridx in range(len(rows)):
-        excel_row = ridx + 2
-        fila_idx = ridx
-        # RESULTADO
-        rc = ws.cell(row=excel_row, column=len(headers) + 1)
+        rc = ws.cell(row=ridx + 2, column=len(headers) + 1)
         rc.alignment = Alignment(horizontal="center", vertical="center")
         rc.border = thin
-        tiene_fila = any((fila_idx, h) in errors_by_cell for h in headers)
+        tiene_fila = any((ridx, h) in errors_by_cell for h in headers)
         if tiene_fila:
             rc.fill = error_fill
             rc.font = error_font
         else:
             rc.fill = ok_fill
             rc.font = Font(color="1B5E20", bold=True)
-        # Celdas con error de esta fila
-        for c, h in enumerate(headers, start=1):
-            key = (fila_idx, h)
-            if key in errors_by_cell:
-                cell = ws.cell(row=excel_row, column=c)
-                cell.fill = error_fill
-                cell.font = error_font
-                cell.comment = Comment(errors_by_cell[key], "Fenix Data", height=120, width=320)
-                if types[c - 1] == "DATE":
-                    cell.number_format = "yyyy-mm-dd"
 
-    for c in range(1, len(headers) + 2):
+    for c in range(1, len(headers) + 3):
         letter = col_letter(c)
-        max_len = max(len(str(headers[c - 1])) if c - 1 < len(headers) else 10, 10)
-        ws.column_dimensions[letter].width = min(max_len + 3, 45)
-
+        if c - 1 < len(headers):
+            max_len = max(len(str(headers[c - 1])), 10)
+            ws.column_dimensions[letter].width = min(max_len + 3, 45)
+        elif c - 1 == len(headers):
+            ws.column_dimensions[letter].width = 14  # RESULTADO
+        else:
+            ws.column_dimensions[letter].width = 60  # ERRORES
     ws.freeze_panes = "A2"
+
+    # Hoja de errores tabular: fila, variable, dato actual, correccion
+    ws_err = wb.create_sheet("Errores")
+    err_headers = ["Fila", "Variable", "Dato actual", "Correccion"]
+    err_header_fill = PatternFill("solid", fgColor="B00020")
+    for c, h in enumerate(err_headers, start=1):
+        cell = ws_err.cell(row=1, column=c, value=h)
+        cell.font = Font(bold=True, color="FFFFFF", size=10, name="Calibri")
+        cell.fill = err_header_fill
+        cell.border = thin
+    # Dato actual por celda: leer de rows
+    err_rows = []
+    for (fila_idx, h), msg in errors_by_cell.items():
+        if fila_idx >= len(rows):
+            continue
+        c = col_idx.get(h)
+        dato = ""
+        if c is not None and c - 1 < len(rows[fila_idx]):
+            dato = rows[fila_idx][c - 1]
+        err_rows.append([fila_idx + 1, h, dato, msg])
+    # Ordenar por fila
+    err_rows.sort(key=lambda x: x[0])
+    for er in err_rows:
+        ws_err.append(er)
+    for c in range(1, 5):
+        ws_err.column_dimensions[col_letter(c)].width = 12 if c == 1 else 45
+    ws_err.freeze_panes = "A2"
+
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)

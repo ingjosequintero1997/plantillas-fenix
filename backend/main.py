@@ -2127,9 +2127,9 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 	"""Calcula los errores por celda usando el validador VECTORIZADO (rapido).
 	Devuelve {(row_idx, col_name): mensaje_correccion}."""
 	try:
-		from .validators import validate_only, rellenar_vacios
+		from .validators import validate_only, rellenar_vacios, normalize_text
 	except ImportError:
-		from validators import validate_only, rellenar_vacios
+		from validators import validate_only, rellenar_vacios, normalize_text
 	import pandas as _pd
 	df = _pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 	df = df.fillna('').astype(str)
@@ -2139,13 +2139,35 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 	if len(df.columns) == len(tmpl_names):
 		df.columns = tmpl_names
 	# rellenar vacios (igual que la validacion real)
-	df = rellenar_vacios(df, tmpl)
+	df_rellenado = rellenar_vacios(df, tmpl)
 	mapping = {c: c for c in df.columns if c in tmpl_names}
-	res = validate_only(df, mapping, tmpl)
+	res = validate_only(df_rellenado, mapping, tmpl)
 	errors = {}
+	tmap2 = {t["name"]: t for t in tmpl}
 	for l in res["logs"]:
 		row = int(l["row"]) - 1
-		errors[(row, l["column"])] = l["corrected"] or "Dato invalido"
+		col = l["column"]
+		corr = l["corrected"] or "Dato invalido"
+		# Comentario explicito: que se encontro y que debe ingresar
+		tdef2 = tmap2.get(col)
+		tipo2 = tdef2.get("type") if tdef2 else None
+		if tipo2 == "SET":
+			allowed = [str(a).strip() for a in (tdef2.get("allowed") or [])]
+			msg = f"El dato '{l['original']}' no es valido para '{col}'. Debe ser uno de: " + (", ".join(allowed) if allowed else "los valores del instructivo")
+		elif tipo2 == "INT":
+			msg = f"El dato '{l['original']}' no es un numero entero valido para '{col}'. Ingresa solo numeros."
+		elif tipo2 == "DECIMAL":
+			msg = f"El dato '{l['original']}' no es un numero valido para '{col}'. Ingresa solo numeros (ej: 12.5)."
+		elif tipo2 == "DATE":
+			msg = f"El dato '{l['original']}' no es una fecha valida para '{col}'. Ingresa la fecha como AAAA-MM-DD (ej: 2025-10-10)."
+		elif tipo2 == "TEXT":
+			msg = f"El dato '{l['original']}' no es un texto valido para '{col}'. Ingresa el dato en texto."
+		else:
+			msg = f"El dato '{l['original']}' no es valido para '{col}'. {corr}"
+		errors[(row, col)] = msg
+	# NOTA: los campos VACIOS/SIN DATO NO son error aqui porque el sistema
+	# los rellena con el valor por tipo (0, SIN DATO, 1845-01-01) segun el
+	# instructivo. Solo se marcan errores por valores realmente invalidos.
 	return errors
 
 
