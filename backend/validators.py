@@ -159,13 +159,14 @@ FIELD_SET_ALIASES = {
 	"NIVEL EDUCATIVO": {
 		"ANALFABETA": {"ANALFABETA", "ANALFABETO", "NO SABE LEER", "NO LEE"},
 		"SABE LEER O ESCRIBIR": {"SABE LEER", "LEER Y ESCRIBIR", "SABE LEER Y ESCRIBIR", "LEE Y ESCRIBE"},
-		"PRIMARIA COMPLETA": {"PRIMARIA COMPLETA", "PRIMARIA", "PRIMARIA COMPLETADA"},
-		"PRIMARIA INCOMPLETA": {"PRIMARIA INCOMPLETA", "PRIMARIA INCOMPLETO"},
+		"PRIMARIA COMPLETA": {"PRIMARIA COMPLETA", "PRIMARIA", "PRIMARIA COMPLETADA", "BASICA PRIMARIA", "BASICA PRIMARIA COMPLETA", "PRIMARIA COMPLETO"},
+		"PRIMARIA INCOMPLETA": {"PRIMARIA INCOMPLETA", "PRIMARIA INCOMPLETO", "BASICA PRIMARIA INCOMPLETA"},
 		"SECUNDARIA COMPLETA": {"SECUNDARIA", "SECUNDARIA COMPLETA", "BACHILLER", "BACHILLERATO", "BACHILLER COMPLETO", "BACHILLERATO COMPLETO", "11", "GRADO 11", "SECNDARIA", "SECUNDARIA COMPLETA", "SECUNDARIA COMPLETA "},
 		"SECUNDARIA INCOMPLETA": {"SECUNDARIA INCOMPLETA", "SECUNDARIA INCOMPLETO", "BACHILLERATO INCOMPLETO", "BACHILLER INCOMPLETO", "SECUNDARIA INCOMPLETA "},
 		"TECNICO": {"TECNICO", "TECNICA", "TECNICO LABORAL"},
 		"TECNOLOGO": {"TECNOLOGO", "TECNOLOGA", "TECNOLOGIA"},
 		"PROFESIONAL UNIVERSITARIO": {"PROFESIONAL", "UNIVERSITARIO", "PROFESIONAL UNIVERSITARIO", "UNIVERSIDAD", "UNIVERSITARIA", "PROFESIONAL UNIVERSITARIA"},
+		"SIN DATO": {"NO DEFINIDO", "NO DEFINED", "NO DEFINIDO (NINGUNO)", "NO DEFINIDO (NINGUNA)", "OTRO", "SIN INFORMACION", "NO REPORTA", "NINGUNO", "NINGUNA"},
 	},
 }
 
@@ -787,11 +788,16 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			field_aliases = FIELD_SET_ALIASES.get(col, {})
 			alias_map = {}
 			for canonical, synonyms in field_aliases.items():
-				if normalize_text(canonical) in norm_allowed_set:
+				# Alias a SIN DATO siempre se incluyen (comodin universal)
+				if normalize_text(canonical) in norm_allowed_set or normalize_text(canonical) == "SIN DATO":
 					alias_map[canonical] = {normalize_text(a) for a in synonyms}
+			# Fusionar alias genericos con los del campo (no sobrescribir)
 			for canon, syns in alias_genericos_norm.items():
 				if normalize_text(canon) in norm_allowed_set:
-					alias_map[canon] = syns
+					if canon in alias_map:
+						alias_map[canon] = alias_map[canon] | syns
+					else:
+						alias_map[canon] = set(syns)
 			alias_union = set().union(*alias_map.values()) if alias_map else set()
 
 			# Error: no vacio, no en allowed, no es SIN DATO, no es alias
@@ -802,7 +808,9 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		elif tipo == "INT":
 			clean = ser_raw.str.replace("-", "", regex=False).str.replace(" ", "", regex=False)
 			es_entero = clean.str.fullmatch(r"[+-]?\d+").fillna(False) | clean.str.fullmatch(r"[+-]?\d+\.0+").fillna(False)
-			error_mask = (~vacio_mask) & (~es_entero)
+			# Aceptar formato "1 TRIM"/"2TRIM"/"1er Trim" (valores de formula de trimestre)
+			es_trim = ser_raw.str.upper().str.replace(" ", "", regex=False).str.replace(".", "", regex=False).str.replace("ER", "", regex=False).str.fullmatch(r"\d+TRIM").fillna(False)
+			error_mask = (~vacio_mask) & (~es_entero) & (~es_trim)
 
 		elif tipo == "DECIMAL":
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
@@ -830,7 +838,10 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 
 		elif tipo == "TEXT":
 			campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
-			if campo_numerico:
+			# Puntaje de escala de Herrera y Hurtado: acepta valores numericos (es una escala)
+			if "HERRERA" in col.upper() or "ESCALA" in col.upper():
+				error_mask = pd.Series(False, index=ser_raw.index)
+			elif campo_numerico:
 				error_mask = pd.Series(False, index=ser_raw.index)
 			else:
 				es_numero = ser_raw.str.replace(",", ".", regex=False).str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
