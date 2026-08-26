@@ -210,17 +210,14 @@ def build_data_excel(corrected_text: str, template: list[dict]) -> io.BytesIO:
 
 
 def build_reporte_errores_excel(corrected_text: str, template: list[dict], errors_by_cell: dict) -> io.BytesIO:
-    """Genera un Excel de la data validada con las celdas con error marcadas
-    en ROJO y una hoja 'Errores' que lista cada error (fila, variable, dato,
-    correccion) para corregir y re-validar. Rapido incluso con miles de filas."""
+    """Genera una UNICA hoja de calculo con la data y una columna final
+    'RESULTADO DE VALIDACION' que describe el/los errores de cada fila.
+    Las celdas con dato invalido se marcan en rojo para localizarlas."""
     headers = [t["name"] for t in template]
     types = [t["type"] for t in template]
-    types_by_col = {i + 1: t["type"] for i, t in enumerate(template)}
-    formulas = build_formulas(types_by_col)
     rows = parse_corrected(corrected_text)
 
     wb = Workbook()
-    wb.calculation.fullCalcOnLoad = True
     ws = wb.active
     ws.title = "DATA"
 
@@ -229,43 +226,19 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
     thin = Border(*[Side(style="thin", color="BDBDBD")] * 4)
     error_fill = PatternFill("solid", fgColor="FDE2E2")  # rojo claro
     error_font = Font(color="B00020", bold=True)
-    ok_fill = PatternFill("solid", fgColor="E6F4EA")     # verde claro para celdas ok
 
-    for c, h in enumerate(headers, start=1):
-        cell = ws.cell(row=1, column=c, value=h)
+    ncols = len(headers) + 1  # + RESULTADO DE VALIDACION
+    for c in range(1, ncols + 1):
+        label = headers[c - 1] if c <= len(headers) else "RESULTADO DE VALIDACION"
+        cell = ws.cell(row=1, column=c, value=label)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = Alignment(wrap_text=True, vertical="center")
         cell.border = thin
 
-    # Columnas RESULTADO y ERRORES
-    for extra, label in ((len(headers) + 1, "RESULTADO"), (len(headers) + 2, "ERRORES")):
-        cell = ws.cell(row=1, column=extra, value=label)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(wrap_text=True, vertical="center")
-        cell.border = thin
-
-    # Instrucciones en una hoja adicional
-    ws_instr = wb.create_sheet("Instrucciones")
-    ws_instr.cell(row=1, column=1, value="INSTRUCCIONES PARA CORREGIR Y RE-VALIDAR").font = Font(bold=True, size=12)
-    instrucciones = [
-        "",
-        "1. En la hoja DATA, las celdas en ROJO tienen errores.",
-        "2. En la hoja ERRORE S (o Errores) esta la lista completa: fila, variable, dato actual y la correccion.",
-        "3. Corrige cada dato segun la hoja de errores.",
-        "4. Guarda el archivo y vuelve a subirlo en la aplicacion para validarlo de nuevo.",
-        "",
-        "Las fechas deben escribirse como AAAA-MM-DD (ej: 2000-04-03).",
-        "Los campos numericos deben contener solo numeros.",
-        "Los campos de catalogo (SI/NO, CC/TI/CE, etc.) deben usar una de las opciones indicadas.",
-    ]
-    for i, line in enumerate(instrucciones, start=2):
-        ws_instr.cell(row=i, column=1, value=line)
-
-    # Construir filas rapidas con append (openpyxl es lento con cell() en bucles grandes)
+    # Construir filas con append (rapido)
     for ridx, row in enumerate(rows, start=2):
-        out_row = [None] * (len(types) + 2)
+        out_row = [None] * ncols
         for c, (ttype, val) in enumerate(zip(types, row), start=1):
             val = (val or "").strip()
             if ttype == "DATE":
@@ -282,21 +255,19 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
                     out_row[c - 1] = val
             else:
                 out_row[c - 1] = val if val else "SIN DATO"
+        # RESULTADO DE VALIDACION: describir el error especifico de la fila
         fila_idx = ridx - 2  # 0-based dentro de rows
         errores_fila = [(h, errors_by_cell[(fila_idx, h)]) for h in headers if (fila_idx, h) in errors_by_cell]
-        tiene = len(errores_fila) > 0
-        out_row[len(types)] = "CON ERRORES" if tiene else "VALIDADO"
-        # Columna ERRORES: mensajes de correccion por fila
         if errores_fila:
-            msgs = [f"{h}: {msg}" for h, msg in errores_fila]
-            out_row[len(types) + 1] = "; ".join(msgs[:8]) + ("; ..." if len(msgs) > 8 else "")
+            desc = " - ".join(f"{h}: {msg}" for h, msg in errores_fila)
         else:
-            out_row[len(types) + 1] = ""
+            desc = "VALIDADO"
+        out_row[ncols - 1] = desc
         ws.append(out_row)
 
-    # Marcar celdas con error en rojo (solo las que tienen error)
+    # Marcar en rojo las celdas con dato invalido
     col_idx = {h: i + 1 for i, h in enumerate(headers)}
-    for (fila_idx, h), msg in errors_by_cell.items():
+    for (fila_idx, h) in errors_by_cell.keys():
         if fila_idx >= len(rows):
             continue
         c = col_idx.get(h)
@@ -306,56 +277,14 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
         cell.fill = error_fill
         cell.font = error_font
 
-    # Columna RESULTADO por fila
-    for ridx in range(len(rows)):
-        rc = ws.cell(row=ridx + 2, column=len(headers) + 1)
-        rc.alignment = Alignment(horizontal="center", vertical="center")
-        rc.border = thin
-        tiene_fila = any((ridx, h) in errors_by_cell for h in headers)
-        if tiene_fila:
-            rc.fill = error_fill
-            rc.font = error_font
-        else:
-            rc.fill = ok_fill
-            rc.font = Font(color="1B5E20", bold=True)
-
-    for c in range(1, len(headers) + 3):
+    for c in range(1, ncols + 1):
         letter = col_letter(c)
-        if c - 1 < len(headers):
+        if c <= len(headers):
             max_len = max(len(str(headers[c - 1])), 10)
             ws.column_dimensions[letter].width = min(max_len + 3, 45)
-        elif c - 1 == len(headers):
-            ws.column_dimensions[letter].width = 14  # RESULTADO
         else:
-            ws.column_dimensions[letter].width = 60  # ERRORES
+            ws.column_dimensions[letter].width = 80  # RESULTADO DE VALIDACION
     ws.freeze_panes = "A2"
-
-    # Hoja de errores tabular: fila, variable, dato actual, correccion
-    ws_err = wb.create_sheet("Errores")
-    err_headers = ["Fila", "Variable", "Dato actual", "Correccion"]
-    err_header_fill = PatternFill("solid", fgColor="B00020")
-    for c, h in enumerate(err_headers, start=1):
-        cell = ws_err.cell(row=1, column=c, value=h)
-        cell.font = Font(bold=True, color="FFFFFF", size=10, name="Calibri")
-        cell.fill = err_header_fill
-        cell.border = thin
-    # Dato actual por celda: leer de rows
-    err_rows = []
-    for (fila_idx, h), msg in errors_by_cell.items():
-        if fila_idx >= len(rows):
-            continue
-        c = col_idx.get(h)
-        dato = ""
-        if c is not None and c - 1 < len(rows[fila_idx]):
-            dato = rows[fila_idx][c - 1]
-        err_rows.append([fila_idx + 1, h, dato, msg])
-    # Ordenar por fila
-    err_rows.sort(key=lambda x: x[0])
-    for er in err_rows:
-        ws_err.append(er)
-    for c in range(1, 5):
-        ws_err.column_dimensions[col_letter(c)].width = 12 if c == 1 else 45
-    ws_err.freeze_panes = "A2"
 
     buf = io.BytesIO()
     wb.save(buf)
