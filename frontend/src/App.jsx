@@ -7,7 +7,6 @@ import DashboardLayout from './components/DashboardLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 import DashboardHome from './components/DashboardHome'
 import TemplateSelector from './components/TemplateSelector'
-import ErrorSummaryTable from './components/ErrorSummaryTable'
 import EditableDataTable from './components/EditableDataTable'
 import QualityBanner from './components/QualityBanner'
 import DragDrop from './components/DragDrop'
@@ -547,9 +546,6 @@ export default function App() {
 
                     {/* Resumen visual de calidad (modo validador) */}
                     {processingMode === 'validador' && <QualityBanner summary={summary} mode="validador" />}
-
-                    {/* Tabla de errores */}
-                    <ErrorSummaryTable logs={logs} />
 
                     {/* Tabla editable (modo validador) */}
                     {processingMode === 'validador' && (
