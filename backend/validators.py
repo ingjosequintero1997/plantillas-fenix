@@ -231,15 +231,26 @@ FIELD_KEYWORD_CANONICAL = {
 	},
 }
 
+_ACENTOS = str.maketrans("ÁÉÍÓÚÜÑáéíóúüñ", "AEIOUUNaeiouun")
+
+
 def normalize_text(v) -> str:
 	if v is None or pd.isna(v):
 		return ""
 	s = str(v).strip().upper()
-	s = unicodedata.normalize("NFD", s)
-	s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+	s = s.translate(_ACENTOS)
 	s = s.replace("_", " ")
 	s = re.sub(r"\s+", " ", s)
 	return s
+
+
+def normalize_series(ser: pd.Series) -> pd.Series:
+	"""Normaliza una Series de texto de forma vectorizada (sin acentos, mayusculas)."""
+	out = ser.fillna("").astype(str).str.strip().str.upper()
+	out = out.str.translate(_ACENTOS)
+	out = out.str.replace("_", " ", regex=False)
+	out = out.str.replace(r"\s+", " ", regex=True)
+	return out
 
 def to_int_safe(v):
 	if v is None or pd.isna(v):
@@ -340,9 +351,34 @@ def to_date_iso(v):
 		return None
 
 	# ISO datetime con componente de hora (YYYY-MM-DD HH:MM:SS): extraer solo la fecha
-	iso_match = re.match(r"^(\d{4}-\d{2}-\d{2})\s", s)
+	iso_match = re.match(r"^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$", s)
 	if iso_match:
-		return iso_match.group(1)
+		anio, mes, dia = iso_match.group(1), iso_match.group(2), iso_match.group(3)
+		try:
+			datetime(int(anio), int(mes), int(dia))
+			return f"{anio}-{mes}-{dia}"
+		except Exception:
+			return None
+
+	# DD/MM/YYYY o DD-MM-YYYY (con o sin hora) - camino comun
+	dm_match = re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[ T].*)?$", s)
+	if dm_match:
+		dia, mes, anio = int(dm_match.group(1)), int(dm_match.group(2)), int(dm_match.group(3))
+		try:
+			datetime(anio, mes, dia)
+			return f"{anio:04d}-{mes:02d}-{dia:02d}"
+		except Exception:
+			return None
+
+	# YYYY/MM/DD
+	ym_match = re.match(r"^(\d{4})[/](\d{1,2})[/](\d{1,2})$", s)
+	if ym_match:
+		anio, mes, dia = int(ym_match.group(1)), int(ym_match.group(2)), int(ym_match.group(3))
+		try:
+			datetime(anio, mes, dia)
+			return f"{anio:04d}-{mes:02d}-{dia:02d}"
+		except Exception:
+			return None
 
 	# Formato compacto: YYYYMMDD (sin separadores) — detectar por prefijo de año
 	only_digits = re.sub(r"\D", "", s)
@@ -654,6 +690,28 @@ def _default_para(tipo: str, tdef: dict):
 		return "SIN DATO"
 	return "SIN DATO"
 
+def _mensaje_esperado(tipo: str, tdef: dict, col: str, val_str: str):
+	"""Mensaje didactico de como corregir segun el tipo de variable."""
+	if tipo == "SET":
+		allowed = [str(a).strip() for a in tdef.get("allowed", [])]
+		return "Debe ser uno de: " + ", ".join(allowed) if allowed else "SIN DATO"
+	if tipo == "INT":
+		if not val_str:
+			return "Complete con un numero entero"
+		return "Entero valido"
+	if tipo == "DECIMAL":
+		if not val_str:
+			return "Complete con un numero"
+		return "Decimal valido"
+	if tipo == "DATE":
+		if not val_str:
+			return "Complete con una fecha (ej: 03/04/2000)"
+		return "Fecha valida (ej: 03/04/2000)"
+	if tipo == "TEXT":
+		return "Escriba el dato en texto"
+	return "SIN DATO"
+
+
 def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	"""Valida la data sin corregirla. Retorna los errores encontrados."""
 	tmap = {t["name"]: t for t in template}
@@ -690,127 +748,117 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	logs = []
 	MAX_LOGS = 50000
 
+	# Precomputar nombres normalizados de columnas de formula (una sola vez)
+	formula_set = {normalize_text(c) for c in FORMULA_COLUMNS}
+
+	# Precomputar alias SET globales y por campo
+	alias_genericos = {
+		"SI": {"S", "1", "YES", "Y", "SI"},
+		"NO": {"N", "0", "FALSE", "F", "NO"},
+		"MASCULINO": {"M"},
+		"FEMENINO": {"F"},
+		"CC": {"CEDULA", "C.C.", "C.C"},
+		"TI": {"TARJETA IDENTIDAD", "T.I."},
+		"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
+	}
+	alias_genericos_norm = {canon: {normalize_text(a) for a in syn} for canon, syn in alias_genericos.items()}
+
 	for ci, col in enumerate(template_cols):
 		tdef = tmap[col]
 		values = src_values[ci]
 		if values is None:
 			continue
 
-		for ridx in range(n):
-			val = values[ridx] if values is not None else None
-			orig_val = None if val is None or pd.isna(val) else str(val)
-			val_str = str(orig_val).strip() if orig_val else ""
-			err_msg = None
-			expected = None
+		col_norm = normalize_text(col)
+		es_formula = col_norm in formula_set
+		tipo = tdef.get("type")
+		allowed = [str(a).strip() for a in tdef.get("allowed", [])]
+		norm_allowed = [normalize_text(a) for a in allowed]
+		norm_allowed_set = set(norm_allowed)
 
-			# Columnas calculadas por la formula (edad, trimestres, IMC...):
-			# si estan vacias NO son error, la formula las genera automaticamente.
-			col_normalizada = normalize_text(col)
-			es_formula = col_normalizada in FORMULA_COLUMNS or normalize_text(col) in {normalize_text(c) for c in FORMULA_COLUMNS}
+		# Vectorizar: convertir toda la columna a Series de strings normalizados
+		ser_raw = pd.Series(values, dtype=object).fillna("").astype(str).str.strip()
+		ser_norm = normalize_series(ser_raw)
 
-			if tdef["type"] == "SET":
-				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
-				normalized_allowed = [normalize_text(a) for a in allowed]
-				if not val_str:
-					err_msg = "Valor vacio"
-					expected = "Complete este campo" if allowed else "SIN DATO"
-				else:
-					sn = normalize_text(val_str)
-					if sn not in normalized_allowed:
-						if sn == "SIN DATO":
-							# Comodin universal del sistema: acepta "SIN DATO" en SET
-							# aunque el campo no lo liste (se usa cuando no hay dato).
-							alias_match = True
-							expected = "SIN DATO"
-						else:
-							alias_match = False
-							expected = None
-							# 1) Alias genericos SI/NO/M/F/CC/TI/CE
-							for alias_canonical, alias_synonyms in {
-								"SI": {"S", "1", "YES", "Y", "SI"},
-								"NO": {"N", "0", "FALSE", "F", "NO"},
-								"MASCULINO": {"M"},
-								"FEMENINO": {"F"},
-								"CC": {"CEDULA", "C.C.", "C.C"},
-								"TI": {"TARJETA IDENTIDAD", "T.I."},
-								"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
-							}.items():
-								if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
-									expected = alias_canonical
-									alias_match = True
-									break
-							# 2) Alias por campo (FIELD_SET_ALIASES): sinonimo -> canonical
-							if not alias_match:
-								field_aliases = FIELD_SET_ALIASES.get(col)
-								if field_aliases:
-									for canonical, synonyms in field_aliases.items():
-										if sn in {normalize_text(a) for a in synonyms}:
-											if normalize_text(canonical) in normalized_allowed:
-												expected = canonical
-												alias_match = True
-											break
-							if not alias_match:
-								expected = "Debe ser uno de: " + ", ".join(allowed)
-								err_msg = f"Valor no permitido"
+		vacio_mask = ser_raw.eq("") | ser_raw.str.upper().isin(["SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"])
 
-			elif tdef["type"] == "INT":
-				# Estricto: solo enteros. Vacio y "SIN DATO" son errores.
-				# Acepta "25.0" (Excel exporta enteros como decimales .0).
-				clean = val_str.replace("-", "").replace(" ", "")
-				if re.fullmatch(r'[+-]?\d+', clean):
-					pass
-				elif re.fullmatch(r'[+-]?\d+\.0+', clean):
-					pass
-				else:
-					expected = "Complete con un numero entero" if not val_str else "Entero valido"
-					err_msg = f"Se esperaba entero" if val_str else "Valor vacio"
+		if tipo == "SET":
+			norm_allowed_set = set(norm_allowed)
+			field_aliases = FIELD_SET_ALIASES.get(col, {})
+			alias_map = {}
+			for canonical, synonyms in field_aliases.items():
+				if normalize_text(canonical) in norm_allowed_set:
+					alias_map[canonical] = {normalize_text(a) for a in synonyms}
+			for canon, syns in alias_genericos_norm.items():
+				if normalize_text(canon) in norm_allowed_set:
+					alias_map[canon] = syns
+			alias_union = set().union(*alias_map.values()) if alias_map else set()
 
-			elif tdef["type"] == "DECIMAL":
-				# Estricto: solo decimales. Vacio y "SIN DATO" son errores.
-				s = val_str.replace(" ", "").replace(",", ".")
-				if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
-					expected = "Complete con un numero" if not val_str else "Decimal valido"
-					err_msg = f"Se esperaba decimal" if val_str else "Valor vacio"
+			# Error: no vacio, no en allowed, no es SIN DATO, no es alias
+			en_allowed = ser_norm.isin(norm_allowed_set)
+			es_alias = ser_norm.isin(alias_union)
+			error_mask = (~vacio_mask) & (~en_allowed) & (~es_alias) & ser_norm.ne("SIN DATO")
 
-			elif tdef["type"] == "DATE":
-				# Estricto: solo fechas validas. Vacio, "SIN DATO" y textos son errores.
-				if not val_str:
-					expected = "Complete con una fecha (ej: 03/04/2000)"
-					err_msg = "Fecha vacia"
-				elif to_date_iso(val_str) is None:
-					expected = "Fecha valida (ej: 03/04/2000)"
-					err_msg = f"Fecha invalida"
+		elif tipo == "INT":
+			clean = ser_raw.str.replace("-", "", regex=False).str.replace(" ", "", regex=False)
+			es_entero = clean.str.fullmatch(r"[+-]?\d+").fillna(False) | clean.str.fullmatch(r"[+-]?\d+\.0+").fillna(False)
+			error_mask = (~vacio_mask) & (~es_entero)
 
-			elif tdef["type"] == "TEXT":
-				# Estricto: solo texto. No acepta vacios, numeros puros ni fechas,
-				# salvo campos naturalmente numericos (identificacion, telefono, etc.).
-				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
-				if not val_str:
-					err_msg = "Valor vacio"
-					expected = "Complete este campo"
-				elif not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', val_str.replace(",", ".")):
-					err_msg = f"Se esperaba texto, se encontro numero"
-					expected = "Escriba el dato en texto"
-				elif not campo_numerico and to_date_iso(val_str) is not None:
-					err_msg = f"Se esperaba texto, se encontro fecha"
-					expected = "Escriba el dato en texto"
+		elif tipo == "DECIMAL":
+			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
+			es_decimal = s.str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
+			error_mask = (~vacio_mask) & (~es_decimal)
 
-			# Columnas de formula vacias: la formula las genera, no son error.
-			if err_msg and es_formula and not val_str:
-				err_msg = None
-				expected = None
+		elif tipo == "DATE":
+			# Vectorizado: solo las celdas con formato de fecha (regex) se parsean.
+			# Evita dateutil/mixed que es lento con datos no-fecha.
+			no_vacio = ~vacio_mask
+			# Patron de fecha comun: separadores -, / o espacios + anio de 4 digitos,
+			# o serial de Excel (5 digitos), o mes en texto (letras + numeros).
+			tiene_patron = no_vacio & ser_raw.str.contains(r"\d{4}", regex=True) & ser_raw.str.contains(r"[0-9]", regex=True)
+			parsed = pd.to_datetime(ser_raw.where(tiene_patron, pd.NaT), errors="coerce", dayfirst=True, format="mixed")
+			ok_fast = parsed.notna()
+			# Celdas con patron que pd.to_datetime no pudo parsear: intentar to_date_iso
+			pendientes = tiene_patron & (~ok_fast)
+			pend_idx = pendientes[pendientes].index.tolist()
+			ok_lento = pd.Series(False, index=ser_raw.index)
+			for ridx in pend_idx:
+				if to_date_iso(ser_raw.iloc[ridx]) is not None:
+					ok_lento.iloc[ridx] = True
+			es_fecha = ok_fast | ok_lento
+			error_mask = no_vacio & (~es_fecha)
 
-			if err_msg:
-				filas_error.add(ridx + 1)
-				if len(logs) < MAX_LOGS:
-					logs.append({
-						"row": ridx + 1,
-						"column": col,
-						"original": orig_val or "",
-						"corrected": expected or "",
-						"status": "error",
-					})
-				stats["errors"] += 1
+		elif tipo == "TEXT":
+			campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+			if campo_numerico:
+				error_mask = pd.Series(False, index=ser_raw.index)
+			else:
+				es_numero = ser_raw.str.replace(",", ".", regex=False).str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
+				# Detectar fechas de forma vectorizada (solo valores con patron de fecha)
+				patron_fecha = ser_raw.str.contains(r"\d{4}", regex=True) & ser_raw.str.contains(r"[0-9]", regex=True)
+				parsed_fecha = pd.to_datetime(ser_raw.where(patron_fecha, pd.NaT), errors="coerce", dayfirst=True, format="mixed")
+				es_fecha = parsed_fecha.notna()
+				error_mask = (~vacio_mask) & (es_numero | es_fecha)
+
+		else:
+			error_mask = pd.Series(False, index=ser_raw.index)
+
+		# Registrar errores (solo las celdas marcadas, no todo el rango)
+		idx_error = error_mask[error_mask].index.tolist()
+		for ridx in idx_error:
+			if es_formula and vacio_mask.iloc[ridx]:
+				continue
+			val_str = ser_raw.iloc[ridx]
+			filas_error.add(ridx + 1)
+			if len(logs) < MAX_LOGS:
+				logs.append({
+					"row": ridx + 1,
+					"column": col,
+					"original": val_str,
+					"corrected": _mensaje_esperado(tipo, tdef, col, val_str),
+					"status": "error",
+				})
+			stats["errors"] += 1
 
 	stats["rows_with_errors"] = len(filas_error)
 	stats["rows_ok"] = max(0, stats["total"] - len(filas_error))
@@ -882,6 +930,29 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		statuses = [None] * n
 		origins = [None] * n
 
+		# Precomputar (fuera del loop por fila) lo que no cambia por celda
+		campo_numerico_col = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+		if tdef["type"] == "SET":
+			allowed_col = [str(a).strip() for a in tdef.get("allowed", [])]
+			norm_allowed_col = [normalize_text(a) for a in allowed_col]
+			alias_map_col = {}
+			for alias_canonical, alias_synonyms in {
+				"SI": {"S", "1", "YES", "Y", "SI"},
+				"NO": {"N", "0", "FALSE", "F", "NO"},
+				"MASCULINO": {"M"},
+				"FEMENINO": {"F"},
+				"CC": {"CEDULA", "C.C.", "C.C"},
+				"TI": {"TARJETA IDENTIDAD", "T.I."},
+				"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
+			}.items():
+				if normalize_text(alias_canonical) in norm_allowed_col:
+					alias_map_col[alias_canonical] = {normalize_text(a) for a in alias_synonyms}
+			field_aliases_col = FIELD_SET_ALIASES.get(col)
+			if field_aliases_col:
+				for canonical, synonyms in field_aliases_col.items():
+					if normalize_text(canonical) in norm_allowed_col:
+						alias_map_col[canonical] = {normalize_text(a) for a in synonyms}
+
 		for ridx in range(n):
 			val = values[ridx] if values is not None else None
 			orig_val = None if val is None or pd.isna(val) else str(val)
@@ -893,8 +964,7 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			# segun el instructivo que lo permite como valor estandar.
 			es_ausente = (not val_str) or val_str.upper() in ("SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL")
 			if es_ausente:
-				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
-				if campo_numerico and not val_str:
+				if campo_numerico_col and not val_str:
 					# Campos numericos obligatorios: sin dato se asigna 0
 					status = "corrected"
 					corrected = "0"
@@ -904,12 +974,11 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 
 			elif tdef["type"] == "TEXT":
 				corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", val_str)
-				campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
-				if not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', corrected.replace(",", ".")):
+				if not campo_numerico_col and re.fullmatch(r'[+-]?\d+(\.\d+)?', corrected.replace(",", ".")):
 					# El limpiador ajusta: dato numerico en campo de texto -> SIN DATO
 					status = "corrected"
 					corrected = "SIN DATO"
-				elif not campo_numerico and to_date_iso(corrected) is not None:
+				elif not campo_numerico_col and to_date_iso(corrected) is not None:
 					status = "corrected"
 					corrected = "SIN DATO"
 				elif corrected != val_str:
@@ -959,35 +1028,16 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			elif tdef["type"] == "SET":
 				# SOLO ajustar con alias veraz del instructivo o coincidencia exacta.
 				# NUNCA usar fuzzy ni subcadena que puedan dañar el dato.
-				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
-				normalized_allowed = [normalize_text(a) for a in allowed]
 				sn = normalize_text(val_str)
 				corregido = None
-				if sn in normalized_allowed:
-					corregido = allowed[normalized_allowed.index(sn)]
+				if sn in norm_allowed_col:
+					corregido = allowed_col[norm_allowed_col.index(sn)]
 				else:
-					# Alias genericos SI/NO/M/F/CC/TI...
-					for alias_canonical, alias_synonyms in {
-						"SI": {"S", "1", "YES", "Y", "SI"},
-						"NO": {"N", "0", "FALSE", "F", "NO"},
-						"MASCULINO": {"M"},
-						"FEMENINO": {"F"},
-						"CC": {"CEDULA", "C.C.", "C.C"},
-						"TI": {"TARJETA IDENTIDAD", "T.I."},
-						"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
-					}.items():
-						if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
+					# Alias precomputados (genericos + del instructivo)
+					for alias_canonical, alias_synonyms in alias_map_col.items():
+						if sn in alias_synonyms:
 							corregido = alias_canonical
 							break
-					# Alias del instructivo (FIELD_SET_ALIASES) - solo coincidencia exacta
-					if corregido is None:
-						field_aliases = FIELD_SET_ALIASES.get(col)
-						if field_aliases:
-							for canonical, synonyms in field_aliases.items():
-								if sn in {normalize_text(a) for a in synonyms}:
-									if normalize_text(canonical) in normalized_allowed:
-										corregido = canonical
-									break
 				if corregido is not None:
 					corrected = corregido
 					if normalize_text(val_str) != normalize_text(corregido):
@@ -995,7 +1045,7 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 				else:
 					# Respaldo fuzzy para errores de digitacion (ej: secndaria -> SECUNDARIA).
 					# Solo se aplica si la mejor coincidencia supera el umbral minimo.
-					fuzzy_match = normalize_set(val, allowed, normalize_text(col))
+					fuzzy_match = normalize_set(val, allowed_col, normalize_text(col))
 					if fuzzy_match is not None:
 						corrected = fuzzy_match
 						status = "corrected"
