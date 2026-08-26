@@ -256,73 +256,63 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
     for i, line in enumerate(instrucciones, start=2):
         ws_instr.cell(row=i, column=1, value=line)
 
+    # Construir filas rapidas con append (openpyxl es lento con cell() en bucles grandes)
     for ridx, row in enumerate(rows, start=2):
+        out_row = [None] * (len(types) + 1)
         for c, (ttype, val) in enumerate(zip(types, row), start=1):
-            if c in formulas:
-                fdef = formulas[c]
-                formula = fdef(ridx) if callable(fdef) else fdef.format(r=ridx)
-                cell = ws.cell(row=ridx, column=c, value=formula)
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.border = thin
-                if ttype == "DATE":
-                    cell.number_format = "yyyy-mm-dd"
-                elif ttype == "INT":
-                    cell.number_format = "0"
-                elif ttype == "DECIMAL":
-                    cell.number_format = "0.00"
-                continue
             val = (val or "").strip()
-            # Determinar si esta celda tiene error
-            tiene_error = (ridx - 1, headers[c - 1]) in errors_by_cell
             if ttype == "DATE":
                 if val in DATE_SENTINELS:
-                    cell = ws.cell(row=ridx, column=c, value="1845-01-01")
+                    out_row[c - 1] = "1845-01-01"
                 else:
                     iso = to_date_iso(val)
                     if iso:
                         try:
-                            cell = ws.cell(row=ridx, column=c, value=datetime.strptime(iso, "%Y-%m-%d"))
+                            out_row[c - 1] = datetime.strptime(iso, "%Y-%m-%d")
                         except Exception:
-                            cell = ws.cell(row=ridx, column=c, value=val)
+                            out_row[c - 1] = val
                     else:
-                        cell = ws.cell(row=ridx, column=c, value=val)
-                cell.number_format = "yyyy-mm-dd"
-                cell.border = thin
+                        out_row[c - 1] = val
             elif ttype in ("INT", "DECIMAL"):
                 num = re.sub(r"[^0-9.\-]", "", val)
                 try:
-                    cell = ws.cell(row=ridx, column=c, value=float(num) if "." in num else int(num))
+                    out_row[c - 1] = float(num) if "." in num else int(num)
                 except Exception:
-                    cell = ws.cell(row=ridx, column=c, value=val)
-                cell.border = thin
+                    out_row[c - 1] = val
             else:
-                cell = ws.cell(row=ridx, column=c, value=val if val else "SIN DATO")
-                cell.border = thin
-
-            # Marcar error: fondo rojo claro + comentario de correccion
-            if tiene_error:
-                cell.fill = error_fill
-                cell.font = error_font
-                msg = errors_by_cell.get((ridx - 1, headers[c - 1]), "Dato invalido")
-                cell.comment = Comment(msg, "Fenix Data", height=120, width=320)
-
-    # Columna extra "RESULTADO" para ver el estado de cada fila
-    res_header = ws.cell(row=1, column=len(headers) + 1, value="RESULTADO")
-    res_header.font = header_font
-    res_header.fill = header_fill
-    res_header.border = thin
-    for ridx in range(len(rows)):
-        fila_idx = ridx  # 0-based
+                out_row[c - 1] = val if val else "SIN DATO"
+        # RESULTADO de la fila
+        fila_idx = ridx - 2  # 0-based dentro de rows
         tiene = any((fila_idx, h) in errors_by_cell for h in headers)
-        rc = ws.cell(row=ridx + 2, column=len(headers) + 1, value="CON ERRORES" if tiene else "VALIDADO")
+        out_row[len(types)] = "CON ERRORES" if tiene else "VALIDADO"
+        ws.append(out_row)
+
+    # Aplicar formato rapido a celdas: solo las celdas con error y las fechas
+    # (evita tocar las 331k celdas).
+    for ridx in range(len(rows)):
+        excel_row = ridx + 2
+        fila_idx = ridx
+        # RESULTADO
+        rc = ws.cell(row=excel_row, column=len(headers) + 1)
         rc.alignment = Alignment(horizontal="center", vertical="center")
         rc.border = thin
-        if tiene:
+        tiene_fila = any((fila_idx, h) in errors_by_cell for h in headers)
+        if tiene_fila:
             rc.fill = error_fill
             rc.font = error_font
         else:
             rc.fill = ok_fill
             rc.font = Font(color="1B5E20", bold=True)
+        # Celdas con error de esta fila
+        for c, h in enumerate(headers, start=1):
+            key = (fila_idx, h)
+            if key in errors_by_cell:
+                cell = ws.cell(row=excel_row, column=c)
+                cell.fill = error_fill
+                cell.font = error_font
+                cell.comment = Comment(errors_by_cell[key], "Fenix Data", height=120, width=320)
+                if types[c - 1] == "DATE":
+                    cell.number_format = "yyyy-mm-dd"
 
     for c in range(1, len(headers) + 2):
         letter = col_letter(c)

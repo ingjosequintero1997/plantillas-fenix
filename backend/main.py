@@ -2081,14 +2081,7 @@ async def descargar_reporte_errores_excel(cargue_id: int, current_user: User = D
 				pass
 		if not text or not text.strip():
 			raise HTTPException(status_code=400, detail="El cargue no tiene datos validos")
-		resp = await validate_data({
-			"template_key": cargue.template_key or "gestante",
-			"corrected_text": text,
-		})
-		errors_by_cell = {}
-		for k, v in (resp.get("errors_by_cell") or {}).items():
-			row_s, col_s = k.split("|", 1)
-			errors_by_cell[(int(row_s), col_s)] = v
+		errors_by_cell = _errores_rapidos(text, cargue.template_key or "gestante")
 		meta = get_template_by_key(cargue.template_key or "gestante")
 		tmpl = meta["template"]
 		try:
@@ -2114,14 +2107,7 @@ async def reporte_errores_excel_data(payload: dict):
 	corrected_text = payload.get("corrected_text", "")
 	if not corrected_text or not corrected_text.strip():
 		raise HTTPException(status_code=400, detail="No hay datos para validar")
-	resp = await validate_data({
-		"template_key": template_key,
-		"corrected_text": corrected_text,
-	})
-	errors_by_cell = {}
-	for k, v in (resp.get("errors_by_cell") or {}).items():
-		row_s, col_s = k.split("|", 1)
-		errors_by_cell[(int(row_s), col_s)] = v
+	errors_by_cell = _errores_rapidos(corrected_text, template_key)
 	meta = get_template_by_key(template_key)
 	tmpl = meta["template"]
 	try:
@@ -2135,6 +2121,32 @@ async def reporte_errores_excel_data(payload: dict):
 		media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		headers={"Content-Disposition": f"attachment; filename={filename}"},
 	)
+
+
+def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
+	"""Calcula los errores por celda usando el validador VECTORIZADO (rapido).
+	Devuelve {(row_idx, col_name): mensaje_correccion}."""
+	try:
+		from .validators import validate_only, rellenar_vacios
+	except ImportError:
+		from validators import validate_only, rellenar_vacios
+	import pandas as _pd
+	df = _pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+	df = df.fillna('').astype(str)
+	meta = get_template_by_key(template_key)
+	tmpl = meta["template"]
+	tmpl_names = [t['name'] for t in tmpl]
+	if len(df.columns) == len(tmpl_names):
+		df.columns = tmpl_names
+	# rellenar vacios (igual que la validacion real)
+	df = rellenar_vacios(df, tmpl)
+	mapping = {c: c for c in df.columns if c in tmpl_names}
+	res = validate_only(df, mapping, tmpl)
+	errors = {}
+	for l in res["logs"]:
+		row = int(l["row"]) - 1
+		errors[(row, l["column"])] = l["corrected"] or "Dato invalido"
+	return errors
 
 
 if __name__ == "__main__":
