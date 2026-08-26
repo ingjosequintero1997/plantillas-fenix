@@ -45,8 +45,6 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
     return cells
   }, [logs])
 
-  const hasErrors = useMemo(() => Array.isArray(logs) && logs.some((l) => l.status === 'error'), [logs])
-
   const errorRows = useMemo(() => {
     const set = new Set()
     if (Array.isArray(logs)) logs.forEach((l) => { if (l.status === 'error') set.add(l.row) })
@@ -138,28 +136,6 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
 
   return (
     <div className="space-y-4">
-      {/* Mensaje de resultado tras re-validar */}
-      {!hasErrors && logs.length > 0 ? (
-        <div className="panel" style={{ borderColor: 'var(--green-300)', backgroundColor: 'var(--green-50)' }}>
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5" style={{ color: 'var(--success)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <div>
-              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>La data qued&oacute; validada correctamente</div>
-              <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>No hay errores pendientes. Puedes descargar el reporte o validar otra data.</div>
-            </div>
-          </div>
-        </div>
-      ) : hasErrors ? (
-        <div className="panel" style={{ borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' }}>
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5" style={{ color: 'var(--error)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Haz clic sobre una celda para corregirla. Luego pulsa <strong style={{ color: 'var(--text-primary)' }}>Re-validar</strong>.
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="px-4 py-3 border-b flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-subtle)' }}>
           <div className="flex items-center gap-3">
