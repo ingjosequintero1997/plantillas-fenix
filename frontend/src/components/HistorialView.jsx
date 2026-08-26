@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import ReactDOM from 'react-dom'
 import * as pako from 'pako'
-import { fetchCargues, fetchCargue, deleteCargue, descargarCargueExcel, descargarCargueTxt } from '../api'
+import { fetchCargues, fetchCargue, deleteCargue, descargarCargueExcel, descargarCargueTxt, descargarReporteErroresExcel } from '../api'
 import ErrorSummaryTable from './ErrorSummaryTable'
 
 const PER_PAGE = 12
@@ -99,6 +99,7 @@ function CargueDetail({ cargue, onBack }) {
     try {
       const base = (cargue.original_filename || 'data_validada').replace(/\.(xlsx|xls|txt)$/i, '')
       if (tipo === 'excel') await descargarCargueExcel(cargue.id, `${base}_ajustada.xlsx`)
+      else if (tipo === 'errores-excel') await descargarReporteErroresExcel(cargue.id, `${base}_errores.xlsx`)
       else await descargarCargueTxt(cargue.id, `${base}_ajustada.txt`)
     } catch (e) {
       setError(e.message || 'Error al descargar')
@@ -149,6 +150,10 @@ function CargueDetail({ cargue, onBack }) {
               <button onClick={() => handleDownload('excel')} disabled={downloading !== ''} className="btn-primary">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 {downloading === 'excel' ? 'Descargando...' : 'Descargar Excel'}
+              </button>
+              <button onClick={() => handleDownload('errores-excel')} disabled={downloading !== ''} className="btn-secondary" title="Excel con las celdas con error marcadas en rojo y comentarios de correccion">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                {downloading === 'errores-excel' ? 'Descargando...' : 'Errores (Excel)'}
               </button>
               <button onClick={() => handleDownload('txt')} disabled={downloading !== ''} className="btn-secondary">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>

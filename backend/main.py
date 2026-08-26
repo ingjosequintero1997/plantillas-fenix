@@ -445,6 +445,25 @@ def _gz_compress(text: str) -> str:
 	# (las respuestas grandes son lentas/inestables en serverless de Vercel).
 	return base64.b64encode(gzip.compress(text.encode("utf-8"))).decode("ascii")
 
+def _correccion_excel(tipo, tdef, val_str):
+	"""Mensaje de correccion claro para el comentario de una celda con error."""
+	try:
+		from .validators import _mensaje_esperado
+	except ImportError:
+		from validators import _mensaje_esperado
+	msg = _mensaje_esperado(tipo, tdef, tdef.get("name", ""), val_str)
+	# Prefix amigable segun el tipo
+	if tipo == "SET":
+		return "Corrige: " + msg
+	if tipo == "INT":
+		return "Numero invalido. " + msg
+	if tipo == "DECIMAL":
+		return "Numero invalido. " + msg
+	if tipo == "DATE":
+		return "Fecha invalida. " + msg
+	return "Dato invalido. " + msg
+
+
 def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, template_key: str, active_template: list[dict]):
 	corrected_df, logs, stats = validate_and_correct(df, mapping, active_template)
 	# Normalizar todas las fechas a AAAA-MM-DD (ej: 3/04/2000 -> 2000-04-03)
@@ -1649,6 +1668,8 @@ async def validate_data(payload: dict):
 
 	# Errores por fila: {row_idx: ["col: msg", ...]}
 	row_errors: dict[int, list[str]] = {}
+	# Errores por celda: {(row_idx, col_name): msg_correccion}
+	errors_by_cell: dict[tuple, str] = {}
 	stats = {"total": n, "rows_with_errors": 0, "total_error_cells": 0, "by_column": {}}
 
 	for ci, col_name in enumerate(template_cols):
@@ -1742,6 +1763,8 @@ async def validate_data(payload: dict):
 				if ridx not in row_errors:
 					row_errors[ridx] = []
 				row_errors[ridx].append(err_msg)
+				# Mensaje de correccion para el comentario de Excel
+				errors_by_cell[(ridx, col_name)] = _correccion_excel(tdef["type"], tdef, val_str)
 				stats["total_error_cells"] += 1
 
 		stats["by_column"][col_name] = {"type": tdef["type"], "errors": col_errors}
@@ -1790,6 +1813,7 @@ async def validate_data(payload: dict):
 			"by_column": stats["by_column"],
 		},
 		"row_errors": {str(k): v for k, v in row_errors.items()},
+		"errors_by_cell": {f"{r}|{c}": m for (r, c), m in errors_by_cell.items()},
 		"report_text": base64.b64encode(report_text.encode("utf-8")).decode("ascii"),
 		"template_key": template_key,
 	}
@@ -2031,6 +2055,51 @@ async def descargar_reporte_errores(cargue_id: int, current_user: User = Depends
 		return StreamingResponse(
 			io.BytesIO(bin_bytes),
 			media_type="text/plain; charset=utf-8",
+			headers={"Content-Disposition": f"attachment; filename={filename}"},
+		)
+	finally:
+		db.close()
+
+
+@app.post("/cargues/{cargue_id}/reporte-errores-excel")
+async def descargar_reporte_errores_excel(cargue_id: int, current_user: User = Depends(get_current_user)):
+	"""Genera un Excel de la data con errores marcados en ROJO y comentarios
+	de correccion. El prestador corrige y re-subve el archivo."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargue = db.get(Cargue, cargue_id)
+		if cargue is None:
+			raise HTTPException(status_code=404, detail="Cargue no encontrado")
+		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+			raise HTTPException(status_code=403, detail="No autorizado")
+		text = cargue.corrected_text or cargue.raw_text or ""
+		if cargue.compressed and text:
+			try:
+				text = gzip.decompress(base64.b64decode(text)).decode("utf-8")
+			except Exception:
+				pass
+		if not text or not text.strip():
+			raise HTTPException(status_code=400, detail="El cargue no tiene datos validos")
+		resp = await validate_data({
+			"template_key": cargue.template_key or "gestante",
+			"corrected_text": text,
+		})
+		errors_by_cell = {}
+		for k, v in (resp.get("errors_by_cell") or {}).items():
+			row_s, col_s = k.split("|", 1)
+			errors_by_cell[(int(row_s), col_s)] = v
+		meta = get_template_by_key(cargue.template_key or "gestante")
+		tmpl = meta["template"]
+		try:
+			from .excel_export import build_reporte_errores_excel
+		except ImportError:
+			from excel_export import build_reporte_errores_excel
+		buf = build_reporte_errores_excel(text, tmpl, errors_by_cell)
+		filename = cargue.original_filename.replace(".xlsx", "_errores.xlsx").replace(".xls", "_errores.xlsx")
+		return StreamingResponse(
+			buf,
+			media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 			headers={"Content-Disposition": f"attachment; filename={filename}"},
 		)
 	finally:

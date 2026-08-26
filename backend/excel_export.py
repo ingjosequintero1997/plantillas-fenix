@@ -207,3 +207,130 @@ def build_data_excel(corrected_text: str, template: list[dict]) -> io.BytesIO:
     wb.save(buf)
     buf.seek(0)
     return buf
+
+
+def build_reporte_errores_excel(corrected_text: str, template: list[dict], errors_by_cell: dict) -> io.BytesIO:
+    """Genera un Excel de la data validada con las celdas con error marcadas
+    en ROJO y un comentario con la correccion que se debe ingresar.
+    El prestador corrige en el Excel y re-subve el archivo (xlsx)."""
+    from openpyxl.comments import Comment
+
+    headers = [t["name"] for t in template]
+    types = [t["type"] for t in template]
+    types_by_col = {i + 1: t["type"] for i, t in enumerate(template)}
+    formulas = build_formulas(types_by_col)
+    rows = parse_corrected(corrected_text)
+
+    wb = Workbook()
+    wb.calculation.fullCalcOnLoad = True
+    ws = wb.active
+    ws.title = "DATA"
+
+    header_fill = PatternFill("solid", fgColor="1B5E20")
+    header_font = Font(bold=True, color="FFFFFF", size=10, name="Calibri")
+    thin = Border(*[Side(style="thin", color="BDBDBD")] * 4)
+    error_fill = PatternFill("solid", fgColor="FDE2E2")  # rojo claro
+    error_font = Font(color="B00020", bold=True)
+    ok_fill = PatternFill("solid", fgColor="E6F4EA")     # verde claro para celdas ok
+
+    for c, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=c, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(wrap_text=True, vertical="center")
+        cell.border = thin
+
+    # Instrucciones en una hoja adicional
+    ws_instr = wb.create_sheet("Instrucciones")
+    ws_instr.cell(row=1, column=1, value="INSTRUCCIONES PARA CORREGIR Y RE-VALIDAR").font = Font(bold=True, size=12)
+    instrucciones = [
+        "",
+        "1. Las celdas en ROJO tienen errores. Pasa el mouse sobre la celda para ver el comentario con la correccion.",
+        "2. Corrige el dato de cada celda roja segun el comentario.",
+        "3. Guarda el archivo y vuelve a subirlo en la aplicacion para validarlo de nuevo.",
+        "",
+        "Las fechas deben escribirse como AAAA-MM-DD (ej: 2000-04-03).",
+        "Los campos numericos deben contener solo numeros.",
+        "Los campos de catalogo (SI/NO, CC/TI/CE, etc.) deben usar una de las opciones indicadas.",
+    ]
+    for i, line in enumerate(instrucciones, start=2):
+        ws_instr.cell(row=i, column=1, value=line)
+
+    for ridx, row in enumerate(rows, start=2):
+        for c, (ttype, val) in enumerate(zip(types, row), start=1):
+            if c in formulas:
+                fdef = formulas[c]
+                formula = fdef(ridx) if callable(fdef) else fdef.format(r=ridx)
+                cell = ws.cell(row=ridx, column=c, value=formula)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = thin
+                if ttype == "DATE":
+                    cell.number_format = "yyyy-mm-dd"
+                elif ttype == "INT":
+                    cell.number_format = "0"
+                elif ttype == "DECIMAL":
+                    cell.number_format = "0.00"
+                continue
+            val = (val or "").strip()
+            # Determinar si esta celda tiene error
+            tiene_error = (ridx - 1, headers[c - 1]) in errors_by_cell
+            if ttype == "DATE":
+                if val in DATE_SENTINELS:
+                    cell = ws.cell(row=ridx, column=c, value="1845-01-01")
+                else:
+                    iso = to_date_iso(val)
+                    if iso:
+                        try:
+                            cell = ws.cell(row=ridx, column=c, value=datetime.strptime(iso, "%Y-%m-%d"))
+                        except Exception:
+                            cell = ws.cell(row=ridx, column=c, value=val)
+                    else:
+                        cell = ws.cell(row=ridx, column=c, value=val)
+                cell.number_format = "yyyy-mm-dd"
+                cell.border = thin
+            elif ttype in ("INT", "DECIMAL"):
+                num = re.sub(r"[^0-9.\-]", "", val)
+                try:
+                    cell = ws.cell(row=ridx, column=c, value=float(num) if "." in num else int(num))
+                except Exception:
+                    cell = ws.cell(row=ridx, column=c, value=val)
+                cell.border = thin
+            else:
+                cell = ws.cell(row=ridx, column=c, value=val if val else "SIN DATO")
+                cell.border = thin
+
+            # Marcar error: fondo rojo claro + comentario de correccion
+            if tiene_error:
+                cell.fill = error_fill
+                cell.font = error_font
+                msg = errors_by_cell.get((ridx - 1, headers[c - 1]), "Dato invalido")
+                cell.comment = Comment(msg, "Fenix Data", height=120, width=320)
+
+    # Columna extra "RESULTADO" para ver el estado de cada fila
+    res_header = ws.cell(row=1, column=len(headers) + 1, value="RESULTADO")
+    res_header.font = header_font
+    res_header.fill = header_fill
+    res_header.border = thin
+    for ridx in range(len(rows)):
+        fila_idx = ridx  # 0-based
+        tiene = any((fila_idx, h) in errors_by_cell for h in headers)
+        rc = ws.cell(row=ridx + 2, column=len(headers) + 1, value="CON ERRORES" if tiene else "VALIDADO")
+        rc.alignment = Alignment(horizontal="center", vertical="center")
+        rc.border = thin
+        if tiene:
+            rc.fill = error_fill
+            rc.font = error_font
+        else:
+            rc.fill = ok_fill
+            rc.font = Font(color="1B5E20", bold=True)
+
+    for c in range(1, len(headers) + 2):
+        letter = col_letter(c)
+        max_len = max(len(str(headers[c - 1])) if c - 1 < len(headers) else 10, 10)
+        ws.column_dimensions[letter].width = min(max_len + 3, 45)
+
+    ws.freeze_panes = "A2"
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
