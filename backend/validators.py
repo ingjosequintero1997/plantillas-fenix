@@ -856,8 +856,8 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	template_cols = [t["name"] for t in template]
 	# Reordenar al orden del template (evita corrimientos si el archivo viene en otro orden)
 	df = reordenar_a_template(df, mapping, template)
-	# Rellenar vacios con el valor por tipo (nunca se valida un dato vacio).
-	df = rellenar_vacios(df, template)
+	# NOTA: NO se rellenan vacios aqui. En el modo VALIDADOR los campos vacios
+	# y los tipos incorrectos se marcan como ERROR (el prestador debe corregir).
 	inverse = {}
 	for orig, templ in (mapping or {}).items():
 		if not templ:
@@ -935,7 +935,7 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			# Error: no vacio, no en allowed, no es SIN DATO, no es alias
 			en_allowed = ser_norm.isin(norm_allowed_set)
 			es_alias = ser_norm.isin(alias_union)
-			error_mask = (~vacio_mask) & (~en_allowed) & (~es_alias) & ser_norm.ne("SIN DATO")
+			error_mask = (~en_allowed) & (~es_alias)
 
 		elif tipo == "INT":
 			# Estricto: solo enteros validos (con .0 de Excel aceptado).
@@ -962,16 +962,17 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			if es_municipio:
 				es_muni = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False)
 
-			error_mask = (~vacio_mask) & (~es_entero) & (~es_trim) & (~es_dec) & (~es_muni)
+			error_mask = (~es_entero) & (~es_trim) & (~es_dec) & (~es_muni)
 
 		elif tipo == "DECIMAL":
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
 			es_decimal = s.str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
-			error_mask = (~vacio_mask) & (~es_decimal)
+			error_mask = (~es_decimal)
 
 		elif tipo == "DATE":
 			# Vectorizado: solo las celdas con formato de fecha (regex) se parsean.
 			# Evita dateutil/mixed que es lento con datos no-fecha.
+			# Los vacios y "SIN DATO" son ERROR en fechas (no se admiten).
 			no_vacio = ~vacio_mask
 			# Patron de fecha comun: separadores -, / o espacios + anio de 4 digitos,
 			# o serial de Excel (5 digitos), o mes en texto (letras + numeros).
@@ -986,7 +987,8 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				if to_date_iso(ser_raw.iloc[ridx]) is not None:
 					ok_lento.iloc[ridx] = True
 			es_fecha = ok_fast | ok_lento
-			error_mask = no_vacio & (~es_fecha)
+			# Vacio o SIN DATO = error; fecha valida = ok
+			error_mask = (~es_fecha) | vacio_mask | ser_raw.str.upper().isin(["SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"])
 
 		elif tipo == "TEXT":
 			campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
@@ -1001,7 +1003,11 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				patron_fecha = ser_raw.str.contains(r"\d{4}", regex=True) & ser_raw.str.contains(r"[0-9]", regex=True)
 				parsed_fecha = pd.to_datetime(ser_raw.where(patron_fecha, pd.NaT), errors="coerce", dayfirst=True, format="mixed")
 				es_fecha = parsed_fecha.notna()
-				error_mask = (~vacio_mask) & (es_numero | es_fecha)
+				# Texto: vacio (solo "") = error, numero o fecha = error.
+				# "SIN DATO" es VALIDO en texto (cuando no hay dato de la gestante).
+				es_sin_dato = ser_raw.str.upper().isin(["SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"])
+				es_vacio_real = ser_raw.eq("")
+				error_mask = es_vacio_real | ((es_numero | es_fecha) & (~es_sin_dato))
 
 		else:
 			error_mask = pd.Series(False, index=ser_raw.index)

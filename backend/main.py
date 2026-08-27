@@ -2127,9 +2127,9 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 	"""Calcula los errores por celda usando el validador VECTORIZADO (rapido).
 	Devuelve {(row_idx, col_name): mensaje_correccion}."""
 	try:
-		from .validators import validate_only, rellenar_vacios, normalize_text
+		from .validators import validate_only, normalize_text
 	except ImportError:
-		from validators import validate_only, rellenar_vacios, normalize_text
+		from validators import validate_only, normalize_text
 	import pandas as _pd
 	df = _pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 	df = df.fillna('').astype(str)
@@ -2138,10 +2138,9 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 	tmpl_names = [t['name'] for t in tmpl]
 	if len(df.columns) == len(tmpl_names):
 		df.columns = tmpl_names
-	# rellenar vacios (igual que la validacion real)
-	df_rellenado = rellenar_vacios(df, tmpl)
+	# Sin rellenar vacios: el validador estricto marca vacios y tipos incorrectos
 	mapping = {c: c for c in df.columns if c in tmpl_names}
-	res = validate_only(df_rellenado, mapping, tmpl)
+	res = validate_only(df, mapping, tmpl)
 	errors = {}
 	tmap2 = {t["name"]: t for t in tmpl}
 	for l in res["logs"]:
