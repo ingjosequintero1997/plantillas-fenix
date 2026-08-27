@@ -17,7 +17,7 @@ PN_SD = ["POSITIVO", "NEGATIVO", "SIN DATO"]
 
 RAW_FIELDS: list[tuple[str, str]] = [
     ("TIPO DE DOCUMENTO DE IDENTIDAD", "SET"),
-    ("NO. DE IDENTIFICACION", "TEXT"),
+    ("NO. DE IDENTIFICACION", "INT"),
     ("APELLIDO_1", "TEXT"),
     ("APELLIDO_2", "TEXT"),
     ("NOMBRE_1", "TEXT"),
