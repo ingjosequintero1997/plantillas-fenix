@@ -65,6 +65,21 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
     const requireExactColumns = options.requireExactColumns ?? true
     const mode = options.mode ?? 'limpiador'
 
+    // Comprimir con gzip si el archivo es grande (evita error 413 de Vercel).
+    const MAX_RAW = 3.5 * 1024 * 1024 // ~3.5MB
+    const readAndCompress = async () => {
+      try {
+        const buf = await file.arrayBuffer()
+        if (buf.byteLength > MAX_RAW) {
+          const compressed = pako.gzip(new Uint8Array(buf))
+          return { body: new Blob([compressed]), filename: file.name, compressed: true }
+        }
+        return { body: file, filename: file.name, compressed: false }
+      } catch (e) {
+        return { body: file, filename: file.name, compressed: false }
+      }
+    }
+
     const doUpload = (body, filename) => {
       const form = new FormData()
       form.append('file', body, filename || file.name)
@@ -98,7 +113,7 @@ export function uploadFile(file, templateKey, onProgress, options = {}) {
       xhr.send(form)
     }
 
-    doUpload(file)
+    readAndCompress().then(({ body, filename }) => doUpload(body, filename)).catch(() => doUpload(file, file.name))
   })
 }
 
