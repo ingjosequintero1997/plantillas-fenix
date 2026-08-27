@@ -7,7 +7,6 @@ import DashboardLayout from './components/DashboardLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 import DashboardHome from './components/DashboardHome'
 import TemplateSelector from './components/TemplateSelector'
-import EditableDataTable from './components/EditableDataTable'
 import QualityBanner from './components/QualityBanner'
 import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
@@ -20,7 +19,7 @@ const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
-import { fetchTemplates, revalidateData, uploadFile, saveCargue, descargarReporteErroresExcelData, descargarReporteErroresExcel } from './api'
+import { fetchTemplates, uploadFile, saveCargue, descargarReporteErroresExcelData, descargarReporteErroresExcel } from './api'
 import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
 
@@ -301,19 +300,6 @@ export default function App() {
     }
   }
 
-  const handleRevalidate = async () => {
-    if (!rawText) return
-    setReprocessing(true); setError('')
-    try {
-      const data = maybeDecompress(await revalidateData(rawText, mapping, selectedTemplate, processingMode))
-      applyResponse(data)
-    } catch (e) {
-      setError(e.message || 'Error al revalidar')
-    } finally {
-      setReprocessing(false)
-    }
-  }
-
   const handleExport = async () => {
     try {
       const filename = `export_${selectedTemplate}_${new Date().toISOString().slice(0, 10)}.txt`
@@ -588,26 +574,19 @@ export default function App() {
                     {/* Resumen visual de calidad (modo validador) */}
                     {processingMode === 'validador' && <QualityBanner summary={summary} mode="validador" />}
 
-                    {/* Tabla editable (modo validador) */}
-                    {processingMode === 'validador' && (
-                      <EditableDataTable
-                        logs={logs}
-                        rawText={rawText}
-                        templateNames={templateNames}
-                        onRevalidate={async (newText) => {
-                          setLoading(true); setError('')
-                          try {
-                            const data = maybeDecompress(await revalidateData(newText, mapping, selectedTemplate, processingMode))
-                            applyResponse(data)
-                          } catch (e) {
-                            setError(e.message || 'Error al re-validar')
-                          } finally {
-                            setLoading(false)
-                          }
-                        }}
-                        loading={loading}
-                      />
-                    )}
+                    {/* Panel informativo: descargar Excel de errores para corregir */}
+                    <div className="panel flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium" style={{ color: 'var(--text)' }}>Para corregir los errores</div>
+                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                          Descarga el Excel de errores, corrige los datos marcados en rojo y vuelve a subir el archivo.
+                        </div>
+                      </div>
+                      <button onClick={handleDownloadReport} disabled={!rawText} className="btn-primary">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        Descargar errores (Excel)
+                      </button>
+                    </div>
 
                     {/* Barra de acciones al final */}
                     <div className="panel flex flex-wrap items-center justify-between gap-3">
