@@ -1,0 +1,1605 @@
+[
+ {
+  "idx": 0,
+  "nombre": "No",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 1,
+  "nombre": "Tipo de documento de identidad",
+  "tipo": "SET",
+  "opciones": [
+   "CC",
+   "MS",
+   "RC",
+   "TI",
+   "PA",
+   "CD",
+   "AS"
+  ]
+ },
+ {
+  "idx": 2,
+  "nombre": "No. De Identificación",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 3,
+  "nombre": "Apellido_1,",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 4,
+  "nombre": "Apellido_2",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 5,
+  "nombre": "Nombre_1,",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 6,
+  "nombre": "Nombre_2",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 7,
+  "nombre": "Fecha de Nacimiento",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 8,
+  "nombre": "Edad (años)",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 9,
+  "nombre": "Sexo",
+  "tipo": "SET",
+  "opciones": [
+   "FEMENINO",
+   "MASCULINO"
+  ]
+ },
+ {
+  "idx": 10,
+  "nombre": "Regimen Afiliacion",
+  "tipo": "SET",
+  "opciones": [
+   "Subsidiado: S",
+   "Contributivo: C"
+  ]
+ },
+ {
+  "idx": 11,
+  "nombre": "Pertenecia Etnica",
+  "tipo": "SET",
+  "opciones": [
+   "Indígena",
+   "ROM (Gitano)",
+   "Raizal del Archipielago",
+   "Negro (a), Mulato, Afroamericano",
+   "Mestizo",
+   "Ningunas de las Anteriores"
+  ]
+ },
+ {
+  "idx": 12,
+  "nombre": "Grupo Poblacional",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 13,
+  "nombre": "Departamento Residencia",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 14,
+  "nombre": "Municipio de Residencia",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 15,
+  "nombre": "Zona",
+  "tipo": "SET",
+  "opciones": [
+   "Rural",
+   "Urbana"
+  ]
+ },
+ {
+  "idx": 16,
+  "nombre": "Etnia",
+  "tipo": "SET",
+  "opciones": [
+   "Wayuu",
+   "Arhuaco",
+   "Wiwa",
+   "Yukpa",
+   "Kogi",
+   "Inga",
+   "Kankuamo",
+   "Chimila",
+   "Zenu",
+   "Sin Etnia"
+  ]
+ },
+ {
+  "idx": 17,
+  "nombre": "Asentamiento/Rancheria/Comunidad",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 18,
+  "nombre": "Teléfono usuaria",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 19,
+  "nombre": "Direccion",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 20,
+  "nombre": "Nivel Educativo",
+  "tipo": "SET",
+  "opciones": [
+   "Analfabeta",
+   "Sabe Leer o Escribir",
+   "Primaria Completa",
+   "Primaria Incompleta",
+   "Secundaria Completa",
+   "Secundaria Incompleta",
+   "Técnico",
+   "Tecnólogo",
+   "Profesional Universitario"
+  ]
+ },
+ {
+  "idx": 21,
+  "nombre": "Discapacidad",
+  "tipo": "SET",
+  "opciones": [
+   "Discapacidad fisica",
+   "Discapacidad Psiquica",
+   "Discapacidad mental",
+   "Ninguna",
+   "Sin dato"
+  ]
+ },
+ {
+  "idx": 22,
+  "nombre": "Mujer cabeza de Hogar",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 23,
+  "nombre": "Ocupación",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 24,
+  "nombre": "Estado Civil",
+  "tipo": "SET",
+  "opciones": [
+   "Soltera",
+   "Casada",
+   "Divorciada",
+   "Viuda",
+   "Unión Libre"
+  ]
+ },
+ {
+  "idx": 25,
+  "nombre": "Control  Tradicional",
+  "tipo": "SET",
+  "opciones": [
+   "Sabedor Ancestral",
+   "Partera (o)",
+   "Sobandera (o)"
+  ]
+ },
+ {
+  "idx": 26,
+  "nombre": "Gestante Renuente",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 27,
+  "nombre": "Inasistente",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 28,
+  "nombre": "Nombre de la IPS Primaria",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 29,
+  "nombre": "Fecha de Diagnostico del embarazo",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 30,
+  "nombre": "Fecha de Ingreso al Control Prenatal",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 31,
+  "nombre": "FUM",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 32,
+  "nombre": "FPP",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 33,
+  "nombre": "Dias para el parto",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 34,
+  "nombre": "Alarma",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 35,
+  "nombre": "Edad Gest Inicio Control",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 36,
+  "nombre": "Trimestre inicio control",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 37,
+  "nombre": "G",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 38,
+  "nombre": "P",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 39,
+  "nombre": "C",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 40,
+  "nombre": "A",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 41,
+  "nombre": "M",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 42,
+  "nombre": "V",
+  "tipo": "INT",
+  "opciones": []
+ },
+ {
+  "idx": 43,
+  "nombre": "Hipertension arterial",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 44,
+  "nombre": "Diabetes",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 45,
+  "nombre": "VIH",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 46,
+  "nombre": "Sifilis",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 47,
+  "nombre": "Tuberculosis",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 48,
+  "nombre": "Otras condiciones medicas graves",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 49,
+  "nombre": "Si la respuesta anterior es  SI describa la otra condición médica grave",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 50,
+  "nombre": "Antecedentes de eventos obstétricos\ndesfavorables",
+  "tipo": "SET",
+  "opciones": [
+   "Prematurez",
+   "Malformados",
+   "Placenta previa",
+   "Polihidramnios",
+   "Muerte Fetal o neonatal",
+   "Bajo peso al nacer",
+   "Ninguno"
+  ]
+ },
+ {
+  "idx": 51,
+  "nombre": "Periodo Intergenésico",
+  "tipo": "SET",
+  "opciones": [
+   "Ninguno",
+   "<12 meses",
+   "12 a 24 meses",
+   "25 a 48 meses",
+   "49 y mas",
+   "Sin dato"
+  ]
+ },
+ {
+  "idx": 52,
+  "nombre": "Peso Inicial (kg)",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 53,
+  "nombre": "Talla (metros)",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 54,
+  "nombre": "Indice de Masa Corporal (IMC)",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 55,
+  "nombre": "Clasificación del IMC",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 56,
+  "nombre": "Apoyo familiar",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No",
+   "Sin Dato"
+  ]
+ },
+ {
+  "idx": 57,
+  "nombre": "Embarazo deseado",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No",
+   "Sin Dato"
+  ]
+ },
+ {
+  "idx": 58,
+  "nombre": "Hábitos de riesgo",
+  "tipo": "SET",
+  "opciones": [
+   "Ninguno",
+   "Fuma",
+   "Toma Alcohol",
+   "Consumo de Drogas",
+   "Sin Dato"
+  ]
+ },
+ {
+  "idx": 59,
+  "nombre": "Ha sido victima de violencia fisica o psicologica",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No",
+   "Sin Dato"
+  ]
+ },
+ {
+  "idx": 60,
+  "nombre": "Ha sido victima de abuso sexual",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No",
+   "Sin Dato"
+  ]
+ },
+ {
+  "idx": 61,
+  "nombre": "Solicita ive IVE?",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 62,
+  "nombre": "Clasificación del riesgo obstetrico",
+  "tipo": "SET",
+  "opciones": [
+   "Alto riesgo obstétrico",
+   "Bajo riesgo obstétrico"
+  ]
+ },
+ {
+  "idx": 63,
+  "nombre": "Causas de Alto  Riesgo obstetrico",
+  "tipo": "SET",
+  "opciones": [
+   "-primigestante adolescente",
+   "-Embarazo no Deseado",
+   "-Gestante Añosa",
+   "-antecedente de preeclampsia",
+   "-Periodo Intergénesico corto",
+   "-Incompatibilidad grupo Rh",
+   "-enfermedad autoimune",
+   "-embarazo multiple",
+   "-Multíparidad -cesarea anterior",
+   "-enfermedad renal",
+   "-Antecedentes de MME",
+   "-Antecedentes de Malformación Congénita",
+   "-Sobrepeso, Obesidad",
+   "-HTA Crónica",
+   "-Hipertensión Inducida por el Embarazo",
+   "-Diabetes",
+   "-VIH",
+   "-Sífilis",
+   "-Hepatitis B",
+   "-enfermedad de chagas",
+   "-Tuberculosis",
+   "-Cancer",
+   "-LES",
+   "-ERC",
+   "-Enfermedad Huérfana",
+   "-Enfermedad Mental",
+   "-Antecedentes de aborto",
+   "-Víctima de Violencia Física o Psicológica",
+   "-Víctima de Violencia Sexual",
+   "-Fumadora",
+   "-Consumo de Alcohol",
+   "-Consumo de SPA",
+   "-Antecedente de mortinato"
+  ]
+ },
+ {
+  "idx": 64,
+  "nombre": "Clacificacion del riesgo de preeclampsia",
+  "tipo": "SET",
+  "opciones": [
+   "Alto riesgo de Preeclampsia moderado riesgo de preeclamsia",
+   "Bajo riesgo de Preeclampsia"
+  ]
+ },
+ {
+  "idx": 65,
+  "nombre": "Causas de Alto  Riesgo de preeclampsia",
+  "tipo": "SET",
+  "opciones": [
+   "-primigestante adolescente",
+   "-Embarazo no Deseado",
+   "-Gestante Añosa",
+   "-antecedente de preeclampsia",
+   "-Periodo Intergénesico corto",
+   "-Incompatibilidad grupo Rh",
+   "-enfermedad autoimune",
+   "-embarazo multiple",
+   "-Multíparidad -cesarea anterior",
+   "-enfermedad renal",
+   "-Antecedentes de MME",
+   "-Antecedentes de Malformación Congénita",
+   "-Sobrepeso, Obesidad",
+   "-HTA Crónica",
+   "-Hipertensión Inducida por el Embarazo",
+   "-Diabetes",
+   "-VIH",
+   "-Sífilis",
+   "-Hepatitis B",
+   "-enfermedad de chagas",
+   "-Tuberculosis",
+   "-Cancer",
+   "-LES",
+   "-ERC",
+   "-Enfermedad Huérfana",
+   "-Enfermedad Mental",
+   "-Antecedentes de aborto",
+   "-Víctima de Violencia Física o Psicológica",
+   "-Víctima de Violencia Sexual",
+   "-Fumadora",
+   "-Consumo de Alcohol",
+   "-Consumo de SPA",
+   "-Antecedente de mortinato"
+  ]
+ },
+ {
+  "idx": 66,
+  "nombre": "Clacificacion del riesgo de preeclampsia",
+  "tipo": "SET",
+  "opciones": [
+   "Alto riesgo Tromboembolico",
+   "Bajo riesgo Tromboembolico"
+  ]
+ },
+ {
+  "idx": 67,
+  "nombre": "Causas de Alto  Riesgo obstetrico",
+  "tipo": "SET",
+  "opciones": [
+   "-primigestante adolescente",
+   "-Embarazo no Deseado",
+   "-Gestante Añosa",
+   "-antecedente de preeclampsia",
+   "-Periodo Intergénesico corto",
+   "-Incompatibilidad grupo Rh",
+   "-enfermedad autoimune",
+   "-embarazo multiple",
+   "-Multíparidad -cesarea anterior",
+   "-enfermedad renal",
+   "-Antecedentes de MME",
+   "-Antecedentes de Malformación Congénita",
+   "-Sobrepeso, Obesidad",
+   "-HTA Crónica",
+   "-Hipertensión Inducida por el Embarazo",
+   "-Diabetes",
+   "-VIH",
+   "-Sífilis",
+   "-Hepatitis B",
+   "-enfermedad de chagas",
+   "-Tuberculosis",
+   "-Cancer",
+   "-LES",
+   "-ERC",
+   "-Enfermedad Huérfana",
+   "-Enfermedad Mental",
+   "-Antecedentes de aborto",
+   "-Víctima de Violencia Física o Psicológica",
+   "-Víctima de Violencia Sexual",
+   "-Fumadora",
+   "-Consumo de Alcohol",
+   "-Consumo de SPA",
+   "-Antecedente de mortinato"
+  ]
+ },
+ {
+  "idx": 68,
+  "nombre": "fecha de suministro de tratamiento",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 69,
+  "nombre": "tratamiento Instaurado",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 70,
+  "nombre": "Remitida a especialista?",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 71,
+  "nombre": "Describa cual(es) especialistas la han atendido",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 72,
+  "nombre": "Asesoria Prueba VIH",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 73,
+  "nombre": "Trimestre Asesoria VIH",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 74,
+  "nombre": "Fecha Toma Prueba VIH Primer Tamizaje",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 75,
+  "nombre": "Resultado Primer Tamizaje prueba de VIH",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 76,
+  "nombre": "Trimestre Toma Prueba VIH Primer Tamizaje",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 77,
+  "nombre": "Fecha Toma Prueba VIH Segundo Tamizaje",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 78,
+  "nombre": "Resultado Segundo Tamizaje Prueba de VIH",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 79,
+  "nombre": "Trimestre Toma  Prueba VIH Segundo Tamizaje",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 80,
+  "nombre": "Fecha Toma Prueba VIH Tercer Tamizaje",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 81,
+  "nombre": "Resultado Tercer Tamizaje Prueba de VIH",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 82,
+  "nombre": "Trimestre Toma Prueba VIH Tercer Tamizaje",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 83,
+  "nombre": "Fecha Primera Prueba Treponemica Rapida Sifilis",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 84,
+  "nombre": "Resultado Primera Prueba Treponemica Rápida Sífilis",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 85,
+  "nombre": "Trimestre Primera Prueba Treponemica Rapida Sifilis",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 86,
+  "nombre": "Fecha Segunda Prueba Treponemica Rapida Sifilis",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 87,
+  "nombre": "Resultado Segunda Prueba Treponemica Rápida Sífilis",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 88,
+  "nombre": "Trimestre Segunda Prueba Treponemica Rapida Sifilis",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 89,
+  "nombre": "Fecha Tercera Prueba Treponemica Rapida Sifilis",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 90,
+  "nombre": "Resultado Tercera Prueba Treponemica Rápida Sífilis",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 91,
+  "nombre": "Trimestre Tercera Prueba Treponemica Rapida Sifilis",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 92,
+  "nombre": "Fecha toma Segunda Prueba VIH",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 93,
+  "nombre": "Resultado Toma Segunda Prueba VIH",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 94,
+  "nombre": "Trimestre Toma segunda Prueba VIH",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 95,
+  "nombre": "Fecha prueba confirmatoria Según Algoritmo",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 96,
+  "nombre": "Trimestre Prueba confirmatoria Según Algoritmo",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 97,
+  "nombre": "Fecha de diagnóstico de sífilis",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 98,
+  "nombre": "Tratamiento instaurado",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 99,
+  "nombre": "Fecha de inicio del tratamiento",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 100,
+  "nombre": "Fecha de segunda dosis del tratamiento",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 101,
+  "nombre": "Fecha de tercera dosis del tratamiento",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 102,
+  "nombre": "Fecha de Toma de Urocultivo",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 103,
+  "nombre": "Resultado Urocultivo",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 104,
+  "nombre": "Fecha Toma Glicemia",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 105,
+  "nombre": "Resultado Glicemia",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 106,
+  "nombre": "Fecha Prueba de Tolerancia Oral Glucosa",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 107,
+  "nombre": "Resultado Prueba de Tolerancia Oral Glucosa",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 108,
+  "nombre": "Fecha 1ra Realizacion Hemoglobina",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 109,
+  "nombre": "Resultado 1ra Hemoglobina",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 110,
+  "nombre": "Fecha 2da Realizacion Hemoglobina",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 111,
+  "nombre": "Resultado 2da Hemoglobina",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 112,
+  "nombre": "Fecha 3ra Realizacion Hemoglobina",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 113,
+  "nombre": "Resultado 3ra Hemoglobina",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 114,
+  "nombre": "Resultado Realizacion Hemoclasificación (Factor RH)",
+  "tipo": "SET",
+  "opciones": [
+   "O+",
+   "O-",
+   "A+",
+   "A-",
+   "AB+",
+   "AB-",
+   "B+",
+   "B-",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 115,
+  "nombre": "Fecha de Antigeno Superficie  Hepatitis B",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 116,
+  "nombre": "Resultado Antigeno Superficie Hepatitis B",
+  "tipo": "SET",
+  "opciones": [
+   "NEGATIVO",
+   "POSITIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 117,
+  "nombre": "Fecha Tamizaje Toxoplasma",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 118,
+  "nombre": "Resultado Toxoplasma",
+  "tipo": "SET",
+  "opciones": [
+   "NEGATIVO",
+   "POSITIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 119,
+  "nombre": "Fecha Citologia Cervicouterina",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 120,
+  "nombre": "Resultado Tamizaje de cuello uterino",
+  "tipo": "SET",
+  "opciones": [
+   "POSITIVO",
+   "NEGATIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 121,
+  "nombre": "Fecha de la prueba de Rubeola",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 122,
+  "nombre": "Resultado Rubeola",
+  "tipo": "SET",
+  "opciones": [
+   "NEGATIVO",
+   "POSITIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 123,
+  "nombre": "Fecha Prueba de Tamizaje para Estreptococo Grupo B",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 124,
+  "nombre": "Resultado Prueba de Tamizaje para Estreptococo Grupo B",
+  "tipo": "SET",
+  "opciones": [
+   "NEGATIVO",
+   "POSITIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 125,
+  "nombre": "Fecha Toma de Gota Gruesa (Malaria)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 126,
+  "nombre": "Resultado Gota gruesa (Malaria)",
+  "tipo": "SET",
+  "opciones": [
+   "NEGATIVO",
+   "POSITIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 127,
+  "nombre": "Fecha de Realización Tamizaje Chagas",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 128,
+  "nombre": "Resultado Chagas",
+  "tipo": "SET",
+  "opciones": [
+   "NEGATIVO",
+   "POSITIVO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 129,
+  "nombre": "FECHA DE APLICACIÓN INFLUENZA (Desde Semana 14)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 130,
+  "nombre": "FECHA DE APLICACIÓN TOXOIDE Según Antecedente Vacunal",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 131,
+  "nombre": "FECHA DE APLICACIÓN DPT ACELULAR (Semana 26)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 132,
+  "nombre": "FECHA DE APLICACIÓN COVID-19     (1 En la Gestación)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 133,
+  "nombre": "FECHA DE APLICACIÓN VSR (Semana 28 - 36)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 134,
+  "nombre": "FECHA CONSULTA ODONTOLOGICA",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 135,
+  "nombre": "Ecografia obstétrica con translucencia nucal (10,6 - 13,6)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 136,
+  "nombre": "Ecografia Obstetrica para la detección de anomalias estructurales (18 - 23)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 137,
+  "nombre": "Otras ecografías?",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 138,
+  "nombre": "Fecha suministro Acido Folico",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 139,
+  "nombre": "Fecha suministro Calcio (Semana 14)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 140,
+  "nombre": "Fecha suministro Hierro",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 141,
+  "nombre": "Condicion del suministro del ASA",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 142,
+  "nombre": "fecha de suministro",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 143,
+  "nombre": "Fecha Desparasitación Antihelmintica II y III Trimestre (Albendazo 400 Mg Dosis Unica)",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 144,
+  "nombre": "Fecha 1er Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 145,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 146,
+  "nombre": "Fecha 2do Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 147,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 148,
+  "nombre": "Fecha 3er Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 149,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 150,
+  "nombre": "Fecha 4to Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 151,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 152,
+  "nombre": "Fecha 5to Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 153,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 154,
+  "nombre": "Fecha 6to Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 155,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 156,
+  "nombre": "Fecha 7mo Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 157,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 158,
+  "nombre": "fecha 8vo Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 159,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 160,
+  "nombre": "Fecha 9no Control",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 161,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "SET",
+  "opciones": [
+   "Médico Ginecologia",
+   "Aux de Enfermeria",
+   "Enfermera (o)",
+   "Control Tradicional (obligatorio)"
+  ]
+ },
+ {
+  "idx": 162,
+  "nombre": "Número Total de Controles Prenatales",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 163,
+  "nombre": "Ultimo Control Prenatal",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 164,
+  "nombre": "edad gestacional actual",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 165,
+  "nombre": "peso actual",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 166,
+  "nombre": "talla actual",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 167,
+  "nombre": "IMC ACTUAL",
+  "tipo": "FORMULA",
+  "opciones": []
+ },
+ {
+  "idx": 168,
+  "nombre": "TA ACTUAL",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 169,
+  "nombre": "ALTURA UTERINA",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 170,
+  "nombre": "FCF",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 171,
+  "nombre": "Fecha Primera Consulta Ginecología",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 172,
+  "nombre": "Fecha Segunda Consulta Ginecología",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 173,
+  "nombre": "Fecha Tercera Consulta Ginecología",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 174,
+  "nombre": "Fecha Consulta Nutrición",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 175,
+  "nombre": "Fecha Consulta Psicología",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 176,
+  "nombre": "Fecha de Atención Otro Especialista",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 177,
+  "nombre": "Quien Realizó la Consulta",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 178,
+  "nombre": "Tipo",
+  "tipo": "SET",
+  "opciones": [
+   "IVE",
+   "Expontáneo",
+   "Provocado",
+   "NA"
+  ]
+ },
+ {
+  "idx": 179,
+  "nombre": "Fecha",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 180,
+  "nombre": "Semanas de Gestación",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 181,
+  "nombre": "Complicaciones",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 182,
+  "nombre": "Fecha de Parto",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 183,
+  "nombre": "Caracteristicas del parto",
+  "tipo": "SET",
+  "opciones": [
+   "Parto Vaginal",
+   "Cesarea",
+   "NA"
+  ]
+ },
+ {
+  "idx": 184,
+  "nombre": "Parto atendido por",
+  "tipo": "SET",
+  "opciones": [
+   "IPS baja complejidad",
+   "IPS mediana o alta",
+   "Partera",
+   "Medico Tradicional",
+   "Otro"
+  ]
+ },
+ {
+  "idx": 185,
+  "nombre": "No. Semanas de gestación",
+  "tipo": "DECIMAL",
+  "opciones": []
+ },
+ {
+  "idx": 186,
+  "nombre": "Multiplicidad del embarazo",
+  "tipo": "SET",
+  "opciones": [
+   "Simple",
+   "Doble",
+   "Triple",
+   "Cuadruple o más"
+  ]
+ },
+ {
+  "idx": 187,
+  "nombre": "Complicaciones durante el parto",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 188,
+  "nombre": "Tipo Complicación",
+  "tipo": "SET",
+  "opciones": [
+   "Parto prematuro",
+   "RPM",
+   "Hemorragia",
+   "Anomalías del cordón",
+   "Anomalías de la placenta",
+   "Sufrimiento fetal",
+   "Desproporción C-P",
+   "Otras"
+  ]
+ },
+ {
+  "idx": 189,
+  "nombre": "UCI  Materna",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 190,
+  "nombre": "Toma de pruebas ITS intraparto",
+  "tipo": "SET",
+  "opciones": [
+   "No",
+   "Sifilis",
+   "VIH",
+   "Sífilis y VIH"
+  ]
+ },
+ {
+  "idx": 191,
+  "nombre": "Resultado POSITIVO",
+  "tipo": "SET",
+  "opciones": [
+   "SI",
+   "NO",
+   "SIN DATO"
+  ]
+ },
+ {
+  "idx": 192,
+  "nombre": "Fecha",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 193,
+  "nombre": "Causa de la defunción",
+  "tipo": "TEXTO",
+  "opciones": []
+ },
+ {
+  "idx": 194,
+  "nombre": "TIPO",
+  "tipo": "SET",
+  "opciones": [
+   "DIU",
+   "Inyeccion mensual",
+   "Inyeccion trimestral",
+   "Pildoras",
+   "Condon",
+   "Pomeroy",
+   "Ninguno"
+  ]
+ },
+ {
+  "idx": 195,
+  "nombre": "FECHA",
+  "tipo": "FECHA",
+  "opciones": []
+ },
+ {
+  "idx": 196,
+  "nombre": "RENUENTE A PLANIFICACION FAMILIAR",
+  "tipo": "SET",
+  "opciones": [
+   "Si",
+   "No"
+  ]
+ },
+ {
+  "idx": 197,
+  "nombre": "OBSERVACIONES GENERALES",
+  "tipo": "TEXTO",
+  "opciones": []
+ }
+]

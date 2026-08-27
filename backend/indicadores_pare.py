@@ -84,7 +84,7 @@ def _calcular_bloque(df: pd.DataFrame, ref_date: datetime, nivel='DEPARTAMENTAL'
             control_45 += 1
 
     edad_gest = col('EDAD GESTACIONAL ACTUAL')
-    num_controles = col('NUMERO TOTAL DE CONTROLES PRENATALES')
+    num_controles = col('Número Total de Controles Prenatales')
     tercer_trim_4mas = 0
     gest_tercer_trim = 0
     for i in range(n):
@@ -96,7 +96,7 @@ def _calcular_bloque(df: pd.DataFrame, ref_date: datetime, nivel='DEPARTAMENTAL'
                 tercer_trim_4mas += 1
 
     vih = col('RESULTADO PRIMER TAMIZAJE PRUEBA DE VIH')
-    sifilis = col('RESULTADO PRIMERA PRUEBA TREPONEMICA RAPIDA SIFILIS')
+    sifilis = col('Resultado Primera Prueba Treponemica Rápida Sífilis')
     hepb = col('RESULTADO ANTIGENO SUPERFICIE HEPATITIS B')
     chagas = col('RESULTADO CHAGAS')
 
@@ -113,8 +113,8 @@ def _calcular_bloque(df: pd.DataFrame, ref_date: datetime, nivel='DEPARTAMENTAL'
     tam_hepb = tamizadas(hepb)
     tam_chagas = tamizadas(chagas)
 
-    riesgo = col('CLASIFICACION DEL RIESGO')
-    gineco1 = col('FECHA PRIMERA CONSULTA GINECOLOGIA')
+    riesgo = col('Clasificación del riesgo obstetrico')
+    gineco1 = col('Fecha Primera Consulta Ginecología')
     aro_total = 0
     aro_go = 0
     for i in range(n):
@@ -125,20 +125,20 @@ def _calcular_bloque(df: pd.DataFrame, ref_date: datetime, nivel='DEPARTAMENTAL'
             if _is_date(_val(gineco1, i)):
                 aro_go += 1
 
-    puntaje = col('PUNTAJE DE CLASIFICACION SEGUN ESCALA DE HERRERA Y HURTADO')
-    asa = col('FECHA SUMINISTRO ASA')
+    puntaje = col('Clacificacion del riesgo de preeclampsia')
+    asa = col('fecha de suministro')
     riesgo_preclamsia = 0
     asa_garantizada = 0
     for i in range(n):
         pn = _norm(_val(puntaje, i))
-        es_preclamsia = bool(pn) and pn not in ('SIN DATO', 'N/A', 'NO APLICA', '0')
+        es_preclamsia = bool(pn) and pn not in ('SIN DATO', 'N/A', 'NO APLICA', '0', 'BAJO')
         if es_preclamsia:
             riesgo_preclamsia += 1
             if _is_date(_val(asa, i)):
                 asa_garantizada += 1
 
-    hemoglobina = col('RESULTADO HEMOGLOBINA')
-    tratamiento = col('TRATAMIENTO INSTAURADO')
+    hemoglobina = col('Resultado 1ra Hemoglobina')
+    tratamiento = col('Tratamiento instaurado')
     con_anemia = 0
     anemia_tratada = 0
     for i in range(n):

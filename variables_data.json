@@ -1,0 +1,790 @@
+[
+ {
+  "col": 0,
+  "nombre": "No"
+ },
+ {
+  "col": 1,
+  "nombre": "Tipo de documento de identidad"
+ },
+ {
+  "col": 2,
+  "nombre": "No. De Identificación"
+ },
+ {
+  "col": 3,
+  "nombre": "Apellido_1,"
+ },
+ {
+  "col": 4,
+  "nombre": "Apellido_2"
+ },
+ {
+  "col": 5,
+  "nombre": "Nombre_1,"
+ },
+ {
+  "col": 6,
+  "nombre": "Nombre_2"
+ },
+ {
+  "col": 7,
+  "nombre": "Fecha de Nacimiento"
+ },
+ {
+  "col": 8,
+  "nombre": "Edad (años)"
+ },
+ {
+  "col": 9,
+  "nombre": "Sexo"
+ },
+ {
+  "col": 10,
+  "nombre": "Regimen Afiliacion"
+ },
+ {
+  "col": 11,
+  "nombre": "Pertenecia Etnica"
+ },
+ {
+  "col": 12,
+  "nombre": "Grupo Poblacional"
+ },
+ {
+  "col": 13,
+  "nombre": "Departamento Residencia"
+ },
+ {
+  "col": 14,
+  "nombre": "Municipio de Residencia"
+ },
+ {
+  "col": 15,
+  "nombre": "Zona"
+ },
+ {
+  "col": 16,
+  "nombre": "Etnia"
+ },
+ {
+  "col": 17,
+  "nombre": "Asentamiento / Rancheria / Comunidad"
+ },
+ {
+  "col": 18,
+  "nombre": "Teléfono usuaria"
+ },
+ {
+  "col": 19,
+  "nombre": "Direccion"
+ },
+ {
+  "col": 20,
+  "nombre": "Nivel Educativo"
+ },
+ {
+  "col": 21,
+  "nombre": "Discapacidad"
+ },
+ {
+  "col": 22,
+  "nombre": "Mujer cabeza de Hogar"
+ },
+ {
+  "col": 23,
+  "nombre": "Ocupación"
+ },
+ {
+  "col": 24,
+  "nombre": "Estado Civil"
+ },
+ {
+  "col": 25,
+  "nombre": "Control  Tradicional"
+ },
+ {
+  "col": 26,
+  "nombre": "Gestante Renuente"
+ },
+ {
+  "col": 27,
+  "nombre": "Inasistente"
+ },
+ {
+  "col": 28,
+  "nombre": "Nombre de la IPS Primaria"
+ },
+ {
+  "col": 29,
+  "nombre": "Fecha de diagnostico"
+ },
+ {
+  "col": 30,
+  "nombre": "Fecha de Ingreso al Control Prenatal"
+ },
+ {
+  "col": 31,
+  "nombre": "FUM"
+ },
+ {
+  "col": 32,
+  "nombre": "FPP"
+ },
+ {
+  "col": 33,
+  "nombre": "Dias para el parto"
+ },
+ {
+  "col": 34,
+  "nombre": "Alarma"
+ },
+ {
+  "col": 35,
+  "nombre": "Edad Gest Inicio Control"
+ },
+ {
+  "col": 36,
+  "nombre": "Trimestre inicio control"
+ },
+ {
+  "col": 37,
+  "nombre": "Fórmula obstétrica"
+ },
+ {
+  "col": 38,
+  "nombre": "P"
+ },
+ {
+  "col": 39,
+  "nombre": "C"
+ },
+ {
+  "col": 40,
+  "nombre": "A"
+ },
+ {
+  "col": 41,
+  "nombre": "M"
+ },
+ {
+  "col": 42,
+  "nombre": "V"
+ },
+ {
+  "col": 43,
+  "nombre": "Antecedentes Personales"
+ },
+ {
+  "col": 44,
+  "nombre": "Diabetes"
+ },
+ {
+  "col": 45,
+  "nombre": "VIH"
+ },
+ {
+  "col": 46,
+  "nombre": "Sifilis"
+ },
+ {
+  "col": 47,
+  "nombre": "Tuberculosis"
+ },
+ {
+  "col": 48,
+  "nombre": "Otras condiciones medicas graves"
+ },
+ {
+  "col": 49,
+  "nombre": "Si la respuesta anterior es  SI describa la otra condición médica grave"
+ },
+ {
+  "col": 50,
+  "nombre": "Antecedentes de eventos obstétricos\ndesfavorables"
+ },
+ {
+  "col": 51,
+  "nombre": "Periodo Intergenésico"
+ },
+ {
+  "col": 52,
+  "nombre": "Peso Inicial (kg)"
+ },
+ {
+  "col": 53,
+  "nombre": "Talla (metros)"
+ },
+ {
+  "col": 54,
+  "nombre": "Indice de Masa Corporal (IMC)"
+ },
+ {
+  "col": 55,
+  "nombre": "Clasificación del IMC"
+ },
+ {
+  "col": 56,
+  "nombre": "Riesgos psicosociales"
+ },
+ {
+  "col": 57,
+  "nombre": "Embarazo deseado"
+ },
+ {
+  "col": 58,
+  "nombre": "Hábitos de riesgo"
+ },
+ {
+  "col": 59,
+  "nombre": "Ha sido victima de violencia fisica o psicologica"
+ },
+ {
+  "col": 60,
+  "nombre": "Ha sido victima de abuso sexual"
+ },
+ {
+  "col": 61,
+  "nombre": "Se Identifican Causales Para IVE?"
+ },
+ {
+  "col": 62,
+  "nombre": "RIESGO OBSTETRICO"
+ },
+ {
+  "col": 63,
+  "nombre": "Causas de Alto  Riesgo Obstetrico"
+ },
+ {
+  "col": 64,
+  "nombre": "RIESGO DE PREECLAMPSIA"
+ },
+ {
+  "col": 65,
+  "nombre": "Causas de Alto  Riesgo de preeclampsia"
+ },
+ {
+  "col": 66,
+  "nombre": "RIESGO TROMBOEMBOLICO"
+ },
+ {
+  "col": 67,
+  "nombre": "Causas de Alto  Riesgo Tromboembolico"
+ },
+ {
+  "col": 68,
+  "nombre": "fecha de suministro de tratamiento"
+ },
+ {
+  "col": 69,
+  "nombre": "tratamiento Instaurado"
+ },
+ {
+  "col": 70,
+  "nombre": "Remitida a especialista?"
+ },
+ {
+  "col": 71,
+  "nombre": "Describa cual(es) especialistas la han atendido"
+ },
+ {
+  "col": 72,
+  "nombre": "PRUEBAS DE TAMIZAJE PARA VIH"
+ },
+ {
+  "col": 73,
+  "nombre": "Trimestre Asesoria VIH"
+ },
+ {
+  "col": 74,
+  "nombre": "Fecha Toma Prueba VIH Primer Tamizaje"
+ },
+ {
+  "col": 75,
+  "nombre": "Resultado Primer Tamizaje prueba de VIH"
+ },
+ {
+  "col": 76,
+  "nombre": "Trimestre Toma Prueba VIH Primer Tamizaje"
+ },
+ {
+  "col": 77,
+  "nombre": "Fecha Toma Prueba VIH Segundo Tamizaje"
+ },
+ {
+  "col": 78,
+  "nombre": "Resultado Segundo Tamizaje Prueba de VIH"
+ },
+ {
+  "col": 79,
+  "nombre": "Trimestre Toma  Prueba VIH Segundo Tamizaje"
+ },
+ {
+  "col": 80,
+  "nombre": "Fecha Toma Prueba VIH Tercer Tamizaje"
+ },
+ {
+  "col": 81,
+  "nombre": "Resultado Tercer Tamizaje Prueba de VIH"
+ },
+ {
+  "col": 82,
+  "nombre": "Trimestre Toma Prueba VIH Tercer Tamizaje"
+ },
+ {
+  "col": 83,
+  "nombre": "PRUEBAS DE TAMIZAJE PARA SIFILIS"
+ },
+ {
+  "col": 84,
+  "nombre": "Resultado Primera Prueba Treponemica Rápida Sífilis"
+ },
+ {
+  "col": 85,
+  "nombre": "Trimestre Primera Prueba Treponemica Rapida Sifilis"
+ },
+ {
+  "col": 86,
+  "nombre": "Fecha Segunda Prueba Treponemica Rapida Sifilis"
+ },
+ {
+  "col": 87,
+  "nombre": "Resultado Segunda Prueba Treponemica Rápida Sífilis"
+ },
+ {
+  "col": 88,
+  "nombre": "Trimestre Segunda Prueba Treponemica Rapida Sifilis"
+ },
+ {
+  "col": 89,
+  "nombre": "Fecha Tercera Prueba Treponemica Rapida Sifilis"
+ },
+ {
+  "col": 90,
+  "nombre": "Resultado Tercera Prueba Treponemica Rápida Sífilis"
+ },
+ {
+  "col": 91,
+  "nombre": "Trimestre Tercera Prueba Treponemica Rapida Sifilis"
+ },
+ {
+  "col": 92,
+  "nombre": "Pruebas Confirmatorias para VIH y Sífilis Gestacional"
+ },
+ {
+  "col": 93,
+  "nombre": "Resultado Toma Segunda Prueba VIH"
+ },
+ {
+  "col": 94,
+  "nombre": "Trimestre Toma segunda Prueba VIH"
+ },
+ {
+  "col": 95,
+  "nombre": "Fecha prueba confirmatoria Según Algoritmo"
+ },
+ {
+  "col": 96,
+  "nombre": "Trimestre Prueba confirmatoria Según Algoritmo"
+ },
+ {
+  "col": 97,
+  "nombre": "SEGUIMIENTO SIFILIS GESTACIONAL"
+ },
+ {
+  "col": 98,
+  "nombre": "Tratamiento instaurado"
+ },
+ {
+  "col": 99,
+  "nombre": "Fecha de inicio del tratamiento"
+ },
+ {
+  "col": 100,
+  "nombre": "Fecha de segunda dosis del tratamiento"
+ },
+ {
+  "col": 101,
+  "nombre": "Fecha de tercera dosis del tratamiento"
+ },
+ {
+  "col": 102,
+  "nombre": "UROCULTIVO Y ANTIBIOGRAMA"
+ },
+ {
+  "col": 103,
+  "nombre": "Resultado Urocultivo"
+ },
+ {
+  "col": 104,
+  "nombre": "GLICEMIA"
+ },
+ {
+  "col": 105,
+  "nombre": "Resultado Glicemia"
+ },
+ {
+  "col": 106,
+  "nombre": "PRUEBA DE TOLERANCIA A LA GLUCOSA  (Semanas 24 - 28)"
+ },
+ {
+  "col": 107,
+  "nombre": "Resultado Prueba de Tolerancia Oral Glucosa"
+ },
+ {
+  "col": 108,
+  "nombre": "HEMOGLOBINA"
+ },
+ {
+  "col": 109,
+  "nombre": "Resultado 1ra Hemoglobina"
+ },
+ {
+  "col": 110,
+  "nombre": "Fecha 2da Realizacion Hemoglobina"
+ },
+ {
+  "col": 111,
+  "nombre": "Resultado 2da Hemoglobina"
+ },
+ {
+  "col": 112,
+  "nombre": "Fecha 3ra Realizacion Hemoglobina"
+ },
+ {
+  "col": 113,
+  "nombre": "Resultado 3ra Hemoglobina"
+ },
+ {
+  "col": 114,
+  "nombre": "HEMOCLASIFICAICON"
+ },
+ {
+  "col": 115,
+  "nombre": "ANTIGENO DE HEPATITIS B"
+ },
+ {
+  "col": 116,
+  "nombre": "Resultado Antigeno Superficie Hepatitis B"
+ },
+ {
+  "col": 117,
+  "nombre": "TOXOPLASMA (Igg - Igm)"
+ },
+ {
+  "col": 118,
+  "nombre": "Resultado Toxoplasma"
+ },
+ {
+  "col": 119,
+  "nombre": "RUBEOLA (Igg-Igm)"
+ },
+ {
+  "col": 120,
+  "nombre": "Resultado Rubeola"
+ },
+ {
+  "col": 121,
+  "nombre": "CITOLOGÍA CIRVICOUTERINA"
+ },
+ {
+  "col": 122,
+  "nombre": "Resultado Tamizaje de cuello uterino"
+ },
+ {
+  "col": 123,
+  "nombre": "ESTREPTOCOCO B                 (Semanas 35 - 37)"
+ },
+ {
+  "col": 124,
+  "nombre": "Resultado Prueba de Tamizaje para Estreptococo Grupo B"
+ },
+ {
+  "col": 125,
+  "nombre": "MALARIA"
+ },
+ {
+  "col": 126,
+  "nombre": "Resultado Gota gruesa (Malaria)"
+ },
+ {
+  "col": 127,
+  "nombre": "CHAGAS"
+ },
+ {
+  "col": 128,
+  "nombre": "Resultado Chagas"
+ },
+ {
+  "col": 129,
+  "nombre": "VACUNACION"
+ },
+ {
+  "col": 130,
+  "nombre": "FECHA DE APLICACIÓN TOXOIDE Según Antecedente Vacunal"
+ },
+ {
+  "col": 131,
+  "nombre": "FECHA DE APLICACIÓN DPT ACELULAR (Semana 26)"
+ },
+ {
+  "col": 132,
+  "nombre": "FECHA DE APLICACIÓN COVID-19     (1 En la Gestación)"
+ },
+ {
+  "col": 133,
+  "nombre": "FECHA DE APLICACIÓN VSR (Semana 28 - 36)"
+ },
+ {
+  "col": 134,
+  "nombre": "FECHA CONSULTA ODONTOLOGICA"
+ },
+ {
+  "col": 135,
+  "nombre": "ECOGRAFIA OBSTETRICA"
+ },
+ {
+  "col": 136,
+  "nombre": "Ecografia Obstetrica para la detección de anomalias estructurales (18 - 23)"
+ },
+ {
+  "col": 137,
+  "nombre": "Otras ecografías?"
+ },
+ {
+  "col": 138,
+  "nombre": "SUMINISTRO MICRONUTRIENTES"
+ },
+ {
+  "col": 139,
+  "nombre": "Fecha suministro Calcio (Semana 14)"
+ },
+ {
+  "col": 140,
+  "nombre": "Fecha suministro Hierro"
+ },
+ {
+  "col": 141,
+  "nombre": "SUMINISTRO DE ASA"
+ },
+ {
+  "col": 142,
+  "nombre": "Fecha suministro"
+ },
+ {
+  "col": 143,
+  "nombre": "Fecha Desparasitación Antihelmintica II y III Trimestre (Albendazo 400 Mg Dosis Unica)"
+ },
+ {
+  "col": 144,
+  "nombre": "ATENCION DEL CONTROL PRENATAL: Escriba en la primera columna la fecha del CPN y en la segunda quien realizó el CPN: Md (Médico); Enf (Enfermera); GO (Ginecoobstetra); Otro: Quién?"
+ },
+ {
+  "col": 145,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 146,
+  "nombre": "Fecha 2do Control"
+ },
+ {
+  "col": 147,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 148,
+  "nombre": "Fecha 3er Control"
+ },
+ {
+  "col": 149,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 150,
+  "nombre": "Fecha 4to Control"
+ },
+ {
+  "col": 151,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 152,
+  "nombre": "Fecha 5to Control"
+ },
+ {
+  "col": 153,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 154,
+  "nombre": "Fecha 6to Control"
+ },
+ {
+  "col": 155,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 156,
+  "nombre": "Fecha 7mo Control"
+ },
+ {
+  "col": 157,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 158,
+  "nombre": "fecha 8vo Control"
+ },
+ {
+  "col": 159,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 160,
+  "nombre": "Fecha 9no Control"
+ },
+ {
+  "col": 161,
+  "nombre": "Quien Realizó el Control"
+ },
+ {
+  "col": 162,
+  "nombre": "Número Total de Controles Prenatales"
+ },
+ {
+  "col": 163,
+  "nombre": "Ultimo Control Prenatal"
+ },
+ {
+  "col": 164,
+  "nombre": "Edad Gestacional actual"
+ },
+ {
+  "col": 165,
+  "nombre": "Peso Actual"
+ },
+ {
+  "col": 166,
+  "nombre": "Talla actual"
+ },
+ {
+  "col": 167,
+  "nombre": "IMC"
+ },
+ {
+  "col": 168,
+  "nombre": "TA ACTUAL"
+ },
+ {
+  "col": 169,
+  "nombre": "ALTURA UTERINA"
+ },
+ {
+  "col": 170,
+  "nombre": "FRECUENCIA CARDIACA FETAL"
+ },
+ {
+  "col": 171,
+  "nombre": "ATENCIÓN ESPECIALIZADA: Escriba la(s) fecha(s) (DD/MM/AA) de consultas realizadas por especialistas"
+ },
+ {
+  "col": 172,
+  "nombre": "Fecha Segunda Consulta Ginecología"
+ },
+ {
+  "col": 173,
+  "nombre": "Fecha Tercera Consulta Ginecología"
+ },
+ {
+  "col": 174,
+  "nombre": "Fecha Consulta Nutrición"
+ },
+ {
+  "col": 175,
+  "nombre": "Fecha Consulta Psicología"
+ },
+ {
+  "col": 176,
+  "nombre": "Fecha de Atención Otro Especialista"
+ },
+ {
+  "col": 177,
+  "nombre": "Quien Realizó la Consulta"
+ },
+ {
+  "col": 178,
+  "nombre": "Tipo"
+ },
+ {
+  "col": 179,
+  "nombre": "Fecha"
+ },
+ {
+  "col": 180,
+  "nombre": "Semanas de Gestación"
+ },
+ {
+  "col": 181,
+  "nombre": "Complicaciones"
+ },
+ {
+  "col": 182,
+  "nombre": "Fecha de Parto"
+ },
+ {
+  "col": 183,
+  "nombre": "Caracteristicas del parto"
+ },
+ {
+  "col": 184,
+  "nombre": "Parto atendido por"
+ },
+ {
+  "col": 185,
+  "nombre": "No. Semanas de gestación"
+ },
+ {
+  "col": 186,
+  "nombre": "Multiplicidad del embarazo"
+ },
+ {
+  "col": 187,
+  "nombre": "Complicaciones durante el parto"
+ },
+ {
+  "col": 188,
+  "nombre": "Tipo Complicación"
+ },
+ {
+  "col": 189,
+  "nombre": "UCI  Materna"
+ },
+ {
+  "col": 190,
+  "nombre": "Toma de pruebas ITS intraparto"
+ },
+ {
+  "col": 191,
+  "nombre": "Resultado POSITIVO"
+ },
+ {
+  "col": 192,
+  "nombre": "Fecha"
+ },
+ {
+  "col": 193,
+  "nombre": "Causa de la defunción"
+ },
+ {
+  "col": 194,
+  "nombre": "TIPO"
+ },
+ {
+  "col": 195,
+  "nombre": "FECHA"
+ },
+ {
+  "col": 196,
+  "nombre": "RENUENTE A PLANIFICACION FAMILIAR"
+ }
+]

@@ -1,0 +1,723 @@
+[0] No
+    R: Se debe escribir el consecutivo comenzando por el No. 1
+[1] Tipo de documento de identidad
+    R: Opciones:
+CC
+MS
+RC
+TI
+PA
+CD
+AS
+[2] No. De Identificación
+    R: Ingresar el número de identificación de la gestante
+[3] Apellido_1,
+    R: Primer Apellido de la Gestante
+[4] Apellido_2
+    R: Segundo Apellido de la Gestante
+[5] Nombre_1,
+    R: Primer nombre de la Gestante
+[6] Nombre_2
+    R: Segundo nombre de la Gestante
+[7] Fecha de Nacimiento
+    R: Se debe escribir la fecha de nacimiento de la siguiente forma: 
+año/mes/día
+[8] Edad (años)
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[9] Sexo
+    R: Femenino
+[10] Regimen Afiliacion
+    R: Opciones:
+Subsidiado: S
+Contributivo: C
+[11] Pertenecia Etnica
+    R: Opciones:
+Indígena
+ROM (Gitano)
+Raizal del Archipielago
+Negro (a), Mulato, Afroamericano
+Mestizo
+Ningunas de las Anteriores
+[12] Grupo Poblacional
+    R: Mujer Embarazada
+[13] Departamento Residencia
+    R: Se debe escribir el Dpto. de la Ipsi
+[14] Municipio de Residencia
+    R: Se debe escrbir el Municipio de la Ipsi
+[15] Zona
+    R: Opciones:
+Rural
+Urbana
+[16] Etnia
+    R: Opciones:
+Wayuu
+Arhuaco
+Wiwa
+Yukpa
+Kogi
+Inga
+Kankuamo
+Chimila
+Zenu
+Sin Etnia
+[17] Asentamiento/Rancheria/Comunidad
+    R: Si seleccionó zona rural debe ingresar el nombre del asentamiento
+[18] Teléfono usuaria
+    R: Ingresar número de telefono fijo o celular de la gestante
+[19] Direccion
+    R: Si seleccionó zona urbana debe ingresar la direccion
+[20] Nivel Educativo
+    R: Opciones:
+Analfabeta
+Sabe Leer o Escribir
+Primaria Completa
+Primaria Incompleta
+Secundaria Completa
+Secundaria Incompleta
+Técnico
+Tecnólogo
+Profesional Universitario
+[21] Discapacidad
+    R: Opciones:
+Discapacidad fisica
+Discapacidad Psiquica
+Discapacidad mental
+Ninguna
+Sin dato
+[22] Mujer cabeza de Hogar
+    R: Opciones:
+Si
+No
+[23] Ocupación
+    R: Se debe escribir la Ocupación de la Gestante
+[24] Estado Civil
+    R: Opciones:
+Soltera
+Casada
+Divorciada
+Viuda
+Unión Libre
+[25] Control  Tradicional
+    R: Opciones:
+Sabedor Ancestral
+Partera (o)
+Sobandera (o)
+[26] Gestante Renuente
+    R: Opciones:
+Si
+No
+[27] Inasistente
+    R: Opciones:
+Si
+No
+[28] Nombre de la IPS Primaria
+    R: Se debe ingresar el Nombre de la IPS
+[29] Fecha de Diagnostico del embarazo
+    R: Fecha de Ingreso al Control Prenatal de la siguiente forma: Año/Mes/ Día (obligatorio) debe ser igual o inferrior a la fecha de ingreso a control prenatal
+[30] Fecha de Ingreso al Control Prenatal
+    R: Fecha de Ingreso al Control Prenatal de la siguiente forma: Año/Mes/ Día (obligatorio) debe ser posterior a la FUM
+[31] FUM
+    R: Fecha de la última Mestruación de la siguiente forma: Año/Mes /Día (obligatorio) debe ser inferior a la fecha de ingreso a control prenatal y a lafecha de diagnostico de gestacion
+[32] FPP
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[33] Dias para el parto
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[34] Alarma
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[35] Edad Gest Inicio Control
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[36] Trimestre inicio control
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[37] G
+    R: Se debe ingresar el número de embarazos que ha tenido la gestante contando el actual (obligatorio)
+[38] P
+    R: Se debe ingresar el número de partos Vaginales (obligatorio)
+[39] C
+    R: Se debe ingresar el número de cesareas (obligatorio)
+[40] A
+    R: Se debe ingresra el número de Abortos(obligatorio)
+[41] M
+    R: Se debe ingresar el número de Mortinatos (obligatorio)
+[42] V
+    R: Se debe ingresar la cantidad de hijos vivos(obligatorio)
+[43] Hipertension arterial
+    R: Opciones:
+Si
+No
+[44] Diabetes
+    R: Opciones:
+Si
+No
+[45] VIH
+    R: Opciones:
+Si
+No
+[46] Sifilis
+    R: Opciones:
+Si
+No
+[47] Tuberculosis
+    R: Opciones:
+Si
+No
+[48] Otras condiciones medicas graves
+    R: Opciones:
+Si
+No
+[49] Si la respuesta anterior es  SI describa la otra condición médica grave
+    R: Si la respuesta  del campo otras condiciones medicas graves es  SI describa la otra condición médica grave
+[50] Antecedentes de eventos obstétricos
+desfavorables
+    R: Opciones: 
+Prematurez
+Malformados
+Placenta previa
+Polihidramnios
+Muerte Fetal o neonatal
+Bajo peso al nacer
+Ninguno
+[51] Periodo Intergenésico
+    R: Opciones:
+ Ninguno
+<12 meses
+12 a 24 meses
+25 a 48 meses
+49 y mas
+Sin dato
+[52] Peso Inicial (kg)
+    R: Se debe ingresar el peso inicial de la gestante (obligatorio)
+[53] Talla (metros)
+    R: Se debe ingresar la talla en metros separado por un punto ejemplo 1.57(obligatorio)
+[54] Indice de Masa Corporal (IMC)
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[55] Clasificación del IMC
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[56] Apoyo familiar
+    R: Opciones:
+Si
+No
+Sin Dato
+[57] Embarazo deseado
+    R: Opciones:
+Si
+No
+Sin Dato
+[58] Hábitos de riesgo
+    R: Opciones:
+Ninguno
+Fuma
+Toma Alcohol
+Consumo de Drogas
+Sin Dato
+[59] Ha sido victima de violencia fisica o psicologica
+    R: Opciones:
+Si
+No
+Sin Dato
+[60] Ha sido victima de abuso sexual
+    R: Opciones:
+Si
+No
+Sin Dato
+[61] Solicita ive IVE?
+    R: Opciones:
+Si
+No
+[62] Clasificación del riesgo obstetrico
+    R: Opciones:
+Alto riesgo obstétrico
+Bajo riesgo obstétrico
+[63] Causas de Alto  Riesgo obstetrico
+    R: Opciones:
+-primigestante adolescente
+-Embarazo no Deseado
+-Gestante Añosa
+-antecedente de preeclampsia
+-Periodo Intergénesico corto
+-Incompatibilidad grupo Rh
+-enfermedad autoimune
+-embarazo multiple
+-Multíparidad                                                                                                                                                                                                                                                                                                                                                  -cesarea anterior
+-enfermedad renal
+-Antecedentes  de MME
+-Antecedentes de Malformación Congénita
+-Sobrepeso, Obesidad
+-HTA Crónica
+-Hipertensión Inducida por el Embarazo
+-Diabetes
+-VIH
+-Sífilis
+-Hepatitis B
+-enfermedad de chagas
+-Tuberculosis
+-Cancer
+-LES
+-ERC
+-Enfermedad Huérfana
+-Enfermedad Mental
+-Antecedentes de aborto 
+-Víctima de Violencia Física o Psicológica
+-Víctima de Violencia Sexual
+-Fumadora
+-Consumo de Alcohol
+-Consumo de SPA
+-Antecedente de mortinato
+[64] Clacificacion del riesgo de preeclampsia
+    R: Opciones:
+Alto riesgo de Preeclampsia                                                                                                                                                                                                                                                                                                                     moderado riesgo de preeclamsia
+Bajo riesgo de Preeclampsia
+[65] Causas de Alto  Riesgo de preeclampsia
+    R: Opciones:
+-primigestante adolescente
+-Embarazo no Deseado
+-Gestante Añosa
+-antecedente de preeclampsia
+-Periodo Intergénesico corto
+-Incompatibilidad grupo Rh
+-enfermedad autoimune
+-embarazo multiple
+-Multíparidad                                                                                                                                                                                                                                                                                                                                                  -cesarea anterior
+-enfermedad renal
+-Antecedentes  de MME
+-Antecedentes de Malformación Congénita
+-Sobrepeso, Obesidad
+-HTA Crónica
+-Hipertensión Inducida por el Embarazo
+-Diabetes
+-VIH
+-Sífilis
+-Hepatitis B
+-enfermedad de chagas
+-Tuberculosis
+-Cancer
+-LES
+-ERC
+-Enfermedad Huérfana
+-Enfermedad Mental
+-Antecedentes de aborto 
+-Víctima de Violencia Física o Psicológica
+-Víctima de Violencia Sexual
+-Fumadora
+-Consumo de Alcohol
+-Consumo de SPA
+-Antecedente de mortinato
+[66] Clacificacion del riesgo de preeclampsia
+    R: Opciones:
+Alto riesgo Tromboembolico
+Bajo riesgo Tromboembolico
+[67] Causas de Alto  Riesgo obstetrico
+    R: Opciones:
+-primigestante adolescente
+-Embarazo no Deseado
+-Gestante Añosa
+-antecedente de preeclampsia
+-Periodo Intergénesico corto
+-Incompatibilidad grupo Rh
+-enfermedad autoimune
+-embarazo multiple
+-Multíparidad                                                                                                                                                                                                                                                                                                                                                  -cesarea anterior
+-enfermedad renal
+-Antecedentes  de MME
+-Antecedentes de Malformación Congénita
+-Sobrepeso, Obesidad
+-HTA Crónica
+-Hipertensión Inducida por el Embarazo
+-Diabetes
+-VIH
+-Sífilis
+-Hepatitis B
+-enfermedad de chagas
+-Tuberculosis
+-Cancer
+-LES
+-ERC
+-Enfermedad Huérfana
+-Enfermedad Mental
+-Antecedentes de aborto 
+-Víctima de Violencia Física o Psicológica
+-Víctima de Violencia Sexual
+-Fumadora
+-Consumo de Alcohol
+-Consumo de SPA
+-Antecedente de mortinato
+[68] fecha de suministro de tratamiento
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día- de no aplicar ingresar comodin 1800-01-01
+[69] tratamiento Instaurado
+    R: ingrese el tipo de tratamiento instaurado: medicamentosa (el nombre del medicamento), medias compresivas
+[70] Remitida a especialista?
+    R: Opciones:
+Si
+No
+[71] Describa cual(es) especialistas la han atendido
+    R: Ingresar la Especilialidad Médica a la cual fue remitido
+[72] Asesoria Prueba VIH
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día de no aplicar ingresar comodin 1800-01-01
+[73] Trimestre Asesoria VIH
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[74] Fecha Toma Prueba VIH Primer Tamizaje
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[75] Resultado Primer Tamizaje prueba de VIH
+    R: Opciones:
+-Positivo
+-Negativo
+[76] Trimestre Toma Prueba VIH Primer Tamizaje
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[77] Fecha Toma Prueba VIH Segundo Tamizaje
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[78] Resultado Segundo Tamizaje Prueba de VIH
+    R: Opciones:
+-Positivo
+-Negativo
+[79] Trimestre Toma  Prueba VIH Segundo Tamizaje
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[80] Fecha Toma Prueba VIH Tercer Tamizaje
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[81] Resultado Tercer Tamizaje Prueba de VIH
+    R: Opciones:
+-Positivo
+-Negativo
+[82] Trimestre Toma Prueba VIH Tercer Tamizaje
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[83] Fecha Primera Prueba Treponemica Rapida Sifilis
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[84] Resultado Primera Prueba Treponemica Rápida Sífilis
+    R: Opciones:
+-Positivo
+-Negativo
+[85] Trimestre Primera Prueba Treponemica Rapida Sifilis
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[86] Fecha Segunda Prueba Treponemica Rapida Sifilis
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[87] Resultado Segunda Prueba Treponemica Rápida Sífilis
+    R: Opciones:
+-Positivo
+-Negativo
+[88] Trimestre Segunda Prueba Treponemica Rapida Sifilis
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[89] Fecha Tercera Prueba Treponemica Rapida Sifilis
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[90] Resultado Tercera Prueba Treponemica Rápida Sífilis
+    R: Opciones:
+-Positivo
+-Negativo
+[91] Trimestre Tercera Prueba Treponemica Rapida Sifilis
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[92] Fecha toma Segunda Prueba VIH
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[93] Resultado Toma Segunda Prueba VIH
+    R: Opciones:
+-Positivo
+-Negativo
+[94] Trimestre Toma segunda Prueba VIH
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[95] Fecha prueba confirmatoria Según Algoritmo
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[96] Trimestre Prueba confirmatoria Según Algoritmo
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[97] Fecha de diagnóstico de sífilis
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[98] Tratamiento instaurado
+    R: ingrese el nombre del tratamiento instaurado
+[99] Fecha de inicio del tratamiento
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[100] Fecha de segunda dosis del tratamiento
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[101] Fecha de tercera dosis del tratamiento
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[102] Fecha de Toma de Urocultivo
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día de no aplicar ingresar comodin 1800-01-01
+[103] Resultado Urocultivo
+    R: Opciones:
+-Positivo
+-Negativo
+[104] Fecha Toma Glicemia
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día de no aplicar ingresar comodin 1800-01-01
+[105] Resultado Glicemia
+    R: Ingrese el Resultado en Números
+[106] Fecha Prueba de Tolerancia Oral Glucosa
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[107] Resultado Prueba de Tolerancia Oral Glucosa
+    R: Ingrese el Resultado en Números
+[108] Fecha 1ra Realizacion Hemoglobina
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[109] Resultado 1ra Hemoglobina
+    R: Ingrese el Resultado en Números enteros
+[110] Fecha 2da Realizacion Hemoglobina
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[111] Resultado 2da Hemoglobina
+    R: Ingrese el Resultado en Números enteros
+[112] Fecha 3ra Realizacion Hemoglobina
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[113] Resultado 3ra Hemoglobina
+    R: Ingrese el Resultado en Números enteros
+[114] Resultado Realizacion Hemoclasificación (Factor RH)
+    R: Opciones:
+O+
+O-
+A+
+A-
+AB+
+AB-
+B+
+B-
+[115] Fecha de Antigeno Superficie  Hepatitis B
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[116] Resultado Antigeno Superficie Hepatitis B
+    R: Opciones:
+Negativo
+Positivo
+[117] Fecha Tamizaje Toxoplasma
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[118] Resultado Toxoplasma
+    R: Opciones:
+Negativo
+Positivo
+[119] Fecha Citologia Cervicouterina
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[120] Resultado Tamizaje de cuello uterino
+    R: Opciones:
+-Positivo
+-Negativo
+[121] Fecha de la prueba de Rubeola
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[122] Resultado Rubeola
+    R: Opciones:
+Negativo
+Positivo
+[123] Fecha Prueba de Tamizaje para Estreptococo Grupo B
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[124] Resultado Prueba de Tamizaje para Estreptococo Grupo B
+    R: Opciones:
+Negativo
+Positivo
+[125] Fecha Toma de Gota Gruesa (Malaria)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[126] Resultado Gota gruesa (Malaria)
+    R: Opciones:
+Negativo
+Positivo
+[127] Fecha de Realización Tamizaje Chagas
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[128] Resultado Chagas
+    R: Opciones:
+Negativo
+Positivo
+[129] FECHA DE APLICACIÓN INFLUENZA (Desde Semana 14)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[130] FECHA DE APLICACIÓN TOXOIDE Según Antecedente Vacunal
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[131] FECHA DE APLICACIÓN DPT ACELULAR (Semana 26)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-01
+[132] FECHA DE APLICACIÓN COVID-19     (1 En la Gestación)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-02
+[133] FECHA DE APLICACIÓN VSR (Semana 28 - 36)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-03
+[134] FECHA CONSULTA ODONTOLOGICA
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-04
+[135] Ecografia obstétrica con translucencia nucal (10,6 - 13,6)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-05
+[136] Ecografia Obstetrica para la detección de anomalias estructurales (18 - 23)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-06
+[137] Otras ecografías?
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-07
+[138] Fecha suministro Acido Folico
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-08
+[139] Fecha suministro Calcio (Semana 14)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-09
+[140] Fecha suministro Hierro
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[141] Condicion del suministro del ASA
+    R: 1. ASA indicado y suministrado.                                                                                                                                                                                                                                                                                                                2. Asa indicado y no suministrado.                                                                                                                                                                                                                                                                                                       3. ASA no indicada ni suministrada.                                                                                                                                                                                                                                                                                                    4. ASA suministrado sin ser indicado.                                                                                                                                                                                                                                                                                                    5. No requiere ASA
+[142] fecha de suministro
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-02
+[143] Fecha Desparasitación Antihelmintica II y III Trimestre (Albendazo 400 Mg Dosis Unica)
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[144] Fecha 1er Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-(Obligatorio)
+[145] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[146] Fecha 2do Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[147] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[148] Fecha 3er Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[149] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[150] Fecha 4to Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[151] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[152] Fecha 5to Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[153] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[154] Fecha 6to Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[155] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[156] Fecha 7mo Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[157] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[158] fecha 8vo Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[159] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[160] Fecha 9no Control
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[161] Quien Realizó el Control
+    R: Opciones:
+Médico                                                                                                                                                                                                                                                                                                                                                  Ginecologia
+Aux de Enfermeria
+Enfermera (o)
+Control Tradicional (obligatorio)
+[162] Número Total de Controles Prenatales
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[163] Ultimo Control Prenatal
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[164] edad gestacional actual
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[165] peso actual
+    R: Se debe ingresar el peso de la gestante enel ultimo control prenatal  (obligatorio)
+[166] talla actual
+    R: Se debe ingresar la talla en metros del ultimo control prenatal separado por un punto ejemplo 1.57 (obligatorio)
+[167] IMC ACTUAL
+    R: Este campo es calculado automaticamente, no se debe modificar la Fómula
+[168] TA ACTUAL
+    R: Se debe ingresar el valor de la TA del ultimo control prenatal (obligatorio)
+[169] ALTURA UTERINA
+    R: Se debe ingresar el valor de la altura uterina del ultimo control prenatal (obligatorio) si es inferior a 12 semanas colocar NA
+[170] FCF
+    R: Se debe ingresar el valor de la FCF del ultimo control prenatal (obligatorio) si es inferior a 12 semanas colocar NA
+[171] Fecha Primera Consulta Ginecología
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[172] Fecha Segunda Consulta Ginecología
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[173] Fecha Tercera Consulta Ginecología
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[174] Fecha Consulta Nutrición
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[175] Fecha Consulta Psicología
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[176] Fecha de Atención Otro Especialista
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[177] Quien Realizó la Consulta
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[178] Tipo
+    R: Opciones:
+IVE
+Expontáneo
+Provocado
+NA
+[179] Fecha
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[180] Semanas de Gestación
+    R: Ingrese el número de semanas al momento del aborto de lo contrario colocar NA
+[181] Complicaciones
+    R: Opciones:
+Si
+No
+[182] Fecha de Parto
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[183] Caracteristicas del parto
+    R: Opciones:
+Parto Vaginal
+Cesarea
+NA
+[184] Parto atendido por
+    R: Opciones:
+ IPS baja complejidad
+IPS mediana o alta
+Partera
+Medico Tradicional
+Otro
+[185] No. Semanas de gestación
+    R: Digite el número de semanas de gestación
+[186] Multiplicidad del embarazo
+    R: Opciones:
+ Simple
+Doble
+Triple
+Cuadruple o más
+[187] Complicaciones durante el parto
+    R: Opciones:
+Si
+No
+[188] Tipo Complicación
+    R: Opciones: 
+Parto prematuro
+RPM
+Hemorragia
+Anomalías del cordón
+Anomalías de la placenta
+Sufrimiento fetal
+Desproporción C-P
+Otras
+[189] UCI  Materna
+    R: Opciones:
+Si
+No
+[190] Toma de pruebas ITS intraparto
+    R: Opciones: 
+No
+Sifilis
+VIH
+Sífilis y VIH
+[191] Resultado POSITIVO
+    R: Opciones:
+Si
+No
+[192] Fecha
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[193] Causa de la defunción
+    R: Ingresa la causa de la defunción o NA
+[194] TIPO
+    R: Opciones:
+DIU
+Inyeccion mensual
+ Inyeccion trimestral
+Pildoras
+ Condon
+ Pomeroy
+ Ninguno
+[195] FECHA
+    R: Ingrese la Fecha de la siguiente Forma: Año/Mes/Día-de no aplicar ingresar comodin 1800-01-10
+[196] RENUENTE A PLANIFICACION FAMILIAR
+    R: Opciones:
+Si
+No
+[197] OBSERVACIONES GENERALES
+    R: Escriba las observaciones

@@ -1,0 +1,987 @@
+[
+ {
+  "idx": 0,
+  "nombre": "No",
+  "tipo": "INT"
+ },
+ {
+  "idx": 1,
+  "nombre": "Tipo de documento de identidad",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 2,
+  "nombre": "No. De Identificación",
+  "tipo": "INT"
+ },
+ {
+  "idx": 3,
+  "nombre": "Apellido_1,",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 4,
+  "nombre": "Apellido_2",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 5,
+  "nombre": "Nombre_1,",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 6,
+  "nombre": "Nombre_2",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 7,
+  "nombre": "Fecha de Nacimiento",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 8,
+  "nombre": "Edad (años)",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 9,
+  "nombre": "Sexo",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 10,
+  "nombre": "Regimen Afiliacion",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 11,
+  "nombre": "Pertenecia Etnica",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 12,
+  "nombre": "Grupo Poblacional",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 13,
+  "nombre": "Departamento Residencia",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 14,
+  "nombre": "Municipio de Residencia",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 15,
+  "nombre": "Zona",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 16,
+  "nombre": "Etnia",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 17,
+  "nombre": "Asentamiento / Rancheria / Comunidad",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 18,
+  "nombre": "Teléfono usuaria",
+  "tipo": "INT"
+ },
+ {
+  "idx": 19,
+  "nombre": "Direccion",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 20,
+  "nombre": "Nivel Educativo",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 21,
+  "nombre": "Discapacidad",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 22,
+  "nombre": "Mujer cabeza de Hogar",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 23,
+  "nombre": "Ocupación",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 24,
+  "nombre": "Estado Civil",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 25,
+  "nombre": "Control  Tradicional",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 26,
+  "nombre": "Gestante Renuente",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 27,
+  "nombre": "Inasistente",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 28,
+  "nombre": "Nombre de la IPS Primaria",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 29,
+  "nombre": "Fecha de diagnostico",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 30,
+  "nombre": "Fecha de Ingreso al Control Prenatal",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 31,
+  "nombre": "FUM",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 32,
+  "nombre": "FPP",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 33,
+  "nombre": "Dias para el parto",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 34,
+  "nombre": "Alarma",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 35,
+  "nombre": "Edad Gest Inicio Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 36,
+  "nombre": "Trimestre inicio control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 37,
+  "nombre": "Fórmula obstétrica",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 38,
+  "nombre": "P",
+  "tipo": "INT"
+ },
+ {
+  "idx": 39,
+  "nombre": "C",
+  "tipo": "INT"
+ },
+ {
+  "idx": 40,
+  "nombre": "A",
+  "tipo": "INT"
+ },
+ {
+  "idx": 41,
+  "nombre": "M",
+  "tipo": "INT"
+ },
+ {
+  "idx": 42,
+  "nombre": "V",
+  "tipo": "INT"
+ },
+ {
+  "idx": 43,
+  "nombre": "Antecedentes Personales",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 44,
+  "nombre": "Diabetes",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 45,
+  "nombre": "VIH",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 46,
+  "nombre": "Sifilis",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 47,
+  "nombre": "Tuberculosis",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 48,
+  "nombre": "Otras condiciones medicas graves",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 49,
+  "nombre": "Si la respuesta anterior es  SI describa la otra condición médica grave",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 50,
+  "nombre": "Antecedentes de eventos obstétricos\ndesfavorables",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 51,
+  "nombre": "Periodo Intergenésico",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 52,
+  "nombre": "Peso Inicial (kg)",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 53,
+  "nombre": "Talla (metros)",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 54,
+  "nombre": "Indice de Masa Corporal (IMC)",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 55,
+  "nombre": "Clasificación del IMC",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 56,
+  "nombre": "Riesgos psicosociales",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 57,
+  "nombre": "Embarazo deseado",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 58,
+  "nombre": "Hábitos de riesgo",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 59,
+  "nombre": "Ha sido victima de violencia fisica o psicologica",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 60,
+  "nombre": "Ha sido victima de abuso sexual",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 61,
+  "nombre": "Se Identifican Causales Para IVE?",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 62,
+  "nombre": "RIESGO OBSTETRICO",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 63,
+  "nombre": "Causas de Alto  Riesgo Obstetrico",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 64,
+  "nombre": "RIESGO DE PREECLAMPSIA",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 65,
+  "nombre": "Causas de Alto  Riesgo de preeclampsia",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 66,
+  "nombre": "RIESGO TROMBOEMBOLICO",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 67,
+  "nombre": "Causas de Alto  Riesgo Tromboembolico",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 68,
+  "nombre": "fecha de suministro de tratamiento",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 69,
+  "nombre": "tratamiento Instaurado",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 70,
+  "nombre": "Remitida a especialista?",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 71,
+  "nombre": "Describa cual(es) especialistas la han atendido",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 72,
+  "nombre": "PRUEBAS DE TAMIZAJE PARA VIH",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 73,
+  "nombre": "Trimestre Asesoria VIH",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 74,
+  "nombre": "Fecha Toma Prueba VIH Primer Tamizaje",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 75,
+  "nombre": "Resultado Primer Tamizaje prueba de VIH",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 76,
+  "nombre": "Trimestre Toma Prueba VIH Primer Tamizaje",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 77,
+  "nombre": "Fecha Toma Prueba VIH Segundo Tamizaje",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 78,
+  "nombre": "Resultado Segundo Tamizaje Prueba de VIH",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 79,
+  "nombre": "Trimestre Toma  Prueba VIH Segundo Tamizaje",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 80,
+  "nombre": "Fecha Toma Prueba VIH Tercer Tamizaje",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 81,
+  "nombre": "Resultado Tercer Tamizaje Prueba de VIH",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 82,
+  "nombre": "Trimestre Toma Prueba VIH Tercer Tamizaje",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 83,
+  "nombre": "PRUEBAS DE TAMIZAJE PARA SIFILIS",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 84,
+  "nombre": "Resultado Primera Prueba Treponemica Rápida Sífilis",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 85,
+  "nombre": "Trimestre Primera Prueba Treponemica Rapida Sifilis",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 86,
+  "nombre": "Fecha Segunda Prueba Treponemica Rapida Sifilis",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 87,
+  "nombre": "Resultado Segunda Prueba Treponemica Rápida Sífilis",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 88,
+  "nombre": "Trimestre Segunda Prueba Treponemica Rapida Sifilis",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 89,
+  "nombre": "Fecha Tercera Prueba Treponemica Rapida Sifilis",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 90,
+  "nombre": "Resultado Tercera Prueba Treponemica Rápida Sífilis",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 91,
+  "nombre": "Trimestre Tercera Prueba Treponemica Rapida Sifilis",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 92,
+  "nombre": "Pruebas Confirmatorias para VIH y Sífilis Gestacional",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 93,
+  "nombre": "Resultado Toma Segunda Prueba VIH",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 94,
+  "nombre": "Trimestre Toma segunda Prueba VIH",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 95,
+  "nombre": "Fecha prueba confirmatoria Según Algoritmo",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 96,
+  "nombre": "Trimestre Prueba confirmatoria Según Algoritmo",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 97,
+  "nombre": "SEGUIMIENTO SIFILIS GESTACIONAL",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 98,
+  "nombre": "Tratamiento instaurado",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 99,
+  "nombre": "Fecha de inicio del tratamiento",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 100,
+  "nombre": "Fecha de segunda dosis del tratamiento",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 101,
+  "nombre": "Fecha de tercera dosis del tratamiento",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 102,
+  "nombre": "UROCULTIVO Y ANTIBIOGRAMA",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 103,
+  "nombre": "Resultado Urocultivo",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 104,
+  "nombre": "GLICEMIA",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 105,
+  "nombre": "Resultado Glicemia",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 106,
+  "nombre": "PRUEBA DE TOLERANCIA A LA GLUCOSA  (Semanas 24 - 28)",
+  "tipo": "INT"
+ },
+ {
+  "idx": 107,
+  "nombre": "Resultado Prueba de Tolerancia Oral Glucosa",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 108,
+  "nombre": "HEMOGLOBINA",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 109,
+  "nombre": "Resultado 1ra Hemoglobina",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 110,
+  "nombre": "Fecha 2da Realizacion Hemoglobina",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 111,
+  "nombre": "Resultado 2da Hemoglobina",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 112,
+  "nombre": "Fecha 3ra Realizacion Hemoglobina",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 113,
+  "nombre": "Resultado 3ra Hemoglobina",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 114,
+  "nombre": "HEMOCLASIFICAICON",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 115,
+  "nombre": "ANTIGENO DE HEPATITIS B",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 116,
+  "nombre": "Resultado Antigeno Superficie Hepatitis B",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 117,
+  "nombre": "TOXOPLASMA (Igg - Igm)",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 118,
+  "nombre": "Resultado Toxoplasma",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 119,
+  "nombre": "RUBEOLA (Igg-Igm)",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 120,
+  "nombre": "Resultado Rubeola",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 121,
+  "nombre": "CITOLOGÍA CIRVICOUTERINA",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 122,
+  "nombre": "Resultado Tamizaje de cuello uterino",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 123,
+  "nombre": "ESTREPTOCOCO B                 (Semanas 35 - 37)",
+  "tipo": "INT"
+ },
+ {
+  "idx": 124,
+  "nombre": "Resultado Prueba de Tamizaje para Estreptococo Grupo B",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 125,
+  "nombre": "MALARIA",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 126,
+  "nombre": "Resultado Gota gruesa (Malaria)",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 127,
+  "nombre": "CHAGAS",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 128,
+  "nombre": "Resultado Chagas",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 129,
+  "nombre": "VACUNACION",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 130,
+  "nombre": "FECHA DE APLICACIÓN TOXOIDE Según Antecedente Vacunal",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 131,
+  "nombre": "FECHA DE APLICACIÓN DPT ACELULAR (Semana 26)",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 132,
+  "nombre": "FECHA DE APLICACIÓN COVID-19     (1 En la Gestación)",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 133,
+  "nombre": "FECHA DE APLICACIÓN VSR (Semana 28 - 36)",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 134,
+  "nombre": "FECHA CONSULTA ODONTOLOGICA",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 135,
+  "nombre": "ECOGRAFIA OBSTETRICA",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 136,
+  "nombre": "Ecografia Obstetrica para la detección de anomalias estructurales (18 - 23)",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 137,
+  "nombre": "Otras ecografías?",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 138,
+  "nombre": "SUMINISTRO MICRONUTRIENTES",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 139,
+  "nombre": "Fecha suministro Calcio (Semana 14)",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 140,
+  "nombre": "Fecha suministro Hierro",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 141,
+  "nombre": "SUMINISTRO DE ASA",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 142,
+  "nombre": "Fecha suministro",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 143,
+  "nombre": "Fecha Desparasitación Antihelmintica II y III Trimestre (Albendazo 400 Mg Dosis Unica)",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 144,
+  "nombre": "ATENCION DEL CONTROL PRENATAL: Escriba en la primera columna la fecha del CPN y en la segunda quien realizó el CPN: Md (Médico); Enf (Enfermera); GO (Ginecoobstetra); Otro: Quién?",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 145,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 146,
+  "nombre": "Fecha 2do Control",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 147,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 148,
+  "nombre": "Fecha 3er Control",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 149,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 150,
+  "nombre": "Fecha 4to Control",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 151,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 152,
+  "nombre": "Fecha 5to Control",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 153,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 154,
+  "nombre": "Fecha 6to Control",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 155,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 156,
+  "nombre": "Fecha 7mo Control",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 157,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 158,
+  "nombre": "fecha 8vo Control",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 159,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 160,
+  "nombre": "Fecha 9no Control",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 161,
+  "nombre": "Quien Realizó el Control",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 162,
+  "nombre": "Número Total de Controles Prenatales",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 163,
+  "nombre": "Ultimo Control Prenatal",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 164,
+  "nombre": "Edad Gestacional actual",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 165,
+  "nombre": "Peso Actual",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 166,
+  "nombre": "Talla actual",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 167,
+  "nombre": "IMC",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 168,
+  "nombre": "TA ACTUAL",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 169,
+  "nombre": "ALTURA UTERINA",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 170,
+  "nombre": "FRECUENCIA CARDIACA FETAL",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 171,
+  "nombre": "ATENCIÓN ESPECIALIZADA: Escriba la(s) fecha(s) (DD/MM/AA) de consultas realizadas por especialistas",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 172,
+  "nombre": "Fecha Segunda Consulta Ginecología",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 173,
+  "nombre": "Fecha Tercera Consulta Ginecología",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 174,
+  "nombre": "Fecha Consulta Nutrición",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 175,
+  "nombre": "Fecha Consulta Psicología",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 176,
+  "nombre": "Fecha de Atención Otro Especialista",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 177,
+  "nombre": "Quien Realizó la Consulta",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 178,
+  "nombre": "Tipo",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 179,
+  "nombre": "Fecha",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 180,
+  "nombre": "Semanas de Gestación",
+  "tipo": "INT"
+ },
+ {
+  "idx": 181,
+  "nombre": "Complicaciones",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 182,
+  "nombre": "Fecha de Parto",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 183,
+  "nombre": "Caracteristicas del parto",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 184,
+  "nombre": "Parto atendido por",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 185,
+  "nombre": "No. Semanas de gestación",
+  "tipo": "INT"
+ },
+ {
+  "idx": 186,
+  "nombre": "Multiplicidad del embarazo",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 187,
+  "nombre": "Complicaciones durante el parto",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 188,
+  "nombre": "Tipo Complicación",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 189,
+  "nombre": "UCI  Materna",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 190,
+  "nombre": "Toma de pruebas ITS intraparto",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 191,
+  "nombre": "Resultado POSITIVO",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 192,
+  "nombre": "Fecha",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 193,
+  "nombre": "Causa de la defunción",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 194,
+  "nombre": "TIPO",
+  "tipo": "TEXTO"
+ },
+ {
+  "idx": 195,
+  "nombre": "FECHA",
+  "tipo": "FECHA"
+ },
+ {
+  "idx": 196,
+  "nombre": "RENUENTE A PLANIFICACION FAMILIAR",
+  "tipo": "TEXTO"
+ }
+]
