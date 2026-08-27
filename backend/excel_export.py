@@ -225,7 +225,7 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
     header_font = Font(bold=True, color="FFFFFF", size=10, name="Calibri")
     thin = Border(*[Side(style="thin", color="BDBDBD")] * 4)
     error_fill = PatternFill("solid", fgColor="FECACA")  # rojo mas intenso
-    error_font = Font(color="#B91C1C", bold=True)
+    error_font = Font(color="B91C1C", bold=True)
     valid_fill = PatternFill("solid", fgColor="DCFCE7")  # verde claro (VALIDADO)
 
     ncols = len(headers) + 1  # + RESULTADO DE VALIDACION
@@ -278,7 +278,7 @@ def build_reporte_errores_excel(corrected_text: str, template: list[dict], error
             rc.font = error_font
         else:
             rc.fill = valid_fill
-            rc.font = Font(color="#166534", bold=True)
+            rc.font = Font(color="166534", bold=True)
     # Celdas con dato invalido
     for (fila_idx, h) in errors_by_cell.keys():
         if fila_idx >= len(rows):
