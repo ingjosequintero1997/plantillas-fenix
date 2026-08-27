@@ -545,14 +545,17 @@ async def upload_file(
 		if len(df) == 0:
 			raise HTTPException(status_code=400, detail="Archivo vacío")
 
-		# Regla de integridad: ningun dato puede quedar vacio. Se rellena con
-		# el valor por tipo segun el instructivo: texto->SIN DATO, numerico->0,
-		# fecha->1845-01-01, SET->SIN DATO. Asi la data queda 100% completa.
-		try:
-			from .validators import rellenar_vacios
-		except ImportError:
-			from validators import rellenar_vacios
-		df = rellenar_vacios(df, active_template)
+		# Regla de integridad: en modo LIMPIADOR ningun dato puede quedar vacio.
+		# Se rellena con el valor por tipo segun el instructivo: texto->SIN DATO,
+		# numerico->0, fecha->1845-01-01, SET->SIN DATO.
+		# En modo VALIDADOR NO se rellena: los campos vacios son ERROR y el
+		# prestador debe corregirlos (validacion estricta contra el instructivo).
+		if mode != "validador":
+			try:
+				from .validators import rellenar_vacios
+			except ImportError:
+				from validators import rellenar_vacios
+			df = rellenar_vacios(df, active_template)
 
 		orig_headers = list(df.columns)
 		map_suggest = infer_mapping(orig_headers, active_template)
@@ -1708,8 +1711,11 @@ async def validate_data(payload: dict):
 								alias_match = True
 								break
 						if not alias_match:
-							from validators import FIELD_SET_ALIASES
-							field_aliases = FIELD_SET_ALIASES.get(col_name)
+							try:
+								from .validators import field_aliases_for
+							except ImportError:
+								from validators import field_aliases_for
+							field_aliases = field_aliases_for(col_name)
 							if field_aliases:
 								for canonical, synonyms in field_aliases.items():
 									if sn in {normalize_text(a) for a in synonyms}:

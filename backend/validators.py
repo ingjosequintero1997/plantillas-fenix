@@ -737,6 +737,31 @@ def _default_para(tipo: str, tdef: dict):
 		return "SIN DATO"
 	return "SIN DATO"
 
+FIELD_SET_ALIASES_NORM = {normalize_text(k): v for k, v in FIELD_SET_ALIASES.items()}
+
+
+def field_aliases_for(col: str) -> dict:
+	"""Alias SET del campo, buscando por nombre normalizado (sin acentos, mayusculas).
+	Resuelve los nombres del template nuevo contra las claves del instructivo original."""
+	cn = normalize_text(col)
+	# Coincidencia exacta normalizada primero
+	if cn in FIELD_SET_ALIASES_NORM:
+		return FIELD_SET_ALIASES_NORM[cn]
+	# Fallback: compartir al menos 2 palabras significativas
+	cn_words = {w for w in cn.split() if len(w) >= 3 and w not in ("DE", "DEL", "LA", "EL", "LOS", "LAS")}
+	best_key = None
+	best_count = 0
+	for key, aliases in FIELD_SET_ALIASES_NORM.items():
+		key_words = {w for w in key.split() if len(w) >= 3 and w not in ("DE", "DEL", "LA", "EL", "LOS", "LAS")}
+		common = len(cn_words & key_words)
+		if common > best_count:
+			best_count = common
+			best_key = key
+	if best_key is not None and best_count >= 2:
+		return FIELD_SET_ALIASES_NORM[best_key]
+	return {}
+
+
 def _mensaje_esperado(tipo: str, tdef: dict, col: str, val_str: str):
 	"""Mensaje didactico de como corregir segun el tipo de variable."""
 	if tipo == "SET":
@@ -896,6 +921,12 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	}
 	alias_genericos_norm = {canon: {normalize_text(a) for a in syn} for canon, syn in alias_genericos.items()}
 
+	# Campos donde el instructivo permite el comodin NA (no aplica)
+	NA_FIELDS = {
+		"ALTURA UTERINA", "FCF",
+		"SEMANAS DE GESTACION",
+	}
+
 	for ci, col in enumerate(template_cols):
 		tdef = tmap[col]
 		values = src_values[ci]
@@ -915,14 +946,29 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 
 		vacio_mask = ser_raw.eq("") | ser_raw.str.upper().isin(["SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"])
 
+		# Comodin NA permitido en campos numericos segun el instructivo
+		NA_FIELDS_COL_SERIES = pd.Series(col_norm in NA_FIELDS, index=ser_raw.index)
+
 		if tipo == "SET":
 			norm_allowed_set = set(norm_allowed)
-			field_aliases = FIELD_SET_ALIASES.get(col, {})
+			# Campos de causas de riesgo: el instructivo lista con guion inicial
+			# ("-primigestante adolescente") pero la data puede venir sin el guion.
+			if "CAUSAS DE" in col_norm or "CAUSA DE" in col_norm:
+				norm_allowed_set |= {normalize_text(a).replace("-", " ").strip() for a in allowed}
+			field_aliases = field_aliases_for(col)
 			alias_map = {}
 			for canonical, synonyms in field_aliases.items():
+				cn_canon = normalize_text(canonical)
 				# Alias a SIN DATO siempre se incluyen (comodin universal)
-				if normalize_text(canonical) in norm_allowed_set or normalize_text(canonical) == "SIN DATO":
+				if cn_canon in norm_allowed_set or cn_canon == "SIN DATO":
 					alias_map[canonical] = {normalize_text(a) for a in synonyms}
+				else:
+					# Fallback: el canonical es una variante sin sufijo de una opcion
+					# (ej: "SUBSIDIADO" vs "SUBSIDIADO: S"). Se valida contra cada opcion.
+					for opc in norm_allowed:
+						if cn_canon in opc or opc in cn_canon:
+							alias_map[canonical] = {normalize_text(a) for a in synonyms}
+							break
 			# Fusionar alias genericos con los del campo (no sobrescribir)
 			for canon, syns in alias_genericos_norm.items():
 				if normalize_text(canon) in norm_allowed_set:
@@ -967,7 +1013,11 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		elif tipo == "DECIMAL":
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
 			es_decimal = s.str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
-			error_mask = (~es_decimal)
+			# El instructivo permite el comodin NA solo en campos especificos:
+			# ALTURA UTERINA y FCF ("si es inferior a 12 semanas colocar NA"),
+			# Semanas de Gestacion ("de lo contrario colocar NA").
+			es_na = ser_raw.str.upper().isin(["NA", "N/A", "N.A."]) & NA_FIELDS_COL_SERIES
+			error_mask = (~es_decimal) & (~es_na)
 
 		elif tipo == "DATE":
 			# Vectorizado: solo las celdas con formato de fecha (regex) se parsean.
@@ -1115,7 +1165,7 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			}.items():
 				if normalize_text(alias_canonical) in norm_allowed_col:
 					alias_map_col[alias_canonical] = {normalize_text(a) for a in alias_synonyms}
-			field_aliases_col = FIELD_SET_ALIASES.get(col)
+			field_aliases_col = field_aliases_for(col)
 			if field_aliases_col:
 				for canonical, synonyms in field_aliases_col.items():
 					if normalize_text(canonical) in norm_allowed_col:
