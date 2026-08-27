@@ -594,17 +594,11 @@ export default function App() {
                         <div className="font-medium" style={{ color: 'var(--text)' }}>¿Terminaste esta validación?</div>
                         <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                           {(summary.rows_with_errors ?? summary.errors) > 0
-                            ? 'Descarga el reporte con los errores o vuelve para validar otra data.'
+                            ? 'Descarga el Excel de errores arriba para corregir, o valida otra data.'
                             : 'Tu data quedó al 100%. Descárgala desde Verificar data.'}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {(summary.rows_with_errors ?? summary.errors) > 0 && (
-                          <button onClick={handleDownloadReport} disabled={!rawText} className="btn-secondary">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Descargar errores (Excel)
-                          </button>
-                        )}
                         <button onClick={handleReset} className="btn-primary">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           Validar otra data
