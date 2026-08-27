@@ -1748,7 +1748,7 @@ async def validate_data(payload: dict):
 			elif tdef["type"] == "TEXT":
 				# Estricto: solo texto. No acepta vacios, numeros puros ni fechas,
 				# salvo campos naturalmente numericos (identificacion, telefono, etc.).
-				campo_numerico = any(k in col_name.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+				campo_numerico = any(k in normalize_text(col_name) for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
 				if not val_str:
 					err_msg = f"[{col_name}] Valor vacio. Requerido"
 					col_errors += 1

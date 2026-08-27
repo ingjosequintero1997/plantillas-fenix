@@ -13,7 +13,7 @@ except ImportError:
     from validators import to_date_iso
 
 # Fechas centinela usadas para indicar "sin dato"
-DATE_SENTINELS = {"", "1900-01-01", "1800-01-01", "SIN DATO", "00:00:00"}
+DATE_SENTINELS = {"", "1900-01-01", "1800-01-01", "1845-01-01", "SIN DATO", "00:00:00"}
 
 
 def col_letter(n: int) -> str:

@@ -712,13 +712,13 @@ def rellenar_vacios(df: pd.DataFrame, template: list) -> pd.DataFrame:
 			continue
 		ser = out[col]
 		# Vectorizado: marca celdas ausentes (None/NaN/vacio/valores comodin)
-		if ser.dtype == object:
+		if ser.dtype != object and not pd.api.types.is_string_dtype(ser.dtype):
+			mask = pd.isna(ser)
+		else:
 			vals = ser.astype("string")
 			es_vacio = vals.str.strip().eq("")
 			es_comodin = vals.str.strip().str.upper().isin(ausentes_upper)
 			mask = vals.isna() | es_vacio | es_comodin
-		else:
-			mask = pd.isna(ser)
 		if mask.any():
 			out[col] = ser.mask(mask, _default_para(tdef.get("type"), tdef))
 	return out
@@ -991,9 +991,9 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			error_mask = (~es_fecha) | vacio_mask | ser_raw.str.upper().isin(["SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"])
 
 		elif tipo == "TEXT":
-			campo_numerico = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+			campo_numerico = any(k in normalize_text(col) for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
 			# Puntaje de escala de Herrera y Hurtado: acepta valores numericos (es una escala)
-			if "HERRERA" in col.upper() or "ESCALA" in col.upper():
+			if "HERRERA" in normalize_text(col) or "ESCALA" in normalize_text(col):
 				error_mask = pd.Series(False, index=ser_raw.index)
 			elif campo_numerico:
 				error_mask = pd.Series(False, index=ser_raw.index)
@@ -1099,7 +1099,7 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 		origins = [None] * n
 
 		# Precomputar (fuera del loop por fila) lo que no cambia por celda
-		campo_numerico_col = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
+		campo_numerico_col = any(k in normalize_text(col) for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
 		if tdef["type"] == "SET":
 			allowed_col = [str(a).strip() for a in tdef.get("allowed", [])]
 			norm_allowed_col = [normalize_text(a) for a in allowed_col]
@@ -1154,7 +1154,7 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			elif tdef["type"] == "INT":
 				corrected_int = to_municipality_code(val) if normalize_text(col) == "MUNICIPIO DE RESIDENCIA" else to_int_safe(val)
 				if corrected_int is None:
-					campo_numerico_oblig = any(k in col.upper() for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO"))
+					campo_numerico_oblig = any(k in normalize_text(col) for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO"))
 					if campo_numerico_oblig:
 						# Campos numericos obligatorios: se asigna 0
 						status = "corrected"

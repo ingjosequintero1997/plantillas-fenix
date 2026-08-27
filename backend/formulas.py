@@ -13,7 +13,7 @@ def _fecha(valor):
     if valor is None:
         return None
     s = str(valor).strip()
-    if not s or s.upper() in ('SIN DATO', 'NO APLICA', 'N/A', 'NONE', '1900-01-01'):
+    if not s or s.upper() in ('SIN DATO', 'NO APLICA', 'N/A', 'NONE', '1900-01-01', '1845-01-01'):
         return None
     iso = to_date_iso(s)
     if not iso:

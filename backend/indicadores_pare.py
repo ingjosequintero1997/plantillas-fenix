@@ -28,7 +28,7 @@ def _to_num(v):
 
 def _is_date(value):
     try:
-        if value and str(value).strip() and str(value).strip().lower() not in ('sin dato', 'no aplica', 'n/a', '1900-01-01'):
+        if value and str(value).strip() and str(value).strip().lower() not in ('sin dato', 'no aplica', 'n/a', '1900-01-01', '1845-01-01'):
             from dateutil import parser
             parser.parse(str(value).strip(), dayfirst=True)
             return True
@@ -39,7 +39,7 @@ def _is_date(value):
 
 def _parse_date(value):
     try:
-        if value and str(value).strip() and str(value).strip().lower() not in ('sin dato', 'no aplica', 'n/a', '1900-01-01'):
+        if value and str(value).strip() and str(value).strip().lower() not in ('sin dato', 'no aplica', 'n/a', '1900-01-01', '1845-01-01'):
             from dateutil import parser
             return parser.parse(str(value).strip(), dayfirst=True)
     except Exception:

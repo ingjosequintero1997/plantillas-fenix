@@ -24,7 +24,7 @@ def _to_int(val: str):
 
 
 def _parse_date(val: str):
-    if not val or val.strip().upper() in ("SIN DATO", "1900-01-01", ""):
+    if not val or val.strip().upper() in ("SIN DATO", "1900-01-01", "1845-01-01", ""):
         return None
     try:
         return pd.to_datetime(val.strip(), dayfirst=False, errors="coerce")
