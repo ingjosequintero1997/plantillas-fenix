@@ -2147,26 +2147,41 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 		row = int(l["row"]) - 1
 		col = l["column"]
 		corr = l["corrected"] or "Dato invalido"
+		orig = l["original"] or ""
+		es_vacio = orig.strip() == ""
 		# Comentario explicito: que se encontro y que debe ingresar
 		tdef2 = tmap2.get(col)
 		tipo2 = tdef2.get("type") if tdef2 else None
 		if tipo2 == "SET":
 			allowed = [str(a).strip() for a in (tdef2.get("allowed") or [])]
-			msg = f"El dato '{l['original']}' no es valido para '{col}'. Debe ser uno de: " + (", ".join(allowed) if allowed else "los valores del instructivo")
+			opciones = ", ".join(allowed) if allowed else "los valores del instructivo"
+			if es_vacio:
+				msg = f"Este campo esta VACIO. Debe escribir uno de estos valores: {opciones}."
+			else:
+				msg = f"El valor '{orig}' no es valido. Debe escribir uno de estos valores: {opciones}."
 		elif tipo2 == "INT":
-			msg = f"El dato '{l['original']}' no es un numero entero valido para '{col}'. Ingresa solo numeros."
+			if es_vacio:
+				msg = f"Este campo esta VACIO y debe llevar SOLO NUMEROS (entero). Ej: 25, 1103567890."
+			else:
+				msg = f"El valor '{orig}' no es un numero entero valido. En este campo solo van NUMEROS (ej: 25, 1103567890)."
 		elif tipo2 == "DECIMAL":
-			msg = f"El dato '{l['original']}' no es un numero valido para '{col}'. Ingresa solo numeros (ej: 12.5)."
+			if es_vacio:
+				msg = f"Este campo esta VACIO y debe llevar UN NUMERO (puede tener decimales). Ej: 60.5, 1.60."
+			else:
+				msg = f"El valor '{orig}' no es un numero valido. En este campo va un NUMERO (ej: 60.5, 1.60)."
 		elif tipo2 == "DATE":
-			msg = f"El dato '{l['original']}' no es una fecha valida para '{col}'. Ingresa la fecha como AAAA-MM-DD (ej: 2025-10-10)."
+			if es_vacio:
+				msg = f"Este campo esta VACIO y debe llevar UNA FECHA en formato AAAA-MM-DD. Ej: 2025-10-10."
+			else:
+				msg = f"El valor '{orig}' no es una fecha valida. Debe escribir la fecha como AAAA-MM-DD (ej: 2025-10-10)."
 		elif tipo2 == "TEXT":
-			msg = f"El dato '{l['original']}' no es un texto valido para '{col}'. Ingresa el dato en texto."
+			if es_vacio:
+				msg = f"Este campo esta VACIO. Debe escribir el dato en TEXTO, o 'SIN DATO' si no lo tiene."
+			else:
+				msg = f"El valor '{orig}' no es valido. Este campo va en TEXTO (letras), o 'SIN DATO' si no tiene el dato."
 		else:
-			msg = f"El dato '{l['original']}' no es valido para '{col}'. {corr}"
+			msg = f"El dato '{orig}' no es valido. {corr}"
 		errors[(row, col)] = msg
-	# NOTA: los campos VACIOS/SIN DATO NO son error aqui porque el sistema
-	# los rellena con el valor por tipo (0, SIN DATO, 1845-01-01) segun el
-	# instructivo. Solo se marcan errores por valores realmente invalidos.
 	return errors
 
 
