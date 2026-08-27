@@ -326,6 +326,7 @@ export default function App() {
     setTemplateNames([]); setLoading(false); setReprocessing(false)
     setProgress(0); setError(''); setAuditQuery(''); setAuditStatus('all')
     setMappingStats(null); setStructureValidation(null); setShowEvaluation(false)
+    setSection('subir')
   }
 
   const handleSelectTemplate = (key) => {
@@ -343,11 +344,14 @@ export default function App() {
       // 1) Si hay data en memoria (validacion actual), generar Excel directo.
       if (rawText && rawText.trim()) {
         await descargarReporteErroresExcelData(rawText, selectedTemplate, filename)
+        // Volver al estado de validacion para re-subir la data corregida.
+        handleReset()
         return
       }
       // 2) Si hay un cargue validado en BD, descargar el Excel desde el backend.
       if (lastCargueId) {
         await descargarReporteErroresExcel(lastCargueId, filename)
+        handleReset()
         return
       }
     } catch (e) {
