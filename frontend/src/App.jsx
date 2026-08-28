@@ -587,19 +587,21 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Panel informativo: descargar Excel de errores para corregir */}
-                    <div className="panel flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="font-medium" style={{ color: 'var(--text)' }}>Para corregir los errores</div>
-                        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                          Descarga el Excel de errores, corrige los datos marcados en rojo y vuelve a subir el archivo.
+                    {/* Panel informativo: descargar Excel de errores SOLO si hay errores */}
+                    {(summary.rows_with_errors ?? summary.errors) > 0 && (
+                      <div className="panel flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="font-medium" style={{ color: 'var(--text)' }}>Para corregir los errores</div>
+                          <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                            Descarga el Excel de errores, corrige los datos marcados en rojo y vuelve a subir el archivo.
+                          </div>
                         </div>
+                        <button onClick={handleDownloadReport} disabled={!rawText} className="btn-primary">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                          Descargar errores (Excel)
+                        </button>
                       </div>
-                      <button onClick={handleDownloadReport} disabled={!rawText} className="btn-primary">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        Descargar errores (Excel)
-                      </button>
-                    </div>
+                    )}
 
                     {/* Barra de acciones al final */}
                     <div className="panel flex flex-wrap items-center justify-between gap-3">
