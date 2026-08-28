@@ -505,6 +505,21 @@ def to_date_iso(v):
 	except Exception:
 		return None
 
+def _default_set(allowed) -> str:
+	"""Retorna un valor comodin VALIDO de un SET del template:
+	Si/No -> No, con NA -> NA, con NINGUNO -> NINGUNO, sino la primera opcion."""
+	au = [str(a).strip().upper() for a in (allowed or [])]
+	if "NO" in au:
+		return "No"
+	if "NA" in au:
+		return "NA"
+	if "NINGUNO" in au:
+		return "NINGUNO"
+	if allowed:
+		return str(allowed[0]).strip()
+	return "SIN DATO"
+
+
 def normalize_set(v, allowed, field_name=None):
 	if v is None or pd.isna(v):
 		return None
@@ -710,7 +725,7 @@ def rellenar_vacios(df: pd.DataFrame, template: list) -> pd.DataFrame:
 	tmap = {t["name"]: t for t in template}
 	normalized_tmap = {normalize_text(t["name"]): t["name"] for t in template}
 	out = df.copy()
-	ausentes_upper = {"SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"}
+	ausentes_upper = {"SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL"}
 	for col in out.columns:
 		canonical = normalized_tmap.get(normalize_text(col))
 		tdef = tmap.get(canonical) if canonical else None
@@ -740,7 +755,7 @@ def _default_para(tipo: str, tdef: dict):
 	if tipo == "TEXT":
 		return "SIN DATO"
 	if tipo == "SET":
-		return "SIN DATO"
+		return _default_set(tdef.get("allowed"))
 	return "SIN DATO"
 
 FIELD_SET_ALIASES_NORM = {normalize_text(k): v for k, v in FIELD_SET_ALIASES.items()}
@@ -1289,14 +1304,14 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 						status = "corrected"
 
 			elif tdef["type"] == "SET":
-				# SOLO ajustar con alias veraz del instructivo o coincidencia exacta.
-				# NUNCA usar fuzzy ni subcadena que puedan dañar el dato.
+				# Ajustar a una opcion VALIDA del template actual (nuevo instructivo).
 				sn = normalize_text(val_str)
 				corregido = None
 				if sn in norm_allowed_col:
 					corregido = allowed_col[norm_allowed_col.index(sn)]
 				else:
-					# Alias precomputados (genericos + del instructivo)
+					# Alias precomputados (genericos + del instructivo). El canonical
+					# del alias debe ser una opcion valida del template actual.
 					for alias_canonical, alias_synonyms in alias_map_col.items():
 						if sn in alias_synonyms:
 							corregido = alias_canonical
@@ -1306,16 +1321,18 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 					if normalize_text(val_str) != normalize_text(corregido):
 						status = "corrected"
 				else:
-					# Respaldo fuzzy para errores de digitacion (ej: secndaria -> SECUNDARIA).
-					# Solo se aplica si la mejor coincidencia supera el umbral minimo.
+					# Respaldo: intentar un valor permitido del instructivo actual
+					# (incluye sinonimos y errores de digitacion leves), pero NUNCA
+					# devolver algo que no sea una opcion valida del template.
 					fuzzy_match = normalize_set(val, allowed_col, normalize_text(col))
-					if fuzzy_match is not None:
+					if fuzzy_match is not None and normalize_text(fuzzy_match) in norm_allowed_col:
 						corrected = fuzzy_match
 						status = "corrected"
 					else:
-						# Sin mapeo veraz: el limpiador ajusta a SIN DATO (correccion),
-						# nunca deja la fila bloqueada por un valor no reconocido.
-						corrected = "SIN DATO"
+						# Sin mapeo veraz: el limpiador ajusta a un comodin valido del
+						# template (primera opcion, o Si/No si existe), nunca a un
+						# valor inexistente que rompa la validacion posterior.
+						corrected = _default_set(allowed_col)
 						status = "corrected"
 
 			out_vals[ridx] = corrected
