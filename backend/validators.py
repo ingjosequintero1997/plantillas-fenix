@@ -930,7 +930,9 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 	# Campos donde el instructivo permite el comodin NA (no aplica)
 	NA_FIELDS = {
 		"ALTURA UTERINA", "FCF",
-		"SEMANAS DE GESTACION",
+		"SEMANAS DE GESTACION", "NO. SEMANAS DE GESTACION",
+		"RESULTADO GLICEMIA", "RESULTADO PRUEBA DE TOLERANCIA ORAL GLUCOSA",
+		"RESULTADO 1RA HEMOGLOBINA", "RESULTADO 2DA HEMOGLOBINA", "RESULTADO 3RA HEMOGLOBINA",
 	}
 
 	for ci, col in enumerate(template_cols):
@@ -1048,6 +1050,11 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				es_muni = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False)
 
 			error_mask = (~es_entero) & (~es_trim) & (~es_dec) & (~es_muni)
+			# El instructivo permite el comodin NA en varios campos numericos:
+			# glicemia, tolerancia, hemoglobina ("NA - numero entero"),
+			# Semanas de Gestacion ("de lo contrario colocar NA").
+			es_na_int = ser_raw.str.upper().isin(["NA", "N/A", "N.A."]) & NA_FIELDS_COL_SERIES
+			error_mask = error_mask & (~es_na_int)
 
 		elif tipo == "DECIMAL":
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
