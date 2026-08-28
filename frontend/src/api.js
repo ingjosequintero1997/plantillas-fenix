@@ -257,6 +257,28 @@ export async function deleteCargue(id) {
   return apiFetch(`${API_BASE}/cargues/${id}`, { method: 'DELETE' })
 }
 
+export async function fetchCargueUnificado(templateKey = 'gestante') {
+  return apiFetch(`${API_BASE}/cargue-unificado?template_key=${encodeURIComponent(templateKey)}`)
+}
+
+export async function fetchEstructuraFormulario(templateKey = 'gestante') {
+  return apiFetch(`${API_BASE}/cargue-unificado/estructura?template_key=${encodeURIComponent(templateKey)}`)
+}
+
+export async function agregarRegistroUnificado(registro, templateKey = 'gestante') {
+  return apiFetch(`${API_BASE}/cargue-unificado/registro`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ registro, template_key: templateKey }),
+  })
+}
+
+export async function eliminarRegistroUnificado(indice, templateKey = 'gestante') {
+  return apiFetch(`${API_BASE}/cargue-unificado/registro/${indice}?template_key=${encodeURIComponent(templateKey)}`, {
+    method: 'DELETE',
+  })
+}
+
 export async function validateData(corrected_text, templateKey, templateNames = []) {
   return apiFetch(`${API_BASE}/validate-data`, {
     method: 'POST',

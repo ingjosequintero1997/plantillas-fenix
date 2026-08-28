@@ -9,6 +9,7 @@ import DashboardHome from './components/DashboardHome'
 import TemplateSelector from './components/TemplateSelector'
 import QualityBanner from './components/QualityBanner'
 import ValidationLogTable from './components/ValidationLogTable'
+import FormularioRegistro from './components/FormularioRegistro'
 import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
@@ -102,6 +103,7 @@ export default function App() {
   const [tipoCargue, setTipoCargue] = useState('mensual')
   const [processingMode, setProcessingMode] = useState('validador')
   const [lastCargueId, setLastCargueId] = useState('')
+  const [mostrarFormulario, setMostrarFormulario] = useState(false)
 
   const isAdmin = user?.role === 'admin'
   // Los prestadores y lideres solo validan: forzar modo validador para ellos.
@@ -429,6 +431,29 @@ export default function App() {
                     </div>
 
                     <DragDrop onFile={handleFile} />
+
+                    {/* Acceso al formulario de registro unificado */}
+                    {!mostrarFormulario ? (
+                      <div className="panel flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="font-medium" style={{ color: 'var(--text)' }}>¿Prefieres registrar una gestante por formulario?</div>
+                          <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                            Llena las variables en el formulario y guarda el registro. Se acumula en Verificar data.
+                          </div>
+                        </div>
+                        <button onClick={() => setMostrarFormulario(true)} className="btn-primary text-sm">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                          Registrar gestante por formulario
+                        </button>
+                      </div>
+                    ) : (
+                      <FormularioRegistro
+                        templateKey={selectedTemplate || 'gestante'}
+                        registros={[]}
+                        onRegistrado={() => { setMostrarFormulario(false) }}
+                        onCancelar={() => setMostrarFormulario(false)}
+                      />
+                    )}
 
                     {/* Modo de procesamiento */}
                     <div className="panel">

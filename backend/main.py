@@ -873,6 +873,11 @@ class CarguePayload(BaseModel):
 	status: str = "validado"
 
 
+class RegistroFormularioPayload(BaseModel):
+	registro: dict
+	template_key: str = "gestante"
+
+
 def _current_month() -> str:
 	now = datetime.utcnow()
 	return now.strftime("%Y-%m")
@@ -907,6 +912,259 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 		return {"id": cargue.id, "mes": cargue.mes, "template_key": cargue.template_key}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para guardar el cargue. Verifica la conexión al servidor PostgreSQL.")
+	finally:
+		db.close()
+
+
+UNIFICADO_MES = "UNIFICADO"
+
+
+# Bloques del formulario: nombre + rango de indices (0-based) en el template gestante
+FORMULARIO_BLOQUES = [
+    {"id": "datos", "titulo": "Datos personales", "descripcion": "Identificación y datos generales de la gestante", "inicio": 0, "fin": 28},
+    {"id": "control", "titulo": "Control prenatal y antecedentes", "descripcion": "Fechas de control, FUM y fórmula obstétrica", "inicio": 29, "fin": 43},
+    {"id": "riesgos", "titulo": "Antecedentes y riesgos", "descripcion": "Enfermedades, eventos obstétricos, peso, talla y riesgos psicosociales", "inicio": 44, "fin": 71},
+    {"id": "vih", "titulo": "Tamizajes VIH y Sífilis", "descripcion": "Asesoría, fechas y resultados de pruebas de VIH y sífilis", "inicio": 72, "fin": 98},
+    {"id": "laboratorio", "titulo": "Laboratorios", "descripcion": "Urocultivo, glicemia, hemoglobina, grupo RH, hepatitis, toxoplasma y otros", "inicio": 99, "fin": 128},
+    {"id": "vacunas", "titulo": "Vacunas y ecografías", "descripcion": "Aplicación de vacunas, ecografías y suministro de micronutrientes", "inicio": 129, "fin": 143},
+    {"id": "controles", "titulo": "Controles prenatales", "descripcion": "Fecha de cada control y quién lo realizó, más datos del último control", "inicio": 144, "fin": 170},
+    {"id": "especialistas", "titulo": "Atención especializada", "descripcion": "Consultas de ginecología, nutrición, psicología y otros especialistas", "inicio": 171, "fin": 177},
+    {"id": "eventos", "titulo": "Eventos obstétricos", "descripcion": "Aborto, parto, complicaciones, defunción y planificación familiar", "inicio": 178, "fin": 197},
+]
+
+
+@app.get("/cargue-unificado/estructura")
+async def estructura_formulario(
+	template_key: str = Query("gestante"),
+	current_user: User = Depends(get_current_user),
+):
+	"""Devuelve la estructura del formulario por bloques con los campos y sus opciones."""
+	meta = get_template_by_key(template_key)
+	tmpl = meta["template"]
+	bloques = []
+	for b in FORMULARIO_BLOQUES:
+		campos = []
+		for i in range(b["inicio"], min(b["fin"], len(tmpl)) + 1):
+			if i >= len(tmpl):
+				continue
+			x = tmpl[i]
+			campos.append({
+				"name": x["name"],
+				"type": x["type"],
+				"allowed": x.get("allowed"),
+			})
+		bloques.append({
+			"id": b["id"],
+			"titulo": b["titulo"],
+			"descripcion": b["descripcion"],
+			"campos": campos,
+		})
+	return {"template_key": template_key, "bloques": bloques}
+
+
+def _get_or_create_cargue_unificado(db, current_user: User, template_key: str) -> Cargue:
+	"""Retorna el cargue unico del prestador para la plantilla, creandolo si no existe."""
+	prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+	cargue = (
+		db.query(Cargue)
+		.filter(
+			Cargue.user_id == current_user.id,
+			Cargue.template_key == template_key,
+			Cargue.mes == UNIFICADO_MES,
+		)
+		.first()
+	)
+	if cargue is None:
+		cargue = Cargue(
+			prestador_id=prestador.id if prestador else None,
+			user_id=current_user.id,
+			template_key=template_key,
+			mes=UNIFICADO_MES,
+			original_filename="cargue_unificado.txt",
+			raw_text="",
+			corrected_text="",
+			compressed=False,
+			summary_json=None,
+			logs_json=None,
+			row_count=0,
+			errors_count=0,
+			corrected_count=0,
+			quality_percent=100.0,
+			status="validado",
+		)
+		db.add(cargue)
+		db.commit()
+		db.refresh(cargue)
+	return cargue
+
+
+def _filas_cargue(cargue: Cargue) -> list[str]:
+	"""Devuelve las lineas (filas) pipe-delimited del cargue."""
+	text = _decompress_cargue(cargue) if cargue.compressed else (cargue.corrected_text or "")
+	lines = []
+	for line in text.replace("\r\n", "\n").split("\n"):
+		if line.strip():
+			lines.append(line)
+	return lines
+
+
+def _guardar_filas(db, cargue: Cargue, filas: list[str]):
+	text = "\n".join(filas)
+	cargue.corrected_text = text
+	cargue.raw_text = text
+	cargue.compressed = False
+	cargue.row_count = len(filas)
+	cargue.quality_percent = 100.0
+	cargue.status = "validado"
+	db.commit()
+
+
+@app.get("/cargue-unificado")
+async def get_cargue_unificado(
+	template_key: str = Query("gestante"),
+	current_user: User = Depends(get_current_user),
+):
+	"""Devuelve el cargue unificado del prestador con sus registros en formato filas."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargue = _get_or_create_cargue_unificado(db, current_user, template_key)
+		filas = _filas_cargue(cargue)
+		# Devolver las filas como lista de dicts usando los nombres del template
+		meta = get_template_by_key(template_key)
+		tmpl = meta["template"]
+		nombres = [t["name"] for t in tmpl]
+		registros = []
+		for line in filas:
+			cells = line.split("|")
+			rec = {}
+			for i, name in enumerate(nombres):
+				rec[name] = cells[i] if i < len(cells) else ""
+			registros.append(rec)
+		return {
+			"cargue_id": cargue.id,
+			"template_key": template_key,
+			"registros": registros,
+			"row_count": len(registros),
+		}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para consultar el cargue unificado.")
+	finally:
+		db.close()
+
+
+@app.post("/cargue-unificado/registro")
+async def agregar_registro_unificado(
+	payload: RegistroFormularioPayload,
+	current_user: User = Depends(get_current_user),
+):
+	"""Agrega un registro (fila) al cargue unificado del prestador. Los campos
+	se validan contra el template del instructivo antes de guardar."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		meta = get_template_by_key(payload.template_key)
+		tmpl = meta["template"]
+		nombres = [t["name"] for t in tmpl]
+
+		# Construir la fila en orden de plantilla
+		celdas = []
+		errores = []
+		for i, tdef in enumerate(tmpl):
+			name = tdef["name"]
+			val = payload.registro.get(name, "")
+			val = "" if val is None else str(val).strip()
+			# Formula: se recalcula, se guarda vacio si no viene
+			if tdef["type"] == "FORMULA":
+				celdas.append("")
+				continue
+			# Campos obligatorios minimos
+			if i == 0 and not val:
+				errores.append("El campo 'No' (consecutivo) es obligatorio")
+			if i == 2 and not val:
+				errores.append("El campo 'No. De Identificación' es obligatorio")
+			if i == 3 and not val:
+				errores.append("El campo 'Apellido_1' es obligatorio")
+			if i == 5 and not val:
+				errores.append("El campo 'Nombre_1' es obligatorio")
+			celdas.append(val)
+
+		if errores:
+			raise HTTPException(status_code=400, detail="; ".join(errores))
+
+		# Los campos vacios se dejan vacios (el formulario solo exige los obligatorios).
+		# Se validan solo los campos que el prestador realmente ingreso.
+
+		# Validar cada campo con valor contra el template (mismos criterios del instructivo)
+		errores_val = []
+		for i, tdef in enumerate(tmpl):
+			val = celdas[i]
+			if tdef["type"] == "FORMULA" or val == "":
+				continue
+			df_one = pd.DataFrame([[val]])
+			df_one.columns = [nombres[i]]
+			mapping_one = {nombres[i]: nombres[i]}
+			try:
+				from .validators import validate_only
+			except ImportError:
+				from validators import validate_only
+			res = validate_only(df_one, mapping_one, [tdef])
+			if res["stats"]["rows_with_errors"] > 0:
+				detalles = [l["corrected"] for l in res["logs"][:3]]
+				errores_val.append(f"{tdef['name']}: {'; '.join(detalles)}")
+		if errores_val:
+			raise HTTPException(status_code=400, detail="El registro tiene errores de validación: " + " | ".join(errores_val[:10]))
+
+		# Aplicar formulas al registro
+		df = pd.DataFrame([celdas])
+		df.columns = nombres
+		try:
+			from .formulas import aplicar_formulas_df
+		except ImportError:
+			from formulas import aplicar_formulas_df
+		try:
+			df = aplicar_formulas_df(df)
+		except Exception:
+			pass
+
+		# Guardar como fila en el cargue unificado
+		cargue = _get_or_create_cargue_unificado(db, current_user, payload.template_key)
+		filas = _filas_cargue(cargue)
+		line = df.iloc[0].astype(str).str.replace("|", " ").str.replace("\r", " ").str.replace("\n", " ").tolist()
+		filas.append("|".join(line))
+		_guardar_filas(db, cargue, filas)
+
+		return {
+			"success": True,
+			"cargue_id": cargue.id,
+			"row_count": len(filas),
+			"registro": {n: v for n, v in zip(nombres, line)},
+		}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para guardar el registro.")
+	finally:
+		db.close()
+
+
+@app.delete("/cargue-unificado/registro/{indice}")
+async def eliminar_registro_unificado(
+	indice: int,
+	template_key: str = Query("gestante"),
+	current_user: User = Depends(get_current_user),
+):
+	"""Elimina un registro (fila) del cargue unificado por su indice (1-based)."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargue = _get_or_create_cargue_unificado(db, current_user, template_key)
+		filas = _filas_cargue(cargue)
+		if indice < 1 or indice > len(filas):
+			raise HTTPException(status_code=404, detail="Registro no encontrado")
+		del filas[indice - 1]
+		_guardar_filas(db, cargue, filas)
+		return {"success": True, "row_count": len(filas)}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para eliminar el registro.")
 	finally:
 		db.close()
 
