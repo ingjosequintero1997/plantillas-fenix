@@ -2580,11 +2580,22 @@ def _buscar_afiliado(documento: str):
 		from database import engine
 	try:
 		from sqlalchemy import text
+		doc = str(documento).strip()
+		# Limpiar el documento de posibles espacios o guiones internos
+		doc_limpio = doc.replace(" ", "").replace("-", "")
 		with engine.connect() as conn:
+			# 1er intento: buscar como texto exacto (VARCHAR/TEXT)
 			row = conn.execute(
 				text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :doc LIMIT 1'),
-				{"doc": str(documento).strip()},
+				{"doc": doc_limpio},
 			).fetchone()
+			if row is None:
+				# 2do intento: si el documento es solo numeros, buscar como numerico (BIGINT/NUMERIC)
+				if doc_limpio.isdigit():
+					row = conn.execute(
+						text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :num LIMIT 1'),
+						{"num": int(doc_limpio)},
+					).fetchone()
 			if row is None:
 				return None, None
 			columnas = list(row._mapping.keys())
