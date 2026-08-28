@@ -988,6 +988,39 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			en_allowed = ser_norm.isin(norm_allowed_set)
 			es_alias = ser_norm.isin(alias_union)
 			error_mask = (~en_allowed) & (~es_alias)
+			# Prefijo: un valor que coincide con el inicio (una o mas palabras) de
+			# EXACTAMENTE UNA opcion del instructivo es valido (ej: "Medico" dentro
+			# de "Medico Ginecologia", "Med" dentro de "Medico Ginecologia").
+			# Requiere al menos 3 letras para evitar abreviaturas ambiguas.
+			if error_mask.any():
+				pref_idx = error_mask[error_mask].index.tolist()
+				# Para cada opcion permitida, las palabras iniciales posibles
+				prefijos_por_opcion = []
+				for opc in norm_allowed:
+					words = opc.split()
+					prefijos_por_opcion.append({(" ".join(words[:k])) for k in range(1, len(words) + 1)})
+				# Primeras palabras de cada opcion (para prefijos parciales como "Med")
+				primeras_palabras = {opc.split()[0] for opc in norm_allowed}
+				for ridx in pref_idx:
+					v = ser_norm.iloc[ridx]
+					if len(v) < 2:
+						continue
+					if v in alias_union:
+						continue
+					# 1) Coincidencia de palabra(s) completa(s)
+					matches = 0
+					for opc_prefijos in prefijos_por_opcion:
+						if v in opc_prefijos:
+							matches += 1
+					if matches == 1:
+						error_mask.iloc[ridx] = False
+						continue
+					# 2) Prefijo parcial de la primera palabra (ej: "Med" -> Medico)
+					#    Solo si es inequivoco (una sola opcion empieza asi)
+					if " " not in v:
+						cand = [w for w in primeras_palabras if w.startswith(v)]
+						if len(cand) == 1:
+							error_mask.iloc[ridx] = False
 
 		elif tipo == "INT":
 			# Estricto: solo enteros validos (con .0 de Excel aceptado).
