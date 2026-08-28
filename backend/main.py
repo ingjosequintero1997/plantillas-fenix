@@ -2466,24 +2466,31 @@ AFILIADO_CAMPOS = [
     ("sexo", ["SEXO"]),
     ("direccion", ["DIRECCION", "DIRECCIÓN"]),
     ("correo", ["CORREO", "EMAIL", "CORREO ELECTRONICO", "CORREO ELECTRÓNICO"]),
-    ("categoria", ["CATEGORIA", "CATEGORÍA"]),
+    ("categoria", ["CATEGORIA", "CATEGORÍA", "NIVEL SISBEN", "NIVELSISBEN"]),
     ("estado_afiliado", ["ESTADO AFILIADO", "ESTADOAFILIADO", "ESTADO"]),
     ("tipo_afiliado", ["TIPO AFILIADO", "TIPOAFILIADO", "TIPO"]),
-    ("fecha_inicio_cobertura", ["FECHA INICIO COBERTURA", "FECHAINICIOC", "INICIO COBERTURA"]),
+    ("fecha_inicio_cobertura", ["FECHA INICIO COBERTURA", "FECHAINICIOC", "INICIO COBERTURA", "FECHA AFILIACION ENTIDAD", "FECHAAFILIACIONENTIDAD", "FECHA AFILIACION"]),
     ("municipio_afiliacion", ["MUNICIPIO AFILIACION", "MUNICIPIOAFILIACION", "MUNICIPIO"]),
     ("departamento_afiliacion", ["DEPARTAMENTO AFILIACION", "DEPARTAMENTOAFILIACION", "DEPARTAMENTO"]),
     ("discapacidad", ["DISCAPACIDAD"]),
     ("telefono", ["TELEFONO", "TELÉFONO", "CELULAR"]),
+    ("telefono_2", ["TELEFONO 2", "TELÉFONO 2", "TELEFONO2"]),
+    ("celular", ["CELULAR"]),
+    ("celular_2", ["CELULAR 2", "CELULAR2"]),
     ("barrio", ["BARRIO"]),
     ("ips_primaria", ["IPS PRIMARIA", "IPS"]),
 ]
 
 # Palabras clave para localizar la columna de numero de documento
-AFILIADO_DOC_KEYWORDS = ["NUMERO DE DOCUMENTO", "NUMERODOCUMENTO", "NUMERO DOCUMENTO", "N DOCUMENTO", "DOCUMENTO", "IDENTIFICACION", "CEDULA", "CC"]
+AFILIADO_DOC_KEYWORDS = ["NUMERO DE DOCUMENTO", "NUMERODOCUMENTO", "NUMERO DOCUMENTO", "N DOCUMENTO", "NUMERO IDENTIFICACION", "NUMEROIDENTIFICACION", "NO IDENTIFICACION", "IDENTIFICACION", "DOCUMENTO"]
 
 
 def _descubrir_columnas_afiliado() -> list[str] | None:
 	"""Devuelve las columnas reales de administrativo.af_afiliado o None si no accesible."""
+	try:
+		from .database import engine
+	except ImportError:
+		from database import engine
 	try:
 		from sqlalchemy import inspect
 		insp = inspect(engine)
@@ -2516,17 +2523,33 @@ def _normalizar_columna(s) -> str:
 
 
 def _mapear_columnas_afiliado(cols: list[str]) -> tuple[dict, str | None]:
-	"""Mapea columnas reales a los campos demograficos y localiza la columna de documento."""
+	"""Mapea columnas reales a los campos demograficos y localiza la columna de documento.
+	La columna de documento se busca con prioridad (coincidencia de palabras completas)
+	para no confundirla con otras columnas (ej: 'CC' dentro de 'direccion')."""
 	mapping = {}
 	norm_cols = {c: _normalizar_columna(c) for c in cols}
-	doc_col = None
+
+	# 1) Columna de documento: coincidencia de TODAS las palabras de la keyword
+	doc_candidates = []
 	for c, nc in norm_cols.items():
-		# Columna de documento
+		n_words = set(nc.split())
 		for kw in AFILIADO_DOC_KEYWORDS:
-			if kw in nc or nc == kw:
-				doc_col = c
+			kw_words = set(kw.split())
+			if nc == kw or (kw_words and kw_words.issubset(n_words)):
+				doc_candidates.append(c)
 				break
-		# Campos demograficos
+	def doc_score(c):
+		nc = norm_cols[c]
+		words = nc.split()
+		return (
+			0 if "NUMERO" in words else 1,
+			0 if ("DOCUMENTO" in words or "IDENTIFICACION" in words) else 1,
+		)
+	doc_candidates.sort(key=doc_score)
+	doc_col = doc_candidates[0] if doc_candidates else None
+
+	# 2) Campos demograficos
+	for c, nc in norm_cols.items():
 		for campo, keywords in AFILIADO_CAMPOS:
 			if campo in mapping:
 				continue
@@ -2552,6 +2575,10 @@ def _buscar_afiliado(documento: str):
 		return None, "No se encontró la columna de número de documento en la tabla af_afiliado."
 
 	try:
+		from .database import engine
+	except ImportError:
+		from database import engine
+	try:
 		from sqlalchemy import text
 		with engine.connect() as conn:
 			row = conn.execute(
@@ -2569,17 +2596,40 @@ def _buscar_afiliado(documento: str):
 
 
 def _serializar_afiliado(data: dict, mapping: dict) -> dict:
-	"""Extrae los campos demograficos solicitados de la fila consultada."""
-	def get(campo):
-		col = mapping.get(campo)
-		if not col:
-			return None
-		v = data.get(col)
-		if v is None:
-			return None
-		s = str(v).strip()
-		return s if s else None
-	return {campo: get(campo) for campo, _ in AFILIADO_CAMPOS}
+	"""Extrae los campos demograficos solicitados de la fila consultada.
+	Algunos campos (telefono, correo) pueden tener varias columnas de origen;
+	se usa el primer valor no vacio."""
+	def get(campo, extra_cols=()):
+		for col in ([mapping.get(campo)] + list(extra_cols)):
+			if not col:
+				continue
+			v = data.get(col)
+			if v is None:
+				continue
+			s = str(v).strip()
+			if s:
+				return s
+		return None
+	return {
+		"primer_nombre": get("primer_nombre"),
+		"segundo_nombre": get("segundo_nombre"),
+		"primer_apellido": get("primer_apellido"),
+		"segundo_apellido": get("segundo_apellido"),
+		"fecha_nacimiento": get("fecha_nacimiento"),
+		"sexo": get("sexo"),
+		"direccion": get("direccion"),
+		"correo": get("correo"),
+		"categoria": get("categoria"),
+		"estado_afiliado": get("estado_afiliado"),
+		"tipo_afiliado": get("tipo_afiliado"),
+		"fecha_inicio_cobertura": get("fecha_inicio_cobertura"),
+		"municipio_afiliacion": get("municipio_afiliacion"),
+		"departamento_afiliacion": get("departamento_afiliacion"),
+		"discapacidad": get("discapacidad"),
+		"telefono": get("telefono", extra_cols=(mapping.get("telefono_2"), mapping.get("celular"), mapping.get("celular_2"))),
+		"barrio": get("barrio"),
+		"ips_primaria": get("ips_primaria"),
+	}
 
 
 @app.get("/verificar-afiliado/{documento}")

@@ -52,3 +52,6 @@ generar_pruebas.py
 *.xlsx
 *.xls
 ~$*.xlsx
+
+# Datos sensibles de afiliados (no subir)
+af_afiliado_*.csv
