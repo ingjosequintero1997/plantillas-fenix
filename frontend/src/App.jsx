@@ -103,7 +103,6 @@ export default function App() {
   const [tipoCargue, setTipoCargue] = useState('mensual')
   const [processingMode, setProcessingMode] = useState('validador')
   const [lastCargueId, setLastCargueId] = useState('')
-  const [mostrarFormulario, setMostrarFormulario] = useState(false)
 
   const isAdmin = user?.role === 'admin'
   // Los prestadores y lideres solo validan: forzar modo validador para ellos.
@@ -409,7 +408,7 @@ export default function App() {
                           }}
                         >
                           <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Cargue mensual</div>
-                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Data de un período específico</div>
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Registra gestante por formulario</div>
                         </button>
                         <button
                           onClick={() => setTipoCargue('masivo')}
@@ -430,107 +429,97 @@ export default function App() {
                       )}
                     </div>
 
-                    <DragDrop onFile={handleFile} />
-
-                    {/* Acceso al formulario de registro unificado */}
-                    {!mostrarFormulario ? (
-                      <div className="panel flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <div className="font-medium" style={{ color: 'var(--text)' }}>¿Prefieres registrar una gestante por formulario?</div>
-                          <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                            Llena las variables en el formulario y guarda el registro. Se acumula en Verificar data.
-                          </div>
-                        </div>
-                        <button onClick={() => setMostrarFormulario(true)} className="btn-primary text-sm">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                          Registrar gestante por formulario
-                        </button>
-                      </div>
-                    ) : (
+                    {tipoCargue === 'mensual' ? (
+                      /* Cargue mensual: registro por registro via formulario */
                       <FormularioRegistro
                         templateKey={selectedTemplate || 'gestante'}
                         registros={[]}
-                        onRegistrado={() => { setMostrarFormulario(false) }}
-                        onCancelar={() => setMostrarFormulario(false)}
+                        onRegistrado={() => {}}
+                        onCancelar={() => {}}
                       />
-                    )}
+                    ) : (
+                      /* Cargue masivo: subida de archivo */
+                      <>
+                        <DragDrop onFile={handleFile} />
 
-                    {/* Modo de procesamiento */}
-                    <div className="panel">
-                      <div className="section-label mb-3">Modo de procesamiento</div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setProcessingMode('validador')}
-                          className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
-                          style={{
-                            borderColor: processingMode === 'validador' ? 'var(--green-500)' : 'var(--border)',
-                            backgroundColor: processingMode === 'validador' ? 'var(--green-50)' : 'transparent',
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4" style={{ color: processingMode === 'validador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <div>
-                              <div className="text-sm font-semibold" style={{ color: processingMode === 'validador' ? 'var(--green-700)' : 'var(--text)' }}>Validador</div>
-                              <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Solo valida, sin ajustar</div>
-                            </div>
+                        {/* Modo de procesamiento */}
+                        <div className="panel">
+                          <div className="section-label mb-3">Modo de procesamiento</div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setProcessingMode('validador')}
+                              className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
+                              style={{
+                                borderColor: processingMode === 'validador' ? 'var(--green-500)' : 'var(--border)',
+                                backgroundColor: processingMode === 'validador' ? 'var(--green-50)' : 'transparent',
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4" style={{ color: processingMode === 'validador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <div>
+                                  <div className="text-sm font-semibold" style={{ color: processingMode === 'validador' ? 'var(--green-700)' : 'var(--text)' }}>Validador</div>
+                                  <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Solo valida, sin ajustar</div>
+                                </div>
+                              </div>
+                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => setProcessingMode('limpiador')}
+                                className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
+                                style={{
+                                  borderColor: processingMode === 'limpiador' ? 'var(--green-500)' : 'var(--border)',
+                                  backgroundColor: processingMode === 'limpiador' ? 'var(--green-50)' : 'transparent',
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <svg className="w-4 h-4" style={{ color: processingMode === 'limpiador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                  <div>
+                                    <div className="text-sm font-semibold" style={{ color: processingMode === 'limpiador' ? 'var(--green-700)' : 'var(--text)' }}>Limpiador</div>
+                                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Ajusta segun instructivo</div>
+                                  </div>
+                                </div>
+                              </button>
+                            )}
                           </div>
-                        </button>
-                        {isAdmin && (
-                          <button
-                            onClick={() => setProcessingMode('limpiador')}
-                            className="flex-1 text-left px-4 py-3 rounded-lg border transition-colors"
-                            style={{
-                              borderColor: processingMode === 'limpiador' ? 'var(--green-500)' : 'var(--border)',
-                              backgroundColor: processingMode === 'limpiador' ? 'var(--green-50)' : 'transparent',
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4" style={{ color: processingMode === 'limpiador' ? 'var(--green-600)' : 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              <div>
-                                <div className="text-sm font-semibold" style={{ color: processingMode === 'limpiador' ? 'var(--green-700)' : 'var(--text)' }}>Limpiador</div>
-                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Ajusta segun instructivo</div>
+                          {!isAdmin && (
+                            <div className="mt-2 text-xs flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
+                              <svg className="w-3.5 h-3.5" style={{ color: 'var(--green-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              Como prestador validas la data contra el instructivo. Solo el administrador puede aplicar el modo limpiador.
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Barra de progreso */}
+                        {loading && (
+                          <div className="panel">
+                            <div className="flex items-center gap-3 mb-2">
+                              <svg className="w-4 h-4 animate-spin" style={{ color: 'var(--green-500)' }} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Procesando archivo...</span>
+                                  <span className="text-sm font-medium" style={{ color: 'var(--green-600)' }}>{progress}%</span>
+                                </div>
+                                <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-subtle)' }}>
+                                  <div
+                                    className="h-full rounded-full transition-all duration-300"
+                                    style={{
+                                      width: `${progress}%`,
+                                      backgroundColor: progress < 100 ? 'var(--green-500)' : 'var(--green-600)',
+                                    }}
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </button>
-                        )}
-                      </div>
-                      {!isAdmin && (
-                        <div className="mt-2 text-xs flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
-                          <svg className="w-3.5 h-3.5" style={{ color: 'var(--green-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          Como prestador validas la data contra el instructivo. Solo el administrador puede aplicar el modo limpiador.
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Barra de progreso */}
-                    {loading && (
-                      <div className="panel">
-                        <div className="flex items-center gap-3 mb-2">
-                          <svg className="w-4 h-4 animate-spin" style={{ color: 'var(--green-500)' }} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Procesando archivo...</span>
-                              <span className="text-sm font-medium" style={{ color: 'var(--green-600)' }}>{progress}%</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-subtle)' }}>
-                              <div
-                                className="h-full rounded-full transition-all duration-300"
-                                style={{
-                                  width: `${progress}%`,
-                                  backgroundColor: progress < 100 ? 'var(--green-500)' : 'var(--green-600)',
-                                }}
-                              />
-                            </div>
+                            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                              {processingMode === 'validador' ? 'Validando datos contra el instructivo...' : 'Limpiando y ajustando datos segun el instructivo...'}
+                            </p>
                           </div>
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          {processingMode === 'validador' ? 'Validando datos contra el instructivo...' : 'Limpiando y ajustando datos segun el instructivo...'}
-                        </p>
-                      </div>
-                    )}
+                        )}
 
-                    {error && (
-                      <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+                        {error && (
+                          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+                        )}
+                      </>
                     )}
                   </>
                 ) : (
