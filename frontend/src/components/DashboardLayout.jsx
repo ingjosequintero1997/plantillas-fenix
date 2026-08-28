@@ -18,6 +18,8 @@ const OPERACIONES_ITEMS = [
 ]
 
 const GESTION_ITEMS = [
+  { key: 'verificar', label: 'Verificar afiliado', roles: ['admin', 'prestador', 'lider'],
+    icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
   { key: 'historias', label: 'Historias clinicas', roles: ['admin', 'prestador', 'lider'],
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
@@ -33,6 +35,7 @@ const META = {
   historial: { title: 'Verificar data', sub: 'Cargues de los prestadores' },
   consolidar: { title: 'Consolidar', sub: 'Une las datas' },
   historias: { title: 'Historias clinicas', sub: 'Expedientes clinicos' },
+  verificar: { title: 'Verificar afiliado', sub: 'Consulta de datos demograficos por documento' },
   prestadores: { title: 'Usuarios', sub: 'Prestadores y lideres de programa' },
 }
 const ROLE_TITLE = { historial: { admin: 'Verificar data', lider: 'Verificar data', prestador: 'Mis cargues' } }

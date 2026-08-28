@@ -279,6 +279,10 @@ export async function eliminarRegistroUnificado(indice, templateKey = 'gestante'
   })
 }
 
+export async function verificarAfiliado(documento) {
+  return apiFetch(`${API_BASE}/verificar-afiliado/${encodeURIComponent(documento)}`)
+}
+
 export async function validateData(corrected_text, templateKey, templateNames = []) {
   return apiFetch(`${API_BASE}/validate-data`, {
     method: 'POST',

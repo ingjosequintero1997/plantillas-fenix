@@ -10,6 +10,7 @@ import TemplateSelector from './components/TemplateSelector'
 import QualityBanner from './components/QualityBanner'
 import ValidationLogTable from './components/ValidationLogTable'
 import FormularioRegistro from './components/FormularioRegistro'
+import VerificarAfiliado from './components/VerificarAfiliado'
 import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
@@ -639,6 +640,9 @@ export default function App() {
                 />
               </div>
             )}
+
+            {/* ─── VERIFICAR AFILIADO ─── */}
+            {section === 'verificar' && <VerificarAfiliado />}
 
             {/* ─── HISTORIAL / VERIFICAR DATA ─── */}
             {section === 'historial' && (

@@ -2449,6 +2449,154 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 	return errors
 
 
+# ─── Verificar afiliado ─────────────────────────────────────────────────
+# Consulta la tabla administrativo.af_afiliado por numero de documento y
+# extrae los datos demograficos de la usuaria.
+
+AFILIADO_ESQUEMA = "administrativo"
+AFILIADO_TABLA = "af_afiliado"
+
+# Campos demograficos solicitados y las palabras clave para mapear la columna real
+AFILIADO_CAMPOS = [
+    ("primer_nombre", ["PRIMER NOMBRE", "PRIMERNOMBRE", "NOMBRE1", "NOMBRE 1"]),
+    ("segundo_nombre", ["SEGUNDO NOMBRE", "SEGUNDONOMBRE", "NOMBRE2", "NOMBRE 2"]),
+    ("primer_apellido", ["PRIMER APELLIDO", "PRIMERAPELLIDO", "APELLIDO1", "APELLIDO 1"]),
+    ("segundo_apellido", ["SEGUNDO APELLIDO", "SEGUNDOAPELLIDO", "APELLIDO2", "APELLIDO 2"]),
+    ("fecha_nacimiento", ["FECHA NACIMIENTO", "FECHA DE NACIMIENTO", "FECHANACIMIENTO", "FECHA_NAC"]),
+    ("sexo", ["SEXO"]),
+    ("direccion", ["DIRECCION", "DIRECCIÓN"]),
+    ("correo", ["CORREO", "EMAIL", "CORREO ELECTRONICO", "CORREO ELECTRÓNICO"]),
+    ("categoria", ["CATEGORIA", "CATEGORÍA"]),
+    ("estado_afiliado", ["ESTADO AFILIADO", "ESTADOAFILIADO", "ESTADO"]),
+    ("tipo_afiliado", ["TIPO AFILIADO", "TIPOAFILIADO", "TIPO"]),
+    ("fecha_inicio_cobertura", ["FECHA INICIO COBERTURA", "FECHAINICIOC", "INICIO COBERTURA"]),
+    ("municipio_afiliacion", ["MUNICIPIO AFILIACION", "MUNICIPIOAFILIACION", "MUNICIPIO"]),
+    ("departamento_afiliacion", ["DEPARTAMENTO AFILIACION", "DEPARTAMENTOAFILIACION", "DEPARTAMENTO"]),
+    ("discapacidad", ["DISCAPACIDAD"]),
+    ("telefono", ["TELEFONO", "TELÉFONO", "CELULAR"]),
+    ("barrio", ["BARRIO"]),
+    ("ips_primaria", ["IPS PRIMARIA", "IPS"]),
+]
+
+# Palabras clave para localizar la columna de numero de documento
+AFILIADO_DOC_KEYWORDS = ["NUMERO DE DOCUMENTO", "NUMERODOCUMENTO", "NUMERO DOCUMENTO", "N DOCUMENTO", "DOCUMENTO", "IDENTIFICACION", "CEDULA", "CC"]
+
+
+def _descubrir_columnas_afiliado() -> list[str] | None:
+	"""Devuelve las columnas reales de administrativo.af_afiliado o None si no accesible."""
+	try:
+		from sqlalchemy import inspect
+		insp = inspect(engine)
+		cols = insp.get_columns(AFILIADO_TABLA, schema=AFILIADO_ESQUEMA)
+		return [c["name"] for c in cols]
+	except Exception:
+		pass
+	try:
+		from sqlalchemy import text
+		with engine.connect() as conn:
+			if str(engine.url).startswith("sqlite"):
+				rows = conn.execute(text(f'PRAGMA table_info("{AFILIADO_TABLA}")')).fetchall()
+				return [r[1] for r in rows]
+			rows = conn.execute(text(
+				f"SELECT column_name FROM information_schema.columns "
+				f"WHERE table_schema = '{AFILIADO_ESQUEMA}' AND table_name = '{AFILIADO_TABLA}'"
+			)).fetchall()
+			return [r[0] for r in rows]
+	except Exception:
+		return None
+
+
+def _normalizar_columna(s) -> str:
+	import unicodedata
+	t = str(s or "").strip().upper()
+	t = ''.join(ch for ch in unicodedata.normalize('NFD', t) if unicodedata.category(ch) != 'Mn')
+	t = t.replace("_", " ").replace("-", " ").replace(".", " ")
+	t = ' '.join(t.split())
+	return t
+
+
+def _mapear_columnas_afiliado(cols: list[str]) -> tuple[dict, str | None]:
+	"""Mapea columnas reales a los campos demograficos y localiza la columna de documento."""
+	mapping = {}
+	norm_cols = {c: _normalizar_columna(c) for c in cols}
+	doc_col = None
+	for c, nc in norm_cols.items():
+		# Columna de documento
+		for kw in AFILIADO_DOC_KEYWORDS:
+			if kw in nc or nc == kw:
+				doc_col = c
+				break
+		# Campos demograficos
+		for campo, keywords in AFILIADO_CAMPOS:
+			if campo in mapping:
+				continue
+			for kw in keywords:
+				if kw == nc or (len(kw) >= 6 and kw in nc):
+					mapping[campo] = c
+					break
+	return mapping, doc_col
+
+
+def _buscar_afiliado(documento: str):
+	"""Busca un afiliado por numero de documento en administrativo.af_afiliado."""
+	cols = _descubrir_columnas_afiliado()
+	if not cols:
+		return None, "No se pudo acceder a la tabla administrativo.af_afiliado (verifica conexión y permisos)."
+
+	mapping, doc_col = _mapear_columnas_afiliado(cols)
+	if not doc_col:
+		# Fallback: asumir columna documento
+		cands = [c for c in cols if _normalizar_columna(c) in AFILIADO_DOC_KEYWORDS]
+		doc_col = cands[0] if cands else None
+	if not doc_col:
+		return None, "No se encontró la columna de número de documento en la tabla af_afiliado."
+
+	try:
+		from sqlalchemy import text
+		with engine.connect() as conn:
+			row = conn.execute(
+				text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :doc LIMIT 1'),
+				{"doc": str(documento).strip()},
+			).fetchone()
+			if row is None:
+				return None, None
+			columnas = list(row._mapping.keys())
+			valores = list(row)
+			data = dict(zip(columnas, valores))
+			return data, None
+	except Exception as e:
+		return None, f"Error al consultar el afiliado: {str(e)[:200]}"
+
+
+def _serializar_afiliado(data: dict, mapping: dict) -> dict:
+	"""Extrae los campos demograficos solicitados de la fila consultada."""
+	def get(campo):
+		col = mapping.get(campo)
+		if not col:
+			return None
+		v = data.get(col)
+		if v is None:
+			return None
+		s = str(v).strip()
+		return s if s else None
+	return {campo: get(campo) for campo, _ in AFILIADO_CAMPOS}
+
+
+@app.get("/verificar-afiliado/{documento}")
+async def verificar_afiliado(documento: str, current_user: User = Depends(get_current_user)):
+	"""Consulta datos demograficos de una usuaria por numero de documento."""
+	cols = _descubrir_columnas_afiliado()
+	extra = {"columnas_tabla": cols}
+	data, err = _buscar_afiliado(documento)
+	if err:
+		return {"encontrado": False, "error": err, **extra}
+	if data is None:
+		return {"encontrado": False, "documento": documento, **extra}
+	mapping, _ = _mapear_columnas_afiliado(cols)
+	afiliado = _serializar_afiliado(data, mapping)
+	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)
