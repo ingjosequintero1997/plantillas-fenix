@@ -2662,6 +2662,35 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
 
 
+@app.get("/test-tablas-ubicacion")
+async def test_tablas_ubicacion(current_user: User = Depends(get_current_user)):
+	"""Descubre tablas de departamento y municipio."""
+	try:
+		from .database import engine
+	except ImportError:
+		from database import engine
+	from sqlalchemy import text
+	with engine.connect() as conn:
+		resultado = {}
+		# Buscar tablas con "depart" o "municipio"
+		for termino in ["depart", "municipio", "muni", "ct_depto"]:
+			try:
+				conn.rollback()
+				rows = conn.execute(text(f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'administrativo' AND table_name ILIKE '%{termino}%'")).fetchall()
+				for r in rows:
+					resultado[r[0]] = []
+					try:
+						conn.rollback()
+						r2 = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{r[0]}" LIMIT 1')).fetchone()
+						if r2:
+							resultado[r[0]] = list(r2._mapping.keys())
+					except:
+						pass
+			except:
+				pass
+		return resultado
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)
