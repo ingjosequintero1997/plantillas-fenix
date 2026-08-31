@@ -2456,6 +2456,162 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 AFILIADO_ESQUEMA = "administrativo"
 AFILIADO_TABLA = "af_afiliado"
 
+# Codigos DANE de departamentos
+DEPARTAMENTOS = {
+    "05": "ANTIOQUIA", "08": "ATLANTICO", "11": "BOGOTA D.C.", "13": "BOLIVAR",
+    "15": "BOYACA", "17": "CALDAS", "18": "CAQUETÁ", "19": "CASANARE",
+    "20": "CAUCA", "23": "CESAR", "25": "CUNDINAMARCA", "27": "CHOCO",
+    "41": "HUILA", "44": "LA GUAJIRA", "47": "MAGDALENA", "50": "META",
+    "52": "NARIÑO", "54": "NORTE DE SANTANDER", "63": "QUINDIO", "66": "RISARALDA",
+    "68": "SANTANDER", "70": "SUCRE", "73": "TOLIMA", "76": "VALLE DEL CAUCA",
+    "81": "ARAUCA", "85": "CASANARE", "86": "PUTUMAYO", "88": "SAN ANDRÉS",
+    "91": "AMAZONAS", "94": "GUAINÍA", "95": "VAUPÉS", "97": "VICHADA",
+}
+
+# Codigos DANE de municipios principales (departamento + 3 digitos)
+MUNICIPIOS = {
+    "05001": "MEDELLIN", "05002": "ABEJORRAL", "05004": "ABRIAQUI",
+    "08001": "BARRANQUILLA", "08078": "BARANOA", "08137": "CAMPO DE LA CRUZ",
+    "08296": "GALAPA", "08372": "JUAN DE ACOSTA", "08421": "LURUACO",
+    "08433": "MALAMBO", "08440": "MANATI", "08549": "PALMAR DE VARELA",
+    "08558": "PIOJO", "08560": "POLONUEVO", "08573": "PONEDERA",
+    "08606": "PUERTO COLOMBIA", "08634": "REPELON", "08638": "SABANAGRANDE",
+    "08675": "SABANALARGA", "08685": "SANTA LUCIA", "08770": "SANTO TOMAS",
+    "08758": "SOLEDAD", "08832": "SUAN", "08849": "TUBARA",
+    "08885": "USIACURI", "11001": "BOGOTA D.C.",
+    "13001": "CARTAGENA", "13006": "ACHI", "13030": "ALTOS DEL ROSARIO",
+    "13042": "ARJONA", "13052": "ARROYOHONDO", "13062": "BARRANCO DE LOBA",
+    "13074": "CALAMAR", "13160": "CICUCO", "13188": "CORDOBA",
+    "13212": "CLEMENCIA", "13244": "HATILLO DE LOBA", "13248": "MAGANGUE",
+    "13268": "MAHATES", "13300": "MARGARITA", "13322": "MARIA LA BAJA",
+    "13440": "MONTECRISTO", "13473": "MORALES", "13549": "PINILLOS",
+    "13580": "REGIDOR", "13600": "RIO VIEJO", "13620": "SAN CRISTOBAL",
+    "13647": "SAN ESTANISLAO", "13650": "SAN FERNANDO", "13654": "SAN JACINTO",
+    "13655": "SAN JACINTO DEL CAUCA", "13657": "SAN JUAN NEPOMUCENO",
+    "13667": "SAN MARTIN DE LOBA", "13670": "SAN PABLO", "13673": "SANTA CATALINA",
+    "13683": "SANTA ROSA", "13688": "SANTO DOMINGO", "13744": "SIPEHI",
+    "13760": "SOPLAVIENTO", "13780": "TALAIGUA NUEVO", "13810": "TIQUISIO",
+    "13836": "TURBACO", "13838": "TURBANA", "13873": "VILLANUEVA",
+    "13894": "ZAMBRANO",
+    "15001": "TUNJA", "15022": "ALMEIDA", "15047": "AQUITANIA",
+    "15051": "ARCABUCO", "15087": "BELEN", "15090": "BERBEO",
+    "15092": "BETEITIVA", "15097": "BOAVITA", "15104": "BOYACA",
+    "15106": "BUENAVISTA", "15109": "BUSTUBANTE", "15114": "CALDAS",
+    "15131": "CAMPOHERMOSO", "15162": "CERINZA", "15172": "CHINAVITA",
+    "15176": "CHIQUINQUIRA", "15180": "CHIQUIZA", "15183": "CHIVATA",
+    "15185": "CIENEGA", "15187": "COMBITA", "15204": "COPER",
+    "15212": "CORRALES", "15215": "COVARACHIA", "15223": "CUBARA",
+    "15226": "CUCAITA", "15232": "CUITIVA", "15236": "CHIVOR",
+    "15238": "DUITAMA", "15244": "EL COCUY", "15248": "EL ESPINO",
+    "15264": "FIRAVITOBA", "15272": "FLORESTA", "15276": "GACHANTIVA",
+    "15293": "GAMEZA", "15296": "GARAGOA", "15317": "GUACAMAYAS",
+    "15322": "GUATEQUE", "15325": "GUAYATA", "15332": "GARAGOA",
+    "15362": "IZA", "15367": "JENESANO", "15377": "JORDAN",
+    "15380": "LA CAPILLA", "15401": "LENDA", "15425": "MARIPI",
+    "15442": "MIRAFLORES", "15455": "MONGUA", "15464": "MONGUI",
+    "15466": "MONIQUIRA", "15476": "MOTAVITA", "15480": "MUZO",
+    "15491": "NOBSA", "15494": "NUEVO COLON", "15500": "OICATA",
+    "15507": "OTANCHE", "15511": "PACHAVITA", "15516": "PAEZ",
+    "15522": "PAIPA", "15531": "PAJARITO", "15533": "PANQUEBA",
+    "15537": "PAUNA", "15542": "PAYA", "15550": "PAZ DE RIO",
+    "15572": "PESCA", "15580": "PISBA", "15599": "PUERTO BOYACA",
+    "15600": "QUIPAMA", "15621": "RAMIRIQUI", "15632": "RAQUIRA",
+    "15638": "RONDON", "15646": "SABOYA", "15660": "SACHICA",
+    "15664": "SAMACA", "15667": "SAN EDUARDO", "15673": "SAN JOSE DE PARE",
+    "15676": "SAN LUIS DE SACO", "15681": "SANTANA", "15686": "SANTA MARIA",
+    "15690": "SANTA SOFIA", "15693": "SANTANDER", "15696": "SATIVANORTE",
+    "15697": "SATIVASUR", "15707": "SOACHA", "15740": "SOGAMOSO",
+    "15753": "SOMONDOCO", "15755": "SORA", "15757": "SOTAQUIRA",
+    "15759": "SOTARA", "15761": "SUSACON", "15762": "SUTAMARCHAN",
+    "15764": "SUTATENZA", "15774": "TASCO", "15776": "TENZA",
+    "15781": "TIBANA", "15783": "TIBASOSA", "15785": "TINJACA",
+    "15787": "TIPACOQUE", "15793": "TOCA", "15797": "TOGUI",
+    "15804": "TOPAGA", "15806": "TOTA", "15808": "TUNUNGUA",
+    "15810": "TURMEQUE", "15814": "TUTA", "15816": "TUTAZA",
+    "15820": "UMBITA", "15832": "VENTAQUEMADA", "15835": "VIRACACHA",
+    "15842": "ZETAQUIRA", "17001": "MANIZALES", "17013": "ANSERMA",
+    "17042": "ARANZAZU", "17050": "BELALCAZAR", "17088": "CHINCHINA",
+    "17174": "FILADELFIA", "17272": "LA DORADA", "17380": "LA MERCED",
+    "17433": "MONTENEGRO", "17442": "PENSILVANIA", "17497": "RIOSUCIO",
+    "17524": "RISARALDA", "17541": "SANTA ROSA DE CABAL", "17614": "SANTUARIO",
+    "18001": "FLORENCIA", "18029": "ALBANIA", "18094": "BELEN DE LOS ANDAQUIES",
+    "18150": "CARTAGENA DEL CHAIRA", "18205": "CURILOCO", "18247": "EL DONCELLO",
+    "18256": "EL PAUJIL", "18410": "LA MONTAÑITA", "18460": "MILAN",
+    "18479": "MORELIA", "18592": "PUERTO RICO", "18610": "SAN JOSE DE LA MONTAÑA",
+    "18653": "SAN MIGUEL DEL DUDA", "18656": "SAN MARTIN DE LOS LLANOS",
+    "18753": "SOLANO", "18756": "SOLITA", "18860": "VALPARAISO",
+    "19001": "POPAYAN", "19022": "ALMAGUER", "19050": "ARGELIA",
+    "19075": "BALBOA", "19100": "BOLIVAR", "19110": "BUENOS AIRES",
+    "19130": "CAJIBIO", "19137": "CALDONO", "19142": "CALOTO",
+    "19215": "CORINTO", "19256": "EL TAMBO", "19290": "FLORENCIA",
+    "19300": "GUACHENE", "19310": "GUAPI", "19355": "INZA",
+    "19364": "JAMBALO", "19392": "LA SIERRA", "19397": "LA VEGA",
+    "19418": "MERCADERES", "19450": "MISAGA", "19455": "MONDOMO",
+    "19473": "MORALES", "19513": "PADILLA", "19517": "PAEZ",
+    "19532": "PATIA (EL BORDO)", "19533": "PIAMONTE", "19548": "PIENDAMO",
+    "19573": "PUERTO TEJADA", "19585": "PURACE (COCONUCO)", "19622": "ROSAS",
+    "19693": "SAN SEBASTIAN", "19698": "SANTANDER DE QUILICHAO",
+    "19701": "SANTA ROSA", "19743": "SILVIA", "19760": "SOTARA (PAISPAMBA)",
+    "19780": "SUAREZ", "19785": "SUCRE", "19807": "TIMBIO", "19809": "TIMBIQUI",
+    "19821": "TORIBIO", "19824": "TOTORO", "19845": "VILLA RICA",
+    "20001": "POPAYAN", "20011": "ALMEIDA", "20013": "BARRANQUILLA",
+    "20032": "AVENIDA", "20045": "CALIFORNIA", "20060": "EL COCUY",
+    "20099": "GARZON", "20110": "GIGANTE", "20124": "GUADALUPE",
+    "20130": "HOBO", "20136": "ICACAS", "20149": "LA ARGENTINA",
+    "20156": "LA PLATA", "20167": "NATAGA", "20170": "OPORAPA",
+    "20174": "PAICOL", "20177": "PALMIRA", "20183": "PALESTINA",
+    "20196": "PITAL", "20215": "PITALITO", "20260": "RIVERA",
+    "20272": "SALADOBLANCO", "20274": "SAN AGUSTIN", "20283": "SANTA MARIA",
+    "20296": "SUAZA", "20310": "TESALIA", "20319": "TULUA",
+    "20349": "VILLAVIEJA", "20357": "YAGUARA", "20001": "GAIRA",
+    "23001": "VALLEDUPAR", "23001": "VALLEDUPAR", "23001": "VALLEDUPAR",
+    "25001": "AGUA DE DIOS", "25001": "AGUA DE DIOS", "25001": "AGUA DE DIOS",
+    "41001": "NEIVA", "41001": "NEIVA", "41001": "NEIVA",
+    "44001": "RIOHACHA", "44001": "RIOHACHA", "44001": "RIOHACHA",
+    "47001": "SANTA MARTA", "47001": "SANTA MARTA", "47001": "SANTA MARTA",
+    "50001": "VILLAVICENCIO", "50001": "VILLAVICENCIO", "50001": "VILLAVICENCIO",
+    "52001": "PASTO", "52001": "PASTO", "52001": "PASTO",
+    "54001": "CUCUTA", "54001": "CUCUTA", "54001": "CUCUTA",
+    "63001": "ARMENIA", "63001": "ARMENIA", "63001": "ARMENIA",
+    "66001": "PEREIRA", "66001": "PEREIRA", "66001": "PEREIRA",
+    "68001": "BUCARAMANGA", "68001": "BUCARAMANGA", "68001": "BUCARAMANGA",
+    "70001": "SINCELEJO", "70001": "SINCELEJO", "70001": "SINCELEJO",
+    "73001": "IBAGUE", "73001": "IBAGUE", "73001": "IBAGUE",
+    "76001": "CALI", "76001": "CALI", "76001": "CALI",
+    "81001": "ARAUCA", "81001": "ARAUCA", "81001": "ARAUCA",
+    "85001": "YOPAL", "85001": "YOPAL", "85001": "YOPAL",
+    "86001": "MOCOA", "86001": "MOCOA", "86001": "MOCOA",
+    "88001": "SAN ANDRES", "88001": "SAN ANDRES", "88001": "SAN ANDRES",
+    "91001": "LETICIA", "91001": "LETICIA", "91001": "LETICIA",
+    "94001": "INIRIDA", "94001": "INIRIDA", "94001": "INIRIDA",
+    "95001": "MITU", "95001": "MITU", "95001": "MITU",
+    "97001": "PUERTO CARRENO", "97001": "PUERTO CARRENO", "97001": "PUERTO CARRENO",
+}
+
+
+def resolver_departamento(codigo) -> str:
+    """Resuelve codigo de departamento a nombre."""
+    if codigo is None:
+        return None
+    cod = str(codigo).strip().zfill(2)
+    return DEPARTAMENTOS.get(cod, str(codigo).strip())
+
+
+def resolver_municipio(codigo) -> str:
+    """Resuelve codigo de municipio a nombre."""
+    if codigo is None:
+        return None
+    cod = str(codigo).strip().zfill(5)
+    nombre = MUNICIPIOS.get(cod)
+    if nombre:
+        return nombre
+    # Si no esta en el diccionario, intentar con el codigo de depto
+    depto = cod[:2]
+    nombre_depto = DEPARTAMENTOS.get(depto, "")
+    if nombre_depto:
+        return f"Municipio {cod} ({nombre_depto})"
+    return str(codigo).strip()
+
 # Campos demograficos solicitados y las palabras clave para mapear la columna real
 AFILIADO_CAMPOS = [
     ("primer_nombre", ["PRIMER NOMBRE", "PRIMERNOMBRE", "NOMBRE1", "NOMBRE 1"]),
@@ -2638,8 +2794,8 @@ def _serializar_afiliado(data: dict, mapping: dict) -> dict:
 		"estado_afiliado": get("estado_afiliado"),
 		"tipo_afiliado": get("tipo_afiliado"),
 		"fecha_inicio_cobertura": get("fecha_inicio_cobertura"),
-		"municipio_afiliacion": get("municipio_afiliacion"),
-		"departamento_afiliacion": get("departamento_afiliacion"),
+		"municipio_afiliacion": resolver_municipio(get("municipio_afiliacion")),
+		"departamento_afiliacion": resolver_departamento(get("departamento_afiliacion")),
 		"discapacidad": get("discapacidad"),
 		"telefono": get("telefono", extra_cols=(mapping.get("telefono_2"), mapping.get("celular"), mapping.get("celular_2"))),
 		"barrio": get("barrio"),
@@ -2660,35 +2816,6 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	mapping, _ = _mapear_columnas_afiliado(cols)
 	afiliado = _serializar_afiliado(data, mapping)
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
-
-
-@app.get("/test-tablas-ubicacion")
-async def test_tablas_ubicacion(current_user: User = Depends(get_current_user)):
-	"""Descubre tablas de departamento y municipio."""
-	try:
-		from .database import engine
-	except ImportError:
-		from database import engine
-	from sqlalchemy import text
-	with engine.connect() as conn:
-		resultado = {}
-		# Buscar tablas con "depart" o "municipio"
-		for termino in ["depart", "municipio", "muni", "ct_depto"]:
-			try:
-				conn.rollback()
-				rows = conn.execute(text(f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'administrativo' AND table_name ILIKE '%{termino}%'")).fetchall()
-				for r in rows:
-					resultado[r[0]] = []
-					try:
-						conn.rollback()
-						r2 = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{r[0]}" LIMIT 1')).fetchone()
-						if r2:
-							resultado[r[0]] = list(r2._mapping.keys())
-					except:
-						pass
-			except:
-				pass
-		return resultado
 
 
 if __name__ == "__main__":
