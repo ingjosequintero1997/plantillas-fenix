@@ -2690,6 +2690,34 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
 
 
+@app.get("/test-ips-columnas")
+async def test_ips_columnas(current_user: User = Depends(get_current_user)):
+	"""Devuelve las columnas y 1 fila de ct_ips para descubrir estructura."""
+	try:
+		from .database import engine
+	except ImportError:
+		from database import engine
+	from sqlalchemy import text
+	with engine.connect() as conn:
+		row = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" LIMIT 1')).fetchone()
+		if not row:
+			return {"error": "No se pudo leer ct_ips"}
+		columnas = list(row._mapping.keys())
+		valores = [str(v)[:80] if v else None for v in row]
+		# Buscar fila con codigo 803709
+		ejemplo = None
+		for c in columnas:
+			try:
+				conn.rollback()
+				r2 = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" WHERE "{c}" = :cod LIMIT 1'), {"cod": "803709"}).fetchone()
+				if r2:
+					ejemplo = {"columna_codigo": c, "valores": [str(v)[:80] if v else None for v in r2]}
+					break
+			except:
+				continue
+		return {"columnas": columnas, "fila_1": dict(zip(columnas, valores)), "ejemplo_803709": ejemplo}
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)
