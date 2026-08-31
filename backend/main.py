@@ -86,12 +86,14 @@ async def auth_login(payload: LoginPayload):
 async def auth_me(current_user: User = Depends(get_current_user)):
     prestador_id = None
     prestador_nombre = None
+    prestador_ips = None
     try:
         db = SessionLocal()
         try:
             prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
             prestador_id = prestador.id if prestador else None
             prestador_nombre = prestador.nombre if prestador else None
+            prestador_ips = prestador.ips if prestador else None
         finally:
             db.close()
     except Exception:
@@ -104,6 +106,7 @@ async def auth_me(current_user: User = Depends(get_current_user)):
             "role": current_user.role,
             "prestador_id": prestador_id,
             "prestador_nombre": prestador_nombre,
+            "prestador_ips": prestador_ips,
         }
     }
 
@@ -1560,6 +1563,7 @@ async def delete_historia(request: Request, historia_id: int, current_user: User
 class PrestadorPayload(BaseModel):
 	nombre: str
 	nit: str = ""
+	ips: str = ""
 	municipio: str = ""
 	username: str
 	password: str
@@ -1589,15 +1593,15 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 			user_id=user.id,
 			nombre=payload.nombre,
 			nit=payload.nit,
+			ips=payload.ips,
 			municipio=payload.municipio,
 		)
 		db.add(prestador)
 		db.flush()
-		# Asignar la plantilla del prestador
 		pp = PrestadorPlantilla(prestador_id=prestador.id, template_key=payload.template_key)
 		db.add(pp)
 		db.commit()
-		return {"id": prestador.id, "username": user.username, "nombre": prestador.nombre, "template_key": payload.template_key, "role": role}
+		return {"id": prestador.id, "username": user.username, "nombre": prestador.nombre, "ips": prestador.ips, "template_key": payload.template_key, "role": role}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
 	finally:
@@ -1618,12 +1622,13 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 				"id": p.id,
 				"nombre": p.nombre,
 				"nit": p.nit,
-			"municipio": p.municipio,
-			"username": p.user.username if p.user else None,
-			"cargues_count": cargues_count,
-			"template_key": plantillas[0] if plantillas else "gestante",
-			"role": p.user.role if p.user else "prestador",
-		})
+				"ips": p.ips,
+				"municipio": p.municipio,
+				"username": p.user.username if p.user else None,
+				"cargues_count": cargues_count,
+				"template_key": plantillas[0] if plantillas else "gestante",
+				"role": p.user.role if p.user else "prestador",
+			})
 		return {"prestadores": result}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")

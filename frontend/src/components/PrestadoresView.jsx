@@ -19,7 +19,7 @@ function EmptyState({ onNew }) {
 }
 
 function NewPrestadorForm({ onClose, onCreated }) {
-  const [form, setForm] = useState({ nombre: '', nit: '', municipio: '', template_key: 'gestante', username: '', password: '', role: 'prestador' })
+  const [form, setForm] = useState({ nombre: '', nit: '', ips: '', municipio: '', template_key: 'gestante', username: '', password: '', role: 'prestador' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -91,6 +91,9 @@ function NewPrestadorForm({ onClose, onCreated }) {
                   <input name="municipio" value={form.municipio} onChange={handleChange} className="input" placeholder="Albania" />
                 </Field>
               </div>
+              <Field label="Código IPS" hint="Código de la IPS en el sistema (ej: 803709)">
+                <input name="ips" value={form.ips} onChange={handleChange} className="input" placeholder="803709" />
+              </Field>
             </div>
           </div>
 
@@ -219,7 +222,7 @@ export default function PrestadoresView() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    let list = prestadores.filter((p) => !q || `${p.nombre} ${p.municipio} ${p.username}`.toLowerCase().includes(q))
+    let list = prestadores.filter((p) => !q || `${p.nombre} ${p.municipio} ${p.username} ${p.ips} ${p.nit}`.toLowerCase().includes(q))
     list = list.sort((a, b) => {
       const va = (a[sort.key] || '').toString().toLowerCase()
       const vb = (b[sort.key] || '').toString().toLowerCase()
@@ -288,6 +291,7 @@ export default function PrestadoresView() {
                     Usuario {sort.key === 'nombre' ? (sort.dir === 1 ? '↑' : '↓') : ''}
                   </th>
                   <th>Identificación</th>
+                  <th>IPS</th>
                   <th>Municipio</th>
                   <th>Plantilla</th>
                   <th>Rol</th>
@@ -311,6 +315,7 @@ export default function PrestadoresView() {
                       </div>
                     </td>
                     <td>{p.nit || '—'}</td>
+                    <td><span className="badge-neutral">{p.ips || '—'}</span></td>
                     <td>{p.municipio || '—'}</td>
                     <td><span className="badge-neutral">{TEMPLATE_LABELS[p.template_key] || p.template_key || '—'}</span></td>
                     <td>

@@ -82,6 +82,7 @@ class Prestador(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
     nombre = Column(String(255), nullable=False)
     nit = Column(String(60), nullable=True)
+    ips = Column(String(60), nullable=True)
     departamento = Column(String(120), nullable=True)
     municipio = Column(String(120), nullable=True)
     created_at = Column(DateTime, nullable=False, default=_utcnow)
@@ -177,6 +178,11 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN template_key VARCHAR(60)"))
+    except Exception:
+        pass
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE prestadores ADD COLUMN ips VARCHAR(60)"))
     except Exception:
         pass
 
