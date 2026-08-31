@@ -2606,7 +2606,7 @@ def _buscar_afiliado(documento: str):
 			# Buscar afiliado con JOIN a ct_ips
 			join_sql = ""
 			if ips_join_col and ips_nombre_col:
-				join_sql = f'LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."{ips_join_col}"'
+				join_sql = f'LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON CAST(a."ips" AS VARCHAR) = i."{ips_join_col}"'
 
 			query = f'SELECT a.*, {"i." + chr(34) + ips_nombre_col + chr(34) + " as ips_nombre" if ips_nombre_col else "NULL as ips_nombre"} FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a {join_sql} WHERE a."{doc_col}" = :doc LIMIT 1'
 			row = conn.execute(text(query), {"doc": doc_limpio}).fetchone()
