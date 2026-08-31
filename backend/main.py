@@ -2660,23 +2660,39 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 
 @app.get("/explorar-ct-afiliado")
 async def explorar_ct_afiliado(current_user: User = Depends(get_current_user)):
-	"""TEMPORAL: Explora columnas y muestra 3 filas de ct_Afiliado para descubrir estructura."""
+	"""TEMPORAL: Explora columnas y muestra 3 filas de ct_Afiliado y ct_ips."""
 	try:
 		from .database import engine
 	except ImportError:
 		from database import engine
 	try:
 		from sqlalchemy import text
+		resultado = {}
 		with engine.connect() as conn:
-			# 1. Obtener columnas
+			# ct_Afiliado
 			cols_rows = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'administrativo' AND table_name = 'ct_Afiliado' ORDER BY ordinal_position")).fetchall()
-			columnas = [r[0] for r in cols_rows]
-			# 2. Obtener 3 filas
-			rows = conn.execute(text('SELECT * FROM "administrativo"."ct_Afiliado" LIMIT 3')).fetchall()
-			filas = []
-			for row in rows:
-				filas.append(dict(zip(columnas, [str(v) if v is not None else None for v in row])))
-			return {"columnas": columnas, "num_columnas": len(columnas), "filas": filas}
+			columnas_a = [r[0] for r in cols_rows]
+			rows_a = conn.execute(text('SELECT * FROM "administrativo"."ct_Afiliado" LIMIT 2')).fetchall()
+			filas_a = [dict(zip(columnas_a, [str(v) if v is not None else None for v in row])) for row in rows_a]
+			resultado["ct_Afiliado"] = {"columnas": columnas_a, "filas": filas_a}
+
+			# ct_ips
+			cols_rows2 = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'administrativo' AND table_name = 'ct_ips' ORDER BY ordinal_position")).fetchall()
+			columnas_i = [r[0] for r in cols_rows2]
+			rows_i = conn.execute(text('SELECT * FROM "administrativo"."ct_ips" LIMIT 2')).fetchall()
+			filas_i = [dict(zip(columnas_i, [str(v) if v is not None else None for v in row])) for row in rows_i]
+			resultado["ct_ips"] = {"columnas": columnas_i, "filas": filas_i}
+
+			# Buscar 803709 en ct_ips con cada columna candidata
+			for cand in columnas_i:
+				try:
+					row = conn.execute(text(f'SELECT * FROM "administrativo"."ct_ips" WHERE "{cand}" = :cod LIMIT 1'), {"cod": "803709"}).fetchone()
+					if row:
+						resultado["busqueda_803709"] = {"columna_usada": cand, "datos": dict(zip(columnas_i, [str(v) if v is not None else None for v in row]))}
+						break
+				except:
+					pass
+		return resultado
 	except Exception as e:
 		return {"error": str(e)}
 
