@@ -192,6 +192,11 @@ def init_db():
             conn.execute(text("ALTER TABLE prestadores ADD COLUMN permissions JSON"))
     except Exception:
         pass
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE gestantes ADD COLUMN CASO_CERRADO BOOLEAN DEFAULT FALSE"))
+    except Exception:
+        pass
 
 
 def get_db():
@@ -308,6 +313,7 @@ GESTANTE_COLUMNS = [
     "TTO_HIPOTIROIDISMO_RECIEN_NACIDO_2", "VACUNACION_CON_BCG_2",
     "VACUNACION_ANTIHEPATITIS_B_2", "TIPO", "OBSEVACION", "FECHA_2",
     "OBSERVACIONES_GENERALES",
+    "CASO_CERRADO",
 ]
 
 

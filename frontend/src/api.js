@@ -296,6 +296,17 @@ export async function deleteGestante(id) {
   return apiFetch(`${API_BASE}/data/gestantes/${id}`, { method: 'DELETE' })
 }
 
+// ─── Caso Cerrado ───────────────────────────────────────────────
+export async function autoFillCasoCerrado() {
+  return apiFetch(`${API_BASE}/data/gestantes/caso-cerrado/auto-fill`, { method: 'POST' })
+}
+
+export async function fetchCasoCerrado(page = 1, pageSize = 50, search = '') {
+  const params = new URLSearchParams({ page, page_size: pageSize })
+  if (search) params.set('search', search)
+  return apiFetch(`${API_BASE}/data/gestantes/caso-cerrado?${params}`)
+}
+
 export async function revalidateData(raw_text, mapping, templateKey, mode = 'limpiador') {
   return apiFetch(`${API_BASE}/revalidate`, {
     method: 'POST',

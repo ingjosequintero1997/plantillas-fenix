@@ -3213,6 +3213,127 @@ async def eliminar_gestante(registro_id: int, current_user: User = Depends(get_c
 		db.close()
 
 
+@app.post("/data/gestantes/caso-cerrado/auto-fill")
+async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
+	"""Auto-llena el campo CASO_CERRADO para gestantes que cumplen los criterios."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+		from datetime import datetime, date
+
+		# Obtener el mes de reporte actual
+		fecha_reporte = datetime.now()
+		mes_reporte = fecha_reporte.strftime("%Y-%m")
+
+		# Criterios:
+		# 1. Al menos 10 meses entre el mes de la gestante y el mes de reporte
+		# 2. ULTIMO_CONTROL_PRENATAL < mes de reporte
+		# 3. FECHA (aborto) no es comodín AND ULTIMO_CONTROL_PRENATAL < FECHA
+		#    O FECHA_DE_PARTO no es comodín AND ULTIMO_CONTROL_PRENATAL < FECHA_DE_PARTO
+
+		# Buscar gestantes que cumplen los criterios
+		query = text(f'''
+			UPDATE gestantes SET CASO_CERRADO = TRUE
+			WHERE CASO_CERRADO = FALSE
+			AND (SELECT strftime('%Y-%m', created_at) FROM gestantes WHERE id = gestantes.id) <= ?
+			AND ULTIMO_CONTROL_PRENATAL IS NOT NULL AND ULTIMO_CONTROL_PRENATAL != ''
+			AND (
+				(FECHA != '0' AND FECHA != '' AND ULTIMO_CONTROL_PRENATAL < FECHA)
+				OR (FECHA_DE_PARTO != '0' AND FECHA_DE_PARTO != '' AND ULTIMO_CONTROL_PRENATAL < FECHA_DE_PARTO)
+			)
+		''')
+
+		# Calcular fecha límite (10 meses antes del reporte)
+		from datetime import timedelta
+		fecha_limite = fecha_reporte - timedelta(days=300)  # ~10 meses
+		mes_limite = fecha_limite.strftime("%Y-%m")
+
+		# SQLite version
+		from sqlalchemy import text as _text
+		rows = db.execute(_text(f'''
+			SELECT COUNT(*) FROM gestantes
+			WHERE CASO_CERRADO = FALSE
+			AND (STRFTIME('%Y-%m', created_at) <= '{mes_limite}' OR mes <= '{mes_limite}')
+			AND ULTIMO_CONTROL_PRENATAL IS NOT NULL AND ULTIMO_CONTROL_PRENATAL != ''
+			AND (
+				(FECHA != '0' AND FECHA != '' AND ULTIMO_CONTROL_PRENATAL < FECHA)
+				OR (FECHA_DE_PARTO != '0' AND FECHA_DE_PARTO != '' AND ULTIMO_CONTROL_PRENATAL < FECHA_DE_PARTO)
+			)
+		''')).scalar()
+
+		# Actualizar
+		db.execute(_text(f'''
+			UPDATE gestantes SET CASO_CERRADO = TRUE
+			WHERE CASO_CERRADO = FALSE
+			AND (STRFTIME('%Y-%m', created_at) <= '{mes_limite}' OR mes <= '{mes_limite}')
+			AND ULTIMO_CONTROL_PRENATAL IS NOT NULL AND ULTIMO_CONTROL_PRENATAL != ''
+			AND (
+				(FECHA != '0' AND FECHA != '' AND ULTIMO_CONTROL_PRENATAL < FECHA)
+				OR (FECHA_DE_PARTO != '0' AND FECHA_DE_PARTO != '' AND ULTIMO_CONTROL_PRENATAL < FECHA_DE_PARTO)
+			)
+		'''))
+		db.commit()
+
+		return {
+			"success": True,
+			"total_caso_cerrado": rows,
+			"mes_reporte": mes_reporte,
+			"criterios": {
+				"mes_limite": mes_limite,
+				"ultimo_control_prenatal": "debe ser anterior al mes de reporte",
+				"fecha_aborto": "no puede ser comodín (0) y debe ser posterior al último control prenatal",
+				"fecha_parto": "no puede ser comodín (0) y debe ser posterior al último control prenatal",
+			}
+		}
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(status_code=500, detail=str(e)[:300])
+	finally:
+		db.close()
+
+
+@app.get("/data/gestantes/caso-cerrado")
+async def listar_caso_cerrado(
+	current_user: User = Depends(get_current_user),
+	page: int = 1,
+	page_size: int = 50,
+	search: str = "",
+):
+	"""Lista gestantes marcadas como Caso Cerrado."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+
+		offset = (max(1, page) - 1) * page_size
+		params = {"limit": page_size, "offset": offset}
+
+		count_sql = 'SELECT COUNT(*) FROM gestantes WHERE CASO_CERRADO = TRUE AND 1=1'
+		query_sql = 'SELECT * FROM gestantes WHERE CASO_CERRADO = TRUE AND 1=1'
+
+		if search:
+			count_sql += ' AND ("NO_DE_IDENTIFICACION" ILIKE :q OR "APELLIDO_1" ILIKE :q OR "NOMBRE_1" ILIKE :q)'
+			query_sql += ' AND ("NO_DE_IDENTIFICACION" ILIKE :q OR "APELLIDO_1" ILIKE :q OR "NOMBRE_1" ILIKE :q)'
+			params["q"] = f"%{search}%"
+
+		count_sql += ' LIMIT 1'
+		total = db.execute(text(count_sql), params).scalar() or 0
+
+		query_sql += f' ORDER BY id DESC LIMIT :limit OFFSET :offset'
+		rows = db.execute(text(query_sql), params).fetchall()
+		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		registros = []
+		for row in rows:
+			registros.append(dict(zip(columnas, [str(v) if v is not None else "" for v in row])))
+
+		return {"registros": registros, "total": total, "page": page, "page_size": page_size}
+	except Exception as e:
+		return {"error": str(e)[:300], "registros": [], "total": 0}
+	finally:
+		db.close()
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)

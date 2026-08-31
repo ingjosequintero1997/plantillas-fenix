@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { fetchGestantes, updateGestante, createGestante, fetchMyPermissions } from '../api'
+import { fetchGestantes, updateGestante, createGestante, fetchMyPermissions, autoFillCasoCerrado, fetchCasoCerrado } from '../api'
 
 const PAGE_SIZE = 50
 
@@ -61,7 +61,12 @@ export default function DataManagement() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [permissions, setPermissions] = useState({})
-  const [showNewForm, setShowNewForm] = useState(false)
+  const [activeTab, setActiveTab] = useState('gestantes') // 'gestantes' | 'caso_cerrado'
+  const [casoCerradoRegistros, setCasoCerradoRegistros] = useState([])
+  const [casoCerradoTotal, setCasoCerradoTotal] = useState(0)
+  const [casoCerradoPage, setCasoCerradoPage] = useState(1)
+  const [autoFillDone, setAutoFillDone] = useState(false)
+  const [autoFillMsg, setAutoFillMsg] = useState('')
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -85,6 +90,27 @@ export default function DataManagement() {
   }, [])
 
   const handleSearch = () => { setPage(1); load() }
+
+  const handleAutoFillCasoCerrado = async () => {
+    try {
+      const data = await autoFillCasoCerrado()
+      setAutoFillMsg(`Caso Cerrado auto-llenado: ${data.total_caso_cerrado} registros marcados`)
+      setAutoFillDone(true)
+      loadCasoCerrado(1)
+      setTimeout(() => setAutoFillMsg(''), 5000)
+    } catch (e) {
+      setAutoFillMsg('Error: ' + (e.message || 'No se pudo auto-llenar'))
+    }
+  }
+
+  const loadCasoCerrado = async (p = 1) => {
+    try {
+      const data = await fetchCasoCerrado(p, PAGE_SIZE)
+      setCasoCerradoRegistros(data.registros || [])
+      setCasoCerradoTotal(data.total || 0)
+      setCasoCerradoPage(p)
+    } catch (e) {}
+  }
 
   const startEdit = (reg) => {
     setEditing(reg)
@@ -148,19 +174,35 @@ export default function DataManagement() {
           <div className="page-title">Gestión de data</div>
           <div className="page-subtitle">Visualiza y edita los registros de gestantes del sistema.</div>
         </div>
-        {permissions.formulario_registro !== false && (
+        <div className="flex items-center gap-2">
           <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
             Nuevo registro
           </button>
-        )}
+          <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            Auto-fill Caso Cerrado
+          </button>
+        </div>
+      </div>
+
+      {autoFillMsg && (
+        <div className="px-3 py-2 rounded-md text-sm" style={{ color: autoFillMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: autoFillMsg.includes('Error') ? '#FBE9E9' : '#EEF3F7' }}>{autoFillMsg}</div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-1">
+        <button onClick={() => setActiveTab('gestantes')} className="px-3 py-1.5 text-sm rounded-md" style={{ backgroundColor: activeTab === 'gestantes' ? 'var(--primary)' : 'var(--bg-secondary)', color: activeTab === 'gestantes' ? 'white' : 'var(--text)' }}>
+          Registros ({total})
+        </button>
+        <button onClick={() => { setActiveTab('caso_cerrado'); loadCasoCerrado(1) }} className="px-3 py-1.5 text-sm rounded-md" style={{ backgroundColor: activeTab === 'caso_cerrado' ? 'var(--primary)' : 'var(--bg-secondary)', color: activeTab === 'caso_cerrado' ? 'white' : 'var(--text)' }}>
+          Caso Cerrado ({casoCerradoTotal})
+        </button>
       </div>
 
       {error && (
         <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
       )}
-
-      {/* Buscador */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -231,6 +273,70 @@ export default function DataManagement() {
                 <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>
                 <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="btn-secondary px-2.5 py-1 text-xs">Siguiente →</button>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Contenido del tab Caso Cerrado */}
+      {activeTab === 'caso_cerrado' && (
+        <div className="space-y-4 fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Caso Cerrado</div>
+              <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Gestantes que cumplen los criterios de caso cerrado (10 meses de evolución, último control prenatal previo al reporte, y fecha de parto o aborto registradas).</div>
+            </div>
+          </div>
+
+          {casoCerradoRegistros.length === 0 && !loading ? (
+            <div className="empty">
+              <div className="empty-icon">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div className="empty-title">Sin casos cerrados</div>
+              <div className="empty-desc">Usa el botón "Auto-fill Caso Cerrado" para marcar automáticamente los casos que cumplen los criterios.</div>
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th className="text-center">#</th>
+                    <th>Documento</th>
+                    <th>Apellido 1</th>
+                    <th>Nombre 1</th>
+                    <th>IPS</th>
+                    <th>Últ. Control</th>
+                    <th>F. Parto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {casoCerradoRegistros.map((reg, i) => (
+                    <tr key={reg.id}>
+                      <td className="text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        {(casoCerradoPage - 1) * PAGE_SIZE + i + 1}
+                      </td>
+                      <td className="text-sm">{reg.NO_DE_IDENTIFICACION || '—'}</td>
+                      <td className="text-sm">{reg.APELLIDO_1 || '—'}</td>
+                      <td className="text-sm">{reg.NOMBRE_1 || '—'}</td>
+                      <td className="text-sm">{reg.NOMBRE_DE_LA_IPS_PRIMARIA || '—'}</td>
+                      <td className="text-sm">{reg.ULTIMO_CONTROL_PRENATAL || '—'}</td>
+                      <td className="text-sm">{reg.FECHA_DE_PARTO || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {Math.ceil(casoCerradoTotal / PAGE_SIZE) > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {casoCerradoPage} de {Math.ceil(casoCerradoTotal / PAGE_SIZE)}</span>
+                  <div className="flex gap-1">
+                    <button onClick={() => loadCasoCerrado(casoCerradoPage - 1)} disabled={casoCerradoPage <= 1} className="btn-secondary px-2.5 py-1 text-xs">←</button>
+                    <button onClick={() => loadCasoCerrado(casoCerradoPage + 1)} disabled={casoCerradoPage >= Math.ceil(casoCerradoTotal / PAGE_SIZE)} className="btn-secondary px-2.5 py-1 text-xs">→</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
