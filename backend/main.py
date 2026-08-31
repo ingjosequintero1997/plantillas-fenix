@@ -2583,42 +2583,57 @@ def _buscar_afiliado(documento: str):
 		doc = str(documento).strip()
 		doc_limpio = doc.replace(" ", "").replace("-", "")
 		with engine.connect() as conn:
-			# Primero descubrir columnas de ct_ips para hacer el JOIN correcto
-			ips_join_col = None
-			ips_nombre_col = None
-			try:
-				row_test = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" LIMIT 1')).fetchone()
-				if row_test:
-					ips_cols = list(row_test._mapping.keys())
-					for c in ips_cols:
-						cn = c.upper()
-						if ips_join_col is None and any(kw in cn for kw in ["COD_HABILITACION", "CODIGO", "COD_IPS"]):
-							ips_join_col = c
-						if ips_nombre_col is None and any(kw in cn for kw in ["NOMBRE", "RAZON", "DENOMINACION"]):
-							ips_nombre_col = c
-					if not ips_join_col and ips_cols:
-						ips_join_col = ips_cols[0]
-					if not ips_nombre_col and len(ips_cols) > 1:
-						ips_nombre_col = ips_cols[1]
-			except Exception:
-				pass
+			# Hacer JOIN directo: af_afiliado con ct_ips para obtener nombre
+			# Probar varias formas de hacer el JOIN
+			for join_cond in [
+				'ON CAST(a."ips" AS VARCHAR) = i."cod_habilitacion"',
+				'ON CAST(a."ips" AS VARCHAR) = i."codigo"',
+				'ON CAST(a."ips" AS TEXT) = i."cod_habilitacion"',
+				'ON CAST(a."ips" AS TEXT) = i."codigo"',
+			]:
+				for where_cond in [
+					'a."{doc_col}" = :doc',
+					'a."{doc_col}" = :num',
+				]:
+					try:
+						wc = where_cond.format(doc_col=doc_col)
+						params = {"doc": doc_limpio} if ":doc" in wc else {"num": int(doc_limpio)}
+						if ":num" in wc and not doc_limpio.isdigit():
+							continue
+						query = f'''
+							SELECT a.*,
+								   CASE WHEN i."nombre" IS NOT NULL THEN i."nombre"
+										WHEN i."razon_social" IS NOT NULL THEN i."razon_social"
+										WHEN i."denominacion" IS NOT NULL THEN i."denominacion"
+										ELSE NULL END as ips_nombre
+							FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
+							LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i {join_cond}
+							WHERE {wc}
+							LIMIT 1
+						'''
+						row = conn.execute(text(query), params).fetchone()
+						if row:
+							columnas = list(row._mapping.keys())
+							valores = list(row)
+							return dict(zip(columnas, valores)), None
+					except Exception:
+						continue
 
-			# Buscar afiliado con JOIN a ct_ips
-			join_sql = ""
-			if ips_join_col and ips_nombre_col:
-				join_sql = f'LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON CAST(a."ips" AS VARCHAR) = i."{ips_join_col}"'
-
-			query = f'SELECT a.*, {"i." + chr(34) + ips_nombre_col + chr(34) + " as ips_nombre" if ips_nombre_col else "NULL as ips_nombre"} FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a {join_sql} WHERE a."{doc_col}" = :doc LIMIT 1'
-			row = conn.execute(text(query), {"doc": doc_limpio}).fetchone()
+			# Fallback: sin JOIN, solo afiliado
+			row = conn.execute(
+				text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :doc LIMIT 1'),
+				{"doc": doc_limpio},
+			).fetchone()
 			if row is None and doc_limpio.isdigit():
-				query = f'SELECT a.*, {"i." + chr(34) + ips_nombre_col + chr(34) + " as ips_nombre" if ips_nombre_col else "NULL as ips_nombre"} FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a {join_sql} WHERE a."{doc_col}" = :num LIMIT 1'
-				row = conn.execute(text(query), {"num": int(doc_limpio)}).fetchone()
+				row = conn.execute(
+					text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :num LIMIT 1'),
+					{"num": int(doc_limpio)},
+				).fetchone()
 			if row is None:
 				return None, None
 			columnas = list(row._mapping.keys())
 			valores = list(row)
-			data = dict(zip(columnas, valores))
-			return data, None
+			return dict(zip(columnas, valores)), None
 	except Exception as e:
 		return None, f"Error al consultar el afiliado: {str(e)[:200]}"
 
