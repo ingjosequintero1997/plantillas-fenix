@@ -2601,9 +2601,48 @@ def _buscar_afiliado(documento: str):
 			columnas = list(row._mapping.keys())
 			valores = list(row)
 			data = dict(zip(columnas, valores))
+
+			# Buscar nombre de IPS en ct_ips
+			ips_col = mapping.get("ips_primaria")
+			if ips_col and ips_col in data and data[ips_col]:
+				ips_code = str(data[ips_col]).strip()
+				if ips_code:
+					ips_nombre = _buscar_nombre_ips(conn, ips_code)
+					if ips_nombre:
+						data["_ips_nombre"] = ips_nombre
 			return data, None
 	except Exception as e:
 		return None, f"Error al consultar el afiliado: {str(e)[:200]}"
+
+
+def _buscar_nombre_ips(conn, ips_code: str) -> str | None:
+	"""Busca el nombre de una IPS en ct_ips usando el codigo."""
+	try:
+		cols_rows = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'administrativo' AND table_name = 'ct_ips' ORDER BY ordinal_position")).fetchall()
+		columnas = [r[0] for r in cols_rows]
+		if not columnas:
+			return None
+		for cand in columnas:
+			try:
+				row = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" WHERE "{cand}" = :cod LIMIT 1'), {"cod": ips_code}).fetchone()
+				if row:
+					valores = list(row)
+					for i, c in enumerate(columnas):
+						cn = c.upper()
+						if any(kw in cn for kw in ["NOMBRE", "RAZON", "RAZÓN", "DENOMINACION", "DENOMINACIÓN"]):
+							v = str(valores[i]).strip() if valores[i] else None
+							if v:
+								return v
+					if len(valores) > 1:
+						v = str(valores[1]).strip() if valores[1] else None
+						if v:
+							return v
+					break
+			except Exception:
+				continue
+	except Exception:
+		pass
+	return None
 
 
 def _serializar_afiliado(data: dict, mapping: dict) -> dict:
@@ -2639,7 +2678,7 @@ def _serializar_afiliado(data: dict, mapping: dict) -> dict:
 		"discapacidad": get("discapacidad"),
 		"telefono": get("telefono", extra_cols=(mapping.get("telefono_2"), mapping.get("celular"), mapping.get("celular_2"))),
 		"barrio": get("barrio"),
-		"ips_primaria": get("ips_primaria"),
+		"ips_primaria": data.get("_ips_nombre") or get("ips_primaria"),
 	}
 
 
