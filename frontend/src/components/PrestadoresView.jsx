@@ -1,8 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { fetchPrestadores, createPrestador } from '../api'
+import { fetchPrestadores, createPrestador, updatePrestador, updatePrestadorPermissions } from '../api'
 
 const TEMPLATE_LABELS = { gestante: 'Gestante', citologia: 'Citología', mamografia: 'Mamografía', penta: 'Penta' }
 const PER_PAGE = 10
+
+const PERMISSION_LABELS = {
+  cargue_masivo: { label: 'Cargue masivo de data', desc: 'Puede subir archivos Excel con múltiples registros' },
+  historias_clinicas: { label: 'Historias clínicas', desc: 'Puede subir y gestionar historias clínicas (PDF)' },
+  ver_historial: { label: 'Ver historial de cargues', desc: 'Puede ver el historial de cargues anteriores' },
+  verificar_afiliado: { label: 'Verificar afiliado', desc: 'Puede consultar datos de afiliadas por documento' },
+  formulario_registro: { label: 'Formulario de registro', desc: 'Puede usar el formulario manual de registro' },
+}
+
+const DEFAULT_PERMISSIONS = {
+  cargue_masivo: true,
+  historias_clinicas: true,
+  ver_historial: true,
+  verificar_afiliado: true,
+  formulario_registro: true,
+}
 
 function EmptyState({ onNew }) {
   return (
@@ -13,13 +29,13 @@ function EmptyState({ onNew }) {
         </svg>
       </div>
       <div className="empty-title">Sin usuarios registrados</div>
-      <div className="empty-desc">Usa el botón "Nuevo usuario" para registrar un prestador o líder de programa.</div>
+      <div className="empty-desc">Usa el botón "Nuevo usuario" para crear un prestador o líder.</div>
     </div>
   )
 }
 
 function NewPrestadorForm({ onClose, onCreated }) {
-  const [form, setForm] = useState({ nombre: '', nit: '', ips: '', municipio: '', template_key: 'gestante', username: '', password: '', role: 'prestador' })
+  const [form, setForm] = useState({ nombre: '', ips: '', username: '', password: '', role: 'prestador', template_key: 'gestante' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -28,6 +44,8 @@ function NewPrestadorForm({ onClose, onCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!form.nombre.trim()) { setError('Ingresa el nombre de la institución.'); return }
+    if (!form.username.trim()) { setError('Ingresa un nombre de usuario.'); return }
     if (form.password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return }
     setSaving(true); setError('')
     try {
@@ -40,28 +58,13 @@ function NewPrestadorForm({ onClose, onCreated }) {
     }
   }
 
-  const SectionTitle = ({ children }) => (
-    <div className="flex items-center gap-2 mb-3">
-      <div className="w-1 h-4 rounded-full" style={{ backgroundColor: 'var(--primary)' }} />
-      <span className="section-label" style={{ color: 'var(--text)' }}>{children}</span>
-    </div>
-  )
-
-  const Field = ({ label, children, hint }) => (
-    <div>
-      <label className="form-label">{label}</label>
-      {children}
-      {hint && <p className="text-[0.68rem] mt-1" style={{ color: 'var(--text-secondary)' }}>{hint}</p>}
-    </div>
-  )
-
   return (
     <div className="panel fade-in">
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <div className="page-title">Nuevo usuario</div>
-            <div className="page-subtitle">Se crearán las credenciales de acceso para el cargue mensual.</div>
+            <div className="page-subtitle">Crea las credenciales de acceso para un prestador.</div>
           </div>
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -70,147 +73,210 @@ function NewPrestadorForm({ onClose, onCreated }) {
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 px-3 py-2.5 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>
-            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>{error}</span>
-          </div>
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
         )}
 
-          {/* Información del usuario */}
+        <div className="space-y-3">
           <div>
-            <SectionTitle>Información del usuario</SectionTitle>
-            <div className="space-y-3">
-              <Field label="Nombre de la institución *">
-                <input name="nombre" value={form.nombre} onChange={handleChange} required className="input" placeholder="E.S.E. Hospital San José" />
-              </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="NIT / identificación">
-                  <input name="nit" value={form.nit} onChange={handleChange} className="input" placeholder="800.000.000-0" />
-                </Field>
-                <Field label="Municipio">
-                  <input name="municipio" value={form.municipio} onChange={handleChange} className="input" placeholder="Albania" />
-                </Field>
-              </div>
-              <Field label="Código IPS" hint="Código de la IPS en el sistema (ej: 803709)">
-                <input name="ips" value={form.ips} onChange={handleChange} className="input" placeholder="803709" />
-              </Field>
+            <label className="form-label">Nombre de la institución *</label>
+            <input name="nombre" value={form.nombre} onChange={handleChange} required className="input" placeholder="E.S.E. Hospital San José" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="form-label">Código IPS</label>
+              <input name="ips" value={form.ips} onChange={handleChange} className="input" placeholder="803709" />
+            </div>
+            <div>
+              <label className="form-label">Rol</label>
+              <select name="role" value={form.role} onChange={handleChange} className="input">
+                <option value="prestador">Prestador</option>
+                <option value="lider">Líder de programa</option>
+              </select>
             </div>
           </div>
-
-          <div className="divider" />
-
-          {/* Usuario de acceso */}
-          <div>
-            <SectionTitle>Usuario de acceso</SectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Nombre de usuario *" hint="Con el que iniciará sesión">
-                <input name="username" value={form.username} onChange={handleChange} required className="input" placeholder="usuario_hospital" autoComplete="off" />
-              </Field>
-              <Field label="Contraseña *" hint="Mínimo 6 caracteres">
-                <div className="relative">
-                  <input name="password" value={form.password} onChange={handleChange} required type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" autoComplete="new-password" />
-                  <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                    {showPass ? (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                    )}
-                  </button>
-                </div>
-              </Field>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="form-label">Usuario de acceso *</label>
+              <input name="username" value={form.username} onChange={handleChange} required className="input" placeholder="usuario_hospital" autoComplete="off" />
             </div>
-          </div>
-
-          <div className="divider" />
-
-          {/* Configuración */}
-          <div>
-            <SectionTitle>Configuración</SectionTitle>
-            <div className="mb-4">
-              <label className="form-label">Rol del usuario</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { key: 'prestador', label: 'Prestador', desc: 'Carga mensual de su data' },
-                  { key: 'lider', label: 'Líder de programa', desc: 'Verifica y consolida su plantilla' },
-                ].map((r) => (
-                  <button
-                    type="button"
-                    key={r.key}
-                    onClick={() => setForm((f) => ({ ...f, role: r.key }))}
-                    className="text-left px-3 py-2.5 rounded-lg border transition-colors"
-                    style={{
-                      borderColor: form.role === r.key ? 'var(--accent)' : 'var(--border)',
-                      backgroundColor: form.role === r.key ? '#EEF3F7' : 'transparent',
-                    }}
-                  >
-                    <div className="text-sm font-medium flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
-                      {r.label}
-                      {form.role === r.key && (
-                        <svg className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      )}
-                    </div>
-                    <div className="text-[0.68rem]" style={{ color: 'var(--text-secondary)' }}>{r.desc}</div>
-                  </button>
-                ))}
+            <div>
+              <label className="form-label">Contraseña *</label>
+              <div className="relative">
+                <input name="password" value={form.password} onChange={handleChange} required type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
+                <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPass ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  )}
+                </button>
               </div>
             </div>
-
-            <Field label="Plantilla asignada" hint="El usuario solo tendrá acceso a esta plantilla">
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { key: 'gestante', label: 'Gestante', desc: 'Control prenatal' },
-                  { key: 'citologia', label: 'Citología', desc: 'Cáncer cervicouterino' },
-                  { key: 'mamografia', label: 'Mamografía', desc: 'Cáncer de mama' },
-                  { key: 'penta', label: 'Penta', desc: 'Vacunación' },
-                ].map((t) => (
-                  <button
-                    type="button"
-                    key={t.key}
-                    onClick={() => setForm((f) => ({ ...f, template_key: t.key }))}
-                    className="text-left px-3 py-2.5 rounded-lg border transition-colors"
-                    style={{
-                      borderColor: form.template_key === t.key ? 'var(--primary)' : 'var(--border)',
-                      backgroundColor: form.template_key === t.key ? 'var(--primary-light)' : 'transparent',
-                    }}
-                  >
-                    <div className="text-sm font-medium flex items-center gap-1.5" style={{ color: form.template_key === t.key ? 'var(--primary)' : 'var(--text)' }}>
-                      {t.label}
-                      {form.template_key === t.key && (
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      )}
-                    </div>
-                    <div className="text-[0.68rem]" style={{ color: 'var(--text-secondary)' }}>{t.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </Field>
           </div>
+        </div>
 
-          <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-            <button type="button" onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-                  Creando...
-                </>
-              ) : 'Crear usuario'}
+        <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+          <button type="button" onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
+          <button type="submit" className="btn-primary" disabled={saving}>
+            {saving ? 'Creando...' : 'Crear usuario'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function PermissionsPanel({ prestador, onClose, onSaved }) {
+  const [perms, setPerms] = useState({ ...DEFAULT_PERMISSIONS, ...(prestador.permissions || {}) })
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const toggle = (key) => setPerms((p) => ({ ...p, [key]: !p[key] }))
+
+  const save = async () => {
+    setSaving(true); setMsg('')
+    try {
+      await updatePrestadorPermissions(prestador.id, perms)
+      setMsg('Guardado')
+      onSaved()
+      setTimeout(() => setMsg(''), 2000)
+    } catch (e) {
+      setMsg('Error: ' + (e.message || 'No se pudo guardar'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="panel fade-in">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Permisos de {prestador.nombre}</div>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Controla qué acciones puede realizar este usuario.</div>
+        </div>
+        <button onClick={onClose} className="btn-ghost text-sm">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          Volver
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {Object.entries(PERMISSION_LABELS).map(([key, { label, desc }]) => (
+          <div key={key} className="flex items-center justify-between px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{desc}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggle(key)}
+              className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+              style={{ backgroundColor: perms[key] ? 'var(--primary)' : '#D1D5DB' }}
+            >
+              <span
+                className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
+              />
             </button>
           </div>
-        </form>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between pt-4 mt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+        <div className="text-sm" style={{ color: msg.includes('Error') ? 'var(--error)' : 'var(--primary)' }}>{msg}</div>
+        <button onClick={save} className="btn-primary" disabled={saving}>
+          {saving ? 'Guardando...' : 'Guardar permisos'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function EditPrestadorForm({ prestador, onClose, onSaved }) {
+  const [form, setForm] = useState({ nombre: prestador.nombre || '', nit: prestador.nit || '', ips: prestador.ips || '', municipio: prestador.municipio || '', role: prestador.role || 'prestador' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true); setError('')
+    try {
+      await updatePrestador(prestador.id, form)
+      onSaved()
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="panel fade-in">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Editar {prestador.nombre}</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Modifica los datos de este prestador.</div>
+          </div>
+          <button type="button" onClick={onClose} className="btn-ghost text-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Volver
+          </button>
+        </div>
+
+        {error && (
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="form-label">Nombre de la institución</label>
+            <input name="nombre" value={form.nombre} onChange={handleChange} className="input" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="form-label">Código IPS</label>
+              <input name="ips" value={form.ips} onChange={handleChange} className="input" placeholder="803709" />
+            </div>
+            <div>
+              <label className="form-label">NIT</label>
+              <input name="nit" value={form.nit} onChange={handleChange} className="input" />
+            </div>
+            <div>
+              <label className="form-label">Municipio</label>
+              <input name="municipio" value={form.municipio} onChange={handleChange} className="input" />
+            </div>
+          </div>
+          <div>
+            <label className="form-label">Rol</label>
+            <select name="role" value={form.role} onChange={handleChange} className="input">
+              <option value="prestador">Prestador</option>
+              <option value="lider">Líder de programa</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+          <button type="button" onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
+          <button type="submit" className="btn-primary" disabled={saving}>
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
 
 export default function PrestadoresView() {
   const [prestadores, setPrestadores] = useState([])
-  const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState({ key: 'nombre', dir: 1 })
   const [page, setPage] = useState(1)
-  const [menuOpen, setMenuOpen] = useState(null)
+  const [view, setView] = useState(null) // null | 'new' | { type: 'edit', data } | { type: 'perms', data }
 
   const load = async () => {
     setLoading(true)
@@ -240,14 +306,14 @@ export default function PrestadoresView() {
     setPage(1)
   }
 
-  // Vista de formulario (en lugar de modal)
-  if (showForm) {
-    return (
-      <NewPrestadorForm
-        onClose={() => setShowForm(false)}
-        onCreated={() => { setShowForm(false); load() }}
-      />
-    )
+  if (view === 'new') {
+    return <NewPrestadorForm onClose={() => setView(null)} onCreated={() => { setView(null); load() }} />
+  }
+  if (view?.type === 'edit') {
+    return <EditPrestadorForm prestador={view.data} onClose={() => setView(null)} onSaved={() => { setView(null); load() }} />
+  }
+  if (view?.type === 'perms') {
+    return <PermissionsPanel prestador={view.data} onClose={() => setView(null)} onSaved={load} />
   }
 
   return (
@@ -255,11 +321,11 @@ export default function PrestadoresView() {
       <div className="flex items-center justify-between">
         <div>
           <div className="page-title">Usuarios</div>
-          <div className="page-subtitle">Usuarios con acceso para cargar sus datos mensuales.</div>
+          <div className="page-subtitle">Gestiona los usuarios y sus permisos de acceso.</div>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary">
+        <button onClick={() => setView('new')} className="btn-primary">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-        Nuevo usuario
+          Nuevo usuario
         </button>
       </div>
 
@@ -268,10 +334,9 @@ export default function PrestadoresView() {
       )}
 
       {prestadores.length === 0 && !loading ? (
-        <EmptyState onNew={() => setShowForm(true)} />
+        <EmptyState onNew={() => setView('new')} />
       ) : (
         <>
-          {/* Barra de herramientas */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-sm">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -282,7 +347,6 @@ export default function PrestadoresView() {
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{filtered.length} usuarios</span>
           </div>
 
-          {/* Tabla */}
           <div className="table-wrap">
             <table className="table">
               <thead>
@@ -290,10 +354,7 @@ export default function PrestadoresView() {
                   <th className="cursor-pointer hover:text-gray-700" onClick={() => toggleSort('nombre')}>
                     Usuario {sort.key === 'nombre' ? (sort.dir === 1 ? '↑' : '↓') : ''}
                   </th>
-                  <th>Identificación</th>
                   <th>IPS</th>
-                  <th>Municipio</th>
-                  <th>Plantilla</th>
                   <th>Rol</th>
                   <th className="text-center">Cargas</th>
                   <th className="text-right">Acciones</th>
@@ -301,7 +362,7 @@ export default function PrestadoresView() {
               </thead>
               <tbody>
                 {pageItems.map((p) => (
-                  <tr key={p.id} className="relative">
+                  <tr key={p.id}>
                     <td>
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium"
@@ -310,14 +371,11 @@ export default function PrestadoresView() {
                         </div>
                         <div>
                           <div className="font-medium">{p.nombre}</div>
-                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{p.username}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>@{p.username}</div>
                         </div>
                       </div>
                     </td>
-                    <td>{p.nit || '—'}</td>
                     <td><span className="badge-neutral">{p.ips || '—'}</span></td>
-                    <td>{p.municipio || '—'}</td>
-                    <td><span className="badge-neutral">{TEMPLATE_LABELS[p.template_key] || p.template_key || '—'}</span></td>
                     <td>
                       <span className={p.role === 'lider' ? 'badge-success' : 'badge-neutral'}>
                         {p.role === 'lider' ? 'Líder' : 'Prestador'}
@@ -325,23 +383,20 @@ export default function PrestadoresView() {
                     </td>
                     <td className="text-center">{p.cargues_count ?? 0}</td>
                     <td className="text-right">
-                      <button onClick={() => setMenuOpen(menuOpen === p.id ? null : p.id)} className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v.01M12 12v.01M12 18v.01" /></svg>
-                      </button>
-                      {menuOpen === p.id && (
-                        <div className="absolute right-4 mt-1 z-10 rounded-lg py-1 bg-white shadow-lg border border-gray-100 w-40 text-left">
-                          <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Ver detalle</button>
-                          <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Editar</button>
-                          <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">Desactivar</button>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => setView({ type: 'edit', data: p })} className="btn-ghost text-xs px-2 py-1" title="Editar datos">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                        <button onClick={() => setView({ type: 'perms', data: p })} className="btn-ghost text-xs px-2 py-1" title="Permisos">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            {/* Paginación */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {safePage} de {totalPages}</span>

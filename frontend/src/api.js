@@ -245,6 +245,26 @@ export async function createPrestador(payload) {
   })
 }
 
+export async function updatePrestador(id, payload) {
+  return apiFetch(`${API_BASE}/admin/prestadores/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updatePrestadorPermissions(id, permissions) {
+  return apiFetch(`${API_BASE}/admin/prestadores/${id}/permissions`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(permissions),
+  })
+}
+
+export async function fetchMyPermissions() {
+  return apiFetch(`${API_BASE}/auth/permissions`)
+}
+
 export async function revalidateData(raw_text, mapping, templateKey, mode = 'limpiador') {
   return apiFetch(`${API_BASE}/revalidate`, {
     method: 'POST',

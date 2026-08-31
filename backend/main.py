@@ -1683,7 +1683,7 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 		for p in items:
 			cargues_count = db.query(Cargue).filter(Cargue.prestador_id == p.id).count()
 			plantillas = [pp.template_key for pp in p.plantillas]
-			result.append({
+		result.append({
 				"id": p.id,
 				"nombre": p.nombre,
 				"nit": p.nit,
@@ -1693,12 +1693,87 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 				"cargues_count": cargues_count,
 				"template_key": plantillas[0] if plantillas else "gestante",
 				"role": p.user.role if p.user else "prestador",
+				"permissions": p.permissions or {},
 			})
 		return {"prestadores": result}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
 	finally:
 		db.close()
+
+
+@app.put("/admin/prestadores/{prestador_id}/permissions")
+async def update_prestador_permissions(prestador_id: int, payload: dict, admin: User = Depends(require_admin)):
+	"""Actualiza los permisos de un prestador."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		prestador = db.query(Prestador).filter(Prestador.id == prestador_id).first()
+		if not prestador:
+			raise HTTPException(status_code=404, detail="Prestador no encontrado")
+		prestador.permissions = payload
+		db.commit()
+		return {"success": True, "permissions": prestador.permissions}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos.")
+	finally:
+		db.close()
+
+
+@app.put("/admin/prestadores/{prestador_id}")
+async def update_prestador(prestador_id: int, payload: dict, admin: User = Depends(require_admin)):
+	"""Actualiza datos de un prestador (nombre, IPS, NIT, municipio, etc)."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		prestador = db.query(Prestador).filter(Prestador.id == prestador_id).first()
+		if not prestador:
+			raise HTTPException(status_code=404, detail="Prestador no encontrado")
+		if "nombre" in payload:
+			prestador.nombre = payload["nombre"]
+			if prestador.user:
+				prestador.user.name = payload["nombre"]
+		if "nit" in payload:
+			prestador.nit = payload["nit"]
+		if "ips" in payload:
+			prestador.ips = payload["ips"]
+		if "municipio" in payload:
+			prestador.municipio = payload["municipio"]
+		if "role" in payload and prestador.user:
+			if payload["role"] in ("prestador", "lider"):
+				prestador.user.role = payload["role"]
+		db.commit()
+		return {"success": True}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos.")
+	finally:
+		db.close()
+
+
+@app.get("/auth/permissions")
+async def get_my_permissions(current_user: User = Depends(get_current_user)):
+	"""Devuelve los permisos del prestador actual."""
+	DEFAULT_PERMISSIONS = {
+		"cargue_masivo": True,
+		"historias_clinicas": True,
+		"ver_historial": True,
+		"verificar_afiliado": True,
+		"formulario_registro": True,
+	}
+	try:
+		db = SessionLocal()
+		try:
+			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			if current_user.role == "admin":
+				return {"permissions": {k: True for k in DEFAULT_PERMISSIONS}}
+			if prestador and prestador.permissions:
+				merged = {**DEFAULT_PERMISSIONS, **prestador.permissions}
+				return {"permissions": merged}
+			return {"permissions": DEFAULT_PERMISSIONS}
+		finally:
+			db.close()
+	except Exception:
+		return {"permissions": DEFAULT_PERMISSIONS}
 
 
 # ─── Consolidación de cargues (admin / EPS) ───────────────────────────────

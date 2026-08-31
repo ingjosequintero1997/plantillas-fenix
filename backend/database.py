@@ -16,6 +16,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    JSON,
     LargeBinary,
     String,
     Text,
@@ -83,6 +84,7 @@ class Prestador(Base):
     nombre = Column(String(255), nullable=False)
     nit = Column(String(60), nullable=True)
     ips = Column(String(60), nullable=True)
+    permissions = Column(JSON, nullable=True)
     departamento = Column(String(120), nullable=True)
     municipio = Column(String(120), nullable=True)
     created_at = Column(DateTime, nullable=False, default=_utcnow)
@@ -183,6 +185,11 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE prestadores ADD COLUMN ips VARCHAR(60)"))
+    except Exception:
+        pass
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE prestadores ADD COLUMN permissions JSON"))
     except Exception:
         pass
 
