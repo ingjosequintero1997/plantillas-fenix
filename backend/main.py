@@ -2604,45 +2604,59 @@ def _buscar_afiliado(documento: str):
 
 			# Buscar nombre de IPS en ct_ips
 			ips_col = mapping.get("ips_primaria")
+			ips_debug = {}
 			if ips_col and ips_col in data and data[ips_col]:
 				ips_code = str(data[ips_col]).strip()
 				if ips_code:
-					ips_nombre = _buscar_nombre_ips(conn, ips_code)
+					ips_nombre, ips_debug = _buscar_nombre_ips(conn, ips_code)
 					if ips_nombre:
 						data["_ips_nombre"] = ips_nombre
+			data["_debug_ips"] = ips_debug
 			return data, None
 	except Exception as e:
 		return None, f"Error al consultar el afiliado: {str(e)[:200]}"
 
 
-def _buscar_nombre_ips(conn, ips_code: str) -> str | None:
+def _buscar_nombre_ips(conn, ips_code: str):
 	"""Busca el nombre de una IPS en ct_ips usando el codigo."""
+	debug = {"ips_code": ips_code, "pasos": []}
 	try:
 		cols_rows = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'administrativo' AND table_name = 'ct_ips' ORDER BY ordinal_position")).fetchall()
 		columnas = [r[0] for r in cols_rows]
+		debug["columnas_ct_ips"] = columnas
 		if not columnas:
-			return None
+			debug["pasos"].append("sin columnas")
+			return None, debug
 		for cand in columnas:
 			try:
 				row = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" WHERE "{cand}" = :cod LIMIT 1'), {"cod": ips_code}).fetchone()
 				if row:
 					valores = list(row)
+					debug["columna_match"] = cand
+					debug["valores_fila"] = [str(v)[:50] if v else None for v in valores[:8]]
 					for i, c in enumerate(columnas):
 						cn = c.upper()
 						if any(kw in cn for kw in ["NOMBRE", "RAZON", "RAZÓN", "DENOMINACION", "DENOMINACIÓN"]):
 							v = str(valores[i]).strip() if valores[i] else None
 							if v:
-								return v
+								debug["nombre_encontrado"] = v
+								debug["por_columna"] = c
+								return v, debug
 					if len(valores) > 1:
 						v = str(valores[1]).strip() if valores[1] else None
 						if v:
-							return v
+							debug["nombre_encontrado"] = v
+							debug["por_fallback"] = f"columna {columnas[1]}"
+							return v, debug
+					debug["pasos"].append("fila encontrada pero sin nombre")
 					break
-			except Exception:
+			except Exception as ex:
+				debug["pasos"].append(f"error en {cand}: {str(ex)[:80]}")
 				continue
-	except Exception:
-		pass
-	return None
+		debug["pasos"].append("no se encontro fila")
+	except Exception as ex:
+		debug["error"] = str(ex)[:200]
+	return None, debug
 
 
 def _serializar_afiliado(data: dict, mapping: dict) -> dict:
@@ -2694,7 +2708,7 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 		return {"encontrado": False, "documento": documento, **extra}
 	mapping, _ = _mapear_columnas_afiliado(cols)
 	afiliado = _serializar_afiliado(data, mapping)
-	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
+	return {"encontrado": True, "documento": documento, "afiliado": afiliado, "_debug_ips": data.get("_debug_ips"), **extra}
 
 
 @app.get("/explorar-ct-afiliado")
