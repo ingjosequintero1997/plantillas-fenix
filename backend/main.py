@@ -892,6 +892,46 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 	db = SessionLocal()
 	try:
 		prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+
+		# Validar IPS: si el prestador tiene IPS asignada, verificar que todas las filas pertenezcan a ella
+		if prestador and prestador.ips and payload.template_key == "gestante":
+			ips_prestador_code = str(prestador.ips).strip()
+			# Buscar nombre de la IPS del prestador en ct_ips
+			ips_prestador_nombre = None
+			try:
+				from sqlalchemy import text
+				with db.bind.connect() as conn:
+					row = conn.execute(
+						text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'),
+						{"cod": ips_prestador_code},
+					).fetchone()
+					if row:
+						ips_prestador_nombre = str(row[0]).strip().upper()
+			except Exception:
+				pass
+
+			if ips_prestador_nombre:
+				# Validar que todas las filas tengan la misma IPS
+				IPS_COL_INDEX = 28  # Indice de "Nombre de la IPS Primaria" en gestante
+				texto = payload.corrected_text or payload.raw_text or ""
+				lineas = [l for l in texto.strip().split("\n") if l.strip()]
+				if len(lineas) > 1:
+					errores_ips = []
+					for i, linea in enumerate(lineas[1:], start=2):
+						cols = linea.split("|")
+						if len(cols) > IPS_COL_INDEX:
+							ips_fila = cols[IPS_COL_INDEX].strip().upper()
+							if ips_fila and ips_fila != ips_prestador_nombre and ips_fila != "NA":
+								errores_ips.append(f"Fila {i}: {ips_fila}")
+					if errores_ips:
+						raise HTTPException(
+							status_code=400,
+							detail=f"No se puede guardar: {len(errores_ips)} usuaria(s) pertenecen a otra IPS. "
+								   f"Tu IPS asignada es: {ips_prestador_nombre}. "
+								   f"Usuarias con otra IPS: {'; '.join(errores_ips[:5])}"
+								   f"{'...' if len(errores_ips) > 5 else ''}"
+						)
+
 		cargue = Cargue(
 			prestador_id=prestador.id if prestador else None,
 			user_id=current_user.id,
@@ -1117,6 +1157,31 @@ async def agregar_registro_unificado(
 				errores_val.append(f"{tdef['name']}: {'; '.join(detalles)}")
 		if errores_val:
 			raise HTTPException(status_code=400, detail="El registro tiene errores de validación: " + " | ".join(errores_val[:10]))
+
+		# Validar IPS del registro contra IPS del prestador
+		prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+		if prestador and prestador.ips and payload.template_key == "gestante":
+			ips_prestador_code = str(prestador.ips).strip()
+			ips_prestador_nombre = None
+			try:
+				from sqlalchemy import text as sa_text
+				with db.bind.connect() as conn:
+					row = conn.execute(
+						sa_text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'),
+						{"cod": ips_prestador_code},
+					).fetchone()
+					if row:
+						ips_prestador_nombre = str(row[0]).strip().upper()
+			except Exception:
+				pass
+			if ips_prestador_nombre:
+				ips_registro = celdas[28].strip().upper() if len(celdas) > 28 else ""
+				if ips_registro and ips_registro != ips_prestador_nombre and ips_registro != "NA":
+					raise HTTPException(
+						status_code=400,
+						detail=f"No se puede guardar: esta gestante pertenece a otra IPS ({celdas[28]}). "
+							   f"Tu IPS asignada es: {ips_prestador_nombre}."
+					)
 
 		# Aplicar formulas al registro
 		df = pd.DataFrame([celdas])
@@ -2820,6 +2885,32 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 		return {"encontrado": False, "documento": documento, **extra}
 	mapping, _ = _mapear_columnas_afiliado(cols)
 	afiliado = _serializar_afiliado(data, mapping)
+
+	# Validar IPS: si el prestador tiene IPS asignada, verificar que el afiliado pertenezca a ella
+	if current_user.role != "admin":
+		try:
+			db = SessionLocal()
+			try:
+				prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+				if prestador and prestador.ips:
+					ips_prestador_code = str(prestador.ips).strip()
+					# Obtener codigo IPS del afiliado
+					ips_col = mapping.get("ips_primaria")
+					ips_afiliado_code = str(data.get(ips_col, "")).strip() if ips_col else ""
+					if ips_afiliado_code and ips_prestador_code != ips_afiliado_code:
+						return {
+							"encontrado": True,
+							"documento": documento,
+							"afiliado": afiliado,
+							"restriction": "ips_no_coincide",
+							"message": f"Esta usuaria pertenece a otra IPS ({afiliado.get('ips_primaria', 'desconocida')}). Tu IPS asignada tiene código {ips_prestador_code}.",
+							**extra,
+						}
+			finally:
+				db.close()
+		except Exception:
+			pass
+
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
 
 
