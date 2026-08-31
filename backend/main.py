@@ -2583,57 +2583,29 @@ def _buscar_afiliado(documento: str):
 		doc = str(documento).strip()
 		doc_limpio = doc.replace(" ", "").replace("-", "")
 		with engine.connect() as conn:
-			# Intentar JOIN con ct_ips
-			nombre_ips = None
-			data = None
-			try:
-				# Primero buscar el afiliado
-				row = conn.execute(
-					text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :doc LIMIT 1'),
-					{"doc": doc_limpio},
-				).fetchone()
-				if row is None and doc_limpio.isdigit():
-					conn.rollback()
-					row = conn.execute(
-						text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :num LIMIT 1'),
-						{"num": int(doc_limpio)},
-					).fetchone()
-				if row is None:
-					return None, None
-				columnas = list(row._mapping.keys())
-				valores = list(row)
-				data = dict(zip(columnas, valores))
-
-				# Intentar buscar nombre de IPS
-				ips_code = data.get("ips")
-				if ips_code:
-					ips_code = str(ips_code).strip()
-					for join_on in [
-						'ON CAST(a."ips" AS VARCHAR) = i."cod_habilitacion"',
-						'ON CAST(a."ips" AS VARCHAR) = i."codigo"',
-					]:
-						for nombre_col in ['"nombre"', '"razon_social"', '"denominacion"']:
-							try:
-								conn.rollback()
-								row2 = conn.execute(text(f'''
-									SELECT i.{nombre_col} as ips_nombre
-									FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
-									LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i {join_on}
-									WHERE CAST(a."ips" AS VARCHAR) = :ips_code
-									LIMIT 1
-								'''), {"ips_code": ips_code}).fetchone()
-								if row2 and row2[0]:
-									nombre_ips = str(row2[0]).strip()
-									break
-							except Exception:
-								continue
-						if nombre_ips:
-							break
-			except Exception:
-				pass
-			if data:
-				data["ips_nombre"] = nombre_ips
-			return data, None
+			# Buscar afiliado y nombre de IPS en una sola consulta
+			query = f'''
+				SELECT a.*, i."razon_social" as ips_nombre
+				FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
+				LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON CAST(a."ips" AS VARCHAR) = i."ips"
+				WHERE a."{doc_col}" = :doc
+				LIMIT 1
+			'''
+			row = conn.execute(text(query), {"doc": doc_limpio}).fetchone()
+			if row is None and doc_limpio.isdigit():
+				query = f'''
+					SELECT a.*, i."razon_social" as ips_nombre
+					FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
+					LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON CAST(a."ips" AS VARCHAR) = i."ips"
+					WHERE a."{doc_col}" = :num
+					LIMIT 1
+				'''
+				row = conn.execute(text(query), {"num": int(doc_limpio)}).fetchone()
+			if row is None:
+				return None, None
+			columnas = list(row._mapping.keys())
+			valores = list(row)
+			return dict(zip(columnas, valores)), None
 	except Exception as e:
 		return None, f"Error al consultar el afiliado: {str(e)[:200]}"
 
@@ -2688,34 +2660,6 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	mapping, _ = _mapear_columnas_afiliado(cols)
 	afiliado = _serializar_afiliado(data, mapping)
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
-
-
-@app.get("/test-ips-columnas")
-async def test_ips_columnas(current_user: User = Depends(get_current_user)):
-	"""Devuelve las columnas y 1 fila de ct_ips para descubrir estructura."""
-	try:
-		from .database import engine
-	except ImportError:
-		from database import engine
-	from sqlalchemy import text
-	with engine.connect() as conn:
-		row = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" LIMIT 1')).fetchone()
-		if not row:
-			return {"error": "No se pudo leer ct_ips"}
-		columnas = list(row._mapping.keys())
-		valores = [str(v)[:80] if v else None for v in row]
-		# Buscar fila con codigo 803709
-		ejemplo = None
-		for c in columnas:
-			try:
-				conn.rollback()
-				r2 = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" WHERE "{c}" = :cod LIMIT 1'), {"cod": "803709"}).fetchone()
-				if r2:
-					ejemplo = {"columna_codigo": c, "valores": [str(v)[:80] if v else None for v in r2]}
-					break
-			except:
-				continue
-		return {"columnas": columnas, "fila_1": dict(zip(columnas, valores)), "ejemplo_803709": ejemplo}
 
 
 if __name__ == "__main__":
