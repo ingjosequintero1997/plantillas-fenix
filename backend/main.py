@@ -2709,6 +2709,45 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
 
 
+@app.get("/test-ips/{codigo}")
+async def test_ips(codigo: str, current_user: User = Depends(get_current_user)):
+	"""TEMPORAL: Prueba busqueda de IPS por codigo."""
+	try:
+		from .database import engine
+	except ImportError:
+		from database import engine
+	from sqlalchemy import text
+	resultado = {"codigo": codigo, "pasos": []}
+	with engine.connect() as conn:
+		# 1. Probar varias tablas posibles
+		for tabla in ["ct_ips", "ct_Ips", "CT_IPS", "Ips", "ips"]:
+			try:
+				row = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{tabla}" LIMIT 1')).fetchone()
+				if row:
+					columnas = list(row._mapping.keys())
+					resultado["tabla_encontrada"] = tabla
+					resultado["columnas"] = columnas
+					resultado["num_cols"] = len(columnas)
+					# Buscar el codigo
+					for i, c in enumerate(columnas):
+						cn = c.upper()
+						if any(kw in cn for kw in ["COD", "CODIGO", "HABILITACION", "ID"]):
+							try:
+								row2 = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{tabla}" WHERE "{c}" = :cod LIMIT 1'), {"cod": codigo}).fetchone()
+								if row2:
+									valores = [str(v)[:60] if v else None for v in row2]
+									resultado["fila"] = dict(zip(columnas, valores))
+									resultado["columna_codigo"] = c
+									break
+							except Exception as ex:
+								resultado["pasos"].append(f"error buscar {c}: {str(ex)[:80]}")
+					break
+			except Exception as ex:
+				resultado["pasos"].append(f"tabla {tabla}: {str(ex)[:80]}")
+				continue
+	return resultado
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)
