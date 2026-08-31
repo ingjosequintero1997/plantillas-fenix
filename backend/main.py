@@ -2587,7 +2587,7 @@ def _buscar_afiliado(documento: str):
 			query = f'''
 				SELECT a.*, i."razon_social" as ips_nombre
 				FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
-				LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON CAST(a."ips" AS VARCHAR) = i."ips"
+				LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."ips"
 				WHERE a."{doc_col}" = :doc
 				LIMIT 1
 			'''
@@ -2596,7 +2596,7 @@ def _buscar_afiliado(documento: str):
 				query = f'''
 					SELECT a.*, i."razon_social" as ips_nombre
 					FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
-					LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON CAST(a."ips" AS VARCHAR) = i."ips"
+					LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."ips"
 					WHERE a."{doc_col}" = :num
 					LIMIT 1
 				'''
