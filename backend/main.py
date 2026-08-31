@@ -2658,6 +2658,29 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
 
 
+@app.get("/explorar-ct-afiliado")
+async def explorar_ct_afiliado(current_user: User = Depends(get_current_user)):
+	"""TEMPORAL: Explora columnas y muestra 3 filas de ct_Afiliado para descubrir estructura."""
+	try:
+		from .database import engine
+	except ImportError:
+		from database import engine
+	try:
+		from sqlalchemy import text
+		with engine.connect() as conn:
+			# 1. Obtener columnas
+			cols_rows = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'administrativo' AND table_name = 'ct_Afiliado' ORDER BY ordinal_position")).fetchall()
+			columnas = [r[0] for r in cols_rows]
+			# 2. Obtener 3 filas
+			rows = conn.execute(text('SELECT * FROM "administrativo"."ct_Afiliado" LIMIT 3')).fetchall()
+			filas = []
+			for row in rows:
+				filas.append(dict(zip(columnas, [str(v) if v is not None else None for v in row])))
+			return {"columnas": columnas, "num_columnas": len(columnas), "filas": filas}
+	except Exception as e:
+		return {"error": str(e)}
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)
