@@ -1669,6 +1669,10 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 		return {"id": prestador.id, "username": user.username, "nombre": prestador.nombre, "ips": prestador.ips, "template_key": payload.template_key, "role": role}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+	except HTTPException:
+		raise
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=f"Error al crear el usuario: {str(e)[:300]}")
 	finally:
 		db.close()
 
@@ -1683,7 +1687,7 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 		for p in items:
 			cargues_count = db.query(Cargue).filter(Cargue.prestador_id == p.id).count()
 			plantillas = [pp.template_key for pp in p.plantillas]
-		result.append({
+			result.append({
 				"id": p.id,
 				"nombre": p.nombre,
 				"nit": p.nit,
@@ -2987,6 +2991,226 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 			pass
 
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
+
+
+# ─── Gestión de data (ver, editar, crear registros de gestantes) ───────────
+
+@app.get("/data/gestantes")
+async def listar_gestantes(
+	current_user: User = Depends(get_current_user),
+	page: int = 1,
+	page_size: int = 50,
+	search: str = "",
+):
+	"""Lista registros de gestantes. Admin ve todos, prestador solo los de su IPS."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		# Obtener IPS del prestador actual
+		ips_filtro = None
+		if current_user.role != "admin":
+			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			if prestador and prestador.ips:
+				ips_filtro = str(prestador.ips).strip()
+
+		offset = (max(1, page) - 1) * page_size
+		from sqlalchemy import text
+
+		# Contar total
+		count_sql = 'SELECT COUNT(*) FROM gestantes WHERE 1=1'
+		count_params = {}
+		if ips_filtro:
+			count_sql += ' AND "NOMBRE_DE_LA_IPS_PRIMARIA" = :ips'
+			count_params["ips"] = ips_filtro
+		if search:
+			count_sql += ' AND ("NO_DE_IDENTIFICACION" ILIKE :q OR "APELLIDO_1" ILIKE :q OR "NOMBRE_1" ILIKE :q)'
+			count_params["q"] = f"%{search}%"
+
+		total = db.execute(text(count_sql), count_params).scalar() or 0
+
+		# Obtener registros
+		query_sql = 'SELECT * FROM gestantes WHERE 1=1'
+		if ips_filtro:
+			query_sql += ' AND "NOMBRE_DE_LA_IPS_PRIMARIA" = :ips'
+		if search:
+			query_sql += ' AND ("NO_DE_IDENTIFICACION" ILIKE :q OR "APELLIDO_1" ILIKE :q OR "NOMBRE_1" ILIKE :q)'
+		query_sql += ' ORDER BY id DESC LIMIT :limit OFFSET :offset'
+		params = {"limit": page_size, "offset": offset}
+		if ips_filtro:
+			params["ips"] = ips_filtro
+		if search:
+			params["q"] = f"%{search}%"
+
+		rows = db.execute(text(query_sql), params).fetchall()
+		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		registros = []
+		for row in rows:
+			registros.append(dict(zip(columnas, [str(v) if v is not None else "" for v in row])))
+
+		return {"registros": registros, "total": total, "page": page, "page_size": page_size}
+	except Exception as e:
+		return {"error": str(e)[:300], "registros": [], "total": 0}
+	finally:
+		db.close()
+
+
+@app.get("/data/gestantes/{registro_id}")
+async def obtener_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
+	"""Obtiene un registro de gestante por ID."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+		row = db.execute(text('SELECT * FROM gestantes WHERE id = :id'), {"id": registro_id}).fetchone()
+		if not row:
+			raise HTTPException(status_code=404, detail="Registro no encontrado")
+		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		registro = dict(zip(columnas, [str(v) if v is not None else "" for v in row]))
+		return registro
+	except HTTPException:
+		raise
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=str(e)[:300])
+	finally:
+		db.close()
+
+
+@app.put("/data/gestantes/{registro_id}")
+async def actualizar_gestante(registro_id: int, payload: dict, current_user: User = Depends(get_current_user)):
+	"""Actualiza un registro de gestante. Valida contra el instructivo."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+		# Verificar que existe
+		existing = db.execute(text('SELECT id FROM gestantes WHERE id = :id'), {"id": registro_id}).fetchone()
+		if not existing:
+			raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+		# Validar campos contra el instructivo
+		try:
+			from .gestante_config import RAW_FIELDS
+		except ImportError:
+			from gestante_config import RAW_FIELDS
+
+		errores = []
+		for i, (col_name, col_type) in enumerate(RAW_FIELDS):
+			if col_name in payload:
+				val = str(payload[col_name]).strip()
+				if col_type == "SET" and val and val != "NA":
+					# Validar opciones del SET
+					for field_name, field_type in RAW_FIELDS:
+						if field_name == col_name and field_type == "SET":
+							# Obtener opciones permitidas
+							try:
+								from .gestante_config import GESTANTE_TEMPLATE
+							except ImportError:
+								from gestante_config import GESTANTE_TEMPLATE
+							for t in GESTANTE_TEMPLATE:
+								if t["name"] == col_name and "allowed" in t:
+									if val not in t["allowed"]:
+										errores.append(f"{col_name}: '{val}' no es una opción válida")
+									break
+
+		if errores:
+			raise HTTPException(status_code=400, detail="; ".join(errores[:10]))
+
+		# Actualizar
+		set_parts = []
+		params = {"id": registro_id}
+		for key, val in payload.items():
+			set_parts.append(f'"{key}" = :{key}')
+			params[key] = str(val) if val is not None else ""
+
+		if set_parts:
+			update_sql = f'UPDATE gestantes SET {", ".join(set_parts)} WHERE id = :id'
+			db.execute(text(update_sql), params)
+			db.commit()
+
+		return {"success": True}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(status_code=500, detail=str(e)[:300])
+	finally:
+		db.close()
+
+
+@app.post("/data/gestantes")
+async def crear_gestante(payload: dict, current_user: User = Depends(get_current_user)):
+	"""Crea un registro individual de gestante (cargue de uno en uno)."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		# Obtener IPS del prestador
+		ips_prestador = ""
+		if current_user.role != "admin":
+			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			if prestador and prestador.ips:
+				ips_prestador = str(prestador.ips).strip()
+
+		# Si el prestador tiene IPS, forzar que la gestante sea de esa IPS
+		if ips_prestador and "NOMBRE_DE_LA_IPS_PRIMARIA" in payload:
+			ips_gestante = str(payload["NOMBRE_DE_LA_IPS_PRIMARIA"]).strip().upper()
+			# Buscar nombre real de la IPS
+			ips_nombre_real = None
+			try:
+				from sqlalchemy import text as sa_text
+				row = db.execute(sa_text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'), {"cod": ips_prestador}).fetchone()
+				if row:
+					ips_nombre_real = str(row[0]).strip().upper()
+			except Exception:
+				pass
+			if ips_nombre_real and ips_gestante and ips_gestante != ips_nombre_real:
+				raise HTTPException(status_code=400, detail=f"No se puede crear: la gestante pertenece a otra IPS ({ips_gestante}). Tu IPS es: {ips_nombre_real}")
+
+		from sqlalchemy import text
+		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		# Solo usar columnas que existen en la tabla y que vienen en el payload
+		cols_validas = [c for c in columnas if c in payload and c not in ("id", "created_at")]
+		if not cols_validas:
+			raise HTTPException(status_code=400, detail="No se enviaron campos válidos para guardar")
+
+		placeholders = ", ".join(f':{c}' for c in cols_validas)
+		col_names = ", ".join(f'"{c}"' for c in cols_validas)
+		params = {c: str(payload.get(c, "")) for c in cols_validas}
+
+		insert_sql = f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'
+		db.execute(text(insert_sql), params)
+		db.commit()
+		return {"success": True}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(status_code=500, detail=str(e)[:300])
+	finally:
+		db.close()
+
+
+@app.delete("/data/gestantes/{registro_id}")
+async def eliminar_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
+	"""Elimina un registro de gestante."""
+	if current_user.role != "admin":
+		raise HTTPException(status_code=403, detail="Solo el admin puede eliminar registros")
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+		existing = db.execute(text('SELECT id FROM gestantes WHERE id = :id'), {"id": registro_id}).fetchone()
+		if not existing:
+			raise HTTPException(status_code=404, detail="Registro no encontrado")
+		db.execute(text('DELETE FROM gestantes WHERE id = :id'), {"id": registro_id})
+		db.commit()
+		return {"success": True}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(status_code=500, detail=str(e)[:300])
+	finally:
+		db.close()
 
 
 if __name__ == "__main__":

@@ -22,6 +22,7 @@ const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
+const DataManagement = lazy(() => import('./components/DataManagement'))
 import { fetchTemplates, uploadFile, saveCargue, descargarReporteErroresExcelData, descargarReporteErroresExcel } from './api'
 import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
@@ -669,6 +670,13 @@ export default function App() {
             {section === 'prestadores' && (
               <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
                 <PrestadoresView />
+              </Suspense>
+            )}
+
+            {/* ─── GESTIÓN DE DATA ─── */}
+            {section === 'data' && (
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <DataManagement />
               </Suspense>
             )}
 

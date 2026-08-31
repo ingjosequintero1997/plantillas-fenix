@@ -265,6 +265,37 @@ export async function fetchMyPermissions() {
   return apiFetch(`${API_BASE}/auth/permissions`)
 }
 
+// ─── Data management ───────────────────────────────────────────────────
+export async function fetchGestantes(page = 1, pageSize = 50, search = '') {
+  const params = new URLSearchParams({ page, page_size: pageSize })
+  if (search) params.set('search', search)
+  return apiFetch(`${API_BASE}/data/gestantes?${params}`)
+}
+
+export async function fetchGestante(id) {
+  return apiFetch(`${API_BASE}/data/gestantes/${id}`)
+}
+
+export async function updateGestante(id, data) {
+  return apiFetch(`${API_BASE}/data/gestantes/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function createGestante(data) {
+  return apiFetch(`${API_BASE}/data/gestantes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteGestante(id) {
+  return apiFetch(`${API_BASE}/data/gestantes/${id}`, { method: 'DELETE' })
+}
+
 export async function revalidateData(raw_text, mapping, templateKey, mode = 'limpiador') {
   return apiFetch(`${API_BASE}/revalidate`, {
     method: 'POST',
