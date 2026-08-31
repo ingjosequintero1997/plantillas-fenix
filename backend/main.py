@@ -2581,80 +2581,46 @@ def _buscar_afiliado(documento: str):
 	try:
 		from sqlalchemy import text
 		doc = str(documento).strip()
-		# Limpiar el documento de posibles espacios o guiones internos
 		doc_limpio = doc.replace(" ", "").replace("-", "")
 		with engine.connect() as conn:
-			# 1er intento: buscar como texto exacto (VARCHAR/TEXT)
-			row = conn.execute(
-				text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :doc LIMIT 1'),
-				{"doc": doc_limpio},
-			).fetchone()
-			if row is None:
-				# 2do intento: si el documento es solo numeros, buscar como numerico (BIGINT/NUMERIC)
-				if doc_limpio.isdigit():
-					row = conn.execute(
-						text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" WHERE "{doc_col}" = :num LIMIT 1'),
-						{"num": int(doc_limpio)},
-					).fetchone()
+			# Primero descubrir columnas de ct_ips para hacer el JOIN correcto
+			ips_join_col = None
+			ips_nombre_col = None
+			try:
+				row_test = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" LIMIT 1')).fetchone()
+				if row_test:
+					ips_cols = list(row_test._mapping.keys())
+					for c in ips_cols:
+						cn = c.upper()
+						if ips_join_col is None and any(kw in cn for kw in ["COD_HABILITACION", "CODIGO", "COD_IPS"]):
+							ips_join_col = c
+						if ips_nombre_col is None and any(kw in cn for kw in ["NOMBRE", "RAZON", "DENOMINACION"]):
+							ips_nombre_col = c
+					if not ips_join_col and ips_cols:
+						ips_join_col = ips_cols[0]
+					if not ips_nombre_col and len(ips_cols) > 1:
+						ips_nombre_col = ips_cols[1]
+			except Exception:
+				pass
+
+			# Buscar afiliado con JOIN a ct_ips
+			join_sql = ""
+			if ips_join_col and ips_nombre_col:
+				join_sql = f'LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."{ips_join_col}"'
+
+			query = f'SELECT a.*, {"i." + chr(34) + ips_nombre_col + chr(34) + " as ips_nombre" if ips_nombre_col else "NULL as ips_nombre"} FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a {join_sql} WHERE a."{doc_col}" = :doc LIMIT 1'
+			row = conn.execute(text(query), {"doc": doc_limpio}).fetchone()
+			if row is None and doc_limpio.isdigit():
+				query = f'SELECT a.*, {"i." + chr(34) + ips_nombre_col + chr(34) + " as ips_nombre" if ips_nombre_col else "NULL as ips_nombre"} FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a {join_sql} WHERE a."{doc_col}" = :num LIMIT 1'
+				row = conn.execute(text(query), {"num": int(doc_limpio)}).fetchone()
 			if row is None:
 				return None, None
 			columnas = list(row._mapping.keys())
 			valores = list(row)
 			data = dict(zip(columnas, valores))
-
-			# Buscar nombre de IPS en ct_ips
-			ips_col = mapping.get("ips_primaria")
-			if ips_col and ips_col in data and data[ips_col]:
-				ips_code = str(data[ips_col]).strip()
-				if ips_code:
-					ips_nombre = _buscar_nombre_ips(conn, ips_code)
-					if ips_nombre:
-						data["_ips_nombre"] = ips_nombre
 			return data, None
 	except Exception as e:
 		return None, f"Error al consultar el afiliado: {str(e)[:200]}"
-
-
-def _buscar_nombre_ips(conn, ips_code: str) -> str | None:
-	"""Busca el nombre de una IPS en ct_ips. La primera columna es el codigo, la segunda el nombre."""
-	try:
-		from sqlalchemy import text
-		row = conn.execute(
-			text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" LIMIT 1'),
-		).fetchone()
-		if not row:
-			return None
-		# Descubrir qué columna tiene el codigo
-		columnas = list(row._mapping.keys())
-		cod_col = None
-		for c in columnas:
-			cn = c.upper()
-			if any(kw in cn for kw in ["COD", "CODIGO", "HABILITACION", "COD_HABILITACION", "ID"]):
-				cod_col = c
-				break
-		if not cod_col:
-			cod_col = columnas[0]
-		# Buscar por el codigo
-		row = conn.execute(
-			text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" WHERE "{cod_col}" = :cod LIMIT 1'),
-			{"cod": ips_code},
-		).fetchone()
-		if not row:
-			return None
-		valores = list(row)
-		# Buscar columna de nombre
-		for i, c in enumerate(columnas):
-			cn = c.upper()
-			if any(kw in cn for kw in ["NOMBRE", "RAZON", "RAZÓN", "DENOMINACION", "DENOMINACIÓN", "RAZON_SOCIAL"]):
-				v = str(valores[i]).strip() if valores[i] else None
-				if v:
-					return v
-		# Fallback: segunda columna
-		if len(valores) > 1 and valores[1]:
-			return str(valores[1]).strip()
-	except Exception:
-		pass
-	return None
 
 
 def _serializar_afiliado(data: dict, mapping: dict) -> dict:
@@ -2690,7 +2656,7 @@ def _serializar_afiliado(data: dict, mapping: dict) -> dict:
 		"discapacidad": get("discapacidad"),
 		"telefono": get("telefono", extra_cols=(mapping.get("telefono_2"), mapping.get("celular"), mapping.get("celular_2"))),
 		"barrio": get("barrio"),
-		"ips_primaria": data.get("_ips_nombre") or get("ips_primaria"),
+		"ips_primaria": data.get("ips_nombre") or get("ips_primaria"),
 	}
 
 
@@ -2707,51 +2673,6 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	mapping, _ = _mapear_columnas_afiliado(cols)
 	afiliado = _serializar_afiliado(data, mapping)
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
-
-
-@app.get("/test-ips/{codigo}")
-async def test_ips(codigo: str, current_user: User = Depends(get_current_user)):
-	"""TEMPORAL: Prueba busqueda de IPS por codigo con JOIN."""
-	try:
-		from .database import engine
-	except ImportError:
-		from database import engine
-	from sqlalchemy import text
-	with engine.connect() as conn:
-		# Buscar afiliado por documento y hacer join con ct_ips
-		try:
-			row = conn.execute(text(f'''
-				SELECT a.*, i.*
-				FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
-				LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."cod_habilitacion"
-				WHERE a."numero_identificacion" = :doc
-				LIMIT 1
-			'''), {"doc": codigo}).fetchone()
-			if row:
-				columnas = list(row._mapping.keys())
-				valores = [str(v)[:80] if v else None for v in row]
-				return {"encontrado": True, "datos": dict(zip(columnas, valores))}
-		except Exception as e:
-			pass
-		
-		# Si falla, probar directamente ct_ips
-		try:
-			row = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" LIMIT 1')).fetchone()
-			if row:
-				columnas = list(row._mapping.keys())
-				# Buscar por cada columna posible
-				for c in columnas:
-					try:
-						row2 = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" WHERE "{c}" = :cod LIMIT 1'), {"cod": codigo}).fetchone()
-						if row2:
-							valores = [str(v)[:80] if v else None for v in row2]
-							return {"encontrado": True, "tabla": "ct_ips", "columna": c, "datos": dict(zip(columnas, valores))}
-					except:
-						continue
-		except Exception as e:
-			return {"error_ct_ips": str(e)[:200]}
-		
-		return {"encontrado": False, "mensaje": "No se encontro la IPS"}
 
 
 if __name__ == "__main__":
