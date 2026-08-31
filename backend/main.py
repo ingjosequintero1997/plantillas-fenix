@@ -2604,59 +2604,57 @@ def _buscar_afiliado(documento: str):
 
 			# Buscar nombre de IPS en ct_ips
 			ips_col = mapping.get("ips_primaria")
-			ips_debug = {}
 			if ips_col and ips_col in data and data[ips_col]:
 				ips_code = str(data[ips_col]).strip()
 				if ips_code:
-					ips_nombre, ips_debug = _buscar_nombre_ips(conn, ips_code)
+					ips_nombre = _buscar_nombre_ips(conn, ips_code)
 					if ips_nombre:
 						data["_ips_nombre"] = ips_nombre
-			data["_debug_ips"] = ips_debug
 			return data, None
 	except Exception as e:
 		return None, f"Error al consultar el afiliado: {str(e)[:200]}"
 
 
-def _buscar_nombre_ips(conn, ips_code: str):
-	"""Busca el nombre de una IPS en ct_ips usando el codigo."""
-	debug = {"ips_code": ips_code, "pasos": []}
+def _buscar_nombre_ips(conn, ips_code: str) -> str | None:
+	"""Busca el nombre de una IPS en ct_ips. La primera columna es el codigo, la segunda el nombre."""
 	try:
-		cols_rows = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'administrativo' AND table_name = 'ct_ips' ORDER BY ordinal_position")).fetchall()
-		columnas = [r[0] for r in cols_rows]
-		debug["columnas_ct_ips"] = columnas
-		if not columnas:
-			debug["pasos"].append("sin columnas")
-			return None, debug
-		for cand in columnas:
-			try:
-				row = conn.execute(text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" WHERE "{cand}" = :cod LIMIT 1'), {"cod": ips_code}).fetchone()
-				if row:
-					valores = list(row)
-					debug["columna_match"] = cand
-					debug["valores_fila"] = [str(v)[:50] if v else None for v in valores[:8]]
-					for i, c in enumerate(columnas):
-						cn = c.upper()
-						if any(kw in cn for kw in ["NOMBRE", "RAZON", "RAZÓN", "DENOMINACION", "DENOMINACIÓN"]):
-							v = str(valores[i]).strip() if valores[i] else None
-							if v:
-								debug["nombre_encontrado"] = v
-								debug["por_columna"] = c
-								return v, debug
-					if len(valores) > 1:
-						v = str(valores[1]).strip() if valores[1] else None
-						if v:
-							debug["nombre_encontrado"] = v
-							debug["por_fallback"] = f"columna {columnas[1]}"
-							return v, debug
-					debug["pasos"].append("fila encontrada pero sin nombre")
-					break
-			except Exception as ex:
-				debug["pasos"].append(f"error en {cand}: {str(ex)[:80]}")
-				continue
-		debug["pasos"].append("no se encontro fila")
-	except Exception as ex:
-		debug["error"] = str(ex)[:200]
-	return None, debug
+		from sqlalchemy import text
+		row = conn.execute(
+			text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" LIMIT 1'),
+		).fetchone()
+		if not row:
+			return None
+		# Descubrir qué columna tiene el codigo
+		columnas = list(row._mapping.keys())
+		cod_col = None
+		for c in columnas:
+			cn = c.upper()
+			if any(kw in cn for kw in ["COD", "CODIGO", "HABILITACION", "COD_HABILITACION", "ID"]):
+				cod_col = c
+				break
+		if not cod_col:
+			cod_col = columnas[0]
+		# Buscar por el codigo
+		row = conn.execute(
+			text(f'SELECT * FROM "{AFILIADO_ESQUEMA}"."ct_ips" WHERE "{cod_col}" = :cod LIMIT 1'),
+			{"cod": ips_code},
+		).fetchone()
+		if not row:
+			return None
+		valores = list(row)
+		# Buscar columna de nombre
+		for i, c in enumerate(columnas):
+			cn = c.upper()
+			if any(kw in cn for kw in ["NOMBRE", "RAZON", "RAZÓN", "DENOMINACION", "DENOMINACIÓN", "RAZON_SOCIAL"]):
+				v = str(valores[i]).strip() if valores[i] else None
+				if v:
+					return v
+		# Fallback: segunda columna
+		if len(valores) > 1 and valores[1]:
+			return str(valores[1]).strip()
+	except Exception:
+		pass
+	return None
 
 
 def _serializar_afiliado(data: dict, mapping: dict) -> dict:
@@ -2708,46 +2706,7 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 		return {"encontrado": False, "documento": documento, **extra}
 	mapping, _ = _mapear_columnas_afiliado(cols)
 	afiliado = _serializar_afiliado(data, mapping)
-	return {"encontrado": True, "documento": documento, "afiliado": afiliado, "_debug_ips": data.get("_debug_ips"), **extra}
-
-
-@app.get("/explorar-ct-afiliado")
-async def explorar_ct_afiliado(current_user: User = Depends(get_current_user)):
-	"""TEMPORAL: Explora columnas y muestra 3 filas de ct_Afiliado y ct_ips."""
-	try:
-		from .database import engine
-	except ImportError:
-		from database import engine
-	try:
-		from sqlalchemy import text
-		resultado = {}
-		with engine.connect() as conn:
-			# ct_Afiliado
-			cols_rows = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'administrativo' AND table_name = 'ct_Afiliado' ORDER BY ordinal_position")).fetchall()
-			columnas_a = [r[0] for r in cols_rows]
-			rows_a = conn.execute(text('SELECT * FROM "administrativo"."ct_Afiliado" LIMIT 2')).fetchall()
-			filas_a = [dict(zip(columnas_a, [str(v) if v is not None else None for v in row])) for row in rows_a]
-			resultado["ct_Afiliado"] = {"columnas": columnas_a, "filas": filas_a}
-
-			# ct_ips
-			cols_rows2 = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'administrativo' AND table_name = 'ct_ips' ORDER BY ordinal_position")).fetchall()
-			columnas_i = [r[0] for r in cols_rows2]
-			rows_i = conn.execute(text('SELECT * FROM "administrativo"."ct_ips" LIMIT 2')).fetchall()
-			filas_i = [dict(zip(columnas_i, [str(v) if v is not None else None for v in row])) for row in rows_i]
-			resultado["ct_ips"] = {"columnas": columnas_i, "filas": filas_i}
-
-			# Buscar 803709 en ct_ips con cada columna candidata
-			for cand in columnas_i:
-				try:
-					row = conn.execute(text(f'SELECT * FROM "administrativo"."ct_ips" WHERE "{cand}" = :cod LIMIT 1'), {"cod": "803709"}).fetchone()
-					if row:
-						resultado["busqueda_803709"] = {"columna_usada": cand, "datos": dict(zip(columnas_i, [str(v) if v is not None else None for v in row]))}
-						break
-				except:
-					pass
-		return resultado
-	except Exception as e:
-		return {"error": str(e)}
+	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
 
 
 if __name__ == "__main__":
