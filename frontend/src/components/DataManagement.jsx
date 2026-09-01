@@ -244,7 +244,7 @@ export default function DataManagement() {
       } else {
         const errCount = data.errores ? data.errores.length : 0
         const primerError = errCount > 0 ? ` | Error: ${data.errores[0]}` : ''
-        const dbg = data.debug ? ` | debug: ${data.debug.cols_en_primera_linea} cols/texto, ${data.debug.real_cols_count} cols/tabla, ${data.debug.cols_validas_count} match` : ''
+        const dbg = data.debug ? ` | debug: ${data.debug.cols_en_primera_linea} cols/texto, ${data.debug.real_cols_count} cols/tabla` : ''
         setPopulateMsg(`${data.insertadas} gestantes de ${data.total_lineas} lineas (cargue #${data.cargue_id})${primerError}${dbg}`)
         loadIpsGroups()
       }

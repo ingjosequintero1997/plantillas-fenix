@@ -3147,8 +3147,9 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 					 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
 					 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
 
+		from sqlalchemy import text as sa_text
 		params = {"ips": ips_filtro} if ips_filtro else {}
-		rows = db.execute(text(sql), params).fetchall()
+		rows = db.execute(sa_text(sql), params).fetchall()
 		ips_list = [{"nombre": str(r[0]).strip(), "total": int(r[1])} for r in rows]
 		return {"ips": ips_list}
 	except Exception as e:
@@ -3196,11 +3197,8 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 		if not lineas:
 			return {"error": f"Cargue {cargue.id}: 0 lineas de texto", "insertadas": 0, "texto_len": len(texto), "primeros_200": texto[:200]}
 
-		# Debug: mostrar info de la primera linea
-		primera_cols = lineas[0].split("|")
 		debug_info = {
 			"total_lineas": len(lineas),
-			"cols_en_primera_linea": len(primera_cols),
 			"db_cols_count": len(db_cols),
 			"real_cols_count": len(real_cols),
 		}
