@@ -53,7 +53,7 @@ try:
         require_admin,
         verify_credentials,
     )
-    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes
+    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes, GESTANTE_COLUMNS
     from . import gcs_storage
 except ImportError:
     from auth_utils import (
@@ -63,7 +63,7 @@ except ImportError:
         require_admin,
         verify_credentials,
     )
-    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes
+    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes, GESTANTE_COLUMNS
     import gcs_storage
 
 class LoginPayload(BaseModel):
@@ -952,7 +952,124 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 		db.add(cargue)
 		db.commit()
 		db.refresh(cargue)
-		return {"id": cargue.id, "mes": cargue.mes, "template_key": cargue.template_key}
+
+		# ── Poblar tabla gestantes ────────────────────────────────────────
+		# Parsear corrected_text y insertar cada fila en gestantes,
+		# validando contra af_afiliado y asignando prestador_id.
+		gestantes_insertadas = 0
+		gestantes_errores = []
+		if payload.template_key == "gestante" and payload.corrected_text:
+			try:
+				lineas = [l for l in payload.corrected_text.strip().split("\n") if l.strip()]
+				if len(lineas) > 0:
+					# Mapeo: texto columna i -> GESTANTE_COLUMNS[i-1]
+					# Texto columna 0 = "No" (consecutivo, no se almacena)
+					from gestante_config import RAW_FIELDS
+					text_cols_count = len(RAW_FIELDS)
+					db_cols = GESTANTE_COLUMNS
+
+					for idx, linea in enumerate(lineas):
+						cols = linea.split("|")
+						if len(cols) < 3:
+							continue
+
+						# Extraer campos clave para validacion
+						tipo_doc = cols[1].strip() if len(cols) > 1 else ""
+						num_doc = cols[2].strip() if len(cols) > 2 else ""
+						apellido1 = cols[3].strip() if len(cols) > 3 else ""
+						apellido2 = cols[4].strip() if len(cols) > 4 else ""
+						nombre1 = cols[5].strip() if len(cols) > 5 else ""
+						nombre2 = cols[6].strip() if len(cols) > 6 else ""
+						fecha_nac = cols[7].strip() if len(cols) > 7 else ""
+						ips_fila = cols[28].strip() if len(cols) > 28 else ""
+
+						if not num_doc or num_doc == "SIN DATO":
+							gestantes_errores.append(f"Fila {idx+1}: sin numero de documento")
+							continue
+
+						# Validar contra af_afiliado
+						valida_afiliado = True
+						afiliado_data = None
+						try:
+							afiliado_data, err_busq = _buscar_afiliado(num_doc)
+							if afiliado_data is None:
+								valida_afiliado = False
+								gestantes_errores.append(f"Fila {idx+1}: documento {num_doc} no encontrado en af_afiliados")
+							else:
+								# Validar tipo de documento
+								af_tipo_doc = str(afiliado_data.get("tipo_documento", "")).strip().upper()
+								if tipo_doc and af_tipo_doc and tipo_doc.upper() != af_tipo_doc:
+									valida_afiliado = False
+									gestantes_errores.append(f"Fila {idx+1}: tipo documento no coincide ({tipo_doc} vs {af_tipo_doc})")
+								# Validar nombres
+								af_p_ap = str(afiliado_data.get("primer_apellido", "")).strip().upper()
+								if af_p_ap and apellido1 and af_p_ap != apellido1.upper():
+									valida_afiliado = False
+									gestantes_errores.append(f"Fila {idx+1}: primer apellido no coincide ({apellido1} vs {af_p_ap})")
+								af_s_ap = str(afiliado_data.get("segundo_apellido", "")).strip().upper()
+								if af_s_ap and apellido2 and af_s_ap != apellido2.upper():
+									valida_afiliado = False
+									gestantes_errores.append(f"Fila {idx+1}: segundo apellido no coincide ({apellido2} vs {af_s_ap})")
+								af_p_no = str(afiliado_data.get("primer_nombre", "")).strip().upper()
+								if af_p_no and nombre1 and af_p_no != nombre1.upper():
+									valida_afiliado = False
+									gestantes_errores.append(f"Fila {idx+1}: primer nombre no coincide ({nombre1} vs {af_p_no})")
+								af_s_no = str(afiliado_data.get("segundo_nombre", "")).strip().upper()
+								if af_s_no and nombre2 and af_s_no != nombre2.upper():
+									valida_afiliado = False
+									gestantes_errores.append(f"Fila {idx+1}: segundo nombre no coincide ({nombre2} vs {af_s_no})")
+								# Validar fecha de nacimiento
+								af_fnac = str(afiliado_data.get("fecha_nacimiento", "")).strip()
+								if af_fnac and fecha_nac and af_fnac != fecha_nac:
+									valida_afiliado = False
+									gestantes_errores.append(f"Fila {idx+1}: fecha nacimiento no coincide ({fecha_nac} vs {af_fnac})")
+								# Validar IPS
+								af_ips = str(afiliado_data.get("ips_primaria", "")).strip().upper()
+								if af_ips and ips_fila and af_ips != ips_fila.upper() and ips_fila != "NA":
+									valida_afiliado = False
+									gestantes_errores.append(f"Fila {idx+1}: IPS no coincide ({ips_fila} vs {af_ips})")
+						except Exception:
+							valida_afiliado = False
+							gestantes_errores.append(f"Fila {idx+1}: error validando documento {num_doc}")
+
+						# Construir dict para insertar en gestantes
+						registro = {}
+						for ci in range(len(db_cols)):
+							text_idx = ci + 1
+							if text_idx < len(cols):
+								registro[db_cols[ci]] = cols[text_idx].strip()
+							else:
+								registro[db_cols[ci]] = ""
+
+						# Asignar metadata del cargue
+						registro["prestador_id"] = str(prestador.id) if prestador else ""
+						registro["user_id"] = str(current_user.id)
+						registro["mes"] = cargue.mes
+						registro["original_filename"] = cargue.original_filename
+
+						try:
+							db_cols_validas = [c for c in db_cols if c in registro and c not in ("id", "created_at")]
+							placeholders = ", ".join(f':{c}' for c in db_cols_validas)
+							col_names_sql = ", ".join(f'"{c}"' for c in db_cols_validas)
+							params = {c: str(registro.get(c, "")) for c in db_cols_validas}
+							insert_sql = f'INSERT INTO gestantes ({col_names_sql}) VALUES ({placeholders})'
+							db.execute(text(insert_sql), params)
+							gestantes_insertadas += 1
+						except Exception as e_insert:
+							gestantes_errores.append(f"Fila {idx+1}: error insertando - {str(e_insert)[:100]}")
+
+					db.commit()
+			except Exception as e_parse:
+				gestantes_errores.append(f"Error parseando texto: {str(e_parse)[:200]}")
+
+		return {
+			"id": cargue.id,
+			"mes": cargue.mes,
+			"template_key": cargue.template_key,
+			"gestantes_insertadas": gestantes_insertadas,
+			"gestantes_errores": gestantes_errores[:20],
+			"total_errores": len(gestantes_errores),
+		}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para guardar el cargue. Verifica la conexión al servidor PostgreSQL.")
 	finally:
@@ -3006,12 +3123,18 @@ async def listar_gestantes(
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
-		# Obtener IPS del prestador actual
+		# Obtener IPS del prestador actual (resolving code -> name)
 		ips_filtro = None
 		if current_user.role != "admin":
 			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 			if prestador and prestador.ips:
-				ips_filtro = str(prestador.ips).strip()
+				ips_code = str(prestador.ips).strip()
+				try:
+					row_ips = db.execute(text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'), {"cod": ips_code}).fetchone()
+					if row_ips:
+						ips_filtro = str(row_ips[0]).strip().upper()
+				except Exception:
+					ips_filtro = None
 
 		offset = (max(1, page) - 1) * page_size
 		from sqlalchemy import text
@@ -3020,7 +3143,7 @@ async def listar_gestantes(
 		count_sql = 'SELECT COUNT(*) FROM gestantes WHERE 1=1'
 		count_params = {}
 		if ips_filtro:
-			count_sql += ' AND "NOMBRE_DE_LA_IPS_PRIMARIA" = :ips'
+			count_sql += ' AND UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips'
 			count_params["ips"] = ips_filtro
 		if search:
 			count_sql += ' AND ("NO_DE_IDENTIFICACION" ILIKE :q OR "APELLIDO_1" ILIKE :q OR "NOMBRE_1" ILIKE :q)'
@@ -3031,7 +3154,7 @@ async def listar_gestantes(
 		# Obtener registros
 		query_sql = 'SELECT * FROM gestantes WHERE 1=1'
 		if ips_filtro:
-			query_sql += ' AND "NOMBRE_DE_LA_IPS_PRIMARIA" = :ips'
+			query_sql += ' AND UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips'
 		if search:
 			query_sql += ' AND ("NO_DE_IDENTIFICACION" ILIKE :q OR "APELLIDO_1" ILIKE :q OR "NOMBRE_1" ILIKE :q)'
 		query_sql += ' ORDER BY id DESC LIMIT :limit OFFSET :offset'
