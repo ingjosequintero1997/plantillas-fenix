@@ -214,17 +214,25 @@ export default function DataManagement() {
   }
 
   const handlePopulate = async () => {
-    setPopulating(true); setPopulateMsg('')
+    setPopulating(true); setPopulateMsg('Procesando...')
     try {
-      const data = await populateGestantes()
+      const raw = sessionStorage.getItem('auth')
+      const token = raw ? JSON.parse(raw).token : ''
+      const resp = await fetch('/api/data/gestantes/populate', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      const text = await resp.text()
+      let data
+      try { data = JSON.parse(text) } catch { data = { error: text.slice(0, 300) } }
       if (data.error) {
         setPopulateMsg('Error: ' + data.error)
       } else {
-        setPopulateMsg(`OK: ${data.insertadas} gestantes insertadas de ${data.cargues_procesados} cargues (${data.errores?.length || 0} errores)`)
+        setPopulateMsg(`OK: ${data.insertadas} gestantes de ${data.total_lineas} lineas (cargue #${data.cargue_id})`)
         loadIpsGroups()
       }
     } catch (e) {
-      setPopulateMsg('Error: ' + (e.message || 'No se pudo poblar'))
+      setPopulateMsg('Error fetch: ' + (e.message || 'No se pudo poblar'))
     } finally {
       setPopulating(false)
     }
