@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { fetchIpsGrupos, fetchGestantes, updateGestante, createGestante, autoFillCasoCerrado, fetchCasoCerrado } from '../api'
+import { fetchIpsGrupos, fetchGestantes, updateGestante, createGestante, autoFillCasoCerrado, fetchCasoCerrado, populateGestantes } from '../api'
 
 const PAGE_SIZE = 50
 
@@ -108,6 +108,8 @@ export default function DataManagement() {
   const [casoCerradoRegistros, setCasoCerradoRegistros] = useState([])
   const [casoCerradoTotal, setCasoCerradoTotal] = useState(0)
   const [autoFillMsg, setAutoFillMsg] = useState('')
+  const [populating, setPopulating] = useState(false)
+  const [populateMsg, setPopulateMsg] = useState('')
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -211,6 +213,23 @@ export default function DataManagement() {
     }
   }
 
+  const handlePopulate = async () => {
+    setPopulating(true); setPopulateMsg('')
+    try {
+      const data = await populateGestantes()
+      if (data.error) {
+        setPopulateMsg('Error: ' + data.error)
+      } else {
+        setPopulateMsg(`OK: ${data.insertadas} gestantes insertadas de ${data.cargues_procesados} cargues (${data.errores?.length || 0} errores)`)
+        loadIpsGroups()
+      }
+    } catch (e) {
+      setPopulateMsg('Error: ' + (e.message || 'No se pudo poblar'))
+    } finally {
+      setPopulating(false)
+    }
+  }
+
   const loadCasoCerrado = async (p = 1) => {
     try {
       const data = await fetchCasoCerrado(p, PAGE_SIZE)
@@ -239,16 +258,23 @@ export default function DataManagement() {
             <div className="page-title">Gestión de data</div>
             <div className="page-subtitle">Selecciona una IPS para ver y gestionar las gestantes.</div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              Auto-fill Caso Cerrado
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handlePopulate} disabled={populating} className="btn-secondary text-sm" style={{ borderColor: '#e74c3c', color: '#e74c3c' }}>
+            {populating ? 'Poblando...' : 'Poblar data desde cargues'}
+          </button>
+          <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            Auto-fill Caso Cerrado
+          </button>
+        </div>
         </div>
 
         {autoFillMsg && (
           <div className="px-3 py-2 rounded-md text-sm" style={{ color: autoFillMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: autoFillMsg.includes('Error') ? '#FBE9E9' : '#EEF3F7' }}>{autoFillMsg}</div>
+        )}
+
+        {populateMsg && (
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: populateMsg.includes('Error') ? 'var(--error)' : 'var(--success, #27ae60)', backgroundColor: populateMsg.includes('Error') ? '#FBE9E9' : '#E8F8F0' }}>{populateMsg}</div>
         )}
 
         {error && (

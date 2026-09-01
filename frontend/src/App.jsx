@@ -260,9 +260,9 @@ export default function App() {
     if (shouldSave) {
       try {
         const saved = await saveCargue({
-          corrected_text: data.corrected_text || '',
-          raw_text: data.raw_text || '',
-          compressed: false,
+          corrected_text: raw.corrected_text || '',
+          raw_text: raw.raw_text || '',
+          compressed: true,
           template_key: data.template_key || selectedTemplate,
           filename: file.name,
           summary,

@@ -270,6 +270,10 @@ export async function fetchIpsGrupos() {
   return apiFetch(`${API_BASE}/data/gestantes/ips-grupos`)
 }
 
+export async function populateGestantes() {
+  return apiFetch(`${API_BASE}/data/gestantes/populate`, { method: 'POST' })
+}
+
 export async function fetchGestantes(page = 1, pageSize = 50, search = '', ips = '') {
   const params = new URLSearchParams({ page, page_size: pageSize })
   if (search) params.set('search', search)
