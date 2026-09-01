@@ -270,7 +270,17 @@ export default function App() {
           corrected_count: summary.corrected || 0,
           quality_percent: summary.quality_percent || 0,
         })
-        if (saved && saved.id) setLastCargueId(String(saved.id))
+        if (saved && saved.id) {
+          setLastCargueId(String(saved.id))
+          if (saved.gestantes_insertadas !== undefined) {
+            const msgGest = `Gestantes insertadas: ${saved.gestantes_insertadas}`
+            const errGest = saved.total_errores > 0 ? ` | Errores: ${saved.total_errores}` : ''
+            console.log(msgGest + errGest)
+            if (saved.gestantes_errores && saved.gestantes_errores.length > 0) {
+              console.log('Errores gestantes:', saved.gestantes_errores)
+            }
+          }
+        }
       } catch (e) {
         console.warn('No se pudo guardar el cargue:', e)
         setError('No se pudo guardar el cargue en el historial: ' + (e.message || 'error'))
