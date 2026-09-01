@@ -255,7 +255,9 @@ export default function App() {
       valido: !tieneErrores,
     }
     // Regla "todo o nada": solo se guarda en la BD la data validada sin errores.
-    if (!tieneErrores) {
+    // En modo limpiador, SIEMPRE guardar porque los errores ya fueron corregidos.
+    const shouldSave = processingMode === 'limpiador' || !tieneErrores
+    if (shouldSave) {
       try {
         const saved = await saveCargue({
           corrected_text: raw.corrected_text || '',
