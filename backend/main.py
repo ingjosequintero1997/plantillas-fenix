@@ -3126,8 +3126,8 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 
 
 @app.post("/data/gestantes/populate")
-async def populate_gestantes_from_cargues(current_user: User = Depends(require_admin)):
-	"""Lee todos los cargues y puebla la tabla gestantes. Para uso manual."""
+async def populate_gestantes_from_cargues(current_user: User = Depends(get_current_user)):
+	"""Lee el ultimo cargue y puebla la tabla gestantes."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
@@ -3136,71 +3136,69 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 		from sqlalchemy import text as sa_text
 		import base64, gzip
 
-		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id).all()
+		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
 		if not cargues:
 			return {"error": "No hay cargues de gestantes", "insertadas": 0}
 
 		db_cols = GESTANTE_COLUMNS
-		real_cols = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		try:
+			real_cols = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		except Exception as e:
+			return {"error": f"No se pudo leer columnas de gestantes: {str(e)[:200]}", "insertadas": 0}
 
 		total_insertadas = 0
 		total_errores = []
-		cargues_procesados = 0
+		cargue = cargues[0]
 
-		for cargue in cargues:
-			texto = cargue.corrected_text or cargue.raw_text or ""
-			if not texto:
+		texto = cargue.corrected_text or cargue.raw_text or ""
+		if not texto:
+			return {"error": f"Cargue {cargue.id} vacio", "insertadas": 0}
+
+		if cargue.compressed:
+			try:
+				texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
+			except Exception as e:
+				return {"error": f"Cargue {cargue.id}: error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
+
+		lineas = [l for l in texto.strip().split("\n") if l.strip()]
+		if not lineas:
+			return {"error": f"Cargue {cargue.id}: 0 lineas de texto", "insertadas": 0, "texto_len": len(texto), "primeros_200": texto[:200]}
+
+		for idx, linea in enumerate(lineas):
+			cols = linea.split("|")
+			if len(cols) < 3:
 				continue
 
-			if cargue.compressed:
-				try:
-					texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
-				except Exception as e:
-					total_errores.append(f"Cargue {cargue.id}: error descomprimiendo: {str(e)[:100]}")
+			registro = {}
+			for ci in range(min(len(db_cols), len(cols) - 1)):
+				registro[db_cols[ci]] = cols[ci + 1].strip()
+
+			registro["prestador_id"] = str(cargue.prestador_id) if cargue.prestador_id else ""
+			registro["user_id"] = str(cargue.user_id) if cargue.user_id else ""
+			registro["mes"] = cargue.mes or ""
+			registro["original_filename"] = cargue.original_filename or ""
+
+			try:
+				cols_validas = [c for c in real_cols if c in registro and c != "id"]
+				if not cols_validas:
 					continue
-
-			lineas = [l for l in texto.strip().split("\n") if l.strip()]
-			if not lineas:
-				continue
-
-			cargues_procesados += 1
-			for idx, linea in enumerate(lineas):
-				cols = linea.split("|")
-				if len(cols) < 3:
-					continue
-
-				registro = {}
-				for ci in range(min(len(db_cols), len(cols) - 1)):
-					registro[db_cols[ci]] = cols[ci + 1].strip()
-
-				registro["prestador_id"] = str(cargue.prestador_id) if cargue.prestador_id else ""
-				registro["user_id"] = str(cargue.user_id) if cargue.user_id else ""
-				registro["mes"] = cargue.mes or ""
-				registro["original_filename"] = cargue.original_filename or ""
-
-				try:
-					cols_validas = [c for c in real_cols if c in registro and c != "id"]
-					if not cols_validas:
-						continue
-					placeholders = ", ".join(f':{c}' for c in cols_validas)
-					col_names = ", ".join(f'"{c}"' for c in cols_validas)
-					params_ins = {c: str(registro.get(c, "")) for c in cols_validas}
-					db.execute(sa_text(f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'), params_ins)
-					total_insertadas += 1
-				except Exception as e:
-					total_errores.append(f"Cargue {cargue.id} fila {idx+1}: {str(e)[:100]}")
-					if len(total_errores) > 50:
-						break
-			if len(total_errores) > 50:
-				break
+				placeholders = ", ".join(f':{c}' for c in cols_validas)
+				col_names = ", ".join(f'"{c}"' for c in cols_validas)
+				params_ins = {c: str(registro.get(c, "")) for c in cols_validas}
+				db.execute(sa_text(f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'), params_ins)
+				total_insertadas += 1
+			except Exception as e:
+				total_errores.append(f"Fila {idx+1}: {str(e)[:100]}")
+				if len(total_errores) >= 10:
+					break
 
 		db.commit()
 		return {
 			"ok": True,
-			"cargues_encontrados": len(cargues),
-			"cargues_procesados": cargues_procesados,
+			"cargue_id": cargue.id,
+			"total_lineas": len(lineas),
 			"insertadas": total_insertadas,
-			"errores": total_errores[:30],
+			"errores": total_errores[:10],
 		}
 	except Exception as e:
 		db.rollback()

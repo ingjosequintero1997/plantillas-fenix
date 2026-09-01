@@ -271,7 +271,7 @@ export async function fetchIpsGrupos() {
 }
 
 export async function populateGestantes() {
-  return apiFetch(`${API_BASE}/data/gestantes/populate`, { method: 'POST' })
+  return apiFetch(`${API_BASE}/data/gestantes/populate`, { method: 'POST', signal: AbortSignal.timeout(120000) })
 }
 
 export async function fetchGestantes(page = 1, pageSize = 50, search = '', ips = '') {
