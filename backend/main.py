@@ -3164,6 +3164,18 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 		if not lineas:
 			return {"error": f"Cargue {cargue.id}: 0 lineas de texto", "insertadas": 0, "texto_len": len(texto), "primeros_200": texto[:200]}
 
+		# Debug: mostrar info de la primera linea
+		primera_cols = lineas[0].split("|")
+		debug_info = {
+			"total_lineas": len(lineas),
+			"cols_en_primera_linea": len(primera_cols),
+			"db_cols_count": len(db_cols),
+			"real_cols_count": len(real_cols),
+			"real_cols_primeras_5": real_cols[:5],
+			"primera_linea_primeras_5": primera_cols[:5] if len(primera_cols) >= 5 else primera_cols,
+			"cols_validas_count": len([c for c in real_cols if c in {db_cols[ci]: True for ci in range(min(len(db_cols), len(primera_cols) - 1))} and c != "id"]),
+		}
+
 		for idx, linea in enumerate(lineas):
 			cols = linea.split("|")
 			if len(cols) < 3:
@@ -3199,6 +3211,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 			"total_lineas": len(lineas),
 			"insertadas": total_insertadas,
 			"errores": total_errores[:10],
+			"debug": debug_info,
 		}
 	except Exception as e:
 		db.rollback()
