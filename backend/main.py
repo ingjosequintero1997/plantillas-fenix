@@ -55,6 +55,7 @@ try:
     )
     from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes, GESTANTE_COLUMNS
     from . import gcs_storage
+    from . import corporate_db
 except ImportError:
     from auth_utils import (
         create_token,
@@ -65,6 +66,7 @@ except ImportError:
     )
     from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes, GESTANTE_COLUMNS
     import gcs_storage
+    import corporate_db
 
 class LoginPayload(BaseModel):
     username: str
@@ -197,6 +199,40 @@ async def debug_db():
 		info["conectado"] = False
 		info["error_conexion"] = str(e)[:300]
 	return info
+
+@app.get("/debug-corporate-db")
+async def debug_corporate_db():
+	"""Diagnostica la conexión con la BD corporativa Dusakawi."""
+	try:
+		conectado = corporate_db.test_conexion_corporativa()
+		if conectado:
+			# Intentar leer tabla de afiliados
+			engine = corporate_db.get_corporate_connection()
+			if engine:
+				from sqlalchemy import text
+				conn = engine.connect()
+				try:
+					result = conn.execute(text('SELECT COUNT(*) FROM administrativo."af_Afiliados"')).scalar()
+					return {
+						"conectado": True,
+						"db_corporativa": "postgres://...@129.80.159.38:5435/base_sie_dusakawi",
+						"tabla_afiliados": "administrativo.af_Afiliados",
+						"total_afiliados": int(result),
+						"error": None
+					}
+				finally:
+					conn.close()
+		return {
+			"conectado": False,
+			"db_corporativa": "postgres://...@129.80.159.38:5435/base_sie_dusakawi",
+			"tabla_afiliados": "administrativo.af_Afiliados",
+			"error": "No se pudo establecer conexión con BD corporativa"
+		}
+	except Exception as e:
+		return {
+			"conectado": False,
+			"error": str(e)[:300]
+		}
 
 @app.post("/setup-gestantes")
 async def setup_gestantes(current_user: User = Depends(require_admin)):
@@ -3090,28 +3126,24 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
-		from sqlalchemy import text
+		# Para prestadores, filtrar por su IPS
 		ips_filtro = None
 		if current_user.role != "admin":
 			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 			if prestador and prestador.ips:
-				ips_code = str(prestador.ips).strip()
-				try:
-					row_ips = db.execute(text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'), {"cod": ips_code}).fetchone()
-					if row_ips:
-						ips_filtro = str(row_ips[0]).strip().upper()
-				except Exception:
-					pass
+				ips_filtro = str(prestador.ips).strip().upper()
 
 		sql = '''SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
 				 FROM gestantes
 				 WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL AND "NOMBRE_DE_LA_IPS_PRIMARIA" != ''
 				 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
 				 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
+		
 		if ips_filtro:
+			# Prestador: solo ver su IPS
 			sql = '''SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
 					 FROM gestantes
-					 WHERE UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips
+					 WHERE UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = UPPER(:ips)
 					 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
 					 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
 
@@ -3127,7 +3159,7 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 
 @app.post("/data/gestantes/populate")
 async def populate_gestantes_from_cargues(current_user: User = Depends(get_current_user)):
-	"""Lee el ultimo cargue y puebla la tabla gestantes."""
+	"""Lee el ultimo cargue y puebla la tabla gestantes, dividiendo por prestador segun IPS."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
@@ -3171,10 +3203,20 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 			"cols_en_primera_linea": len(primera_cols),
 			"db_cols_count": len(db_cols),
 			"real_cols_count": len(real_cols),
-			"real_cols_primeras_5": real_cols[:5],
-			"primera_linea_primeras_5": primera_cols[:5] if len(primera_cols) >= 5 else primera_cols,
-			"cols_validas_count": len([c for c in real_cols if c in {db_cols[ci]: True for ci in range(min(len(db_cols), len(primera_cols) - 1))} and c != "id"]),
 		}
+
+		# Mapeo de nombres de IPS a prestadores para asignar prestador_id
+		ips_to_prestador = {}
+		prestadores = db.query(Prestador).all()
+		for prest in prestadores:
+			ips_key = str(prest.ips).strip().upper() if prest.ips else ""
+			if ips_key:
+				ips_to_prestador[ips_key] = prest.id
+			# También mapear por nombre si existe
+			if prest.nombre:
+				name_key = str(prest.nombre).strip().upper()
+				if name_key not in ips_to_prestador:  # No sobrescribir mapeo por código
+					ips_to_prestador[name_key] = prest.id
 
 		for idx, linea in enumerate(lineas):
 			cols = linea.split("|")
@@ -3182,13 +3224,18 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 				continue
 
 			registro = {}
-			for ci in range(min(len(db_cols), len(cols) - 1)):
-				registro[db_cols[ci]] = cols[ci + 1].strip()
+			for ci in range(min(len(db_cols), len(cols))):
+				if ci < len(cols):
+					registro[db_cols[ci]] = cols[ci].strip()
 
-			registro["prestador_id"] = str(cargue.prestador_id) if cargue.prestador_id else ""
-			registro["user_id"] = str(cargue.user_id) if cargue.user_id else ""
-			registro["mes"] = cargue.mes or ""
-			registro["original_filename"] = cargue.original_filename or ""
+			# Buscar prestador según NOMBRE_DE_LA_IPS_PRIMARIA
+			ips_primaria = registro.get("NOMBRE_DE_LA_IPS_PRIMARIA", "").strip().upper()
+			prestador_id = ips_to_prestador.get(ips_primaria)
+
+			registro["prestador_id"] = prestador_id if prestador_id else (cargue.prestador_id if cargue.prestador_id else None)
+			registro["user_id"] = cargue.user_id if cargue.user_id else None
+			registro["mes"] = cargue.mes or None
+			registro["original_filename"] = cargue.original_filename or None
 
 			try:
 				cols_validas = [c for c in real_cols if c in registro and c != "id"]
@@ -3196,7 +3243,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 					continue
 				placeholders = ", ".join(f':{c}' for c in cols_validas)
 				col_names = ", ".join(f'"{c}"' for c in cols_validas)
-				params_ins = {c: str(registro.get(c, "")) for c in cols_validas}
+				params_ins = {c: registro.get(c) if registro.get(c) != "" else None for c in cols_validas}
 				db.execute(sa_text(f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'), params_ins)
 				total_insertadas += 1
 			except Exception as e:
@@ -3232,18 +3279,12 @@ async def listar_gestantes(
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
-		# Obtener IPS del prestador actual (resolving code -> name)
+		# Obtener IPS del prestador actual
 		ips_filtro = None
 		if current_user.role != "admin":
 			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 			if prestador and prestador.ips:
-				ips_code = str(prestador.ips).strip()
-				try:
-					row_ips = db.execute(text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'), {"cod": ips_code}).fetchone()
-					if row_ips:
-						ips_filtro = str(row_ips[0]).strip().upper()
-				except Exception:
-					ips_filtro = None
+				ips_filtro = str(prestador.ips).strip().upper()
 
 		# Si se pasa el param ips explicitamente, usarlo (para admin que quiere filtrar por IPS)
 		if ips and current_user.role == "admin":

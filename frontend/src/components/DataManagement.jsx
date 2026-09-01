@@ -114,12 +114,26 @@ export default function DataManagement() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const loadIpsGroups = async () => {
-    setLoading(true); setError('')
+    setLoading(true)
+    setError('')
     try {
       const data = await fetchIpsGrupos()
+      if (!data) {
+        setError('Respuesta vacía del servidor')
+        setIpsGroups([])
+        return
+      }
+      if (data.error) {
+        setError(data.error)
+        setIpsGroups([])
+        return
+      }
       setIpsGroups(data.ips || [])
     } catch (e) {
-      setError(e.message || 'No se pudieron cargar las IPS')
+      const errMsg = e.message || 'No se pudieron cargar las IPS'
+      console.error('Error loading IPS groups:', errMsg)
+      setError(`Error: ${errMsg}. Si el problema persiste, contacta administración.`)
+      setIpsGroups([])
     } finally {
       setLoading(false)
     }
@@ -256,7 +270,7 @@ export default function DataManagement() {
   }
 
   // ─── New gestante form ────────────────────────────────────
-  if (showNewForm) {
+  if (view === 'ips_detail' && showNewForm) {
     return <NewGestanteForm onSave={handleCreate} onClose={() => setShowNewForm(false)} />
   }
 
