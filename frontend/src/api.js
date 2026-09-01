@@ -266,9 +266,14 @@ export async function fetchMyPermissions() {
 }
 
 // ─── Data management ───────────────────────────────────────────────────
-export async function fetchGestantes(page = 1, pageSize = 50, search = '') {
+export async function fetchIpsGrupos() {
+  return apiFetch(`${API_BASE}/data/gestantes/ips-grupos`)
+}
+
+export async function fetchGestantes(page = 1, pageSize = 50, search = '', ips = '') {
   const params = new URLSearchParams({ page, page_size: pageSize })
   if (search) params.set('search', search)
+  if (ips) params.set('ips', ips)
   return apiFetch(`${API_BASE}/data/gestantes?${params}`)
 }
 

@@ -1,20 +1,26 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { fetchGestantes, updateGestante, createGestante, fetchMyPermissions, autoFillCasoCerrado, fetchCasoCerrado } from '../api'
+import { fetchIpsGrupos, fetchGestantes, updateGestante, createGestante, autoFillCasoCerrado, fetchCasoCerrado } from '../api'
 
 const PAGE_SIZE = 50
 
-// Campos clave para mostrar en la tabla resumen
 const TABLE_COLS = [
+  { key: 'TIPO_DE_DOCUMENTO_DE_IDENTIDAD', label: 'Tipo Doc' },
   { key: 'NO_DE_IDENTIFICACION', label: 'Documento' },
   { key: 'APELLIDO_1', label: 'Apellido 1' },
+  { key: 'APELLIDO_2', label: 'Apellido 2' },
   { key: 'NOMBRE_1', label: 'Nombre 1' },
+  { key: 'NOMBRE_2', label: 'Nombre 2' },
   { key: 'FECHA_DE_NACIMIENTO', label: 'Nacimiento' },
   { key: 'EDAD', label: 'Edad' },
-  { key: 'NOMBRE_DE_LA_IPS_PRIMARIA', label: 'IPS' },
+  { key: 'SEXO', label: 'Sexo' },
+  { key: 'FECHA_DE_DIAGNOSTICO', label: 'F. Diagnóstico' },
+  { key: 'FUM', label: 'FUM' },
+  { key: 'ULTIMO_CONTROL_PRENATAL', label: 'Últ. Control' },
+  { key: 'FECHA_DE_PARTO', label: 'F. Parto' },
+  { key: 'CASO_CERRADO', label: 'Caso Cerrado' },
 ]
 
-// Campos del formulario de edición (grupos)
-const FORM_SECTIONS = [
+const EDIT_SECTIONS = [
   {
     titulo: 'Datos personales',
     fields: [
@@ -47,75 +53,124 @@ const FORM_SECTIONS = [
       'HABITOS_DE_RIESGO',
     ],
   },
+  {
+    titulo: 'Tamizajes',
+    fields: [
+      'ASESORIA_PRUEBA_VIH', 'TRIMESTRE_ASESORIA_VIH',
+      'FECHA_TOMA_PRUEBA_VIH_PRIMER_TAMIZAJE', 'RESULTADO_PRIMER_TAMIZAJE_PRUEBA_DE_VIH',
+      'FECHA_TOMA_PRUEBA_VIH_SEGUNDO_TAMIZAJE', 'RESULTADO_SEGUNDO_TAMIZAJE_PRUEBA_DE_VIH',
+      'FECHA_TOMA_PRUEBA_VIH_TERCER_TAMIZAJE', 'RESULTADO_TERCER_TAMIZAJE_PRUEBA_DE_VIH',
+      'FECHA_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'RESULTADO_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS',
+      'FECHA_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'RESULTADO_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS',
+      'FECHA_DE_DIAGNOSTICO_DE_SIFILIS', 'TRATAMIENTO_INSTAURADO',
+    ],
+  },
+  {
+    titulo: 'Controles y controles',
+    fields: [
+      'FECHA_1ER_CONTROL', 'QUIEN_REALIZO_EL_CONTROL',
+      'FECHA_2DO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_2',
+      'FECHA_3ER_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_3',
+      'FECHA_4TO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_4',
+      'FECHA_5TO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_5',
+      'NUMERO_TOTAL_DE_CONTROLES_PRENATALES', 'ULTIMO_CONTROL_PRENATAL',
+      'EDAD_GESTACIONAL_ACTUAL', 'PESO_ACTUAL', 'TALLA_ACTUAL', 'IMC', 'TA_ACTUAL',
+    ],
+  },
+  {
+    titulo: 'Eventos obstétricos',
+    fields: [
+      'TIPO_DE_ABORTO', 'FECHA', 'SEMANAS_DE_GESTACION', 'COMPLICACIONES',
+      'FECHA_DE_PARTO', 'CARACTERISTICAS_DEL_PARTO', 'PARTO_ATENDIDO_POR',
+      'NO_SEMANAS_DE_GESTACION', 'COMPLICACIONES_DURANTE_EL_PARTO',
+      'TIPO_COMPLICACION', 'UCI_MATERNA', 'TOMA_DE_PRUEBAS_ITS_INTRAPARTO',
+      'MULTIPLICIDAD_DEL_EMBARAZO', 'CASO_CERRADO', 'OBSERVACIONES_GENERALES',
+    ],
+  },
 ]
 
 export default function DataManagement() {
+  const [view, setView] = useState('ips_list') // 'ips_list' | 'ips_detail' | 'editing'
+  const [ipsGroups, setIpsGroups] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [selectedIps, setSelectedIps] = useState(null)
   const [registros, setRegistros] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [editing, setEditing] = useState(null) // registro object or null
+  const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({})
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const [permissions, setPermissions] = useState({})
-  const [activeTab, setActiveTab] = useState('gestantes') // 'gestantes' | 'caso_cerrado'
+  const [showNewForm, setShowNewForm] = useState(false)
+  const [activeTab, setActiveTab] = useState('gestantes')
   const [casoCerradoRegistros, setCasoCerradoRegistros] = useState([])
   const [casoCerradoTotal, setCasoCerradoTotal] = useState(0)
-  const [casoCerradoPage, setCasoCerradoPage] = useState(1)
-  const [autoFillDone, setAutoFillDone] = useState(false)
   const [autoFillMsg, setAutoFillMsg] = useState('')
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const load = async () => {
+  const loadIpsGroups = async () => {
     setLoading(true); setError('')
     try {
-      const data = await fetchGestantes(page, PAGE_SIZE, search)
-      setRegistros(data.registros || [])
-      setTotal(data.total || 0)
-      if (data.error) setError(data.error)
+      const data = await fetchIpsGrupos()
+      setIpsGroups(data.ips || [])
     } catch (e) {
-      setError(e.message || 'No se pudo cargar la data')
+      setError(e.message || 'No se pudieron cargar las IPS')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { load() }, [page])
-  useEffect(() => {
-    fetchMyPermissions().then(d => setPermissions(d.permissions || {})).catch(() => {})
-  }, [])
-
-  const handleSearch = () => { setPage(1); load() }
-
-  const handleAutoFillCasoCerrado = async () => {
+  const loadGestantes = async (ipsName = '', p = 1, q = '') => {
+    setLoading(true); setError('')
     try {
-      const data = await autoFillCasoCerrado()
-      setAutoFillMsg(`Caso Cerrado auto-llenado: ${data.total_caso_cerrado} registros marcados`)
-      setAutoFillDone(true)
-      loadCasoCerrado(1)
-      setTimeout(() => setAutoFillMsg(''), 5000)
+      const data = await fetchGestantes(p, PAGE_SIZE, q, ipsName)
+      setRegistros(data.registros || [])
+      setTotal(data.total || 0)
+      if (data.error) setError(data.error)
     } catch (e) {
-      setAutoFillMsg('Error: ' + (e.message || 'No se pudo auto-llenar'))
+      setError(e.message || 'No se pudieron cargar los registros')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const loadCasoCerrado = async (p = 1) => {
-    try {
-      const data = await fetchCasoCerrado(p, PAGE_SIZE)
-      setCasoCerradoRegistros(data.registros || [])
-      setCasoCerradoTotal(data.total || 0)
-      setCasoCerradoPage(p)
-    } catch (e) {}
+  useEffect(() => { loadIpsGroups() }, [])
+
+  const handleSelectIps = (ips) => {
+    setSelectedIps(ips)
+    setPage(1)
+    setSearch('')
+    setView('ips_detail')
+    loadGestantes(ips.nombre, 1, '')
+  }
+
+  const handleBack = () => {
+    setView('ips_list')
+    setSelectedIps(null)
+    setRegistros([])
+    setTotal(0)
+    setPage(1)
+    loadIpsGroups()
+  }
+
+  const handleSearch = () => {
+    setPage(1)
+    loadGestantes(selectedIps?.nombre || '', 1, search)
+  }
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage)
+    loadGestantes(selectedIps?.nombre || '', newPage, search)
   }
 
   const startEdit = (reg) => {
     setEditing(reg)
     setForm({ ...reg })
     setMsg('')
+    setView('editing')
   }
 
   const handleFormChange = (key, val) => setForm(f => ({ ...f, [key]: val }))
@@ -126,7 +181,8 @@ export default function DataManagement() {
       await updateGestante(editing.id, form)
       setMsg('Guardado correctamente')
       setEditing(null)
-      load()
+      setView('ips_detail')
+      loadGestantes(selectedIps?.nombre || '', page, search)
     } catch (e) {
       setMsg('Error: ' + (e.message || 'No se pudo guardar'))
     } finally {
@@ -138,71 +194,133 @@ export default function DataManagement() {
     try {
       await createGestante(data)
       setShowNewForm(false)
-      load()
+      setView('ips_detail')
+      loadGestantes(selectedIps?.nombre || '', page, search)
     } catch (e) {
       throw e
     }
   }
 
-  if (editing) {
-    return (
-      <EditForm
-        form={form}
-        onChange={handleFormChange}
-        onSave={saveEdit}
-        onClose={() => setEditing(null)}
-        saving={saving}
-        msg={msg}
-      />
-    )
+  const handleAutoFillCasoCerrado = async () => {
+    try {
+      const data = await autoFillCasoCerrado()
+      setAutoFillMsg(`Caso Cerrado auto-llenado: ${data.total_caso_cerrado} registros marcados`)
+      setTimeout(() => setAutoFillMsg(''), 5000)
+    } catch (e) {
+      setAutoFillMsg('Error: ' + (e.message || 'No se pudo auto-llenar'))
+    }
   }
 
+  const loadCasoCerrado = async (p = 1) => {
+    try {
+      const data = await fetchCasoCerrado(p, PAGE_SIZE)
+      setCasoCerradoRegistros(data.registros || [])
+      setCasoCerradoTotal(data.total || 0)
+    } catch (e) {}
+  }
+
+  // ─── Edit view ────────────────────────────────────────────
+  if (view === 'editing' && editing) {
+    return <EditForm form={form} onChange={handleFormChange} onSave={saveEdit}
+      onClose={() => { setEditing(null); setView('ips_detail') }} saving={saving} msg={msg} />
+  }
+
+  // ─── New gestante form ────────────────────────────────────
   if (showNewForm) {
+    return <NewGestanteForm onSave={handleCreate} onClose={() => setShowNewForm(false)} />
+  }
+
+  // ─── IPS List view ────────────────────────────────────────
+  if (view === 'ips_list') {
     return (
-      <NewGestanteForm
-        onSave={handleCreate}
-        onClose={() => setShowNewForm(false)}
-        permissions={permissions}
-      />
+      <div className="space-y-5 fade-in">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="page-title">Gestión de data</div>
+            <div className="page-subtitle">Selecciona una IPS para ver y gestionar las gestantes.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              Auto-fill Caso Cerrado
+            </button>
+          </div>
+        </div>
+
+        {autoFillMsg && (
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: autoFillMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: autoFillMsg.includes('Error') ? '#FBE9E9' : '#EEF3F7' }}>{autoFillMsg}</div>
+        )}
+
+        {error && (
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+        )}
+
+        {loading ? (
+          <div className="skeleton h-40 w-full rounded-xl" />
+        ) : ipsGroups.length === 0 ? (
+          <div className="empty">
+            <div className="empty-icon">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="empty-title">Sin datos</div>
+            <div className="empty-desc">No hay registros de gestantes en el sistema. Sube un cargue desde "Validar data" primero.</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {ipsGroups.map((item) => (
+              <button
+                key={item.nombre}
+                onClick={() => handleSelectIps(item)}
+                className="panel text-left hover:shadow-md transition-shadow"
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
+                    <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{item.nombre}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{item.total} gestantes</div>
+                  </div>
+                  <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     )
   }
 
+  // ─── IPS Detail view (list of gestantes for one IPS) ──────
   return (
     <div className="space-y-5 fade-in">
       <div className="flex items-center justify-between">
-        <div>
-          <div className="page-title">Gestión de data</div>
-          <div className="page-subtitle">Visualiza y edita los registros de gestantes del sistema.</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            Nuevo registro
+        <div className="flex items-center gap-3">
+          <button onClick={handleBack} className="btn-ghost text-sm px-2 py-1">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </button>
-          <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            Auto-fill Caso Cerrado
-          </button>
+          <div>
+            <div className="page-title">{selectedIps?.nombre || 'IPS'}</div>
+            <div className="page-subtitle">{total} gestantes registradas</div>
+          </div>
         </div>
-      </div>
-
-      {autoFillMsg && (
-        <div className="px-3 py-2 rounded-md text-sm" style={{ color: autoFillMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: autoFillMsg.includes('Error') ? '#FBE9E9' : '#EEF3F7' }}>{autoFillMsg}</div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-1">
-        <button onClick={() => setActiveTab('gestantes')} className="px-3 py-1.5 text-sm rounded-md" style={{ backgroundColor: activeTab === 'gestantes' ? 'var(--primary)' : 'var(--bg-secondary)', color: activeTab === 'gestantes' ? 'white' : 'var(--text)' }}>
-          Registros ({total})
-        </button>
-        <button onClick={() => { setActiveTab('caso_cerrado'); loadCasoCerrado(1) }} className="px-3 py-1.5 text-sm rounded-md" style={{ backgroundColor: activeTab === 'caso_cerrado' ? 'var(--primary)' : 'var(--bg-secondary)', color: activeTab === 'caso_cerrado' ? 'white' : 'var(--text)' }}>
-          Caso Cerrado ({casoCerradoTotal})
+        <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+          Nuevo registro
         </button>
       </div>
 
       {error && (
         <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
       )}
+
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -217,10 +335,8 @@ export default function DataManagement() {
           />
         </div>
         <button onClick={handleSearch} className="btn-secondary text-sm">Buscar</button>
-        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{total} registros</span>
       </div>
 
-      {/* Tabla */}
       {loading ? (
         <div className="skeleton h-40 w-full rounded-xl" />
       ) : registros.length === 0 ? (
@@ -231,7 +347,7 @@ export default function DataManagement() {
             </svg>
           </div>
           <div className="empty-title">Sin registros</div>
-          <div className="empty-desc">No se encontraron gestantes con los filtros actuales.</div>
+          <div className="empty-desc">No se encontraron gestantes para esta IPS.</div>
         </div>
       ) : (
         <div className="table-wrap">
@@ -252,7 +368,7 @@ export default function DataManagement() {
                     {(page - 1) * PAGE_SIZE + i + 1}
                   </td>
                   {TABLE_COLS.map((col) => (
-                    <td key={col.key} className="text-sm max-w-[150px] truncate">
+                    <td key={col.key} className="text-sm max-w-[120px] truncate">
                       {reg[col.key] || '—'}
                     </td>
                   ))}
@@ -270,73 +386,9 @@ export default function DataManagement() {
             <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
               <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {page} de {totalPages}</span>
               <div className="flex gap-1">
-                <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>
-                <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="btn-secondary px-2.5 py-1 text-xs">Siguiente →</button>
+                <button onClick={() => handlePageChange(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>
+                <button onClick={() => handlePageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="btn-secondary px-2.5 py-1 text-xs">Siguiente →</button>
               </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Contenido del tab Caso Cerrado */}
-      {activeTab === 'caso_cerrado' && (
-        <div className="space-y-4 fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Caso Cerrado</div>
-              <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Gestantes que cumplen los criterios de caso cerrado (10 meses de evolución, último control prenatal previo al reporte, y fecha de parto o aborto registradas).</div>
-            </div>
-          </div>
-
-          {casoCerradoRegistros.length === 0 && !loading ? (
-            <div className="empty">
-              <div className="empty-icon">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="empty-title">Sin casos cerrados</div>
-              <div className="empty-desc">Usa el botón "Auto-fill Caso Cerrado" para marcar automáticamente los casos que cumplen los criterios.</div>
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th className="text-center">#</th>
-                    <th>Documento</th>
-                    <th>Apellido 1</th>
-                    <th>Nombre 1</th>
-                    <th>IPS</th>
-                    <th>Últ. Control</th>
-                    <th>F. Parto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {casoCerradoRegistros.map((reg, i) => (
-                    <tr key={reg.id}>
-                      <td className="text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        {(casoCerradoPage - 1) * PAGE_SIZE + i + 1}
-                      </td>
-                      <td className="text-sm">{reg.NO_DE_IDENTIFICACION || '—'}</td>
-                      <td className="text-sm">{reg.APELLIDO_1 || '—'}</td>
-                      <td className="text-sm">{reg.NOMBRE_1 || '—'}</td>
-                      <td className="text-sm">{reg.NOMBRE_DE_LA_IPS_PRIMARIA || '—'}</td>
-                      <td className="text-sm">{reg.ULTIMO_CONTROL_PRENATAL || '—'}</td>
-                      <td className="text-sm">{reg.FECHA_DE_PARTO || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {Math.ceil(casoCerradoTotal / PAGE_SIZE) > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {casoCerradoPage} de {Math.ceil(casoCerradoTotal / PAGE_SIZE)}</span>
-                  <div className="flex gap-1">
-                    <button onClick={() => loadCasoCerrado(casoCerradoPage - 1)} disabled={casoCerradoPage <= 1} className="btn-secondary px-2.5 py-1 text-xs">←</button>
-                    <button onClick={() => loadCasoCerrado(casoCerradoPage + 1)} disabled={casoCerradoPage >= Math.ceil(casoCerradoTotal / PAGE_SIZE)} className="btn-secondary px-2.5 py-1 text-xs">→</button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -344,6 +396,7 @@ export default function DataManagement() {
     </div>
   )
 }
+
 
 function EditForm({ form, onChange, onSave, onClose, saving, msg }) {
   const [activeSection, setActiveSection] = useState(0)
@@ -353,7 +406,7 @@ function EditForm({ form, onChange, onSave, onClose, saving, msg }) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Editar gestante — {form.NO_DE_IDENTIFICACION || ''}
+            Editar — {form.NO_DE_IDENTIFICACION || ''}
           </div>
           <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             {form.APELLIDO_1} {form.APELLIDO_2} {form.NOMBRE_1} {form.NOMBRE_2}
@@ -365,9 +418,8 @@ function EditForm({ form, onChange, onSave, onClose, saving, msg }) {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 mb-4 overflow-x-auto">
-        {FORM_SECTIONS.map((sec, i) => (
+        {EDIT_SECTIONS.map((sec, i) => (
           <button
             key={i}
             onClick={() => setActiveSection(i)}
@@ -382,16 +434,14 @@ function EditForm({ form, onChange, onSave, onClose, saving, msg }) {
         ))}
       </div>
 
-      {/* Campos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-2">
-        {FORM_SECTIONS[activeSection].fields.map((field) => (
+        {EDIT_SECTIONS[activeSection].fields.map((field) => (
           <div key={field}>
             <label className="form-label text-xs">{field.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}</label>
             <input
               value={form[field] || ''}
               onChange={(e) => onChange(field, e.target.value)}
               className="input text-sm"
-              placeholder=""
             />
           </div>
         ))}
@@ -409,6 +459,7 @@ function EditForm({ form, onChange, onSave, onClose, saving, msg }) {
     </div>
   )
 }
+
 
 function NewGestanteForm({ onSave, onClose }) {
   const [form, setForm] = useState({
@@ -432,7 +483,7 @@ function NewGestanteForm({ onSave, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.NO_DE_IDENTIFICACION) { setError('El número de documento es obligatorio'); return }
+    if (!form.NO_DE_IDENTIFICACION) { setError('El numero de documento es obligatorio'); return }
     if (!form.APELLIDO_1) { setError('El primer apellido es obligatorio'); return }
     if (!form.NOMBRE_1) { setError('El primer nombre es obligatorio'); return }
     setSaving(true); setError('')
@@ -451,7 +502,7 @@ function NewGestanteForm({ onSave, onClose }) {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Nuevo registro de gestante</div>
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Registra una gestante individual (un registro a la vez).</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Registra una gestante individual.</div>
           </div>
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -467,14 +518,14 @@ function NewGestanteForm({ onSave, onClose }) {
           <div>
             <label className="form-label">Tipo de documento *</label>
             <select value={form.TIPO_DE_DOCUMENTO_DE_IDENTIDAD} onChange={(e) => handleChange('TIPO_DE_DOCUMENTO_DE_IDENTIDAD', e.target.value)} className="input">
-              <option value="CC">Cédula de Ciudadanía</option>
+              <option value="CC">Cedula de Ciudadania</option>
               <option value="TI">Tarjeta de Identidad</option>
               <option value="RC">Registro Civil</option>
               <option value="PT">Pasaporte</option>
             </select>
           </div>
           <div>
-            <label className="form-label">Número de documento *</label>
+            <label className="form-label">Numero de documento *</label>
             <input value={form.NO_DE_IDENTIFICACION} onChange={(e) => handleChange('NO_DE_IDENTIFICACION', e.target.value)} className="input" />
           </div>
           <div>
@@ -506,7 +557,7 @@ function NewGestanteForm({ onSave, onClose }) {
             <input value={form.EDAD} onChange={(e) => handleChange('EDAD', e.target.value)} className="input" />
           </div>
           <div>
-            <label className="form-label">Fecha diagnóstico embarazo</label>
+            <label className="form-label">Fecha diagnostico embarazo</label>
             <input type="date" value={form.FECHA_DE_DIAGNOSTICO} onChange={(e) => handleChange('FECHA_DE_DIAGNOSTICO', e.target.value)} className="input" />
           </div>
           <div>

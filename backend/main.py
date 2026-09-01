@@ -3112,12 +3112,55 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 
 # ─── Gestión de data (ver, editar, crear registros de gestantes) ───────────
 
+@app.get("/data/gestantes/ips-grupos")
+async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
+	"""Devuelve lista de IPS primarias con conteo de registros.
+	Admin ve todas; prestador solo ve su IPS."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+		ips_filtro = None
+		if current_user.role != "admin":
+			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			if prestador and prestador.ips:
+				ips_code = str(prestador.ips).strip()
+				try:
+					row_ips = db.execute(text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'), {"cod": ips_code}).fetchone()
+					if row_ips:
+						ips_filtro = str(row_ips[0]).strip().upper()
+				except Exception:
+					pass
+
+		sql = '''SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
+				 FROM gestantes
+				 WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL AND "NOMBRE_DE_LA_IPS_PRIMARIA" != ''
+				 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
+				 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
+		if ips_filtro:
+			sql = '''SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
+					 FROM gestantes
+					 WHERE UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips
+					 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
+					 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
+
+		params = {"ips": ips_filtro} if ips_filtro else {}
+		rows = db.execute(text(sql), params).fetchall()
+		ips_list = [{"nombre": str(r[0]).strip(), "total": int(r[1])} for r in rows]
+		return {"ips": ips_list}
+	except Exception as e:
+		return {"error": str(e)[:300], "ips": []}
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes")
 async def listar_gestantes(
 	current_user: User = Depends(get_current_user),
 	page: int = 1,
 	page_size: int = 50,
 	search: str = "",
+	ips: str = "",
 ):
 	"""Lista registros de gestantes. Admin ve todos, prestador solo los de su IPS."""
 	ensure_db_ready()
@@ -3135,6 +3178,10 @@ async def listar_gestantes(
 						ips_filtro = str(row_ips[0]).strip().upper()
 				except Exception:
 					ips_filtro = None
+
+		# Si se pasa el param ips explicitamente, usarlo (para admin que quiere filtrar por IPS)
+		if ips and current_user.role == "admin":
+			ips_filtro = str(ips).strip().upper()
 
 		offset = (max(1, page) - 1) * page_size
 		from sqlalchemy import text
