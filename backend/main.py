@@ -913,8 +913,14 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 			if ips_prestador_nombre:
 				# Validar que todas las filas tengan la misma IPS
 				IPS_COL_INDEX = 28  # Indice de "Nombre de la IPS Primaria" en gestante
-				texto = payload.corrected_text or payload.raw_text or ""
-				lineas = [l for l in texto.strip().split("\n") if l.strip()]
+				texto_raw = payload.corrected_text or payload.raw_text or ""
+				if payload.compressed:
+					try:
+						import base64, gzip
+						texto_raw = gzip.decompress(base64.b64decode(texto_raw)).decode("utf-8", errors="replace")
+					except Exception:
+						pass
+				lineas = [l for l in texto_raw.strip().split("\n") if l.strip()]
 				if len(lineas) > 1:
 					errores_ips = []
 					for i, linea in enumerate(lineas[1:], start=2):
@@ -960,7 +966,14 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 		gestantes_errores = []
 		if payload.template_key == "gestante" and payload.corrected_text:
 			try:
-				lineas = [l for l in payload.corrected_text.strip().split("\n") if l.strip()]
+				texto_cargue = payload.corrected_text
+				if payload.compressed:
+					try:
+						import base64, gzip
+						texto_cargue = gzip.decompress(base64.b64decode(texto_cargue)).decode("utf-8", errors="replace")
+					except Exception:
+						pass
+				lineas = [l for l in texto_cargue.strip().split("\n") if l.strip()]
 				if len(lineas) > 0:
 					# Mapeo: texto columna i -> GESTANTE_COLUMNS[i-1]
 					# Texto columna 0 = "No" (consecutivo, no se almacena)
