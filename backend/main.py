@@ -504,19 +504,35 @@ def _correccion_excel(tipo, tdef, val_str):
 
 
 def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, template_key: str, active_template: list[dict]):
-	corrected_df, logs, stats = validate_and_correct(df, mapping, active_template)
-	# Normalizar todas las fechas a AAAA-MM-DD (ej: 3/04/2000 -> 2000-04-03)
+	corrected_df, _corrector_logs, stats = validate_and_correct(df, mapping, active_template)
 	try:
 		from .validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
 	except ImportError:
 		from validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
 	corrected_df = normalizar_fechas_df(corrected_df, active_template)
 	corrected_df = limpiar_celdas_export(corrected_df)
-	# Asegurar que no hay NaN antes de exportar
 	corrected_df = corrected_df.fillna("SIN DATO").astype(str)
-	# Reemplazar saltos de linea en celdas para no romper el formato pipe-delimited
 	for col in corrected_df.columns:
 		corrected_df[col] = corrected_df[col].str.replace(r'[\r\n]+', ' ', regex=True)
+	buf = io.StringIO()
+	corrected_df.to_csv(buf, sep='|', index=False, header=False, na_rep='SIN DATO')
+	corrected_text = buf.getvalue()
+	# Log de errores por celda: usar _errores_rapidos sobre la data corregida
+	# (misma fuente que el Excel de errores para consistencia total).
+	errors_by_cell = _errores_rapidos(corrected_text, template_key)
+	logs_sample = []
+	tmap2 = {t["name"]: t for t in active_template}
+	for (row_idx, col_name), msg in errors_by_cell.items():
+		val = ""
+		if row_idx < len(corrected_df) and col_name in corrected_df.columns:
+			val = str(corrected_df.iloc[row_idx][col_name]) if col_name in corrected_df.columns else ""
+		logs_sample.append({
+			"row": row_idx + 1,
+			"column": col_name,
+			"original": val,
+			"corrected": msg,
+			"status": "error",
+		})
 	# Cross-field validation for gestante template
 	cross_field_errors = []
 	if template_key == "gestante":
@@ -524,15 +540,11 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 			cross_field_errors = validate_cross_fields(corrected_df)
 		except Exception:
 			pass
-	# Merge cross-field errors into logs
-	all_logs = logs + [
+	all_logs = logs_sample + [
 		{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
 		for e in cross_field_errors
 	]
 	stats["cross_field_errors"] = len(cross_field_errors)
-	buf = io.StringIO()
-	corrected_df.to_csv(buf, sep='|', index=False, header=False, na_rep='SIN DATO')
-	corrected_text = buf.getvalue()
 	preview_rows = corrected_df.head(30).to_dict(orient='records')
 	return {
 		"success": True,
@@ -2375,6 +2387,28 @@ async def validate_data(payload: dict):
 
 	report_text = "\ufeff" + "\r\n".join(output_lines)
 
+	logs_sample = []
+	for (r, c), msg in errors_by_cell.items():
+		val = ""
+		if r < len(template_rows) and c < len(template_cols):
+			val = str(template_rows[r][c]) if c < len(template_rows[r]) else ""
+		# Skip false-positive entries: empty, SIN DATO, or formula markers
+		val_norm = val.upper().replace(" ", "").strip()
+		if not val or val_norm in ("", "SINDATO", "N/A", "NA"):
+			continue
+		if msg == "OBLIGATORIO":
+			continue
+		# Check for formula marker that may leak into corrector output
+		if "<CALCULAR:" in msg.upper() or "_CALCULADO" in val_norm:
+			continue
+		logs_sample.append({
+			"row": r + 1,
+			"column": c,
+			"original": val,
+			"corrected": msg,
+			"status": "error",
+		})
+
 	return {
 		"valid": stats["rows_with_errors"] == 0,
 		"stats": {
@@ -2388,6 +2422,7 @@ async def validate_data(payload: dict):
 		"row_errors": {str(k): v for k, v in row_errors.items()},
 		"errors_by_cell": {f"{r}|{c}": m for (r, c), m in errors_by_cell.items()},
 		"cross_field_errors": cross_field_errors,
+		"logs_sample": logs_sample,
 		"report_text": base64.b64encode(report_text.encode("utf-8")).decode("ascii"),
 		"template_key": template_key,
 	}
