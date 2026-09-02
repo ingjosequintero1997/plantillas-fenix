@@ -1,6 +1,6 @@
 import re
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 import pandas as pd
 from dateutil import parser
@@ -759,6 +759,283 @@ def _default_para(tipo: str, tdef: dict):
 	return "SIN DATO"
 
 FIELD_SET_ALIASES_NORM = {normalize_text(k): v for k, v in FIELD_SET_ALIASES.items()}
+
+
+# ─── Cross-field validation ──────────────────────────────────────────────────
+
+def _safe_int(val):
+    """Convert to int, returning None on failure."""
+    if val is None or pd.isna(val):
+        return None
+    s = str(val).strip()
+    if not s or s.upper() in ("SIN DATO", "N/A", "NONE", ""):
+        return None
+    try:
+        return int(float(s.replace(",", ".")))
+    except (ValueError, TypeError):
+        return None
+
+
+def _safe_float(val):
+    """Convert to float, returning None on failure."""
+    if val is None or pd.isna(val):
+        return None
+    s = str(val).strip()
+    if not s or s.upper() in ("SIN DATO", "N/A", "NONE", ""):
+        return None
+    try:
+        return float(s.replace(",", "."))
+    except (ValueError, TypeError):
+        return None
+
+
+def _safe_date(val):
+    """Convert to date object, returning None on failure."""
+    if val is None or pd.isna(val):
+        return None
+    s = str(val).strip()
+    if not s or s.upper() in ("SIN DATO", "N/A", "NONE", "1900-01-01", "1845-01-01"):
+        return None
+    iso = to_date_iso(s)
+    if not iso:
+        return None
+    try:
+        return datetime.strptime(iso, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _get_col(row, *patterns):
+    """Get value from row by column name patterns (case-insensitive)."""
+    for pat in patterns:
+        pn = re.sub(r"\s+", "", pat.upper())
+        for col in row.index:
+            if re.sub(r"\s+", "", col.upper()) == pn:
+                v = row.get(col)
+                return str(v).strip() if pd.notna(v) else ""
+            if pn in re.sub(r"\s+", "", col.upper()):
+                v = row.get(col)
+                return str(v).strip() if pd.notna(v) else ""
+    return ""
+
+
+def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
+    """
+    Validate cross-field relationships for gestante data.
+    Returns list of error dicts: {row, column, message, severity}
+    """
+    errors = []
+    today = datetime.now().date()
+
+    for ridx, row in df.iterrows():
+        row_num = ridx + 1  # 1-indexed
+
+        # ── 1. G,P,C,A,M,V relationships ──
+        g = _safe_int(_get_col(row, "G"))
+        p = _safe_int(_get_col(row, "P"))
+        c = _safe_int(_get_col(row, "C"))
+        a = _safe_int(_get_col(row, "A"))
+        m = _safe_int(_get_col(row, "M"))
+        v = _safe_int(_get_col(row, "V"))
+
+        if g is not None and p is not None and a is not None and m is not None:
+            if g < p + a + m:
+                errors.append({
+                    "row": row_num, "column": "G",
+                    "message": f"G({g}) debe ser >= P({p})+A({a})+M({m})={p+a+m}",
+                    "severity": "error",
+                })
+        if p is not None and c is not None:
+            if p < c:
+                errors.append({
+                    "row": row_num, "column": "P",
+                    "message": f"P({p}) debe ser >= C({c})",
+                    "severity": "error",
+                })
+        if p is not None and v is not None:
+            if p < v:
+                errors.append({
+                    "row": row_num, "column": "V",
+                    "message": f"P({p}) debe ser >= V({v}) (hijos vivos no puede exceder partos)",
+                    "severity": "error",
+                })
+
+        # ── 2. Date logic ──
+        fnac = _safe_date(_get_col(row, "Fecha de Nacimiento"))
+        fum = _safe_date(_get_col(row, "FUM"))
+        fpp = _safe_date(_get_col(row, "FPP"))
+        ingreso = _safe_date(_get_col(row, "Fecha de Ingreso al Control Prenatal"))
+        diagnostico = _safe_date(_get_col(row, "Fecha de Diagnostico del embarazo"))
+
+        # Fecha nacimiento must be before today
+        if fnac and fnac >= today:
+            errors.append({
+                "row": row_num, "column": "Fecha de Nacimiento",
+                "message": f"Fecha de nacimiento ({fnac}) debe ser anterior a hoy",
+                "severity": "error",
+            })
+
+        # FUM must be before FPP
+        if fum and fpp and fum >= fpp:
+            errors.append({
+                "row": row_num, "column": "FUM",
+                "message": f"FUM ({fum}) debe ser anterior a FPP ({fpp})",
+                "severity": "error",
+            })
+
+        # FPP should be ~FUM + 280 days (allow 7 days tolerance)
+        if fum and fpp:
+            expected_fpp = fum + timedelta(days=280)
+            diff = abs((fpp - expected_fpp).days)
+            if diff > 7:
+                errors.append({
+                    "row": row_num, "column": "FPP",
+                    "message": f"FPP ({fpp}) difiere de FUM+280 ({expected_fpp}) por {diff} días",
+                    "severity": "warning",
+                })
+
+        # Fecha diagnostico should be after FUM (or close)
+        if diagnostico and fum and diagnostico < fum - timedelta(days=30):
+            errors.append({
+                "row": row_num, "column": "Fecha de Diagnostico del embarazo",
+                "message": f"Fecha de diagnóstico ({diagnostico}) es anterior a FUM ({fum}) por más de 30 días",
+                "severity": "warning",
+            })
+
+        # Ingreso should be after FUM (or close)
+        if ingreso and fum and ingreso < fum - timedelta(days=30):
+            errors.append({
+                "row": row_num, "column": "Fecha de Ingreso al Control Prenatal",
+                "message": f"Fecha de ingreso ({ingreso}) es anterior a FUM ({fum}) por más de 30 días",
+                "severity": "warning",
+            })
+
+        # Control dates should be after FUM and before today
+        control_cols = [
+            "Fecha 1er Control", "Fecha 2do Control", "Fecha 3er Control",
+            "Fecha 4to Control", "Fecha 5to Control", "Fecha 6to Control",
+            "Fecha 7mo Control", "fecha 8vo Control", "Fecha 9no Control",
+        ]
+        for ctrl_col in control_cols:
+            ctrl_date = _safe_date(_get_col(row, ctrl_col))
+            if ctrl_date:
+                if fum and ctrl_date < fum - timedelta(days=7):
+                    errors.append({
+                        "row": row_num, "column": ctrl_col,
+                        "message": f"{ctrl_col} ({ctrl_date}) es anterior a FUM ({fum})",
+                        "severity": "warning",
+                    })
+                if ctrl_date > today:
+                    errors.append({
+                        "row": row_num, "column": ctrl_col,
+                        "message": f"{ctrl_col} ({ctrl_date}) es futuro",
+                        "severity": "error",
+                    })
+
+        # ── 3. Calculated field verification ──
+        # EDAD should match (today - FECHA_NACIMIENTO)
+        edad = _safe_int(_get_col(row, "Edad (años)"))
+        if fnac and edad is not None:
+            expected_edad = today.year - fnac.year - ((today.month, today.day) < (fnac.month, fnac.day))
+            if abs(edad - expected_edad) > 1:
+                errors.append({
+                    "row": row_num, "column": "Edad (años)",
+                    "message": f"Edad declarada ({edad}) difiere de la calculada ({expected_edad})",
+                    "severity": "warning",
+                })
+
+        # EDAD_GEST_INICIO should match (INGRESO - FUM) / 7
+        edad_gest = _safe_float(_get_col(row, "Edad Gest Inicio Control"))
+        if fum and ingreso and edad_gest is not None:
+            semanas = (ingreso - fum).days / 7.0
+            if abs(edad_gest - semanas) > 2:
+                errors.append({
+                    "row": row_num, "column": "Edad Gest Inicio Control",
+                    "message": f"Edad gestacional inicio ({edad_gest:.1f} sem) difiere de la calculada ({semanas:.1f} sem)",
+                    "severity": "warning",
+                })
+
+        # TRIMESTRE_INICIO should match EDAD_GEST_INICIO
+        trim_inicio = _safe_int(_get_col(row, "Trimestre inicio control"))
+        if edad_gest is not None and trim_inicio is not None and trim_inicio > 0:
+            if edad_gest < 14 and trim_inicio != 1:
+                errors.append({
+                    "row": row_num, "column": "Trimestre inicio control",
+                    "message": f"Edad gestacional ({edad_gest:.1f} sem) indica Trimestre 1, pero dice {trim_inicio}",
+                    "severity": "warning",
+                })
+            elif 14 <= edad_gest < 28 and trim_inicio != 2:
+                errors.append({
+                    "row": row_num, "column": "Trimestre inicio control",
+                    "message": f"Edad gestacional ({edad_gest:.1f} sem) indica Trimestre 2, pero dice {trim_inicio}",
+                    "severity": "warning",
+                })
+            elif edad_gest >= 28 and trim_inicio != 3:
+                errors.append({
+                    "row": row_num, "column": "Trimestre inicio control",
+                    "message": f"Edad gestacional ({edad_gest:.1f} sem) indica Trimestre 3, pero dice {trim_inicio}",
+                    "severity": "warning",
+                })
+
+        # IMC should match PESO / TALLA^2
+        peso = _safe_float(_get_col(row, "Peso Inicial (kg)"))
+        talla = _safe_float(_get_col(row, "Talla (metros)"))
+        imc = _safe_float(_get_col(row, "Indice de Masa Corporal (IMC)"))
+        if peso and talla and talla > 0 and imc is not None:
+            expected_imc = peso / (talla * talla)
+            if abs(imc - expected_imc) > 0.5:
+                errors.append({
+                    "row": row_num, "column": "Indice de Masa Corporal (IMC)",
+                    "message": f"IMC declarado ({imc:.2f}) difiere del calculado ({expected_imc:.2f})",
+                    "severity": "warning",
+                })
+
+        # CLASIF_IMC should match IMC value
+        clasif_imc = _get_col(row, "Clasificación del IMC")
+        if imc is not None and clasif_imc and clasif_imc.upper() not in ("SIN DATO", ""):
+            expected_clasif = _clasif_imc_from_value(imc)
+            if expected_clasif and normalize_text(clasif_imc) != normalize_text(expected_clasif):
+                errors.append({
+                    "row": row_num, "column": "Clasificación del IMC",
+                    "message": f"IMC ({imc:.2f}) indica '{expected_clasif}', pero dice '{clasif_imc}'",
+                    "severity": "warning",
+                })
+
+        # ── 4. Required fields enforcement ──
+        required_fields = [
+            ("No. De Identificación", "INT"),
+            ("Apellido_1,", "TEXT"),
+            ("Nombre_1,", "TEXT"),
+            ("Fecha de Nacimiento", "DATE"),
+            ("Sexo", "SET"),
+            ("Regimen Afiliacion", "SET"),
+            ("FUM", "DATE"),
+        ]
+        for field_name, field_type in required_fields:
+            val = _get_col(row, field_name)
+            if not val or val.upper() in ("SIN DATO", "N/A", "NONE", "1900-01-01", "1845-01-01"):
+                errors.append({
+                    "row": row_num, "column": field_name,
+                    "message": f"Campo requerido vacío o sin dato",
+                    "severity": "error",
+                })
+
+    return errors
+
+
+def _clasif_imc_from_value(imc: float) -> str | None:
+    """Return expected IMC classification from value."""
+    if imc < 18.5:
+        return "BAJO PESO"
+    if imc < 25:
+        return "PESO NORMAL"
+    if imc < 30:
+        return "SOBREPESO"
+    if imc < 35:
+        return "OBESIDAD GRADO 1"
+    if imc < 40:
+        return "OBESIDAD GRADO 2"
+    return "OBESIDAD GRADO 3"
 
 
 def field_aliases_for(col: str) -> dict:

@@ -507,9 +507,9 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 	corrected_df, logs, stats = validate_and_correct(df, mapping, active_template)
 	# Normalizar todas las fechas a AAAA-MM-DD (ej: 3/04/2000 -> 2000-04-03)
 	try:
-		from .validators import normalizar_fechas_df, limpiar_celdas_export
+		from .validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
 	except ImportError:
-		from validators import normalizar_fechas_df, limpiar_celdas_export
+		from validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
 	corrected_df = normalizar_fechas_df(corrected_df, active_template)
 	corrected_df = limpiar_celdas_export(corrected_df)
 	# Asegurar que no hay NaN antes de exportar
@@ -517,6 +517,19 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 	# Reemplazar saltos de linea en celdas para no romper el formato pipe-delimited
 	for col in corrected_df.columns:
 		corrected_df[col] = corrected_df[col].str.replace(r'[\r\n]+', ' ', regex=True)
+	# Cross-field validation for gestante template
+	cross_field_errors = []
+	if template_key == "gestante":
+		try:
+			cross_field_errors = validate_cross_fields(corrected_df)
+		except Exception:
+			pass
+	# Merge cross-field errors into logs
+	all_logs = logs + [
+		{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
+		for e in cross_field_errors
+	]
+	stats["cross_field_errors"] = len(cross_field_errors)
 	buf = io.StringIO()
 	corrected_df.to_csv(buf, sep='|', index=False, header=False, na_rep='SIN DATO')
 	corrected_text = buf.getvalue()
@@ -527,7 +540,8 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 		"mapping_suggested": mapping,
 		"mapping": mapping,
 		"summary": stats,
-		"logs_sample": logs[:50000],
+		"logs_sample": all_logs[:50000],
+		"cross_field_errors": cross_field_errors,
 		"corrected_text": _gz_compress(corrected_text),
 		"preview_rows": preview_rows,
 		"raw_text": _gz_compress(raw_text),
@@ -832,10 +846,26 @@ async def revalidate(payload: RevalidatePayload):
 			if len(df) == 0:
 				raise HTTPException(status_code=400, detail="Archivo vacío")
 			try:
-				from .validators import validate_only
+				from .validators import validate_only, validate_cross_fields, reordenar_a_template
 			except ImportError:
-				from validators import validate_only
+				from validators import validate_only, validate_cross_fields, reordenar_a_template
 			validation_result = validate_only(df, payload.mapping, active_template)
+			# Cross-field validation for gestante template
+			cross_field_errors = []
+			if template_key == "gestante":
+				try:
+					df_ordered = reordenar_a_template(df, payload.mapping, active_template)
+					cross_field_errors = validate_cross_fields(df_ordered)
+				except Exception:
+					pass
+			# Merge cross-field errors into logs
+			all_logs = validation_result["logs"] + [
+				{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
+				for e in cross_field_errors
+			]
+			# Update stats
+			validation_result["stats"]["cross_field_errors"] = len(cross_field_errors)
+			validation_result["stats"]["errors"] += len(cross_field_errors)
 			raw_text_compressed = _gz_compress(payload.raw_text)
 			return JSONResponse({
 				"success": True,
@@ -844,7 +874,8 @@ async def revalidate(payload: RevalidatePayload):
 				"mapping_suggested": payload.mapping,
 				"mapping": payload.mapping,
 				"summary": validation_result["stats"],
-				"logs_sample": validation_result["logs"],
+				"logs_sample": all_logs[:5000],
+				"cross_field_errors": cross_field_errors,
 				"corrected_text": raw_text_compressed,
 				"raw_text": raw_text_compressed,
 				"template_names": [t['name'] for t in active_template],
@@ -2342,6 +2373,26 @@ async def validate_data(payload: dict):
 
 	stats["rows_with_errors"] = len(row_errors)
 
+	# Cross-field validation for gestante template
+	cross_field_errors = []
+	if template_key == "gestante":
+		try:
+			from .validators import validate_cross_fields
+		except ImportError:
+			from validators import validate_cross_fields
+		try:
+			cross_field_errors = validate_cross_fields(df)
+			for e in cross_field_errors:
+				ridx = e["row"] - 1  # convert to 0-indexed
+				if ridx not in row_errors:
+					row_errors[ridx] = []
+				row_errors[ridx].append(f"[{e['column']}] {e['message']}")
+				stats["total_error_cells"] += 1
+			stats["rows_with_errors"] = len(row_errors)
+			stats["cross_field_errors"] = len(cross_field_errors)
+		except Exception:
+			pass
+
 	# Tipos por columna para normalizar fechas en el reporte
 	tipos_por_col = {t["name"]: t["type"] for t in tmpl}
 
@@ -2382,9 +2433,11 @@ async def validate_data(payload: dict):
 			"rows_ok": n - stats["rows_with_errors"],
 			"total_error_cells": stats["total_error_cells"],
 			"by_column": stats["by_column"],
+			"cross_field_errors": stats.get("cross_field_errors", 0),
 		},
 		"row_errors": {str(k): v for k, v in row_errors.items()},
 		"errors_by_cell": {f"{r}|{c}": m for (r, c), m in errors_by_cell.items()},
+		"cross_field_errors": cross_field_errors,
 		"report_text": base64.b64encode(report_text.encode("utf-8")).decode("ascii"),
 		"template_key": template_key,
 	}
