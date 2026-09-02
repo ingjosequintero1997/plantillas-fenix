@@ -2261,117 +2261,73 @@ async def validate_data(payload: dict):
 		if len(df.columns) == len(tmpl_names):
 			df.columns = tmpl_names
 
+	# Usar validate_only() de validators.py — UN SOLO validador para todo
+	try:
+		from .validators import validate_only, normalize_text
+	except ImportError:
+		from validators import validate_only, normalize_text
+
+	mapping = {c: c for c in df.columns if c in [t['name'] for t in tmpl]}
+	validation_result = validate_only(df, mapping, tmpl)
+
+	# Convertir resultado de validate_only al formato que espera el frontend
+	n = len(df)
 	tmap = {t["name"]: t for t in tmpl}
 	template_cols = [t["name"] for t in tmpl]
-	n = len(df)
 
-	# Errores por fila: {row_idx: ["col: msg", ...]}
 	row_errors: dict[int, list[str]] = {}
-	# Errores por celda: {(row_idx, col_name): msg_correccion}
 	errors_by_cell: dict[tuple, str] = {}
 	stats = {"total": n, "rows_with_errors": 0, "total_error_cells": 0, "by_column": {}}
 
-	for ci, col_name in enumerate(template_cols):
-		if ci >= len(df.columns):
-			break
-		tdef = tmap.get(col_name)
-		if not tdef:
-			continue
+	for log_entry in validation_result.get("logs", []):
+		ridx = int(log_entry["row"]) - 1
+		col = log_entry["column"]
+		orig = log_entry.get("original", "")
+		tdef = tmap.get(col)
+		tipo = tdef.get("type") if tdef else "TEXT"
 
-		values = df.iloc[:, ci].tolist()
-		col_errors = 0
+		if ridx not in row_errors:
+			row_errors[ridx] = []
 
-		for ridx, val in enumerate(values):
-			val_str = str(val).strip() if val else ""
-			err_msg = None
+		if tipo == "SET":
+			allowed = [str(a).strip() for a in (tdef.get("allowed") or [])]
+			opciones = ", ".join(allowed[:8]) if allowed else "los valores del instructivo"
+			if not orig.strip():
+				msg = f"[{col}] Campo vacio. Opciones: {pciones}"
+			else:
+				msg = f"[{col}] Valor '{orig}' no valido. Opciones: {pciones}"
+		elif tipo == "INT":
+			if not orig.strip():
+				msg = f"[{col}] Campo vacio. Solo enteros (ej: 25)"
+			else:
+				msg = f"[{col}] '{orig}' no es entero valido (ej: 25)"
+		elif tipo == "DECIMAL":
+			if not orig.strip():
+				msg = f"[{col}] Campo vacio. Numero decimal (ej: 60.5)"
+			else:
+				msg = f"[{col}] '{orig}' no es decimal valido (ej: 60.5)"
+		elif tipo == "DATE":
+			if not orig.strip():
+				msg = f"[{col}] Campo vacio. Fecha (AAAA-MM-DD)"
+			else:
+				msg = f"[{col}] '{orig}' no es fecha valida (AAAA-MM-DD)"
+		else:
+			msg = f"[{col}] {log_entry.get('corrected', 'Dato invalido')}"
 
-			if tdef["type"] == "SET":
-				allowed = [str(a).strip() for a in tdef.get("allowed", [])]
-				normalized_allowed = [normalize_text(a) for a in allowed]
-				if val_str:
-					sn = normalize_text(val_str)
-					if sn not in normalized_allowed:
-						alias_match = False
-						expected = None
-						for alias_canonical, alias_synonyms in {
-							"SI": {"S", "1", "YES", "Y", "SI"},
-							"NO": {"N", "0", "FALSE", "F", "NO"},
-							"MASCULINO": {"M"},
-							"FEMENINO": {"F"},
-							"CC": {"CEDULA", "C.C.", "C.C"},
-							"TI": {"TARJETA IDENTIDAD", "T.I."},
-							"CE": {"CEDULA DE EXTRANJERIA", "C.E."},
-						}.items():
-							if sn in {normalize_text(a) for a in alias_synonyms} and normalize_text(alias_canonical) in normalized_allowed:
-								expected = alias_canonical
-								alias_match = True
-								break
-						if not alias_match:
-							try:
-								from .validators import field_aliases_for
-							except ImportError:
-								from validators import field_aliases_for
-							field_aliases = field_aliases_for(col_name)
-							if field_aliases:
-								for canonical, synonyms in field_aliases.items():
-									if sn in {normalize_text(a) for a in synonyms}:
-										if normalize_text(canonical) in normalized_allowed:
-											expected = canonical
-											alias_match = True
-											break
-						if not alias_match:
-							allowed_str = ", ".join(allowed[:8])
-							err_msg = f"[{col_name}] Valor '{val_str}' no permitido. Opciones: {allowed_str}"
-							col_errors += 1
+		row_errors[ridx].append(msg)
+		errors_by_cell[(ridx, col)] = log_entry.get("corrected", "Dato invalido")
+		stats["total_error_cells"] += 1
 
-			elif tdef["type"] == "INT":
-				# Estricto: solo enteros. "SIN DATO", texto y vacio son errores.
-				clean = val_str.replace("-", "").replace(" ", "")
-				if not re.fullmatch(r'[+-]?\d+', clean):
-					err_msg = f"[{col_name}] Se esperaba entero, se encontro '{val_str}'"
-					col_errors += 1
-
-			elif tdef["type"] == "DECIMAL":
-				# Estricto: solo numeros decimales.
-				s = val_str.replace(" ", "").replace(",", ".")
-				if not re.fullmatch(r'[+-]?\d+(\.\d+)?', s):
-					err_msg = f"[{col_name}] Se esperaba decimal, se encontro '{val_str}'"
-					col_errors += 1
-
-			elif tdef["type"] == "DATE":
-				# Estricto: solo fechas validas. "SIN DATO" u otros textos son errores.
-				if not val_str:
-					err_msg = f"[{col_name}] Fecha vacia. Requerida (formato: AAAA-MM-DD)"
-					col_errors += 1
-				elif to_date_iso(val_str) is None:
-					err_msg = f"[{col_name}] Fecha invalida: '{val_str}' (formato: AAAA-MM-DD)"
-					col_errors += 1
-
-			elif tdef["type"] == "TEXT":
-				# Estricto: solo texto. No acepta vacios, numeros puros ni fechas,
-				# salvo campos naturalmente numericos (identificacion, telefono, etc.).
-				campo_numerico = any(k in normalize_text(col_name) for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
-				if not val_str:
-					err_msg = f"[{col_name}] Valor vacio. Requerido"
-					col_errors += 1
-				elif not campo_numerico and re.fullmatch(r'[+-]?\d+(\.\d+)?', val_str.replace(",", ".")):
-					err_msg = f"[{col_name}] Se esperaba texto, se encontro numero '{val_str}'"
-					col_errors += 1
-				elif not campo_numerico and to_date_iso(val_str) is not None:
-					err_msg = f"[{col_name}] Se esperaba texto, se encontro fecha '{val_str}'"
-					col_errors += 1
-
-			if err_msg:
-				if ridx not in row_errors:
-					row_errors[ridx] = []
-				row_errors[ridx].append(err_msg)
-				# Mensaje de correccion para el comentario de Excel
-				errors_by_cell[(ridx, col_name)] = _correccion_excel(tdef["type"], tdef, val_str)
-				stats["total_error_cells"] += 1
-
-		stats["by_column"][col_name] = {"type": tdef["type"], "errors": col_errors}
-
-	stats["rows_with_errors"] = len(row_errors)
+	# Contar errores por columna
+	for ridx, errs in row_errors.items():
+		for e in errs:
+			import re as _re
+			m = _re.match(r'\[([^\]]+)\]', e)
+			if m:
+				cn = m.group(1)
+				if cn not in stats["by_column"]:
+					stats["by_column"][cn] = {"type": tmap.get(cn, {}).get("type", "?"), "errors": 0}
+				stats["by_column"][cn]["errors"] += 1
 
 	# Cross-field validation for gestante template
 	cross_field_errors = []
@@ -2383,24 +2339,21 @@ async def validate_data(payload: dict):
 		try:
 			cross_field_errors = validate_cross_fields(df)
 			for e in cross_field_errors:
-				ridx = e["row"] - 1  # convert to 0-indexed
+				ridx = e["row"] - 1
 				if ridx not in row_errors:
 					row_errors[ridx] = []
 				row_errors[ridx].append(f"[{e['column']}] {e['message']}")
 				stats["total_error_cells"] += 1
-			stats["rows_with_errors"] = len(row_errors)
-			stats["cross_field_errors"] = len(cross_field_errors)
 		except Exception:
 			pass
 
-	# Tipos por columna para normalizar fechas en el reporte
+	stats["rows_with_errors"] = len(row_errors)
+
 	tipos_por_col = {t["name"]: t["type"] for t in tmpl}
 
 	def normalizar_celda(valor, nombre_col):
 		s = str(valor) if valor is not None else ""
 		s = s.strip()
-		# Limpiar caracteres que rompen el formato pipe-delimited:
-		# pipes, saltos de linea, tabulaciones y _x000D_ (carriage return de Excel)
 		s = s.replace("|", " ").replace("\r", " ").replace("\n", " ").replace("\t", " ")
 		s = s.replace("_x000D_", " ").replace("_x000B_", " ")
 		s = re.sub(r"\s+", " ", s).strip()
@@ -2412,8 +2365,6 @@ async def validate_data(payload: dict):
 				return iso
 		return s
 
-	# Construir el TXT con errores: misma estructura pipe-delimited + columna
-	# RESULTADO DE VALIDACION (✓ VALIDADO si la fila esta correcta, o los errores).
 	header_line = "|".join(template_cols) + "|RESULTADO DE VALIDACION"
 	output_lines = [header_line]
 	for ridx in range(n):
@@ -2422,7 +2373,6 @@ async def validate_data(payload: dict):
 		err_col = "; ".join(errs) if errs else "VALIDADO"
 		output_lines.append("|".join(row_vals) + "|" + err_col)
 
-	# BOM UTF-8 para que Excel reconozca la codificacion y muestre el chulo (✓).
 	report_text = "\ufeff" + "\r\n".join(output_lines)
 
 	return {
@@ -2433,7 +2383,7 @@ async def validate_data(payload: dict):
 			"rows_ok": n - stats["rows_with_errors"],
 			"total_error_cells": stats["total_error_cells"],
 			"by_column": stats["by_column"],
-			"cross_field_errors": stats.get("cross_field_errors", 0),
+			"cross_field_errors": len(cross_field_errors),
 		},
 		"row_errors": {str(k): v for k, v in row_errors.items()},
 		"errors_by_cell": {f"{r}|{c}": m for (r, c), m in errors_by_cell.items()},
@@ -3240,6 +3190,57 @@ async def listar_ips(current_user: User = Depends(get_current_user)):
 		db.close()
 
 
+@app.get("/data/gestantes/diagnostico")
+async def diagnosticar_gestantes(current_user: User = Depends(get_current_user)):
+	"""Diagnostico: muestra valores unicos de NOMBRE_DE_LA_IPS_PRIMARIA y un sample de registros."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text as sa_text
+		# Valores unicos de IPS
+		rows_ips = db.execute(sa_text('''
+			SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
+			FROM gestantes
+			WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL
+			GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
+			ORDER BY COUNT(*) DESC
+			LIMIT 30
+		''')).fetchall()
+		ips_vals = [{"valor": str(r[0]), "total": int(r[1])} for r in rows_ips]
+
+		# Sample de primeros 5 registros con todas sus columnas
+		sample_rows = db.execute(sa_text('SELECT * FROM gestantes LIMIT 5')).fetchall()
+		sample_cols = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		sample = []
+		for row in sample_rows:
+			sample.append({col: str(row[i])[:80] for i, col in enumerate(sample_cols)})
+
+		# Columnas 20-35 del sample (rango donde cae IPS)
+		return {"ips_valores": ips_vals, "sample_columns": sample_cols[20:35], "sample_data": sample}
+	except Exception as e:
+		return {"error": str(e)[:300]}
+	finally:
+		db.close()
+
+
+@app.delete("/data/gestantes/clean")
+async def clean_gestantes(current_user: User = Depends(get_current_user)):
+	"""Elimina todos los registros de la tabla gestantes."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text as sa_text
+		count_result = db.execute(sa_text('SELECT COUNT(*) FROM gestantes')).scalar()
+		db.execute(sa_text('DELETE FROM gestantes'))
+		db.commit()
+		return {"ok": True, "eliminados": int(count_result or 0)}
+	except Exception as e:
+		db.rollback()
+		return {"error": str(e)[:300]}
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/ips-grupos")
 async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 	"""Devuelve lista de IPS primarias con conteo de registros.
@@ -3254,9 +3255,14 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 			if prestador and prestador.ips:
 				ips_filtro = str(prestador.ips).strip().upper()
 
+		# Valores de IPS que son claramente invalidos (confundidos con otra columna)
+		IPS_INVALIDOS = {"NO", "SI", "N/A", "NA", "SIN IPS", "S/N", "-", "0", "NO APLICA"}
+
 		sql = '''SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
 				 FROM gestantes
-				 WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL AND "NOMBRE_DE_LA_IPS_PRIMARIA" != ''
+				 WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL
+				   AND "NOMBRE_DE_LA_IPS_PRIMARIA" != ''
+				   AND UPPER(TRIM("NOMBRE_DE_LA_IPS_PRIMARIA")) NOT IN :invalidos
 				 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
 				 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
 		
@@ -3269,7 +3275,7 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 					 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
 
 		from sqlalchemy import text as sa_text
-		params = {"ips": ips_filtro} if ips_filtro else {}
+		params = {"ips": ips_filtro, "invalidos": tuple(IPS_INVALIDOS)} if ips_filtro else {"invalidos": tuple(IPS_INVALIDOS)}
 		rows = db.execute(sa_text(sql), params).fetchall()
 		ips_list = [{"nombre": str(r[0]).strip(), "total": int(r[1])} for r in rows]
 		return {"ips": ips_list}
@@ -3408,6 +3414,164 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 	except Exception as e:
 		db.rollback()
 		return {"error": str(e)[:300], "insertadas": 0}
+	finally:
+		db.close()
+
+
+@app.post("/data/gestantes/clean-repopulate")
+async def clean_and_repopulate(current_user: User = Depends(get_current_user)):
+	"""Limpia la tabla gestantes y re-puebla desde el ultimo cargue con diagnóstico detallado."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text as sa_text
+		import base64, gzip
+
+		# Paso 1: Diagnóstico del cargue
+		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
+		if not cargues:
+			return {"error": "No hay cargues", "insertadas": 0}
+
+		cargue = cargues[0]
+		texto = cargue.corrected_text or cargue.raw_text or ""
+		if not texto:
+			return {"error": f"Cargue {cargue.id} vacio", "insertadas": 0}
+
+		if cargue.compressed:
+			try:
+				texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
+			except Exception as e:
+				return {"error": f"Error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
+
+		lineas = [l for l in texto.strip().split("\n") if l.strip()]
+		if not lineas:
+			return {"error": "0 lineas", "insertadas": 0}
+
+		# Paso 2: Analizar headers del cargue
+		first_cols = lineas[0].split("|")
+		db_cols = GESTANTE_COLUMNS
+
+		def _norm(s):
+			import unicodedata
+			s = str(s).strip()
+			s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('ascii')
+			s = s.upper()
+			s = ''.join(c for c in s if c.isalnum() or c == ' ')
+			s = s.strip()
+			s = '_'.join(s.split())
+			return s
+
+		norm_to_db = {}
+		for col in db_cols:
+			norm_to_db[_norm(col)] = col
+
+		# Mapear headers
+		header_map = {}
+		for ci, hdr in enumerate(first_cols):
+			hdr_norm = _norm(hdr)
+			if hdr_norm in norm_to_db:
+				header_map[ci] = norm_to_db[hdr_norm]
+
+		# Diagnóstico: ver qué columna mapea a qué
+		ips_col_index = None
+		ips_mapped_correctly = False
+		for ci, db_name in header_map.items():
+			if db_name == "NOMBRE_DE_LA_IPS_PRIMARIA":
+				ips_col_index = ci
+				ips_mapped_correctly = True
+				break
+
+		diagnostico_headers = []
+		for ci, hdr in enumerate(first_cols[:40]):
+			db_col = header_map.get(ci, "???")
+			diagnostico_headers.append({
+				"csv_index": ci,
+				"csv_header": hdr.strip()[:50],
+				"db_column": db_col,
+				"is_ips": db_col == "NOMBRE_DE_LA_IPS_PRIMARIA"
+			})
+
+		# Paso 3: Leer primera fila de datos para verificar mapeo
+		lineas_data = [l for l in lineas[1:] if l.strip()]
+		if lineas_data:
+			cols_sample = lineas_data[0].split("|")
+			sample_ips_csv = cols_sample[ips_col_index].strip() if ips_col_index is not None and len(cols_sample) > ips_col_index else "N/A"
+		else:
+			sample_ips_csv = "sin datos"
+
+		# Paso 4: Limpiar y re-poblar
+		db.execute(sa_text('DELETE FROM gestantes'))
+		db.flush()
+
+		# Mapeo IPS a prestadores
+		ips_to_prestador = {}
+		prestadores = db.query(Prestador).all()
+		for prest in prestadores:
+			if prest.ips:
+				ips_to_prestador[str(prest.ips).strip().upper()] = prest.id
+			if prest.nombre:
+				name_key = str(prest.nombre).strip().upper()
+				if name_key not in ips_to_prestador:
+					ips_to_prestador[name_key] = prest.id
+
+		try:
+			real_cols = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		except:
+			real_cols = db_cols
+
+		total_insertadas = 0
+		errores = []
+		for idx, linea in enumerate(lineas_data, start=1):
+			cols = linea.split("|")
+			if len(cols) < 3:
+				continue
+
+			registro = {}
+			for ci, val in enumerate(cols):
+				if ci in header_map:
+					registro[header_map[ci]] = val.strip()
+
+			ips_primaria = registro.get("NOMBRE_DE_LA_IPS_PRIMARIA", "").strip().upper()
+			prestador_id = ips_to_prestador.get(ips_primaria)
+
+			registro["prestador_id"] = prestador_id if prestador_id else (cargue.prestador_id if cargue.prestador_id else None)
+			registro["user_id"] = cargue.user_id if cargue.user_id else None
+			registro["mes"] = cargue.mes or None
+			registro["original_filename"] = cargue.original_filename or None
+
+			try:
+				cols_validas = [c for c in real_cols if c in registro and c != "id"]
+				if not cols_validas:
+					continue
+				placeholders = ", ".join(f':{c}' for c in cols_validas)
+				col_names = ", ".join(f'"{c}"' for c in cols_validas)
+				params_ins = {c: registro.get(c) if registro.get(c) != "" else None for c in cols_validas}
+				db.execute(sa_text(f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'), params_ins)
+				total_insertadas += 1
+			except Exception as e:
+				errores.append(f"Fila {idx}: {str(e)[:100]}")
+				if len(errores) >= 10:
+					break
+
+		db.commit()
+
+		return {
+			"ok": True,
+			"insertadas": total_insertadas,
+			"errores": len(errores),
+			"muestra_errores": errores[:5],
+			"diagnostico": {
+				"ips_col_index_csv": ips_col_index,
+				"ips_mapped_correctly": ips_mapped_correctly,
+				"sample_ips_value": sample_ips_csv,
+				"total_headers_csv": len(first_cols),
+				"total_db_cols": len(db_cols),
+				"total_mapped": len(header_map),
+				"headers_40_primeros": diagnostico_headers[:40],
+			}
+		}
+	except Exception as e:
+		return {"error": str(e)[:400], "insertadas": 0}
 	finally:
 		db.close()
 

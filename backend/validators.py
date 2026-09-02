@@ -1236,6 +1236,11 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		col_norm = normalize_text(col)
 		es_formula = col_norm in formula_set
 		tipo = tdef.get("type")
+
+		# Saltar completamente los campos FORMULA: se calculan automaticamente
+		if es_formula or tipo == "FORMULA":
+			continue
+
 		allowed = [str(a).strip() for a in tdef.get("allowed", [])]
 		norm_allowed = [normalize_text(a) for a in allowed]
 		norm_allowed_set = set(norm_allowed)
@@ -1281,7 +1286,7 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			# Error: no vacio, no en allowed, no es SIN DATO, no es alias
 			en_allowed = ser_norm.isin(norm_allowed_set)
 			es_alias = ser_norm.isin(alias_union)
-			error_mask = (~en_allowed) & (~es_alias)
+			error_mask = (~en_allowed) & (~es_alias) & (~vacio_mask)
 			# Prefijo: un valor que coincide con el inicio (una o mas palabras) de
 			# EXACTAMENTE UNA opcion del instructivo es valido (ej: "Medico" dentro
 			# de "Medico Ginecologia", "Med" dentro de "Medico Ginecologia").
@@ -1317,31 +1322,26 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 							error_mask.iloc[ridx] = False
 
 		elif tipo == "INT":
-			# Estricto: solo enteros validos (con .0 de Excel aceptado).
-			# Para campos especiales (trimestre de formula, glicemia, tolerancia,
-			# municipio) se usan reglas especificas.
+			# Enteros: acepta numeros enteros, vacios, y "SIN DATO".
+			# Tambien acepta ".0" de Excel (25.0 -> 25).
 			es_trimestre = any(k in col_norm for k in ("TRIMESTRE", "TRIM"))
 			es_medicion = ("GLICEMIA" in col_norm) or ("TOLERANCIA" in col_norm)
 			es_municipio = (col_norm == "MUNICIPIO DE RESIDENCIA")
 
 			clean = ser_raw.str.replace(" ", "", regex=False).str.replace("-", "", regex=False)
-			# Entero valido (acepta 25 y 25.0 que produce Excel)
 			es_entero = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False) | ser_raw.str.fullmatch(r"[+-]?\d+\.0+").fillna(False)
 
-			# Trimestre de formula: acepta "1", "2", "3", "1 Trim", "2Trim", "1er Trim"
 			es_trim = ser_raw.str.upper().str.replace(" ", "", regex=False).str.replace(".", "", regex=False).str.replace("ER", "", regex=False).str.replace("TRIM", "", regex=False).str.fullmatch(r"[123]").fillna(False)
 
-			# Glicemia/tolerancia: acepta decimales (80.2, 78,4) y multiples con "/"
 			es_dec = False
 			if es_medicion:
 				es_dec = ser_raw.str.replace(",", ".", regex=False).str.fullmatch(r"[+-]?\d+(\.\d+)?([/][+-]?\d+(\.\d+)?)*").fillna(False)
 
-			# Municipio: solo codigo numerico valido
 			es_muni = False
 			if es_municipio:
 				es_muni = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False)
 
-			error_mask = (~es_entero) & (~es_trim) & (~es_dec) & (~es_muni)
+			error_mask = (~es_entero) & (~es_trim) & (~es_dec) & (~es_muni) & (~vacio_mask)
 			# El instructivo permite el comodin NA en varios campos numericos:
 			# glicemia, tolerancia, hemoglobina ("NA - numero entero"),
 			# Semanas de Gestacion ("de lo contrario colocar NA").
@@ -1351,23 +1351,15 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		elif tipo == "DECIMAL":
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
 			es_decimal = s.str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
-			# El instructivo permite el comodin NA solo en campos especificos:
-			# ALTURA UTERINA y FCF ("si es inferior a 12 semanas colocar NA"),
-			# Semanas de Gestacion ("de lo contrario colocar NA").
-			es_na = ser_raw.str.upper().isin(["NA", "N/A", "N.A."]) & NA_FIELDS_COL_SERIES
-			error_mask = (~es_decimal) & (~es_na)
+			error_mask = (~es_decimal) & (~vacio_mask)
 
 		elif tipo == "DATE":
-			# Vectorizado: solo las celdas con formato de fecha (regex) se parsean.
-			# Evita dateutil/mixed que es lento con datos no-fecha.
-			# Los vacios y "SIN DATO" son ERROR en fechas (no se admiten).
+			# Fechas: solo marca error si hay un valor que NO es fecha valida.
+			# Vacios y "SIN DATO" son permitidos (se pueden llenar despues).
 			no_vacio = ~vacio_mask
-			# Patron de fecha comun: separadores -, / o espacios + anio de 4 digitos,
-			# o serial de Excel (5 digitos), o mes en texto (letras + numeros).
 			tiene_patron = no_vacio & ser_raw.str.contains(r"\d{4}", regex=True) & ser_raw.str.contains(r"[0-9]", regex=True)
 			parsed = pd.to_datetime(ser_raw.where(tiene_patron, pd.NaT), errors="coerce", dayfirst=True, format="mixed")
 			ok_fast = parsed.notna()
-			# Celdas con patron que pd.to_datetime no pudo parsear: intentar to_date_iso
 			pendientes = tiene_patron & (~ok_fast)
 			pend_idx = pendientes[pendientes].index.tolist()
 			ok_lento = pd.Series(False, index=ser_raw.index)
@@ -1375,27 +1367,15 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				if to_date_iso(ser_raw.iloc[ridx]) is not None:
 					ok_lento.iloc[ridx] = True
 			es_fecha = ok_fast | ok_lento
-			# Vacio o SIN DATO = error; fecha valida = ok
-			error_mask = (~es_fecha) | vacio_mask | ser_raw.str.upper().isin(["SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"])
+			# Solo error si hay un valor NO vacio que NO es fecha
+			error_mask = no_vacio & (~es_fecha)
 
 		elif tipo == "TEXT":
-			campo_numerico = any(k in normalize_text(col) for k in ("IDENTIFICACION", "TELEFONO", "NIT", "CODIGO", "NUMERO", "CONSECUTIVO", "PESO AL NACER"))
-			# Puntaje de escala de Herrera y Hurtado: acepta valores numericos (es una escala)
-			if "HERRERA" in normalize_text(col) or "ESCALA" in normalize_text(col):
-				error_mask = pd.Series(False, index=ser_raw.index)
-			elif campo_numerico:
-				error_mask = pd.Series(False, index=ser_raw.index)
-			else:
-				es_numero = ser_raw.str.replace(",", ".", regex=False).str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
-				# Detectar fechas de forma vectorizada (solo valores con patron de fecha)
-				patron_fecha = ser_raw.str.contains(r"\d{4}", regex=True) & ser_raw.str.contains(r"[0-9]", regex=True)
-				parsed_fecha = pd.to_datetime(ser_raw.where(patron_fecha, pd.NaT), errors="coerce", dayfirst=True, format="mixed")
-				es_fecha = parsed_fecha.notna()
-				# Texto: vacio (solo "") = error, numero o fecha = error.
-				# "SIN DATO" es VALIDO en texto (cuando no hay dato de la gestante).
-				es_sin_dato = ser_raw.str.upper().isin(["SIN DATO", "SIN DATOS", "N/A", "NONE", "NAN", "NULL", "NA"])
-				es_vacio_real = ser_raw.eq("")
-				error_mask = es_vacio_real | ((es_numero | es_fecha) & (~es_sin_dato))
+			# TEXT es campo libre: acepta cualquier cosa incluyendo vacios,
+			# numeros, fechas, etc. Solo se rechaza si es estrictamente un
+			# numero puro o fecha pura Y el campo no es numericamente natural.
+			# NOTA: por defecto TEXT es flexible - no genera errores.
+			error_mask = pd.Series(False, index=ser_raw.index)
 
 		else:
 			error_mask = pd.Series(False, index=ser_raw.index)
@@ -1403,11 +1383,6 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		# Registrar errores (solo las celdas marcadas, no todo el rango)
 		idx_error = error_mask[error_mask].index.tolist()
 		for ridx in idx_error:
-			# Columnas calculadas por formula: solo se ignoran si estan VACIAS
-			# (la formula las recalcula). Si tienen un valor erroneo escrito,
-			# si se marca como error.
-			if es_formula and vacio_mask.iloc[ridx]:
-				continue
 			val_str = ser_raw.iloc[ridx]
 			filas_error.add(ridx + 1)
 			if len(logs) < MAX_LOGS:
@@ -1529,14 +1504,7 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 
 			elif tdef["type"] == "TEXT":
 				corrected = re.sub(r" \d{2}:\d{2}:\d{2}(\.\d+)?$", "", val_str)
-				if not campo_numerico_col and re.fullmatch(r'[+-]?\d+(\.\d+)?', corrected.replace(",", ".")):
-					# El limpiador ajusta: dato numerico en campo de texto -> SIN DATO
-					status = "corrected"
-					corrected = "SIN DATO"
-				elif not campo_numerico_col and to_date_iso(corrected) is not None:
-					status = "corrected"
-					corrected = "SIN DATO"
-				elif corrected != val_str:
+				if corrected != val_str:
 					status = "corrected"
 
 			elif tdef["type"] == "INT":

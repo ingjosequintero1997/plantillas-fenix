@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { fetchIpsGrupos, fetchGestantes, fetchIps, updateGestante, createGestante, autoFillCasoCerrado, fetchCasoCerrado, populateGestantes } from '../api'
+import { fetchIpsGrupos, fetchGestantes, fetchIps, updateGestante, createGestante, autoFillCasoCerrado, fetchCasoCerrado, populateGestantes, cleanAndRepopulate } from '../api'
 import GestanteForm from './GestanteForm'
 
 const PAGE_SIZE = 50
@@ -143,28 +143,24 @@ export default function DataManagement() {
   }
 
   const handlePopulate = async () => {
-    setPopulating(true); setPopulateMsg('Procesando...')
+    setPopulating(true); setPopulateMsg('Limpiando y re-poblando con diagnóstico...')
     try {
-      const raw = sessionStorage.getItem('auth')
-      const token = raw ? JSON.parse(raw).token : ''
-      const resp = await fetch('/api/data/gestantes/populate', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-      })
-      const text = await resp.text()
-      let data
-      try { data = JSON.parse(text) } catch { data = { error: text.slice(0, 300) } }
+      const data = await cleanAndRepopulate()
       if (data.error) {
         setPopulateMsg('Error: ' + data.error)
       } else {
-        const errCount = data.errores ? data.errores.length : 0
-        const primerError = errCount > 0 ? ` | Error: ${data.errores[0]}` : ''
-        const dbg = data.debug ? ` | debug: ${data.debug.cols_en_primera_linea} cols/texto, ${data.debug.real_cols_count} cols/tabla` : ''
-        setPopulateMsg(`${data.insertadas} gestantes de ${data.total_lineas} lineas (cargue #${data.cargue_id})${primerError}${dbg}`)
+        const diag = data.diagnostico || {}
+        setPopulateMsg(
+          `Listo: ${data.insertadas} gestantes insertadas. ` +
+          `IPS en CSV columna #${diag.ips_col_index_csv ?? '?'} ` +
+          `(mapeado: ${diag.ips_mapped_correctly ? 'OK' : 'FALLÓ'}). ` +
+          `Valor muestra IPS: "${diag.sample_ips_value ?? '?'}". ` +
+          `Headers mapeados: ${diag.total_mapped}/${diag.total_headers_csv}`
+        )
         loadIpsGroups()
       }
     } catch (e) {
-      setPopulateMsg('Error fetch: ' + (e.message || 'No se pudo poblar'))
+      setPopulateMsg('Error: ' + (e.message || 'No se pudo re-poblar'))
     } finally {
       setPopulating(false)
     }
@@ -193,22 +189,28 @@ export default function DataManagement() {
 
   // ─── IPS List view ────────────────────────────────────────
   if (view === 'ips_list') {
+    const IPS_INVALIDOS = new Set(['NO', 'SI', 'N/A', 'NA', 'SIN IPS', 'S/N', '-', '0', 'NO APLICA'])
+    const ipsValidas = ipsGroups.filter(ig => !IPS_INVALIDOS.has(ig.nombre.toUpperCase().trim()))
+    const ipsInvalidas = ipsGroups.filter(ig => IPS_INVALIDOS.has(ig.nombre.toUpperCase().trim()))
+    const totalGestantes = ipsValidas.reduce((sum, ig) => sum + ig.total, 0)
+    const totalInvalidas = ipsInvalidas.reduce((sum, ig) => sum + ig.total, 0)
+
     return (
       <div className="space-y-5 fade-in">
         <div className="flex items-center justify-between">
           <div>
             <div className="page-title">Gestión de data</div>
-            <div className="page-subtitle">Selecciona una IPS para ver y gestionar las gestantes.</div>
+            <div className="page-subtitle">{ipsValidas.length} IPS · {totalGestantes.toLocaleString()} gestantes</div>
           </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handlePopulate} disabled={populating} className="btn-secondary text-sm" style={{ borderColor: '#e74c3c', color: '#e74c3c' }}>
-            {populating ? 'Poblando...' : 'Poblar data desde cargues'}
-          </button>
-          <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            Auto-fill Caso Cerrado
-          </button>
-        </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handlePopulate} disabled={populating} className="btn-secondary text-sm" style={{ borderColor: '#e74c3c', color: '#e74c3c' }}>
+              {populating ? 'Re-poblando...' : 'Re-poblar data'}
+            </button>
+            <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              Auto-fill Caso Cerrado
+            </button>
+          </div>
         </div>
 
         {autoFillMsg && (
@@ -216,16 +218,22 @@ export default function DataManagement() {
         )}
 
         {populateMsg && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: populateMsg.includes('Error') ? 'var(--error)' : 'var(--success, #27ae60)', backgroundColor: populateMsg.includes('Error') ? '#FBE9E9' : '#E8F8F0' }}>{populateMsg}</div>
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: populateMsg.includes('Error') ? 'var(--error)' : 'var(--text-secondary)', backgroundColor: populateMsg.includes('Error') ? '#FBE9E9' : '#F0F0F0', whiteSpace: 'pre-wrap' }}>{populateMsg}</div>
         )}
 
         {error && (
           <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
         )}
 
+        {ipsInvalidas.length > 0 && (
+          <div className="px-3 py-2 rounded-md text-xs" style={{ color: '#e67e22', backgroundColor: '#FEF3E2' }}>
+            {ipsInvalidas.length} grupo(s) con datos de IPS inválidos ({ipsInvalidas.map(iv => `"${iv.nombre}" (${iv.total})`).join(', ')}). Se ocultan de la vista. Usa "Re-poblar data" para corregir.
+          </div>
+        )}
+
         {loading ? (
           <div className="skeleton h-40 w-full rounded-xl" />
-        ) : ipsGroups.length === 0 ? (
+        ) : ipsValidas.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
@@ -233,11 +241,11 @@ export default function DataManagement() {
               </svg>
             </div>
             <div className="empty-title">Sin datos</div>
-            <div className="empty-desc">No hay registros de gestantes en el sistema. Sube un cargue desde "Validar data" primero.</div>
+            <div className="empty-desc">No hay registros de gestantes válidos. Haz clic en "Re-poblar data" para importar desde los cargues.</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {ipsGroups.map((item) => (
+            {ipsValidas.map((item) => (
               <button
                 key={item.nombre}
                 onClick={() => handleSelectIps(item)}

@@ -278,6 +278,14 @@ export async function populateGestantes() {
   return apiFetch(`${API_BASE}/data/gestantes/populate`, { method: 'POST', signal: AbortSignal.timeout(120000) })
 }
 
+export async function cleanAndRepopulate() {
+  return apiFetch(`${API_BASE}/data/gestantes/clean-repopulate`, { method: 'POST', signal: AbortSignal.timeout(120000) })
+}
+
+export async function fetchGestanteDiagnostico() {
+  return apiFetch(`${API_BASE}/data/gestantes/diagnostico`)
+}
+
 export async function fetchGestantes(page = 1, pageSize = 50, search = '', ips = '') {
   const params = new URLSearchParams({ page, page_size: pageSize })
   if (search) params.set('search', search)
