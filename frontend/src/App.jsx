@@ -10,6 +10,7 @@ import TemplateSelector from './components/TemplateSelector'
 import QualityBanner from './components/QualityBanner'
 import ValidationLogTable from './components/ValidationLogTable'
 import FormularioRegistro from './components/FormularioRegistro'
+import GestanteForm from './components/GestanteForm'
 import VerificarAfiliado from './components/VerificarAfiliado'
 import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
@@ -638,18 +639,20 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="page-title">Cargue mensual — Registro de gestante</div>
-                    <div className="page-subtitle">Llena las variables del instructivo y guarda el registro. Se acumula en Verificar data.</div>
+                    <div className="page-subtitle">Completa el formulario y guarda el registro directamente en la base de datos.</div>
                   </div>
                   <button onClick={() => setSection('subir')} className="btn-secondary text-sm">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                     Volver a cargues
                   </button>
                 </div>
-                <FormularioRegistro
-                  templateKey={selectedTemplate || 'gestante'}
-                  registros={[]}
-                  onRegistrado={() => {}}
-                  onCancelar={() => setSection('subir')}
+                <GestanteForm
+                  mode="create"
+                  onSave={async (data) => {
+                    const { createGestante } = await import('./api')
+                    await createGestante(data)
+                  }}
+                  onClose={() => setSection('subir')}
                 />
               </div>
             )}

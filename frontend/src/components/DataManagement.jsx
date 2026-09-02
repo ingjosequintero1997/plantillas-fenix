@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { fetchIpsGrupos, fetchGestantes, updateGestante, createGestante, autoFillCasoCerrado, fetchCasoCerrado, populateGestantes } from '../api'
+import { fetchIpsGrupos, fetchGestantes, fetchIps, updateGestante, createGestante, autoFillCasoCerrado, fetchCasoCerrado, populateGestantes } from '../api'
+import GestanteForm from './GestanteForm'
 
 const PAGE_SIZE = 50
 
@@ -20,75 +21,6 @@ const TABLE_COLS = [
   { key: 'CASO_CERRADO', label: 'Caso Cerrado' },
 ]
 
-const EDIT_SECTIONS = [
-  {
-    titulo: 'Datos personales',
-    fields: [
-      'TIPO_DE_DOCUMENTO_DE_IDENTIDAD', 'NO_DE_IDENTIFICACION', 'APELLIDO_1', 'APELLIDO_2',
-      'NOMBRE_1', 'NOMBRE_2', 'FECHA_DE_NACIMIENTO', 'EDAD', 'SEXO',
-      'REGIMEN_DE_AFILIACION', 'PERTENECIA_ETNICA', 'GRUPO_POBLACIONAL',
-      'DEPARTAMENTO_DE_RESIDENCIA', 'MUNICIPIO_DE_RESIDENCIA', 'ZONA', 'ETNIA',
-      'TELEFONO_USUARIA', 'DIRECCION', 'NIVEL_EDUCATIVO', 'DISCAPACIDAD',
-      'MUJER_CABEZA_DE_HOGAR', 'OCUPACION', 'ESTADO_CIVIL',
-    ],
-  },
-  {
-    titulo: 'Control prenatal',
-    fields: [
-      'CONTROL_TRADICIONAL', 'GESTANTE_RENUENTE', 'INASISTENTE',
-      'NOMBRE_DE_LA_IPS_PRIMARIA', 'FECHA_DE_DIAGNOSTICO',
-      'FECHA_DE_INGRESO_AL_CONTROL_PRENATAL', 'FUM', 'FPP',
-      'DIAS_PARA_EL_PARTO', 'ALARMA', 'EDAD_GEST_INICIO_CONTROL', 'TRIMESTRE_INICIO_CONTROL',
-    ],
-  },
-  {
-    titulo: 'Antecedentes obstétricos',
-    fields: [
-      'G', 'P', 'C', 'A', 'M', 'V',
-      'HIPERTENSION_ARTERIAL', 'DIABETES', 'VIH', 'SIFILIS', 'TUBERCULOSIS',
-      'OTRAS_CONDICIONES_MEDICAS_GRAVES',
-      'ANTECEDENTES_DE_EVENTOS_OBSTETRICOS_DESFAVORABLES', 'PERIODO_INTERGENESICO',
-      'PESO_INICIAL_KG', 'TALLA_METROS', 'INDICE_DE_MASA_CORPORAL_IMC',
-      'CLASIFICACION_DE_IMC', 'APOYO_FAMILIAR', 'EMBARAZO_DESEADO',
-      'HABITOS_DE_RIESGO',
-    ],
-  },
-  {
-    titulo: 'Tamizajes',
-    fields: [
-      'ASESORIA_PRUEBA_VIH', 'TRIMESTRE_ASESORIA_VIH',
-      'FECHA_TOMA_PRUEBA_VIH_PRIMER_TAMIZAJE', 'RESULTADO_PRIMER_TAMIZAJE_PRUEBA_DE_VIH',
-      'FECHA_TOMA_PRUEBA_VIH_SEGUNDO_TAMIZAJE', 'RESULTADO_SEGUNDO_TAMIZAJE_PRUEBA_DE_VIH',
-      'FECHA_TOMA_PRUEBA_VIH_TERCER_TAMIZAJE', 'RESULTADO_TERCER_TAMIZAJE_PRUEBA_DE_VIH',
-      'FECHA_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'RESULTADO_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS',
-      'FECHA_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'RESULTADO_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS',
-      'FECHA_DE_DIAGNOSTICO_DE_SIFILIS', 'TRATAMIENTO_INSTAURADO',
-    ],
-  },
-  {
-    titulo: 'Controles y controles',
-    fields: [
-      'FECHA_1ER_CONTROL', 'QUIEN_REALIZO_EL_CONTROL',
-      'FECHA_2DO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_2',
-      'FECHA_3ER_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_3',
-      'FECHA_4TO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_4',
-      'FECHA_5TO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_5',
-      'NUMERO_TOTAL_DE_CONTROLES_PRENATALES', 'ULTIMO_CONTROL_PRENATAL',
-      'EDAD_GESTACIONAL_ACTUAL', 'PESO_ACTUAL', 'TALLA_ACTUAL', 'IMC', 'TA_ACTUAL',
-    ],
-  },
-  {
-    titulo: 'Eventos obstétricos',
-    fields: [
-      'TIPO_DE_ABORTO', 'FECHA', 'SEMANAS_DE_GESTACION', 'COMPLICACIONES',
-      'FECHA_DE_PARTO', 'CARACTERISTICAS_DEL_PARTO', 'PARTO_ATENDIDO_POR',
-      'NO_SEMANAS_DE_GESTACION', 'COMPLICACIONES_DURANTE_EL_PARTO',
-      'TIPO_COMPLICACION', 'UCI_MATERNA', 'TOMA_DE_PRUEBAS_ITS_INTRAPARTO',
-      'MULTIPLICIDAD_DEL_EMBARAZO', 'CASO_CERRADO', 'OBSERVACIONES_GENERALES',
-    ],
-  },
-]
-
 export default function DataManagement() {
   const [view, setView] = useState('ips_list') // 'ips_list' | 'ips_detail' | 'editing'
   const [ipsGroups, setIpsGroups] = useState([])
@@ -100,8 +32,6 @@ export default function DataManagement() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState({})
-  const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [showNewForm, setShowNewForm] = useState(false)
   const [activeTab, setActiveTab] = useState('gestantes')
@@ -184,37 +114,22 @@ export default function DataManagement() {
 
   const startEdit = (reg) => {
     setEditing(reg)
-    setForm({ ...reg })
     setMsg('')
     setView('editing')
   }
 
-  const handleFormChange = (key, val) => setForm(f => ({ ...f, [key]: val }))
-
-  const saveEdit = async () => {
-    setSaving(true); setMsg('')
-    try {
-      await updateGestante(editing.id, form)
-      setMsg('Guardado correctamente')
-      setEditing(null)
-      setView('ips_detail')
-      loadGestantes(selectedIps?.nombre || '', page, search)
-    } catch (e) {
-      setMsg('Error: ' + (e.message || 'No se pudo guardar'))
-    } finally {
-      setSaving(false)
-    }
+  const handleSaveEdit = async (data) => {
+    await updateGestante(editing.id, data)
+    setEditing(null)
+    setView('ips_detail')
+    loadGestantes(selectedIps?.nombre || '', page, search)
   }
 
   const handleCreate = async (data) => {
-    try {
-      await createGestante(data)
-      setShowNewForm(false)
-      setView('ips_detail')
-      loadGestantes(selectedIps?.nombre || '', page, search)
-    } catch (e) {
-      throw e
-    }
+    await createGestante(data)
+    setShowNewForm(false)
+    setView('ips_detail')
+    loadGestantes(selectedIps?.nombre || '', page, search)
   }
 
   const handleAutoFillCasoCerrado = async () => {
@@ -265,13 +180,15 @@ export default function DataManagement() {
 
   // ─── Edit view ────────────────────────────────────────────
   if (view === 'editing' && editing) {
-    return <EditForm form={form} onChange={handleFormChange} onSave={saveEdit}
-      onClose={() => { setEditing(null); setView('ips_detail') }} saving={saving} msg={msg} />
+    return <GestanteForm mode="edit" initialData={editing} onSave={handleSaveEdit}
+      onClose={() => { setEditing(null); setView('ips_detail') }} />
   }
 
   // ─── New gestante form ────────────────────────────────────
   if (view === 'ips_detail' && showNewForm) {
-    return <NewGestanteForm onSave={handleCreate} onClose={() => setShowNewForm(false)} />
+    return <GestanteForm mode="create" onSave={handleCreate}
+      onClose={() => setShowNewForm(false)}
+      initialData={{ NOMBRE_DE_LA_IPS_PRIMARIA: selectedIps?.nombre || '' }} />
   }
 
   // ─── IPS List view ────────────────────────────────────────
@@ -449,181 +366,4 @@ export default function DataManagement() {
 }
 
 
-function EditForm({ form, onChange, onSave, onClose, saving, msg }) {
-  const [activeSection, setActiveSection] = useState(0)
-
-  return (
-    <div className="panel fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Editar — {form.NO_DE_IDENTIFICACION || ''}
-          </div>
-          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            {form.APELLIDO_1} {form.APELLIDO_2} {form.NOMBRE_1} {form.NOMBRE_2}
-          </div>
-        </div>
-        <button onClick={onClose} className="btn-ghost text-sm">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          Volver
-        </button>
-      </div>
-
-      <div className="flex gap-1 mb-4 overflow-x-auto">
-        {EDIT_SECTIONS.map((sec, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveSection(i)}
-            className="px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors"
-            style={{
-              backgroundColor: activeSection === i ? 'var(--primary)' : 'var(--bg-secondary)',
-              color: activeSection === i ? 'white' : 'var(--text)',
-            }}
-          >
-            {sec.titulo}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-2">
-        {EDIT_SECTIONS[activeSection].fields.map((field) => (
-          <div key={field}>
-            <label className="form-label text-xs">{field.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}</label>
-            <input
-              value={form[field] || ''}
-              onChange={(e) => onChange(field, e.target.value)}
-              className="input text-sm"
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between pt-4 mt-4 border-t" style={{ borderColor: 'var(--border)' }}>
-        <div className="text-sm" style={{ color: msg.includes('Error') ? 'var(--error)' : 'var(--primary)' }}>{msg}</div>
-        <div className="flex gap-2">
-          <button onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
-          <button onClick={onSave} className="btn-primary" disabled={saving}>
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-
-function NewGestanteForm({ onSave, onClose }) {
-  const [form, setForm] = useState({
-    TIPO_DE_DOCUMENTO_DE_IDENTIDAD: 'CC',
-    NO_DE_IDENTIFICACION: '',
-    APELLIDO_1: '',
-    APELLIDO_2: '',
-    NOMBRE_1: '',
-    NOMBRE_2: '',
-    FECHA_DE_NACIMIENTO: '',
-    EDAD: '',
-    SEXO: '1',
-    NOMBRE_DE_LA_IPS_PRIMARIA: '',
-    FECHA_DE_DIAGNOSTICO: '',
-    FUM: '',
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const handleChange = (key, val) => setForm(f => ({ ...f, [key]: val }))
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!form.NO_DE_IDENTIFICACION) { setError('El numero de documento es obligatorio'); return }
-    if (!form.APELLIDO_1) { setError('El primer apellido es obligatorio'); return }
-    if (!form.NOMBRE_1) { setError('El primer nombre es obligatorio'); return }
-    setSaving(true); setError('')
-    try {
-      await onSave(form)
-    } catch (err) {
-      setError(err.message || 'No se pudo guardar')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="panel fade-in">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Nuevo registro de gestante</div>
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Registra una gestante individual.</div>
-          </div>
-          <button type="button" onClick={onClose} className="btn-ghost text-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-            Volver
-          </button>
-        </div>
-
-        {error && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          <div>
-            <label className="form-label">Tipo de documento *</label>
-            <select value={form.TIPO_DE_DOCUMENTO_DE_IDENTIDAD} onChange={(e) => handleChange('TIPO_DE_DOCUMENTO_DE_IDENTIDAD', e.target.value)} className="input">
-              <option value="CC">Cedula de Ciudadania</option>
-              <option value="TI">Tarjeta de Identidad</option>
-              <option value="RC">Registro Civil</option>
-              <option value="PT">Pasaporte</option>
-            </select>
-          </div>
-          <div>
-            <label className="form-label">Numero de documento *</label>
-            <input value={form.NO_DE_IDENTIFICACION} onChange={(e) => handleChange('NO_DE_IDENTIFICACION', e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="form-label">IPS Primaria</label>
-            <input value={form.NOMBRE_DE_LA_IPS_PRIMARIA} onChange={(e) => handleChange('NOMBRE_DE_LA_IPS_PRIMARIA', e.target.value)} className="input" placeholder="Nombre de la IPS" />
-          </div>
-          <div>
-            <label className="form-label">Primer apellido *</label>
-            <input value={form.APELLIDO_1} onChange={(e) => handleChange('APELLIDO_1', e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="form-label">Segundo apellido</label>
-            <input value={form.APELLIDO_2} onChange={(e) => handleChange('APELLIDO_2', e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="form-label">Primer nombre *</label>
-            <input value={form.NOMBRE_1} onChange={(e) => handleChange('NOMBRE_1', e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="form-label">Segundo nombre</label>
-            <input value={form.NOMBRE_2} onChange={(e) => handleChange('NOMBRE_2', e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="form-label">Fecha de nacimiento</label>
-            <input type="date" value={form.FECHA_DE_NACIMIENTO} onChange={(e) => handleChange('FECHA_DE_NACIMIENTO', e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="form-label">Edad</label>
-            <input value={form.EDAD} onChange={(e) => handleChange('EDAD', e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="form-label">Fecha diagnostico embarazo</label>
-            <input type="date" value={form.FECHA_DE_DIAGNOSTICO} onChange={(e) => handleChange('FECHA_DE_DIAGNOSTICO', e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="form-label">FUM</label>
-            <input type="date" value={form.FUM} onChange={(e) => handleChange('FUM', e.target.value)} className="input" />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
-          <button type="button" onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
-          <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Guardando...' : 'Crear registro'}
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}
+// EditForm and NewGestanteForm replaced by GestanteForm component

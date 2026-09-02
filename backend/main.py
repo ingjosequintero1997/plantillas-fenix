@@ -3206,6 +3206,40 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 
 # ─── Gestión de data (ver, editar, crear registros de gestantes) ───────────
 
+@app.get("/ips")
+async def listar_ips(current_user: User = Depends(get_current_user)):
+	"""Devuelve lista de IPS primarias para dropdown. Admin ve todas; prestador solo ve su IPS."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		ips_filtro = None
+		if current_user.role != "admin":
+			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			if prestador and prestador.ips:
+				ips_filtro = str(prestador.ips).strip().upper()
+
+		from sqlalchemy import text as sa_text
+		if ips_filtro:
+			rows = db.execute(sa_text(
+				'SELECT DISTINCT "NOMBRE_DE_LA_IPS_PRIMARIA" FROM gestantes '
+				'WHERE UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips AND "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL '
+				'ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'
+			), {"ips": ips_filtro}).fetchall()
+		else:
+			rows = db.execute(sa_text(
+				'SELECT DISTINCT "NOMBRE_DE_LA_IPS_PRIMARIA" FROM gestantes '
+				'WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL AND "NOMBRE_DE_LA_IPS_PRIMARIA" != \'\' '
+				'ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'
+			)).fetchall()
+
+		ips_list = [str(r[0]).strip() for r in rows if r[0]]
+		return {"ips": ips_list}
+	except Exception as e:
+		return {"ips": [], "error": str(e)[:200]}
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/ips-grupos")
 async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 	"""Devuelve lista de IPS primarias con conteo de registros.
@@ -3465,15 +3499,19 @@ async def obtener_gestante(registro_id: int, current_user: User = Depends(get_cu
 
 @app.put("/data/gestantes/{registro_id}")
 async def actualizar_gestante(registro_id: int, payload: dict, current_user: User = Depends(get_current_user)):
-	"""Actualiza un registro de gestante. Valida contra el instructivo."""
+	"""Actualiza un registro de gestante. Valida contra el instructivo. Registra auditoria."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text
-		# Verificar que existe
-		existing = db.execute(text('SELECT id FROM gestantes WHERE id = :id'), {"id": registro_id}).fetchone()
+		# Verificar que existe y obtener valores actuales
+		existing = db.execute(text('SELECT * FROM gestantes WHERE id = :id'), {"id": registro_id}).fetchone()
 		if not existing:
 			raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+		# Obtener columnas para comparar
+		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		current_data = dict(zip(columnas, [str(v) if v is not None else "" for v in existing]))
 
 		# Validar campos contra el instructivo
 		try:
@@ -3486,22 +3524,35 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 			if col_name in payload:
 				val = str(payload[col_name]).strip()
 				if col_type == "SET" and val and val != "NA":
-					# Validar opciones del SET
-					for field_name, field_type in RAW_FIELDS:
-						if field_name == col_name and field_type == "SET":
-							# Obtener opciones permitidas
-							try:
-								from .gestante_config import GESTANTE_TEMPLATE
-							except ImportError:
-								from gestante_config import GESTANTE_TEMPLATE
-							for t in GESTANTE_TEMPLATE:
-								if t["name"] == col_name and "allowed" in t:
-									if val not in t["allowed"]:
-										errores.append(f"{col_name}: '{val}' no es una opción válida")
-									break
+					try:
+						from .gestante_config import get_gestante_template
+					except ImportError:
+						from gestante_config import get_gestante_template
+					tmpl = get_gestante_template()
+					for t in tmpl:
+						if t["name"] == col_name and "allowed" in t:
+							if val not in t["allowed"]:
+								errores.append(f"{col_name}: '{val}' no es una opcion valida")
+							break
 
 		if errores:
 			raise HTTPException(status_code=400, detail="; ".join(errores[:10]))
+
+		# Detectar cambios y registrar auditoria
+		audit_entries = []
+		for key, val in payload.items():
+			new_val = str(val) if val is not None else ""
+			old_val = current_data.get(key, "")
+			if new_val != old_val:
+				audit_entries.append({
+					"user_id": current_user.id,
+					"username": current_user.username,
+					"gestante_id": registro_id,
+					"action": "UPDATE",
+					"field_name": key,
+					"old_value": old_val[:500] if old_val else "",
+					"new_value": new_val[:500] if new_val else "",
+				})
 
 		# Actualizar
 		set_parts = []
@@ -3513,9 +3564,17 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 		if set_parts:
 			update_sql = f'UPDATE gestantes SET {", ".join(set_parts)} WHERE id = :id'
 			db.execute(text(update_sql), params)
+
+			# Insertar registros de auditoria
+			for entry in audit_entries:
+				db.execute(text(
+					'INSERT INTO audit_logs (user_id, username, gestante_id, action, field_name, old_value, new_value) '
+					'VALUES (:user_id, :username, :gestante_id, :action, :field_name, :old_value, :new_value)'
+				), entry)
+
 			db.commit()
 
-		return {"success": True}
+		return {"success": True, "audit_count": len(audit_entries)}
 	except HTTPException:
 		raise
 	except Exception as e:
@@ -3597,6 +3656,25 @@ async def eliminar_gestante(registro_id: int, current_user: User = Depends(get_c
 	except Exception as e:
 		db.rollback()
 		raise HTTPException(status_code=500, detail=str(e)[:300])
+	finally:
+		db.close()
+
+
+@app.get("/data/gestantes/{registro_id}/audit")
+async def obtener_auditoria(registro_id: int, current_user: User = Depends(get_current_user)):
+	"""Obtiene el historial de auditoria de una gestante."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+		rows = db.execute(text(
+			'SELECT * FROM audit_logs WHERE gestante_id = :gid ORDER BY created_at DESC LIMIT 100'
+		), {"gid": registro_id}).fetchall()
+		columnas = [c.name for c in db.execute(text('SELECT * FROM audit_logs WHERE 1=0')).cursor.description]
+		logs = [dict(zip(columnas, [str(v) if v is not None else "" for v in row])) for row in rows]
+		return {"logs": logs}
+	except Exception as e:
+		return {"logs": [], "error": str(e)[:200]}
 	finally:
 		db.close()
 

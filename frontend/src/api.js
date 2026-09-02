@@ -266,6 +266,10 @@ export async function fetchMyPermissions() {
 }
 
 // ─── Data management ───────────────────────────────────────────────────
+export async function fetchIps() {
+  return apiFetch(`${API_BASE}/ips`)
+}
+
 export async function fetchIpsGrupos() {
   return apiFetch(`${API_BASE}/data/gestantes/ips-grupos`)
 }
@@ -283,6 +287,10 @@ export async function fetchGestantes(page = 1, pageSize = 50, search = '', ips =
 
 export async function fetchGestante(id) {
   return apiFetch(`${API_BASE}/data/gestantes/${id}`)
+}
+
+export async function fetchGestanteAudit(id) {
+  return apiFetch(`${API_BASE}/data/gestantes/${id}/audit`)
 }
 
 export async function updateGestante(id, data) {
