@@ -3194,13 +3194,16 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 				return {"error": f"Cargue {cargue.id}: error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
 
 		lineas = [l for l in texto.strip().split("\n") if l.strip()]
-		if not lineas:
-			return {"error": f"Cargue {cargue.id}: 0 lineas de texto", "insertadas": 0, "texto_len": len(texto), "primeros_200": texto[:200]}
+		lineas_data = lineas[1:] if len(lineas) > 1 else []
+		if not lineas_data:
+			return {"error": f"Cargue {cargue.id}: 0 lineas de datos (solo header)", "insertadas": 0, "texto_len": len(texto), "primeros_200": texto[:200]}
 
 		debug_info = {
 			"total_lineas": len(lineas),
 			"db_cols_count": len(db_cols),
 			"real_cols_count": len(real_cols),
+			"header_map_count": len(header_map),
+			"unmapped_headers": [first_cols[i] for i in range(len(first_cols)) if i not in header_map][:10],
 		}
 
 		# Mapeo de nombres de IPS a prestadores para asignar prestador_id
@@ -3216,15 +3219,38 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 				if name_key not in ips_to_prestador:  # No sobrescribir mapeo por código
 					ips_to_prestador[name_key] = prest.id
 
-		for idx, linea in enumerate(lineas):
+		# Construir mapeo de nombre normalizado -> columna DB
+		def _norm(s):
+			import unicodedata
+			s = str(s).strip()
+			s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('ascii')
+			s = s.upper()
+			s = ''.join(c for c in s if c.isalnum() or c == ' ')
+			s = s.strip()
+			s = '_'.join(s.split())
+			return s
+
+		norm_to_db = {}
+		for col in db_cols:
+			norm_to_db[_norm(col)] = col
+
+		# Primera linea = headers del instructivo
+		first_cols = lineas[0].split("|") if lineas else []
+		header_map = {}  # indice CSV -> nombre columna DB
+		for ci, hdr in enumerate(first_cols):
+			hdr_norm = _norm(hdr)
+			if hdr_norm in norm_to_db:
+				header_map[ci] = norm_to_db[hdr_norm]
+
+		for idx, linea in enumerate(lineas_data, start=1):
 			cols = linea.split("|")
 			if len(cols) < 3:
 				continue
 
 			registro = {}
-			for ci in range(min(len(db_cols), len(cols))):
-				if ci < len(cols):
-					registro[db_cols[ci]] = cols[ci].strip()
+			for ci, val in enumerate(cols):
+				if ci in header_map:
+					registro[header_map[ci]] = val.strip()
 
 			# Buscar prestador según NOMBRE_DE_LA_IPS_PRIMARIA
 			ips_primaria = registro.get("NOMBRE_DE_LA_IPS_PRIMARIA", "").strip().upper()
@@ -3253,7 +3279,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 		return {
 			"ok": True,
 			"cargue_id": cargue.id,
-			"total_lineas": len(lineas),
+			"total_lineas": len(lineas_data),
 			"insertadas": total_insertadas,
 			"errores": total_errores[:10],
 			"debug": debug_info,
