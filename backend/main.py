@@ -930,9 +930,44 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 		prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 
 		# Validar IPS: si el prestador tiene IPS asignada, verificar que todas las filas pertenezcan a ella
+		# ── Validar cantidad de variables (200 para gestante) ─────────────
+		if payload.template_key == "gestante":
+			ESPERA_NUM_VARS = 200
+			texto_val = payload.corrected_text or payload.raw_text or ""
+			if payload.compressed:
+				try:
+					import base64, gzip
+					texto_val = gzip.decompress(base64.b64decode(texto_val)).decode("utf-8", errors="replace")
+				except Exception:
+					pass
+			lineas_val = [l for l in texto_val.strip().split("\n") if l.strip()]
+			if lineas_val:
+				# Primera linea = header
+				header_cols = lineas_val[0].split("|")
+				num_vars = len(header_cols)
+				if num_vars != ESPERA_NUM_VARS:
+					raise HTTPException(
+						status_code=400,
+						detail=f"El archivo tiene {num_vars} variables pero el instructivo de gestantes requiere exactamente {ESPERA_NUM_VARS}. "
+							   f"Verifique que el archivo Excel sea la versión correcta del formato."
+					)
+				# Validar tambien las filas de datos
+				errores_vars = []
+				for i, linea in enumerate(lineas_val[1:], start=2):
+					cols = linea.split("|")
+					if len(cols) != ESPERA_NUM_VARS:
+						errores_vars.append(f"Fila {i}: {len(cols)} vars")
+						if len(errores_vars) >= 5:
+							break
+				if errores_vars:
+					raise HTTPException(
+						status_code=400,
+						detail=f"Algunas filas no tienen {ESPERA_NUM_VARS} variables: {'; '.join(errores_vars)}"
+					)
+
+		# ── Validar IPS ──────────────────────────────────────────────────
 		if prestador and prestador.ips and payload.template_key == "gestante":
 			ips_prestador_code = str(prestador.ips).strip()
-			# Buscar nombre de la IPS del prestador en ct_ips
 			ips_prestador_nombre = None
 			try:
 				from sqlalchemy import text
@@ -947,8 +982,7 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 				pass
 
 			if ips_prestador_nombre:
-				# Validar que todas las filas tengan la misma IPS
-				IPS_COL_INDEX = 28  # Indice de "Nombre de la IPS Primaria" en gestante
+				IPS_COL_INDEX = 28  # Indice de "Nombre de la IPS Primaria" en instructivo (0-based)
 				texto_raw = payload.corrected_text or payload.raw_text or ""
 				if payload.compressed:
 					try:
