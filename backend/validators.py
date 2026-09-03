@@ -1378,33 +1378,35 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 							error_mask.iloc[ridx] = False
 
 		elif tipo == "INT":
-			# Enteros: acepta numeros enteros, vacios, y "SIN DATO".
-			# Tambien acepta ".0" de Excel (25.0 -> 25).
-			es_trimestre = any(k in col_norm for k in ("TRIMESTRE", "TRIM"))
-			es_medicion = ("GLICEMIA" in col_norm) or ("TOLERANCIA" in col_norm)
-			es_municipio = (col_norm == "MUNICIPIO DE RESIDENCIA")
+			# Enteros: acepta SOLO numeros enteros, "SIN DATO", o NA si el campo lo permite.
+			# El instructivo dice ej: "NA- numero entero ejemplo 70,80"
+			# NO acepta texto como "NORMAL", "Sin Datos", etc.
+			es_trimestre = any(k in col_norm for k in ("trimestre", "trim"))
+			es_medicion = ("glicemia" in col_norm) or ("tolerancia" in col_norm) or ("hemoglobina" in col_norm)
+			es_municipio = (col_norm == "municipio de residencia")
 
-			clean = ser_raw.str.replace(" ", "", regex=False).str.replace("-", "", regex=False)
+			# Solo acepta: enteros (25, 25.0) o decimales (70.5) para mediciones
 			es_entero = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False) | ser_raw.str.fullmatch(r"[+-]?\d+\.0+").fillna(False)
 
 			es_trim = ser_raw.str.upper().str.replace(" ", "", regex=False).str.replace(".", "", regex=False).str.replace("ER", "", regex=False).str.replace("TRIM", "", regex=False).str.fullmatch(r"[123]").fillna(False)
 
 			es_dec = False
 			if es_medicion:
-				# El instructivo dice: "NA- numero entero ejemplo 70,80"
-				# Solo acepta un SOLO numero entero o decimal, NO rangos
+				# Para glicemia/tolerancia/hemoglobina: acepta decimal (70.5) pero NO rangos
 				es_dec = ser_raw.str.replace(",", ".", regex=False).str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
 
 			es_muni = False
 			if es_municipio:
 				es_muni = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False)
 
-			error_mask = (~es_entero) & (~es_trim) & (~es_dec) & (~es_muni) & (~vacio_mask)
-			# El instructivo permite el comodin NA en varios campos numericos:
-			# glicemia, tolerancia, hemoglobina ("NA - numero entero"),
-			# Semanas de Gestacion ("de lo contrario colocar NA").
-			es_na_int = ser_raw.str.upper().isin(["NA", "N/A", "N.A."]) & NA_FIELDS_COL_SERIES
-			error_mask = error_mask & (~es_na_int)
+			# Aceptar "SIN DATO" como valido (el instructivo lo permite como comodin)
+			es_sindato = ser_raw.str.upper().str.strip().isin(["SIN DATO", "SIN DATOS", "S/D"])
+			# Aceptar NA solo si el campo lo permite
+			es_na_perm = ser_raw.str.upper().str.strip().isin(["NA", "N/A", "N.A."]) & NA_FIELDS_COL_SERIES
+
+			error_mask = (~es_entero) & (~es_trim) & (~es_dec) & (~es_muni) & (~es_sindato) & (~es_na_perm)
+			# NOTA: vacios NO se aceptan — el instructivo dice que estos campos son obligatorios
+			# Solo se acepta SIN DATO o NA si el campo lo permite
 
 		elif tipo == "DECIMAL":
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
