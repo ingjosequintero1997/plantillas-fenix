@@ -334,6 +334,11 @@ export default function App() {
 
   const handleEvaluate = () => {
     if (!correctedText || !correctedText.trim()) return
+    // Verificar que correctedText no sea igual a rawText (lo indicaría que aún no se ha corregido)
+    if (correctedText === rawText) {
+      setError('Los datos corregidos son iguales a los originales. El sistema no detectó cambios. Por favor, vuelva a procesar el archivo.')
+      return
+    }
     setShowEvaluation(true)
   }
 
