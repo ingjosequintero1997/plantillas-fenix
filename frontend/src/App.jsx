@@ -359,8 +359,8 @@ export default function App() {
       const fecha = new Date().toISOString().slice(0, 10)
       const filename = `reporte_errores_${selectedTemplate}_${fecha}.xlsx`
       // 1) Si hay data en memoria (validacion actual), generar Excel directo.
-      if (rawText && rawText.trim()) {
-        await descargarReporteErroresExcelData(rawText, selectedTemplate, filename)
+      if (correctedText && correctedText.trim()) {
+        await descargarReporteErroresExcelData(correctedText, selectedTemplate, filename)
         // Volver al estado de validacion para re-subir la data corregida.
         handleReset()
         return
@@ -611,7 +611,7 @@ export default function App() {
                             Descarga el Excel de errores, corrige los datos marcados en rojo y vuelve a subir el archivo.
                           </div>
                         </div>
-                        <button onClick={handleDownloadReport} disabled={!rawText} className="btn-primary">
+                        <button onClick={handleDownloadReport} disabled={!correctedText} className="btn-primary">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                           Descargar errores (Excel)
                         </button>
