@@ -3348,7 +3348,7 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 
 
 @app.post("/data/gestantes/populate")
-async def populate_gestantes_from_cargues(current_user: User = Depends(get_current_user)):
+async def populate_gestantes_from_cargues(current_user: User = Depends(require_admin)):
 	"""Lee el ultimo cargue y puebla la tabla gestantes, dividiendo por prestador segun IPS."""
 	ensure_db_ready()
 	db = SessionLocal()
@@ -3481,7 +3481,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(get_curre
 
 
 @app.post("/data/gestantes/clean-repopulate")
-async def clean_and_repopulate(current_user: User = Depends(get_current_user)):
+async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 	"""Limpia la tabla gestantes y re-puebla desde el ultimo cargue con diagnóstico detallado."""
 	ensure_db_ready()
 	db = SessionLocal()
@@ -3702,6 +3702,36 @@ async def listar_gestantes(
 		db.close()
 
 
+def _get_prestador_ips_name(db, current_user):
+	"""Obtiene el nombre de la IPS del prestador actual. Retorna None si es admin o no tiene IPS."""
+	if current_user.role == "admin":
+		return None
+	prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+	if not prestador or not prestador.ips:
+		return None
+	ips_code = str(prestador.ips).strip()
+	try:
+		row = db.execute(text('SELECT razon_social FROM ct_ips WHERE ips = :code'), {"code": ips_code}).fetchone()
+		if row:
+			return str(row[0]).strip().upper()
+	except Exception:
+		pass
+	return None
+
+
+def _check_gestante_ips(db, current_user, registro_id):
+	"""Verifica que la gestante pertenezca a la IPS del prestador. Lanza 403 si no."""
+	ips_nombre = _get_prestador_ips_name(db, current_user)
+	if ips_nombre is None:
+		return
+	row = db.execute(text('SELECT "NOMBRE_DE_LA_IPS_PRIMARIA" FROM gestantes WHERE id = :id'), {"id": registro_id}).fetchone()
+	if not row:
+		return
+	ips_gestante = str(row[0] or "").strip().upper()
+	if ips_gestante and ips_gestante != ips_nombre and ips_gestante != "NA":
+		raise HTTPException(status_code=403, detail="No autorizado: esta gestante pertenece a otra IPS")
+
+
 @app.get("/data/gestantes/{registro_id}")
 async def obtener_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene un registro de gestante por ID."""
@@ -3709,6 +3739,7 @@ async def obtener_gestante(registro_id: int, current_user: User = Depends(get_cu
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text
+		_check_gestante_ips(db, current_user, registro_id)
 		row = db.execute(text('SELECT * FROM gestantes WHERE id = :id'), {"id": registro_id}).fetchone()
 		if not row:
 			raise HTTPException(status_code=404, detail="Registro no encontrado")
@@ -3730,6 +3761,7 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text
+		_check_gestante_ips(db, current_user, registro_id)
 		# Verificar que existe y obtener valores actuales
 		existing = db.execute(text('SELECT * FROM gestantes WHERE id = :id'), {"id": registro_id}).fetchone()
 		if not existing:
