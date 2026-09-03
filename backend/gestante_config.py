@@ -262,6 +262,7 @@ ALLOWED_BY_NAME = {
     "Resultado Chagas": ["NA", "POSITIVO", "NEGATIVO"],
     "Quien Realizó el Control": ["Médico Ginecologia", "Aux de Enfermeria", "Enfermera (o)", "Control Tradicional (obligatorio)"],
     "Tipo": ["NA", "IVE", "Expontáneo", "Provocado"],
+    "TIPO": ["DIU", "Inyeccion mensual", "Inyeccion trimestral", "Pildoras", "Condon", "Pomeroy", "Ninguno", "NA", "SIN DATO"],
     "Tipo de tratamiento suminitrado para anemia": ["NA", "1. Hierro oral", "2. Hierro parenteral", "3. transfusion sanguinea"],
     "Relación entre Anemia vs tratamiento": ["1. tratamiento para anemia indicado y suministrado", "2. tratamiento para anemia indicado y no suministrado", "3. tratamiento para anemia no indicada ni suministrada", "4. NO requiere tratamiento hemoglobina adecuada"],
     "Complicaciones": ["NA", "Si", "No"],
@@ -281,8 +282,13 @@ def allowed_for(field_name: str):
     direct = ALLOWED_BY_NAME.get(field_name)
     if direct is not None:
         return direct
-    norm = {str(k).strip().upper(): v for k, v in ALLOWED_BY_NAME.items()}
-    return norm.get(field_name.upper(), ["SIN DATO"])
+    try:
+        from .validators import normalize_text
+    except ImportError:
+        from validators import normalize_text
+    norm = {normalize_text(k): v for k, v in ALLOWED_BY_NAME.items()}
+    cn = normalize_text(field_name)
+    return norm.get(cn, ["SIN DATO"])
 
 
 def build_gestante_template():

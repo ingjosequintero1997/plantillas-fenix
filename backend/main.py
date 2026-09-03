@@ -675,39 +675,66 @@ async def upload_file(
 		canonical_raw_text = df.to_csv(sep='|', index=False, header=False)
 
 		if mode == "validador":
+			# En modo validador, normalizar y limpiar la data ANTES de validar,
+			# para que el log de errores y el Excel usen la misma data canonicalizada.
 			try:
-				from .validators import validate_only
+				from .validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
 			except ImportError:
-				from validators import validate_only
-			validation_result = validate_only(df, map_suggest, active_template)
-			# Si la data quedo validada sin errores, aplicar las formulas de la
-			# plantilla (edad, FPP, IMC, trimestres, controles) para tener la data al 100%.
-			if validation_result["stats"]["rows_with_errors"] == 0:
+				from validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
+			df = normalizar_fechas_df(df, active_template)
+			df = limpiar_celdas_export(df)
+			df_safe = df.fillna("SIN DATO").astype(str)
+			canonical_raw_text = df_safe.to_csv(sep='|', index=False, header=False)
+			# Usar _errores_rapidos: misma fuente que el Excel de errores
+			errors_by_cell = _errores_rapidos(canonical_raw_text, template_key)
+			logs_sample = []
+			for (row_idx, col_name), msg in errors_by_cell.items():
+				val = ""
+				if row_idx < len(df_safe) and col_name in df_safe.columns:
+					val = str(df_safe.iloc[row_idx][col_name])
+				logs_sample.append({
+					"row": row_idx + 1,
+					"column": col_name,
+					"original": val,
+					"corrected": msg,
+					"status": "error",
+				})
+			cross_field_errors = []
+			if template_key == "gestante":
+				try:
+					cross_field_errors = validate_cross_fields(df_safe)
+				except Exception:
+					pass
+			all_logs = logs_sample + [
+				{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
+				for e in cross_field_errors
+			]
+			n = len(df_safe)
+			n_errors = len(set(lr["row"] for lr in all_logs if lr["status"] == "error"))
+			stats = {
+				"total": n,
+				"rows_with_errors": n_errors,
+				"rows_ok": n - n_errors,
+				"errors": len([lr for lr in all_logs if lr["status"] == "error"]),
+				"cross_field_errors": len(cross_field_errors),
+			}
+			raw_text_compressed = _gz_compress(canonical_raw_text)
+			if stats["rows_with_errors"] == 0:
 				try:
 					from .formulas import aplicar_formulas_df
 				except ImportError:
 					from formulas import aplicar_formulas_df
-				df = aplicar_formulas_df(df)
-			# En modo validador la data va SIN encabezado (solo filas en orden
-			# de plantilla) para que sea consistente con la tabla editable.
-			try:
-				from .validators import normalizar_fechas_df, limpiar_celdas_export
-			except ImportError:
-				from validators import normalizar_fechas_df, limpiar_celdas_export
-			df = normalizar_fechas_df(df, active_template)
-			df = limpiar_celdas_export(df)
-			# Evitar NaN en preview (Excel produce nan en celdas vacias/formulas)
-			df_safe = df.fillna("SIN DATO").astype(str)
-			canonical_raw_text = df_safe.to_csv(sep='|', index=False, header=False)
-			raw_text_compressed = _gz_compress(canonical_raw_text)
+				df_safe = aplicar_formulas_df(df_safe)
+				canonical_raw_text = df_safe.to_csv(sep='|', index=False, header=False)
+				raw_text_compressed = _gz_compress(canonical_raw_text)
 			return JSONResponse({
 				"success": True,
 				"template_key": template_key,
 				"mode": "validador",
 				"mapping_suggested": map_suggest,
 				"mapping": map_suggest,
-				"summary": validation_result["stats"],
-				"logs_sample": validation_result["logs"],
+				"summary": stats,
+				"logs_sample": all_logs[:50000],
 				"corrected_text": raw_text_compressed,
 				"raw_text": raw_text_compressed,
 				"preview_rows": df_safe.head(30).to_dict(orient='records'),
