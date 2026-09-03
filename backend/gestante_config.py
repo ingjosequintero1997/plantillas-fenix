@@ -216,7 +216,7 @@ RAW_FIELDS: list[tuple[str, str]] = [
 
 ALLOWED_BY_NAME = {
     "Tipo de documento de identidad": ["CC", "MS", "PT", "TI", "PA", "CD", "AS"],
-    "Sexo": ["FEMENINO", "MASCULINO"],
+    "Sexo": ["Femenino"],
     "Regimen Afiliacion": ["S", "C"],
     "Pertenecia Etnica": ["Indígena", "ROM (Gitano)", "Raizal del Archipielago", "Negro (a), Mulato, Afroamericano", "Mestizo", "Ningunas de las Anteriores"],
     "Zona": ["Rural", "Urbana"],
