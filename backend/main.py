@@ -52,8 +52,9 @@ try:
         hash_password,
         require_admin,
         verify_credentials,
+        verify_token,
     )
-    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes, GESTANTE_COLUMNS
+    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS
     from . import gcs_storage
     from . import corporate_db
 except ImportError:
@@ -63,8 +64,9 @@ except ImportError:
         hash_password,
         require_admin,
         verify_credentials,
+        verify_token,
     )
-    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, crear_tabla_gestantes, GESTANTE_COLUMNS
+    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS
     import gcs_storage
     import corporate_db
 
@@ -111,6 +113,144 @@ async def auth_me(current_user: User = Depends(get_current_user)):
             "prestador_ips": prestador_ips,
         }
     }
+
+
+# ─── Auth IPS ──────────────────────────────────────────────────────────────
+
+@app.post("/auth/ips-login")
+async def ips_login(payload: LoginPayload):
+    """Login para usuarios IPS (tabla usuarios_ips)."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        user_ips = db.query(UsuarioIPS).filter(
+            UsuarioIPS.username == payload.username.strip(),
+            UsuarioIPS.active == True,
+        ).first()
+        if user_ips and verify_password(payload.password, user_ips.password_hash):
+            # Crear token con rol "ips_user"
+            token_data = {
+                "sub": user_ips.username,
+                "uid": user_ips.id,
+                "role": "ips_user",
+                "ips_name": user_ips.ips_name,
+                "ips_code": user_ips.ips_code or "",
+                "exp": (datetime.utcnow() + timedelta(hours=8)).isoformat(),
+            }
+            b64 = base64.urlsafe_b64encode(json.dumps(token_data).encode()).decode().rstrip("=")
+            sig = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
+            token = f"{b64}.{sig}"
+            return {
+                "token": token,
+                "user": {"id": user_ips.id, "username": user_ips.username, "name": user_ips.ips_name, "role": "ips_user", "ips_name": user_ips.ips_name, "ips_code": user_ips.ips_code},
+            }
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+    finally:
+        db.close()
+
+
+@app.get("/auth/ips-me")
+async def ips_me(request: Request):
+    """Retorna info del usuario IPS desde el token."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="No autorizado")
+    payload = verify_token(auth[7:])
+    if not payload or payload.get("role") != "ips_user":
+        raise HTTPException(status_code=401, detail="Token inválido")
+    return {
+        "user": {
+            "id": payload.get("uid"),
+            "username": payload.get("sub"),
+            "name": payload.get("ips_name", ""),
+            "role": "ips_user",
+            "ips_name": payload.get("ips_name", ""),
+            "ips_code": payload.get("ips_code", ""),
+        }
+    }
+
+
+# ─── CRUD Usuarios IPS (admin) ────────────────────────────────────────────
+
+@app.get("/data/usuarios-ips")
+async def listar_usuarios_ips(current_user: User = Depends(require_admin)):
+    """Lista todos los usuarios IPS."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        rows = db.query(UsuarioIPS).order_by(UsuarioIPS.ips_name).all()
+        return [{"id": r.id, "username": r.username, "ips_name": r.ips_name, "ips_code": r.ips_code, "active": r.active, "created_at": str(r.created_at)} for r in rows]
+    finally:
+        db.close()
+
+
+@app.post("/data/usuarios-ips")
+async def crear_usuario_ips(payload: dict, current_user: User = Depends(require_admin)):
+    """Crea un usuario IPS. body: {username, password, ips_name, ips_code?}"""
+    ensure_db_ready()
+    username = payload.get("username", "").strip()
+    password = payload.get("password", "")
+    ips_name = payload.get("ips_name", "").strip()
+    ips_code = payload.get("ips_code", "").strip()
+    if not username or not password or not ips_name:
+        raise HTTPException(status_code=400, detail="username, password e ips_name son obligatorios")
+    db = SessionLocal()
+    try:
+        exists = db.query(UsuarioIPS).filter(UsuarioIPS.username == username).first()
+        if exists:
+            raise HTTPException(status_code=409, detail=f"El usuario '{username}' ya existe")
+        u = UsuarioIPS(
+            username=username,
+            password_hash=hash_password(password),
+            ips_name=ips_name,
+            ips_code=ips_code or None,
+            active=True,
+        )
+        db.add(u)
+        db.commit()
+        db.refresh(u)
+        return {"ok": True, "id": u.id, "username": u.username, "ips_name": u.ips_name}
+    finally:
+        db.close()
+
+
+@app.delete("/data/usuarios-ips/{user_id}")
+async def eliminar_usuario_ips(user_id: int, current_user: User = Depends(require_admin)):
+    """Desactiva un usuario IPS."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        u = db.query(UsuarioIPS).get(user_id)
+        if not u:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        u.active = False
+        db.commit()
+        return {"ok": True}
+    finally:
+        db.close()
+
+
+@app.put("/data/usuarios-ips/{user_id}")
+async def actualizar_usuario_ips(user_id: int, payload: dict, current_user: User = Depends(require_admin)):
+    """Actualiza un usuario IPS (password, ips_name, ips_code, active)."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        u = db.query(UsuarioIPS).get(user_id)
+        if not u:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        if "password" in payload and payload["password"]:
+            u.password_hash = hash_password(payload["password"])
+        if "ips_name" in payload:
+            u.ips_name = payload["ips_name"]
+        if "ips_code" in payload:
+            u.ips_code = payload["ips_code"]
+        if "active" in payload:
+            u.active = payload["active"]
+        db.commit()
+        return {"ok": True}
+    finally:
+        db.close()
 
 
 def seed_admin():
@@ -3359,6 +3499,25 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	except Exception:
 		nombres_ips = {}
 	
+	# Buscar IDs de gestantes en la tabla por numero_id
+	nums_batch = [e["numero_id"] for e in encontrados]
+	gestante_ids = {}
+	if nums_batch:
+		try:
+			gest_db = SessionLocal()
+			from sqlalchemy import text as _sa_text
+			BATCH = 200
+			for i in range(0, len(nums_batch), BATCH):
+				batch_nums = nums_batch[i:i+BATCH]
+				placeholders = ", ".join(f":n{j}" for j in range(len(batch_nums)))
+				params = {f"n{j}": n for j, n in enumerate(batch_nums)}
+				rows = gest_db.execute(_sa_text(f'SELECT id, "NO_DE_IDENTIFICACION" FROM gestantes WHERE "NO_DE_IDENTIFICACION" IN ({placeholders})'), params).fetchall()
+				for r in rows:
+					gestante_ids[str(r[1]).strip()] = int(r[0])
+			gest_db.close()
+		except Exception:
+			pass
+	
 	# Construir grupos de IPS
 	ips_groups = {}
 	for u in encontrados:
@@ -3367,6 +3526,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 			ips_name = nombres_ips.get(str(ips_code).strip(), f"IPS {ips_code}")
 			if ips_name not in ips_groups:
 				ips_groups[ips_name] = []
+			gid = gestante_ids.get(u["numero_id"])
 			ips_groups[ips_name].append({
 				"tipo_id": u["tipo_id"],
 				"numero_id": u["numero_id"],
@@ -3374,6 +3534,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"nombre2": u["nombre2"],
 				"apellido1": u["apellido1"],
 				"apellido2": u["apellido2"],
+				"gestante_id": gid,
 			})
 	
 	return {

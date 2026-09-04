@@ -13,6 +13,7 @@ import FormularioRegistro from './components/FormularioRegistro'
 import GestanteForm from './components/GestanteForm'
 import VerificarAfiliado from './components/VerificarAfiliado'
 import DragDrop from './components/DragDrop'
+const UsuariosIPS = lazy(() => import('./components/UsuariosIPS'))
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
 import Pagination from './components/Pagination'
@@ -690,6 +691,13 @@ export default function App() {
             {section === 'prestadores' && (
               <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
                 <PrestadoresView />
+              </Suspense>
+            )}
+
+            {/* ─── USUARIOS IPS (admin) ─── */}
+            {section === 'usuarios-ips' && (
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <UsuariosIPS />
               </Suspense>
             )}
 

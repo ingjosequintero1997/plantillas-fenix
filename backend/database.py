@@ -173,6 +173,18 @@ class AuditLog(Base):
     created_at = Column(DateTime, nullable=False, default=_utcnow)
 
 
+class UsuarioIPS(Base):
+    __tablename__ = "usuarios_ips"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String(120), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    ips_name = Column(String(255), nullable=False)
+    ips_code = Column(String(60), nullable=True)
+    active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False, default=_utcnow)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     # Migraciones ligeras para tablas creadas con esquemas anteriores

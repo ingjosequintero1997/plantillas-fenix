@@ -1,0 +1,14 @@
+cd C:\Users\PROFESIONAL\Desktop\Proyecto Plantillas indicadores fenix
+
+:: Ver estado
+git status
+
+:: Agregar y commit
+git add frontend/src/App.jsx
+git commit -m "fix: validar que correctedText != rawText antes de evaluar"
+
+:: Push a main
+git push origin main
+
+:: Forzar deploy en Vercel
+vercel deploy --force

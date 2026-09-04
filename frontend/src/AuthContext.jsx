@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
       })
       const text = await resp.text()
       if (!resp.ok) {
-        let detail = 'Error de conexión'
+        let detail = 'Error de conexion'
         try { detail = JSON.parse(text).detail || detail } catch { detail = text || detail }
         throw new Error(detail)
       }
@@ -38,7 +38,36 @@ export function AuthProvider({ children }) {
       sessionStorage.setItem('auth', JSON.stringify(userData))
       setUser(userData)
     } catch (e) {
-      if (e.name === 'AbortError') throw new Error('La conexión tardó demasiado. Intenta de nuevo.')
+      if (e.name === 'AbortError') throw new Error('La conexion tardo demasiado. Intenta de nuevo.')
+      throw e
+    } finally {
+      clearTimeout(timer)
+    }
+  }, [])
+
+  const loginIps = useCallback(async (username, password) => {
+    const base = (import.meta.env.VITE_API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api')).trim().replace(/\/+$/, '')
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 25000)
+    try {
+      const resp = await fetch(`${base}/auth/ips-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        signal: controller.signal,
+      })
+      const text = await resp.text()
+      if (!resp.ok) {
+        let detail = 'Credenciales incorrectas'
+        try { detail = JSON.parse(text).detail || detail } catch { detail = text || detail }
+        throw new Error(detail)
+      }
+      const data = JSON.parse(text)
+      const userData = { ...data.user, token: data.token, role: 'ips_user' }
+      sessionStorage.setItem('auth', JSON.stringify(userData))
+      setUser(userData)
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('La conexion tardo demasiado.')
       throw e
     } finally {
       clearTimeout(timer)
@@ -51,7 +80,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, loginIps, logout }}>
       {children}
     </AuthContext.Provider>
   )

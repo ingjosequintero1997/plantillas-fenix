@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
-import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation } from '../api'
+import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante } from '../api'
 import GestanteForm from './GestanteForm'
 
 const PAGE_SIZE = 50
@@ -74,7 +74,20 @@ export default function DataManagement({ correctedText }) {
   }, [instResult, instValidating, runAffiliationValidation])
 
   const ipsGroups = instResult?.ips_groups || {}
-  const ipsNames = Object.keys(ipsGroups)
+  const isIpsUser = user?.role === 'ips_user'
+  const ipsUserName = user?.ips_name || user?.name || ''
+  const filteredIpsGroups = isIpsUser && ipsUserName
+    ? Object.fromEntries(Object.entries(ipsGroups).filter(([name]) => name.toUpperCase().includes(ipsUserName.toUpperCase())))
+    : ipsGroups
+  const ipsNames = Object.keys(filteredIpsGroups)
+
+  useEffect(() => {
+    if (isIpsUser && ipsNames.length === 1 && view === 'list' && !selectedIps) {
+      setSelectedIps(ipsNames[0])
+      setView('ips_detail')
+    }
+  }, [isIpsUser, ipsNames, view, selectedIps])
+
   const noEncontrados = instResult?.no_encontrados || 0
   const instErrors = instResult?.errors || []
   const encontrados = instResult?.encontrados || 0
@@ -89,8 +102,17 @@ export default function DataManagement({ correctedText }) {
     setView('list'); setSelectedIps(null); setPage(1); setSearch('')
   }
 
-  const startEdit = (reg) => {
-    setEditing({ ...reg, _from_gestantes: !!reg.id })
+  const startEdit = async (u) => {
+    const gid = u.gestante_id || u.id
+    if (gid) {
+      try {
+        const fullData = await fetchGestante(gid)
+        setEditing({ ...fullData, _from_gestantes: true })
+        setView('editing')
+        return
+      } catch (e) { /* fallback */ }
+    }
+    setEditing({ ...mapInstToGestanteKeys(u), _from_gestantes: false })
     setView('editing')
   }
 
@@ -217,7 +239,7 @@ export default function DataManagement({ correctedText }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{ipsName}</div>
-                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{ipsGroups[ipsName].length} afiliadas</div>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{filteredIpsGroups[ipsName].length} afiliadas</div>
                   </div>
                   <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -260,7 +282,7 @@ export default function DataManagement({ correctedText }) {
   }
 
   if (view === 'ips_detail' && selectedIps) {
-    const usuarias = ipsGroups[selectedIps] || []
+    const usuarias = filteredIpsGroups[selectedIps] || []
     const filtered = search ? usuarias.filter(u => {
       const q = search.toLowerCase()
       return u.numero_id?.toLowerCase().includes(q) || u.apellido1?.toLowerCase().includes(q) || u.nombre1?.toLowerCase().includes(q)
@@ -326,7 +348,7 @@ export default function DataManagement({ correctedText }) {
                       </td>
                     ))}
                     <td className="text-right">
-                      <button onClick={() => startEdit(mapInstToGestanteKeys(u))} className="btn-ghost text-xs px-2 py-1" title="Editar">
+                      <button onClick={() => startEdit(u)} className="btn-ghost text-xs px-2 py-1" title="Editar">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
                     </td>

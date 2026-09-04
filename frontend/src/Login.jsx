@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
 export default function Login() {
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, login, loginIps } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -18,8 +18,11 @@ export default function Login() {
     e.preventDefault()
     if (!username.trim() || !password.trim()) { setError('Completa todos los campos.'); return }
     setSubmitting(true); setError('')
-    try { await login(username, password) }
-    catch (err) { setError(err.message || 'No fue posible iniciar sesión. Verifica tus credenciales.'); passRef.current?.focus() }
+    try {
+      try { await login(username, password) }
+      catch { await loginIps(username, password) }
+    }
+    catch (err) { setError(err.message || 'Credenciales incorrectas.'); passRef.current?.focus() }
     finally { setSubmitting(false) }
   }
 
