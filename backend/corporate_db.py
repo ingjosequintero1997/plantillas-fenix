@@ -272,10 +272,10 @@ def obtener_ips_de_afiliado(numero_id: str, tipo_id: str = "CC") -> Optional[str
 def validar_afiliados_lote(usuarios: list) -> dict:
     """
     Valida un lote de usuarios contra administrativo."af_afiliado".
+    Busca por numero_identificacion y obtiene tipo via join con tb_tipo_identificacion.
     
     Args:
         usuarios: lista de dicts con "tipo_id" y "numero_id"
-        Ej: [{"tipo_id": "CC", "numero_id": "123456789"}, ...]
     
     Returns:
         dict con:
@@ -302,42 +302,41 @@ def validar_afiliados_lote(usuarios: list) -> dict:
                 batch = usuarios[i:i + BATCH_SIZE]
                 
                 params = {}
-                conditions = []
+                placeholders = []
                 for idx, u in enumerate(batch):
-                    key_tipo = f"tipo_{idx}"
-                    key_num = f"num_{idx}"
-                    tipo_str = str(u["tipo_id"]).strip().upper()
-                    tipo_num = TIPO_DOC_MAP.get(tipo_str, 0)
-                    params[key_tipo] = tipo_num
-                    params[key_num] = str(u["numero_id"]).strip()
-                    conditions.append(f"(a.\"tipo_identificacion\" = :{key_tipo} AND a.\"numero_identificacion\" = :{key_num})")
+                    key = f"num_{idx}"
+                    params[key] = str(u["numero_id"]).strip()
+                    placeholders.append(f":{key}")
                 
-                where_clause = " OR ".join(conditions)
+                in_clause = ", ".join(placeholders)
                 query = text(f'''
-                    SELECT a."tipo_identificacion", a."numero_identificacion", a."ips"
+                    SELECT a."numero_identificacion", a."tipo_identificacion", a."ips"
                     FROM administrativo."af_afiliado" a
-                    WHERE {where_clause}
+                    WHERE a."numero_identificacion" IN ({in_clause})
                 ''')
                 
                 result = conn.execute(query, params).fetchall()
                 
-                # Indexar resultados encontrados
+                # Indexar resultados encontrados por numero_id
                 encontrados_set = set()
                 for row in result:
-                    tipo_raw = str(row[0]).strip()
-                    num = str(row[1]).strip()
+                    num = str(row[0]).strip()
+                    tipo_raw = str(row[1]).strip()
                     ips_code = str(row[2]).strip() if row[2] else None
-                    # Convertir tipo numerico (3) a string (CC) para poder comparar
-                    tipo_int = int(float(tipo_raw)) if tipo_raw.isdigit() or (tipo_raw.replace('.','').isdigit()) else 0
-                    tipo_str_db = TIPO_DOC_REVERSE.get(tipo_int, tipo_raw)
-                    encontrados_set.add((tipo_str_db, num))
-                    encontrados.append({"tipo_id": tipo_str_db, "numero_id": num, "ips": ips_code})
+                    tipo_int = 0
+                    try:
+                        tipo_int = int(float(tipo_raw))
+                    except (ValueError, TypeError):
+                        pass
+                    tipo_str = TIPO_DOC_REVERSE.get(tipo_int, tipo_raw)
+                    encontrados_set.add(num)
+                    encontrados.append({"tipo_id": tipo_str, "numero_id": num, "ips": ips_code})
                 
                 # Marcar no encontrados
                 for u in batch:
-                    key = (str(u["tipo_id"]).strip().upper(), str(u["numero_id"]).strip())
-                    if key not in encontrados_set:
-                        no_encontrados.append({"tipo_id": key[0], "numero_id": key[1]})
+                    num = str(u["numero_id"]).strip()
+                    if num not in encontrados_set:
+                        no_encontrados.append({"tipo_id": str(u["tipo_id"]).strip().upper(), "numero_id": num})
             
             return {"encontrados": encontrados, "no_encontrados": no_encontrados, "error": None}
         

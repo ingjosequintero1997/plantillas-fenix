@@ -3325,11 +3325,11 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	if resultado_lote.get("error"):
 		return {"success": True, "encontrados": 0, "no_encontrados": len(usuarios), "errors": [{"row": 0, "column": "DB", "original": "", "corrected": f"Error BD corporativa: {resultado_lote['error'][:200]}", "status": "error"}], "valid_users": [], "ips_groups": {}, "info": f"Error BD: {resultado_lote['error'][:200]}"}
 	
-	# Indexar encontrados por (tipo, numero) -> ips_code
+	# Indexar encontrados por numero_id -> ips_code
 	indx_encontrados = {}
 	for enc in resultado_lote["encontrados"]:
-		key = (enc["tipo_id"], enc["numero_id"])
-		indx_encontrados[key] = enc.get("ips")
+		num = enc["numero_id"]
+		indx_encontrados[num] = enc.get("ips")
 	
 	# Separar encontrados y no encontrados
 	encontrados = []
@@ -3337,9 +3337,9 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	errors = []
 	
 	for u in usuarios:
-		key = (u["tipo_id"], u["numero_id"])
-		if key in indx_encontrados:
-			ips_code = indx_encontrados[key]
+		num = u["numero_id"]
+		if num in indx_encontrados:
+			ips_code = indx_encontrados[num]
 			u_with_ips = {**u, "ips_code": ips_code}
 			encontrados.append(u_with_ips)
 		else:
