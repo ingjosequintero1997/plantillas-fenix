@@ -4085,6 +4085,62 @@ def _check_gestante_ips(db, current_user, registro_id):
 		raise HTTPException(status_code=403, detail="No autorizado: esta gestante pertenece a otra IPS")
 
 
+@app.get("/data/gestantes/by-numid/{numero_id}")
+async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depends(get_current_user)):
+	"""Obtiene todos los campos de una gestante por numero de identificacion.
+	Primero busca en la tabla gestantes, si no encuentra lee del correctedText del ultimo cargue."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text as sa_text
+		import base64, gzip, io as _io, pandas as _pd
+
+		# 1) Buscar en tabla gestantes
+		row = db.execute(sa_text('SELECT * FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :num'), {"num": numero_id.strip()}).fetchone()
+		if row:
+			columnas = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+			return dict(zip(columnas, [str(v) if v is not None else "" for v in row]))
+
+		# 2) Buscar en el correctedText del ultimo cargue
+		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
+		if not cargues:
+			raise HTTPException(status_code=404, detail="No se encontro gestante con ese documento")
+
+		cargue = cargues[0]
+		texto = cargue.corrected_text or cargue.raw_text or ""
+		if cargue.compressed and texto:
+			try: texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
+			except: pass
+		if not texto:
+			raise HTTPException(status_code=404, detail="No se encontro gestante con ese documento")
+
+		meta = get_template_by_key("gestante")
+		tmpl_names = [t["name"] for t in meta["template"]]
+		df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+		df = df.fillna('').astype(str)
+
+		has_cols = len(df.columns) == len(tmpl_names)
+		if has_cols:
+			df.columns = tmpl_names
+
+		# Buscar por numero_id (posicion 2 del template)
+		num_col = tmpl_names[2] if has_cols else 2
+		for idx, row_data in df.iterrows():
+			if str(row_data.get(num_col, "")).strip() == numero_id.strip():
+				result = {}
+				for c in df.columns:
+					result[str(c)] = str(row_data[c]).strip()
+				return result
+
+		raise HTTPException(status_code=404, detail="No se encontro gestante con ese documento")
+	except HTTPException:
+		raise
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=str(e)[:300])
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/{registro_id}")
 async def obtener_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene un registro de gestante por ID."""

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
-import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante } from '../api'
+import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId } from '../api'
 import GestanteForm from './GestanteForm'
 
 const PAGE_SIZE = 50
@@ -108,6 +108,16 @@ export default function DataManagement({ correctedText }) {
       try {
         const fullData = await fetchGestante(gid)
         setEditing({ ...fullData, _from_gestantes: true })
+        setView('editing')
+        return
+      } catch (e) { /* fallback */ }
+    }
+    if (u.numero_id) {
+      try {
+        const fullData = await fetchGestanteByNumId(u.numero_id)
+        const editId = fullData.id
+        delete fullData.id
+        setEditing({ ...fullData, id: editId, _from_gestantes: !!editId })
         setView('editing')
         return
       } catch (e) { /* fallback */ }

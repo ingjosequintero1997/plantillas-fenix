@@ -297,6 +297,10 @@ export async function fetchGestante(id) {
   return apiFetch(`${API_BASE}/data/gestantes/${id}`)
 }
 
+export async function fetchGestanteByNumId(numeroId) {
+  return apiFetch(`${API_BASE}/data/gestantes/by-numid/${encodeURIComponent(numeroId)}`)
+}
+
 export async function fetchGestanteAudit(id) {
   return apiFetch(`${API_BASE}/data/gestantes/${id}/audit`)
 }
