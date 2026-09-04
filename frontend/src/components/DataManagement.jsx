@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
-import { fetchIpsGrupos, fetchGestantes, updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation } from '../api'
+import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation } from '../api'
 import GestanteForm from './GestanteForm'
 
 const PAGE_SIZE = 50
@@ -14,10 +14,32 @@ const INST_COLS = [
   { key: 'nombre2', label: 'Nombre 2' },
 ]
 
+const GESTANTE_TABLE_COLS = [
+  { key: 'TIPO_DE_DOCUMENTO_DE_IDENTIDAD', label: 'Tipo Doc' },
+  { key: 'NO_DE_IDENTIFICACION', label: 'Documento' },
+  { key: 'APELLIDO_1', label: 'Apellido 1' },
+  { key: 'APELLIDO_2', label: 'Apellido 2' },
+  { key: 'NOMBRE_1', label: 'Nombre 1' },
+  { key: 'NOMBRE_2', label: 'Nombre 2' },
+  { key: 'FUM', label: 'FUM' },
+  { key: 'CASO_CERRADO', label: 'Caso Cerrado' },
+]
+
+function mapInstToGestanteKeys(u) {
+  return {
+    TIPO_DE_DOCUMENTO_DE_IDENTIDAD: u.tipo_id || '',
+    NO_DE_IDENTIFICACION: u.numero_id || '',
+    APELLIDO_1: u.apellido1 || '',
+    APELLIDO_2: u.apellido2 || '',
+    NOMBRE_1: u.nombre1 || '',
+    NOMBRE_2: u.nombre2 || '',
+  }
+}
+
 export default function DataManagement({ correctedText }) {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
-  const [view, setView] = useState('ips_list')
+  const [view, setView] = useState('list')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [selectedIps, setSelectedIps] = useState(null)
@@ -31,18 +53,8 @@ export default function DataManagement({ correctedText }) {
   const [instResult, setInstResult] = useState(null)
   const [instValidating, setInstValidating] = useState(false)
 
-  const totalPages = Math.max(1, Math.ceil((instResult?.valid_users?.length || 0) / PAGE_SIZE))
-
-  const hasInstData = instResult && instResult.ips_groups && Object.keys(instResult.ips_groups).length > 0
-
-  useEffect(() => {
-    if (correctedText && !instResult && !instValidating) {
-      runAffiliationValidation()
-    }
-  }, [correctedText])
-
-  const runAffiliationValidation = async () => {
-    if (!correctedText) return
+  const runAffiliationValidation = useCallback(async () => {
+    if (!correctedText || instValidating || instResult) return
     setInstValidating(true); setError('')
     try {
       const data = await validateAffiliation(correctedText)
@@ -52,7 +64,19 @@ export default function DataManagement({ correctedText }) {
     } finally {
       setInstValidating(false)
     }
-  }
+  }, [correctedText, instValidating, instResult])
+
+  useEffect(() => {
+    if (correctedText && !instResult && !instValidating) {
+      runAffiliationValidation()
+    }
+  }, [correctedText, instResult, instValidating, runAffiliationValidation])
+
+  const ipsGroups = instResult?.ips_groups || {}
+  const ipsNames = Object.keys(ipsGroups)
+  const noEncontrados = instResult?.no_encontrados || 0
+  const instErrors = instResult?.errors || []
+  const encontrados = instResult?.encontrados || 0
 
   const handleSelectIps = (ipsName) => {
     setSelectedIps(ipsName)
@@ -61,21 +85,40 @@ export default function DataManagement({ correctedText }) {
   }
 
   const handleBack = () => {
-    setView('ips_list'); setSelectedIps(null); setPage(1)
+    setView('list'); setSelectedIps(null); setPage(1); setSearch('')
   }
 
-  const handleSearch = () => { setPage(1) }
-
-  const handlePageChange = (newPage) => { setPage(newPage) }
-
-  const startEdit = (reg) => { setEditing(reg); setView('editing') }
+  const startEdit = (reg) => {
+    setEditing({ ...reg, _from_gestantes: !!reg.id })
+    setView('editing')
+  }
 
   const handleSaveEdit = async (data) => {
-    setEditing(null); setView('ips_detail')
+    setLoading(true); setError('')
+    try {
+      if (editing._from_gestantes && editing.id) {
+        await updateGestante(editing.id, data)
+      } else {
+        await createGestante(data)
+      }
+      setEditing(null); setView('ips_detail')
+    } catch (e) {
+      setError('Error al guardar: ' + (e.message || ''))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCreate = async (data) => {
-    setShowNewForm(false); setView('ips_detail')
+    setLoading(true); setError('')
+    try {
+      await createGestante(data)
+      setShowNewForm(false); setView('ips_detail')
+    } catch (e) {
+      setError('Error al crear: ' + (e.message || ''))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleAutoFillCasoCerrado = async () => {
@@ -83,7 +126,7 @@ export default function DataManagement({ correctedText }) {
       const data = await autoFillCasoCerrado()
       setAutoFillMsg(`Caso Cerrado auto-llenado: ${data.total_caso_cerrado} registros`)
       setTimeout(() => setAutoFillMsg(''), 5000)
-    } catch (e) { setAutoFillMsg('Error: ' + (e.message || 'No se pudo auto-llenar')) }
+    } catch (e) { setAutoFillMsg('Error: ' + (e.message || '')) }
   }
 
   const handlePopulate = async () => {
@@ -93,17 +136,11 @@ export default function DataManagement({ correctedText }) {
       if (data.error) { setPopulateMsg('Error: ' + data.error) }
       else {
         const d = data.diagnostico || {}
-        setPopulateMsg(`${data.insertadas} gestantes insertadas. Headers mapeados: ${d.total_mapped}/${d.total_headers_csv}`)
+        setPopulateMsg(`${data.insertadas} gestantes insertadas. Headers: ${d.total_mapped}/${d.total_headers_csv}`)
       }
-    } catch (e) { setPopulateMsg('Error: ' + (e.message || 'No se pudo re-poblar')) }
+    } catch (e) { setPopulateMsg('Error: ' + (e.message || '')) }
     finally { setPopulating(false) }
   }
-
-  const ipsGroups = instResult?.ips_groups || {}
-  const ipsNames = Object.keys(ipsGroups)
-  const noEncontrados = instResult?.no_encontrados || 0
-  const instErrors = instResult?.errors || []
-  const encontrados = instResult?.encontrados || 0
 
   if (view === 'editing' && editing) {
     return <GestanteForm mode="edit" initialData={editing} onSave={handleSaveEdit}
@@ -112,20 +149,20 @@ export default function DataManagement({ correctedText }) {
 
   if (view === 'ips_detail' && showNewForm) {
     return <GestanteForm mode="create" onSave={handleCreate}
-      onClose={() => setShowNewForm(false)}
-      initialData={{}} />
+      onClose={() => { setShowNewForm(false); setView('ips_detail') }}
+      initialData={{ NOMBRE_DE_LA_IPS_PRIMARIA: selectedIps || '' }} />
   }
 
-  if (view === 'ips_list') {
+  if (view === 'list') {
     return (
       <div className="space-y-5 fade-in">
         <div className="flex items-center justify-between">
           <div>
             <div className="page-title">Gestión de data</div>
             <div className="page-subtitle">
-              {instValidating ? 'Validando afiliación...' :
-               hasInstData ? `${ipsNames.length} IPS · ${encontrados} afiliadas` :
-               correctedText ? 'Sin datos validados' : 'Carga y valida datos primero'}
+              {instValidating ? 'Validando afiliación con BD corporativa...' :
+               ipsNames.length > 0 ? `${ipsNames.length} IPS · ${encontrados} afiliadas verificadas` :
+               correctedText ? 'Cargando...' : 'Carga y valida datos primero'}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -151,8 +188,12 @@ export default function DataManagement({ correctedText }) {
         )}
 
         {instValidating ? (
-          <div className="skeleton h-40 w-full rounded-xl" />
-        ) : !hasInstData ? (
+          <div className="space-y-3">
+            <div className="skeleton h-10 w-full rounded-xl" />
+            <div className="skeleton h-10 w-full rounded-xl" />
+            <div className="skeleton h-10 w-full rounded-xl" />
+          </div>
+        ) : ipsNames.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
@@ -228,26 +269,33 @@ export default function DataManagement({ correctedText }) {
 
     return (
       <div className="space-y-5 fade-in">
-        <div className="flex items-center gap-3">
-          <button onClick={handleBack} className="btn-ghost text-sm px-2 py-1">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          </button>
-          <div>
-            <div className="page-title">{selectedIps}</div>
-            <div className="page-subtitle">{usuarias.length} afiliadas verificadas</div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={handleBack} className="btn-ghost text-sm px-2 py-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <div>
+              <div className="page-title">{selectedIps}</div>
+              <div className="page-subtitle">{usuarias.length} afiliadas verificadas</div>
+            </div>
           </div>
+          <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            Nueva usuaria
+          </button>
         </div>
+
+        {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
 
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input value={search} onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
               placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
           </div>
-          <button onClick={handleSearch} className="btn-secondary text-sm">Buscar</button>
         </div>
 
         {filtered.length === 0 ? (
@@ -262,7 +310,7 @@ export default function DataManagement({ correctedText }) {
                 <tr>
                   <th className="text-center">#</th>
                   {INST_COLS.map((col) => <th key={col.key}>{col.label}</th>)}
-                  <th className="text-right">Acción</th>
+                  <th className="text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -277,8 +325,8 @@ export default function DataManagement({ correctedText }) {
                       </td>
                     ))}
                     <td className="text-right">
-                      <button className="btn-ghost text-xs px-2 py-1" title="Ver detalle">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      <button onClick={() => startEdit(mapInstToGestanteKeys(u))} className="btn-ghost text-xs px-2 py-1" title="Editar">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
                     </td>
                   </tr>
@@ -289,8 +337,8 @@ export default function DataManagement({ correctedText }) {
               <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {page} de {pTotal}</span>
                 <div className="flex gap-1">
-                  <button onClick={() => handlePageChange(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>
-                  <button onClick={() => handlePageChange(Math.min(pTotal, page + 1))} disabled={page >= pTotal} className="btn-secondary px-2.5 py-1 text-xs">Siguiente →</button>
+                  <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>
+                  <button onClick={() => setPage(Math.min(pTotal, page + 1))} disabled={page >= pTotal} className="btn-secondary px-2.5 py-1 text-xs">Siguiente →</button>
                 </div>
               </div>
             )}
@@ -300,9 +348,5 @@ export default function DataManagement({ correctedText }) {
     )
   }
 
-  return (
-    <div className="empty">
-      <div className="empty-title">Cargando...</div>
-    </div>
-  )
+  return <div className="skeleton h-40 w-full rounded-xl" />
 }
