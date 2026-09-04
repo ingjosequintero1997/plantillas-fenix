@@ -156,7 +156,7 @@ async def ips_login(payload: LoginPayload):
 				ips_code = str(prest.ips).strip()
 				ips_name = str(prest.nombre or "IPS").strip()
 				try:
-					nombre_ips = obtener_nombre_ips_individual(db, ips_code)
+					nombre_ips = obtener_nombre_ips_individual(ips_code)
 					if nombre_ips:
 						ips_name = nombre_ips
 				except Exception:
@@ -182,13 +182,21 @@ async def ips_login(payload: LoginPayload):
 		db.close()
 
 
-def obtener_nombre_ips_individual(db, ips_code):
-	"""Obtiene el nombre de una IPS por su codigo desde ct_ips."""
+def obtener_nombre_ips_individual(ips_code):
+	"""Obtiene el nombre de una IPS por su codigo desde ct_ips en la BD corporativa."""
 	try:
 		from sqlalchemy import text as _sa_text
-		row = db.execute(_sa_text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :code'), {"code": ips_code}).fetchone()
-		if row and row[0]:
-			return str(row[0]).strip()
+		try:
+			from .corporate_db import get_corporate_connection
+		except ImportError:
+			from corporate_db import get_corporate_connection
+		conn = get_corporate_connection()
+		try:
+			row = conn.execute(_sa_text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :code'), {"code": ips_code}).fetchone()
+			if row and row[0]:
+				return str(row[0]).strip()
+		finally:
+			conn.close()
 	except Exception:
 		pass
 	return None
