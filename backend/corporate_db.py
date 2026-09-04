@@ -231,6 +231,142 @@ def obtener_ips_de_afiliado(numero_id: str, tipo_id: str = "CC") -> Optional[str
         return None
 
 
+def validar_afiliados_lote(usuarios: list) -> dict:
+    """
+    Valida un lote de usuarios contra administrativo."af_Afiliados".
+    
+    Args:
+        usuarios: lista de dicts con "tipo_id" y "numero_id"
+        Ej: [{"tipo_id": "CC", "numero_id": "123456789"}, ...]
+    
+    Returns:
+        dict con:
+        {
+            "encontrados": [{"tipo_id": "CC", "numero_id": "123", "ips": "803709"}, ...],
+            "no_encontrados": [{"tipo_id": "CC", "numero_id": "999"}, ...],
+            "error": str | None
+        }
+    """
+    try:
+        engine = get_corporate_connection()
+        if not engine:
+            return {"encontrados": [], "no_encontrados": usuarios, "error": "No se pudo conectar con BD corporativa"}
+        
+        from sqlalchemy import text
+        conn = engine.connect()
+        
+        try:
+            encontrados = []
+            no_encontrados = []
+            
+            BATCH_SIZE = 200
+            for i in range(0, len(usuarios), BATCH_SIZE):
+                batch = usuarios[i:i + BATCH_SIZE]
+                
+                # Construir lista de parámetros para IN clause
+                params = {}
+                conditions = []
+                for idx, u in enumerate(batch):
+                    key_tipo = f"tipo_{idx}"
+                    key_num = f"num_{idx}"
+                    params[key_tipo] = str(u["tipo_id"]).strip().upper()
+                    params[key_num] = str(u["numero_id"]).strip()
+                    conditions.append(f"(a.\"tipo_identificacion\" = :{key_tipo} AND a.\"numero_identificacion\" = :{key_num})")
+                
+                where_clause = " OR ".join(conditions)
+                query = text(f'''
+                    SELECT a."tipo_identificacion", a."numero_identificacion", a."ips"
+                    FROM administrativo."af_Afiliados" a
+                    WHERE {where_clause}
+                ''')
+                
+                result = conn.execute(query, params).fetchall()
+                
+                # Indexar resultados encontrados
+                encontrados_set = set()
+                for row in result:
+                    tipo = str(row[0]).strip()
+                    num = str(row[1]).strip()
+                    ips_code = str(row[2]).strip() if row[2] else None
+                    encontrados_set.add((tipo, num))
+                    encontrados.append({"tipo_id": tipo, "numero_id": num, "ips": ips_code})
+                
+                # Marcar no encontrados
+                for u in batch:
+                    key = (str(u["tipo_id"]).strip().upper(), str(u["numero_id"]).strip())
+                    if key not in encontrados_set:
+                        no_encontrados.append({"tipo_id": key[0], "numero_id": key[1]})
+            
+            return {"encontrados": encontrados, "no_encontrados": no_encontrados, "error": None}
+        
+        finally:
+            conn.close()
+    
+    except Exception as e:
+        return {"encontrados": [], "no_encontrados": usuarios, "error": f"Error en lote: {str(e)[:200]}"}
+
+
+def obtener_nombres_ips(ips_codes: list) -> dict:
+    """
+    Obtiene los nombres de IPS desde ct_ips para una lista de códigos.
+    
+    Args:
+        ips_codes: lista de códigos de IPS (strings)
+    
+    Returns:
+        dict mapeando codigo IPS -> razon_social
+        Ej: {"803709": "DUSAKAWI IPSI", ...}
+    """
+    if not ips_codes:
+        return {}
+    
+    try:
+        engine = get_corporate_connection()
+        if not engine:
+            return {}
+        
+        from sqlalchemy import text
+        conn = engine.connect()
+        
+        try:
+            # Limpiar códigos nulos/vacíos
+            clean_codes = list({str(c).strip() for c in ips_codes if c and str(c).strip()})
+            if not clean_codes:
+                return {}
+            
+            BATCH_SIZE = 200
+            resultado = {}
+            
+            for i in range(0, len(clean_codes), BATCH_SIZE):
+                batch = clean_codes[i:i + BATCH_SIZE]
+                params = {}
+                placeholders = []
+                for idx, code in enumerate(batch):
+                    key = f"code_{idx}"
+                    params[key] = code
+                    placeholders.append(f":{key}")
+                
+                in_clause = ", ".join(placeholders)
+                query = text(f'''
+                    SELECT "ips", "razon_social"
+                    FROM administrativo."ct_ips"
+                    WHERE "ips" IN ({in_clause})
+                ''')
+                
+                result = conn.execute(query, params).fetchall()
+                for row in result:
+                    resultado[str(row[0]).strip()] = str(row[1]).strip() if row[1] else f"IPS {row[0]}"
+            
+            return resultado
+        
+        finally:
+            conn.close()
+    
+    except Exception as e:
+        print(f"Error al obtener nombres IPS: {str(e)}")
+        return {}
+
+
 def test_conexion_corporativa() -> bool:
     """
     Prueba la conexión con la BD corporativa.

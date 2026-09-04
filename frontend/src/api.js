@@ -370,6 +370,14 @@ export async function verificarAfiliado(documento) {
   return apiFetch(`${API_BASE}/verificar-afiliado/${encodeURIComponent(documento)}`)
 }
 
+export async function validateAffiliation(corrected_text, templateKey = 'gestante') {
+  return apiFetch(`${API_BASE}/validate-affiliation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ corrected_text, template_key: templateKey }),
+  })
+}
+
 export async function validateData(corrected_text, templateKey, templateNames = []) {
   return apiFetch(`${API_BASE}/validate-data`, {
     method: 'POST',

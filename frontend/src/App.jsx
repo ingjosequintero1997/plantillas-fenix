@@ -83,6 +83,7 @@ export default function App() {
   const [summary, setSummary] = useState(null)
   const [logs, setLogs] = useState([])
   const [correctedText, setCorrectedText] = useState('')
+  const [institutionalData, setInstitutionalData] = useState(null)
   const [rawText, setRawText] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
   const [batchResults, setBatchResults] = useState([])
@@ -696,7 +697,7 @@ export default function App() {
             {/* ─── GESTIÓN DE DATA ─── */}
             {section === 'data' && (
               <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <DataManagement />
+                <DataManagement institutionalData={institutionalData} correctedText={correctedText} />
               </Suspense>
             )}
 

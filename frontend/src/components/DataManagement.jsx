@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../AuthContext'
-import { fetchIpsGrupos, fetchGestantes, fetchIps, updateGestante, createGestante, autoFillCasoCerrado, fetchCasoCerrado, populateGestantes, cleanAndRepopulate } from '../api'
+import { fetchIpsGrupos, fetchGestantes, updateGestante, createGestante, autoFillCasoCerrado, populateGestantes, cleanAndRepopulate, validateAffiliation } from '../api'
 import GestanteForm from './GestanteForm'
 
 const PAGE_SIZE = 50
@@ -22,10 +22,19 @@ const TABLE_COLS = [
   { key: 'CASO_CERRADO', label: 'Caso Cerrado' },
 ]
 
-export default function DataManagement() {
+const INST_COLS = [
+  { key: 'tipo_id', label: 'Tipo ID' },
+  { key: 'numero_id', label: 'Número' },
+  { key: 'apellido1', label: 'Apellido 1' },
+  { key: 'apellido2', label: 'Apellido 2' },
+  { key: 'nombre1', label: 'Nombre 1' },
+  { key: 'nombre2', label: 'Nombre 2' },
+]
+
+export default function DataManagement({ institutionalData, correctedText }) {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
-  const [view, setView] = useState('ips_list') // 'ips_list' | 'ips_detail' | 'editing'
+  const [view, setView] = useState('ips_list')
   const [ipsGroups, setIpsGroups] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -35,41 +44,28 @@ export default function DataManagement() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null)
-  const [msg, setMsg] = useState('')
   const [showNewForm, setShowNewForm] = useState(false)
-  const [activeTab, setActiveTab] = useState('gestantes')
-  const [casoCerradoRegistros, setCasoCerradoRegistros] = useState([])
-  const [casoCerradoTotal, setCasoCerradoTotal] = useState(0)
   const [autoFillMsg, setAutoFillMsg] = useState('')
   const [populating, setPopulating] = useState(false)
   const [populateMsg, setPopulateMsg] = useState('')
+  const [instValidating, setInstValidating] = useState(false)
+  const [instResult, setInstResult] = useState(null)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  const useInst = institutionalData && institutionalData.ips_groups && Object.keys(institutionalData.ips_groups).length > 0
+
   const loadIpsGroups = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
       const data = await fetchIpsGrupos()
-      if (!data) {
-        setError('Respuesta vacía del servidor')
-        setIpsGroups([])
-        return
-      }
-      if (data.error) {
-        setError(data.error)
-        setIpsGroups([])
-        return
-      }
+      if (!data) { setError('Respuesta vacía del servidor'); setIpsGroups([]); return }
+      if (data.error) { setError(data.error); setIpsGroups([]); return }
       setIpsGroups(data.ips || [])
     } catch (e) {
-      const errMsg = e.message || 'No se pudieron cargar las IPS'
-      console.error('Error loading IPS groups:', errMsg)
-      setError(`Error: ${errMsg}. Si el problema persiste, contacta administración.`)
+      setError(e.message || 'No se pudieron cargar las IPS')
       setIpsGroups([])
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   const loadGestantes = async (ipsName = '', p = 1, q = '') => {
@@ -81,166 +77,136 @@ export default function DataManagement() {
       if (data.error) setError(data.error)
     } catch (e) {
       setError(e.message || 'No se pudieron cargar los registros')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
-  useEffect(() => { loadIpsGroups() }, [])
+  useEffect(() => { if (!useInst) loadIpsGroups() }, [useInst])
 
-  const handleSelectIps = (ips) => {
-    setSelectedIps(ips)
-    setPage(1)
-    setSearch('')
+  const handleSelectIps = (ipsName) => {
+    setSelectedIps(ipsName)
+    setPage(1); setSearch('')
     setView('ips_detail')
-    loadGestantes(ips.nombre, 1, '')
+    if (!useInst) loadGestantes(ipsName, 1, '')
   }
 
   const handleBack = () => {
-    setView('ips_list')
-    setSelectedIps(null)
-    setRegistros([])
-    setTotal(0)
-    setPage(1)
-    loadIpsGroups()
+    setView('ips_list'); setSelectedIps(null); setRegistros([]); setTotal(0); setPage(1)
+    if (!useInst) loadIpsGroups()
   }
 
   const handleSearch = () => {
     setPage(1)
-    loadGestantes(selectedIps?.nombre || '', 1, search)
+    if (!useInst) loadGestantes(selectedIps || '', 1, search)
   }
 
   const handlePageChange = (newPage) => {
     setPage(newPage)
-    loadGestantes(selectedIps?.nombre || '', newPage, search)
+    if (!useInst) loadGestantes(selectedIps || '', newPage, search)
   }
 
-  const startEdit = (reg) => {
-    setEditing(reg)
-    setMsg('')
-    setView('editing')
-  }
+  const startEdit = (reg) => { setEditing(reg); setView('editing') }
 
   const handleSaveEdit = async (data) => {
     await updateGestante(editing.id, data)
-    setEditing(null)
-    setView('ips_detail')
-    loadGestantes(selectedIps?.nombre || '', page, search)
+    setEditing(null); setView('ips_detail')
+    loadGestantes(selectedIps || '', page, search)
   }
 
   const handleCreate = async (data) => {
     await createGestante(data)
-    setShowNewForm(false)
-    setView('ips_detail')
-    loadGestantes(selectedIps?.nombre || '', page, search)
+    setShowNewForm(false); setView('ips_detail')
+    loadGestantes(selectedIps || '', page, search)
   }
 
   const handleAutoFillCasoCerrado = async () => {
     try {
       const data = await autoFillCasoCerrado()
-      setAutoFillMsg(`Caso Cerrado auto-llenado: ${data.total_caso_cerrado} registros marcados`)
+      setAutoFillMsg(`Caso Cerrado auto-llenado: ${data.total_caso_cerrado} registros`)
       setTimeout(() => setAutoFillMsg(''), 5000)
-    } catch (e) {
-      setAutoFillMsg('Error: ' + (e.message || 'No se pudo auto-llenar'))
-    }
+    } catch (e) { setAutoFillMsg('Error: ' + (e.message || 'No se pudo auto-llenar')) }
   }
 
   const handlePopulate = async () => {
-    setPopulating(true); setPopulateMsg('Limpiando y re-poblando con diagnóstico...')
+    setPopulating(true); setPopulateMsg('Limpiando y re-poblando...')
     try {
       const data = await cleanAndRepopulate()
-      if (data.error) {
-        setPopulateMsg('Error: ' + data.error)
-      } else {
-        const diag = data.diagnostico || {}
-        setPopulateMsg(
-          `Listo: ${data.insertadas} gestantes insertadas. ` +
-          `IPS en CSV columna #${diag.ips_col_index_csv ?? '?'} ` +
-          `(mapeado: ${diag.ips_mapped_correctly ? 'OK' : 'FALLÓ'}). ` +
-          `Valor muestra IPS: "${diag.sample_ips_value ?? '?'}". ` +
-          `Headers mapeados: ${diag.total_mapped}/${diag.total_headers_csv}`
-        )
+      if (data.error) { setPopulateMsg('Error: ' + data.error) }
+      else {
+        const d = data.diagnostico || {}
+        setPopulateMsg(`${data.insertadas} gestantes insertadas. Headers mapeados: ${d.total_mapped}/${d.total_headers_csv}`)
         loadIpsGroups()
       }
-    } catch (e) {
-      setPopulateMsg('Error: ' + (e.message || 'No se pudo re-poblar'))
-    } finally {
-      setPopulating(false)
-    }
+    } catch (e) { setPopulateMsg('Error: ' + (e.message || 'No se pudo re-poblar')) }
+    finally { setPopulating(false) }
   }
 
-  const loadCasoCerrado = async (p = 1) => {
+  const handleValidateAffiliation = async () => {
+    if (!correctedText) { setInstResult({ error: 'No hay datos cargados. Sube un archivo primero.' }); return }
+    setInstValidating(true); setInstResult(null)
     try {
-      const data = await fetchCasoCerrado(p, PAGE_SIZE)
-      setCasoCerradoRegistros(data.registros || [])
-      setCasoCerradoTotal(data.total || 0)
-    } catch (e) {}
+      const data = await validateAffiliation(correctedText)
+      setInstResult(data)
+    } catch (e) { setInstResult({ error: e.message || 'Error validando afiliación' }) }
+    finally { setInstValidating(false) }
   }
 
-  // ─── Edit view ────────────────────────────────────────────
+  const instIpsGroups = useInst ? institutionalData.ips_groups : (instResult?.ips_groups || {})
+  const instIpsNames = Object.keys(instIpsGroups)
+  const instNoEncontrados = useInst ? (institutionalData.no_encontrados || 0) : (instResult?.no_encontrados || 0)
+  const instErrors = useInst ? (institutionalData.errors || []) : (instResult?.errors || [])
+  const instEncontrados = useInst ? (institutionalData.encontrados || 0) : (instResult?.encontrados || 0)
+
   if (view === 'editing' && editing) {
     return <GestanteForm mode="edit" initialData={editing} onSave={handleSaveEdit}
       onClose={() => { setEditing(null); setView('ips_detail') }} />
   }
 
-  // ─── New gestante form ────────────────────────────────────
   if (view === 'ips_detail' && showNewForm) {
     return <GestanteForm mode="create" onSave={handleCreate}
       onClose={() => setShowNewForm(false)}
-      initialData={{ NOMBRE_DE_LA_IPS_PRIMARIA: selectedIps?.nombre || '' }} />
+      initialData={{ NOMBRE_DE_LA_IPS_PRIMARIA: selectedIps || '' }} />
   }
 
-  // ─── IPS List view ────────────────────────────────────────
   if (view === 'ips_list') {
-    const IPS_INVALIDOS = new Set(['NO', 'SI', 'N/A', 'NA', 'SIN IPS', 'S/N', '-', '0', 'NO APLICA'])
-    const ipsValidas = ipsGroups.filter(ig => !IPS_INVALIDOS.has(ig.nombre.toUpperCase().trim()))
-    const ipsInvalidas = ipsGroups.filter(ig => IPS_INVALIDOS.has(ig.nombre.toUpperCase().trim()))
-    const totalGestantes = ipsValidas.reduce((sum, ig) => sum + ig.total, 0)
-    const totalInvalidas = ipsInvalidas.reduce((sum, ig) => sum + ig.total, 0)
-
     return (
       <div className="space-y-5 fade-in">
         <div className="flex items-center justify-between">
           <div>
             <div className="page-title">Gestión de data</div>
-            <div className="page-subtitle">{ipsValidas.length} IPS · {totalGestantes.toLocaleString()} gestantes</div>
+            <div className="page-subtitle">
+              {useInst ? `${instIpsNames.length} IPS institucionales · ${instEncontrados} afiliadas` : `${ipsGroups.length} IPS en BD`}
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            {isAdmin && (
+            <button onClick={handleValidateAffiliation} disabled={instValidating || !correctedText}
+              className="btn-primary text-sm">
+              {instValidating ? 'Validando...' : 'Validar Afiliación'}
+            </button>
+            {isAdmin && !useInst && (
               <>
                 <button onClick={handlePopulate} disabled={populating} className="btn-secondary text-sm" style={{ borderColor: '#e74c3c', color: '#e74c3c' }}>
                   {populating ? 'Re-poblando...' : 'Re-poblar data'}
                 </button>
-                <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                  Auto-fill Caso Cerrado
-                </button>
+                <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm">Auto-fill Caso Cerrado</button>
               </>
             )}
           </div>
         </div>
 
-        {autoFillMsg && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: autoFillMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: autoFillMsg.includes('Error') ? '#FBE9E9' : '#EEF3F7' }}>{autoFillMsg}</div>
-        )}
+        {autoFillMsg && <div className="px-3 py-2 rounded-md text-sm" style={{ color: autoFillMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: autoFillMsg.includes('Error') ? '#FBE9E9' : '#EEF3F7' }}>{autoFillMsg}</div>}
+        {populateMsg && <div className="px-3 py-2 rounded-md text-sm" style={{ color: populateMsg.includes('Error') ? 'var(--error)' : 'var(--text-secondary)', backgroundColor: populateMsg.includes('Error') ? '#FBE9E9' : '#F0F0F0', whiteSpace: 'pre-wrap' }}>{populateMsg}</div>}
+        {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
+        {instResult?.error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{instResult.error}</div>}
 
-        {populateMsg && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: populateMsg.includes('Error') ? 'var(--error)' : 'var(--text-secondary)', backgroundColor: populateMsg.includes('Error') ? '#FBE9E9' : '#F0F0F0', whiteSpace: 'pre-wrap' }}>{populateMsg}</div>
-        )}
-
-        {error && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
-        )}
-
-        {ipsInvalidas.length > 0 && (
+        {instNoEncontrados > 0 && (
           <div className="px-3 py-2 rounded-md text-xs" style={{ color: '#e67e22', backgroundColor: '#FEF3E2' }}>
-            {ipsInvalidas.length} grupo(s) con datos de IPS inválidos ({ipsInvalidas.map(iv => `"${iv.nombre}" (${iv.total})`).join(', ')}). Se ocultan de la vista. Usa "Re-poblar data" para corregir.
+            {instNoEncontrados} usuaria(s) no encontradas en base de afiliados. Se muestran en la sección de errores.
           </div>
         )}
 
         {loading ? (
           <div className="skeleton h-40 w-full rounded-xl" />
-        ) : ipsValidas.length === 0 ? (
+        ) : (useInst ? instIpsNames.length === 0 : ipsGroups.length === 0) ? (
           <div className="empty">
             <div className="empty-icon">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
@@ -248,17 +214,37 @@ export default function DataManagement() {
               </svg>
             </div>
             <div className="empty-title">Sin datos</div>
-            <div className="empty-desc">No hay registros de gestantes válidos. Haz clic en "Re-poblar data" para importar desde los cargues.</div>
+            <div className="empty-desc">
+              {correctedText ? 'Haz clic en "Validar Afiliación" para agrupar por IPS institucional.' : 'Sube un archivo y corrige errores para validar afiliación.'}
+            </div>
+          </div>
+        ) : useInst ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {instIpsNames.map((ipsName) => (
+              <button key={ipsName} onClick={() => handleSelectIps(ipsName)}
+                className="panel text-left hover:shadow-md transition-shadow" style={{ cursor: 'pointer' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
+                    <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{ipsName}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{instIpsGroups[ipsName].length} afiliadas</div>
+                  </div>
+                  <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {ipsValidas.map((item) => (
-              <button
-                key={item.nombre}
-                onClick={() => handleSelectIps(item)}
-                className="panel text-left hover:shadow-md transition-shadow"
-                style={{ cursor: 'pointer' }}
-              >
+            {ipsGroups.map((item) => (
+              <button key={item.nombre} onClick={() => handleSelectIps(item.nombre)}
+                className="panel text-left hover:shadow-md transition-shadow" style={{ cursor: 'pointer' }}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
                     <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -277,11 +263,123 @@ export default function DataManagement() {
             ))}
           </div>
         )}
+
+        {instErrors.length > 0 && (
+          <div className="mt-6">
+            <div className="text-sm font-medium mb-2" style={{ color: 'var(--error)' }}>Usuarias no encontradas en base de afiliados ({instErrors.length})</div>
+            <div className="table-wrap" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Fila</th>
+                    <th>Tipo ID</th>
+                    <th>Número ID</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {instErrors.map((err, i) => (
+                    <tr key={i}>
+                      <td className="text-xs">{err.row}</td>
+                      <td className="text-xs">{err.original?.split(' ')[0]}</td>
+                      <td className="text-xs">{err.original?.split(' ')[1]}</td>
+                      <td className="text-xs" style={{ color: 'var(--error)' }}>{err.corrected}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
 
-  // ─── IPS Detail view (list of gestantes for one IPS) ──────
+  if (view === 'ips_detail' && useInst && selectedIps) {
+    const usuarias = instIpsGroups[selectedIps] || []
+    const filtered = search ? usuarias.filter(u => {
+      const q = search.toLowerCase()
+      return u.numero_id?.toLowerCase().includes(q) || u.apellido1?.toLowerCase().includes(q) || u.nombre1?.toLowerCase().includes(q)
+    }) : usuarias
+    const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    const pTotal = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+
+    return (
+      <div className="space-y-5 fade-in">
+        <div className="flex items-center gap-3">
+          <button onClick={handleBack} className="btn-ghost text-sm px-2 py-1">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div>
+            <div className="page-title">{selectedIps}</div>
+            <div className="page-subtitle">{usuarias.length} afiliadas verificadas</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input value={search} onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
+          </div>
+          <button onClick={handleSearch} className="btn-secondary text-sm">Buscar</button>
+        </div>
+
+        {loading ? (
+          <div className="skeleton h-40 w-full rounded-xl" />
+        ) : filtered.length === 0 ? (
+          <div className="empty">
+            <div className="empty-title">Sin registros</div>
+            <div className="empty-desc">No se encontraron afiliadas para esta IPS.</div>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="text-center">#</th>
+                  {INST_COLS.map((col) => <th key={col.key}>{col.label}</th>)}
+                  <th className="text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map((u, i) => (
+                  <tr key={`${u.numero_id}-${i}`}>
+                    <td className="text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      {(page - 1) * PAGE_SIZE + i + 1}
+                    </td>
+                    {INST_COLS.map((col) => (
+                      <td key={col.key} className="text-sm max-w-[120px] truncate">
+                        {u[col.key] || '—'}
+                      </td>
+                    ))}
+                    <td className="text-right">
+                      <button className="btn-ghost text-xs px-2 py-1" title="Ver detalle">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {pTotal > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {page} de {pTotal}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => handlePageChange(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>
+                  <button onClick={() => handlePageChange(Math.min(pTotal, page + 1))} disabled={page >= pTotal} className="btn-secondary px-2.5 py-1 text-xs">Siguiente →</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5 fade-in">
       <div className="flex items-center justify-between">
@@ -290,7 +388,7 @@ export default function DataManagement() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </button>
           <div>
-            <div className="page-title">{selectedIps?.nombre || 'IPS'}</div>
+            <div className="page-title">{selectedIps || 'IPS'}</div>
             <div className="page-subtitle">{total} gestantes registradas</div>
           </div>
         </div>
@@ -300,22 +398,16 @@ export default function DataManagement() {
         </button>
       </div>
 
-      {error && (
-        <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
-      )}
+      {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Buscar por documento, apellido o nombre..."
-            className="input pl-9"
-          />
+            placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
         </div>
         <button onClick={handleSearch} className="btn-secondary text-sm">Buscar</button>
       </div>
@@ -324,11 +416,6 @@ export default function DataManagement() {
         <div className="skeleton h-40 w-full rounded-xl" />
       ) : registros.length === 0 ? (
         <div className="empty">
-          <div className="empty-icon">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
           <div className="empty-title">Sin registros</div>
           <div className="empty-desc">No se encontraron gestantes para esta IPS.</div>
         </div>
@@ -338,9 +425,7 @@ export default function DataManagement() {
             <thead>
               <tr>
                 <th className="text-center">#</th>
-                {TABLE_COLS.map((col) => (
-                  <th key={col.key}>{col.label}</th>
-                ))}
+                {TABLE_COLS.map((col) => <th key={col.key}>{col.label}</th>)}
                 <th className="text-right">Acciones</th>
               </tr>
             </thead>
@@ -364,7 +449,6 @@ export default function DataManagement() {
               ))}
             </tbody>
           </table>
-
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
               <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {page} de {totalPages}</span>
@@ -379,6 +463,3 @@ export default function DataManagement() {
     </div>
   )
 }
-
-
-// EditForm and NewGestanteForm replaced by GestanteForm component

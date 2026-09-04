@@ -3216,6 +3216,136 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
 
 
+@app.post("/validate-affiliation")
+async def validate_affiliation(payload: dict, current_user: User = Depends(get_current_user)):
+	"""Valida afiliación institucional: tipo+numero vs administrativo.af_Afiliados.
+	Devuelve lista de errores (usuarias no encontradas) y lista de usuarias válidas con IPS."""
+	corrected_text = payload.get("corrected_text", "")
+	template_key = payload.get("template_key", "gestante")
+	
+	if not corrected_text or not corrected_text.strip():
+		raise HTTPException(status_code=400, detail="No hay datos para validar afiliación")
+	
+	try:
+		df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+		df = df.fillna('').astype(str)
+	except Exception as e:
+		raise HTTPException(status_code=400, detail=f"Error al parsear datos: {e}")
+	
+	if df.empty:
+		raise HTTPException(status_code=400, detail="No hay datos para validar")
+	
+	# Columnas del template: index 1 = Tipo de documento, index 2 = No. De Identificación
+	meta = get_template_by_key(template_key)
+	tmpl = meta["template"]
+	tmpl_names = [t['name'] for t in tmpl]
+	if len(df.columns) == len(tmpl_names):
+		df.columns = tmpl_names
+	
+	# Extraer tipo y número de identificación
+	tipo_col = tmpl_names[1] if len(tmpl_names) > 1 else "Tipo de documento de identidad"
+	num_col = tmpl_names[2] if len(tmpl_names) > 2 else "No. De Identificación"
+	nombre1_col = tmpl_names[5] if len(tmpl_names) > 5 else "Nombre_1,"
+	apellido1_col = tmpl_names[3] if len(tmpl_names) > 3 else "Apellido_1,"
+	nombre2_col = tmpl_names[6] if len(tmpl_names) > 6 else "Nombre_2"
+	apellido2_col = tmpl_names[4] if len(tmpl_names) > 4 else "Apellido_2"
+	
+	usuarios = []
+	for idx, row in df.iterrows():
+		tipo_id = str(row.get(tipo_col, "")).strip().upper()
+		num_id = str(row.get(num_col, "")).strip()
+		nombre1 = str(row.get(nombre1_col, "")).strip()
+		apellido1 = str(row.get(apellido1_col, "")).strip()
+		nombre2 = str(row.get(nombre2_col, "")).strip()
+		apellido2 = str(row.get(apellido2_col, "")).strip()
+		if tipo_id and num_id and tipo_id != "SIN DATO" and num_id != "0":
+			usuarios.append({
+				"row_idx": idx,
+				"tipo_id": tipo_id,
+				"numero_id": num_id,
+				"nombre1": nombre1,
+				"nombre2": nombre2,
+				"apellido1": apellido1,
+				"apellido2": apellido2,
+			})
+	
+	if not usuarios:
+		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}}
+	
+	# Validar contra af_Afiliados (consultas por lotes)
+	try:
+		from .corporate_db import validar_afiliados_lote, obtener_nombres_ips
+	except ImportError:
+		from corporate_db import validar_afiliados_lote, obtener_nombres_ips
+	
+	lote_input = [{"tipo_id": u["tipo_id"], "numero_id": u["numero_id"]} for u in usuarios]
+	resultado_lote = validar_afiliados_lote(lote_input)
+	
+	if resultado_lote.get("error"):
+		raise HTTPException(status_code=502, detail=f"Error consultando BD corporativa: {resultado_lote['error']}")
+	
+	# Indexar encontrados por (tipo, numero) -> ips_code
+	indx_encontrados = {}
+	for enc in resultado_lote["encontrados"]:
+		key = (enc["tipo_id"], enc["numero_id"])
+		indx_encontrados[key] = enc.get("ips")
+	
+	# Separar encontrados y no encontrados
+	encontrados = []
+	no_encontrados = []
+	errors = []
+	
+	for u in usuarios:
+		key = (u["tipo_id"], u["numero_id"])
+		if key in indx_encontrados:
+			ips_code = indx_encontrados[key]
+			u_with_ips = {**u, "ips_code": ips_code}
+			encontrados.append(u_with_ips)
+		else:
+			no_encontrados.append(u)
+			errors.append({
+				"row": u["row_idx"] + 2,
+				"column": f"{tipo_col} / {num_col}",
+				"original": f"{u['tipo_id']} {u['numero_id']}",
+				"corrected": f"Usuaria no encontrada en la base de afiliados. Tipo: {u['tipo_id']}, Número: {u['numero_id']}",
+				"status": "error",
+			})
+	
+	# Obtener nombres de IPS desde ct_ips
+	ips_codes = list({e["ips_code"] for e in encontrados if e.get("ips_code")})
+	nombres_ips = obtener_nombres_ips(ips_codes) if ips_codes else {}
+	
+	# Construir grupos de IPS
+	ips_groups = {}
+	for u in encontrados:
+		ips_code = u.get("ips_code")
+		if ips_code:
+			ips_name = nombres_ips.get(str(ips_code).strip(), f"IPS {ips_code}")
+			if ips_name not in ips_groups:
+				ips_groups[ips_name] = []
+			ips_groups[ips_name].append({
+				"tipo_id": u["tipo_id"],
+				"numero_id": u["numero_id"],
+				"nombre1": u["nombre1"],
+				"nombre2": u["nombre2"],
+				"apellido1": u["apellido1"],
+				"apellido2": u["apellido2"],
+			})
+	
+	return {
+		"success": True,
+		"encontrados": len(encontrados),
+		"no_encontrados": len(no_encontrados),
+		"errors": errors,
+		"valid_users": [
+			{"tipo_id": e["tipo_id"], "numero_id": e["numero_id"], "ips_code": e.get("ips_code"),
+			 "nombre1": e["nombre1"], "nombre2": e["nombre2"], "apellido1": e["apellido1"], "apellido2": e["apellido2"]}
+			for e in encontrados
+		],
+		"ips_groups": ips_groups,
+	}
+
+
 # ─── Gestión de data (ver, editar, crear registros de gestantes) ───────────
 
 @app.get("/ips")
