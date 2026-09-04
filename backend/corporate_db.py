@@ -324,11 +324,14 @@ def validar_afiliados_lote(usuarios: list) -> dict:
                 # Indexar resultados encontrados
                 encontrados_set = set()
                 for row in result:
-                    tipo = str(row[0]).strip()
+                    tipo_raw = str(row[0]).strip()
                     num = str(row[1]).strip()
                     ips_code = str(row[2]).strip() if row[2] else None
-                    encontrados_set.add((tipo, num))
-                    encontrados.append({"tipo_id": tipo, "numero_id": num, "ips": ips_code})
+                    # Convertir tipo numerico (3) a string (CC) para poder comparar
+                    tipo_int = int(float(tipo_raw)) if tipo_raw.isdigit() or (tipo_raw.replace('.','').isdigit()) else 0
+                    tipo_str_db = TIPO_DOC_REVERSE.get(tipo_int, tipo_raw)
+                    encontrados_set.add((tipo_str_db, num))
+                    encontrados.append({"tipo_id": tipo_str_db, "numero_id": num, "ips": ips_code})
                 
                 # Marcar no encontrados
                 for u in batch:
