@@ -19,8 +19,8 @@ export default function Login() {
     if (!username.trim() || !password.trim()) { setError('Completa todos los campos.'); return }
     setSubmitting(true); setError('')
     try {
-      try { await login(username, password) }
-      catch { await loginIps(username, password) }
+      try { await loginIps(username, password) }
+      catch { await login(username, password) }
     }
     catch (err) { setError(err.message || 'Credenciales incorrectas.'); passRef.current?.focus() }
     finally { setSubmitting(false) }

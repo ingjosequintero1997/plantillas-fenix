@@ -119,34 +119,59 @@ async def auth_me(current_user: User = Depends(get_current_user)):
 
 @app.post("/auth/ips-login")
 async def ips_login(payload: LoginPayload):
-    """Login para usuarios IPS (tabla usuarios_ips)."""
-    ensure_db_ready()
-    db = SessionLocal()
-    try:
-        user_ips = db.query(UsuarioIPS).filter(
-            UsuarioIPS.username == payload.username.strip(),
-            UsuarioIPS.active == True,
-        ).first()
-        if user_ips and verify_password(payload.password, user_ips.password_hash):
-            # Crear token con rol "ips_user"
-            token_data = {
-                "sub": user_ips.username,
-                "uid": user_ips.id,
-                "role": "ips_user",
-                "ips_name": user_ips.ips_name,
-                "ips_code": user_ips.ips_code or "",
-                "exp": (datetime.utcnow() + timedelta(hours=8)).isoformat(),
-            }
-            b64 = base64.urlsafe_b64encode(json.dumps(token_data).encode()).decode().rstrip("=")
-            sig = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
-            token = f"{b64}.{sig}"
-            return {
-                "token": token,
-                "user": {"id": user_ips.id, "username": user_ips.username, "name": user_ips.ips_name, "role": "ips_user", "ips_name": user_ips.ips_name, "ips_code": user_ips.ips_code},
-            }
-        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-    finally:
-        db.close()
+	"""Login para usuarios IPS. Busca en usuarios_ips, luego en users con prestador."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		# 1) Buscar en tabla usuarios_ips
+		user_ips = db.query(UsuarioIPS).filter(
+			UsuarioIPS.username == payload.username.strip(),
+			UsuarioIPS.active == True,
+		).first()
+		if user_ips and verify_password(payload.password, user_ips.password_hash):
+			token_data = {
+				"sub": user_ips.username,
+				"uid": user_ips.id,
+				"role": "ips_user",
+				"ips_name": user_ips.ips_name,
+				"ips_code": user_ips.ips_code or "",
+				"exp": (datetime.utcnow() + timedelta(hours=8)).isoformat(),
+			}
+			b64 = base64.urlsafe_b64encode(json.dumps(token_data).encode()).decode().rstrip("=")
+			sig = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
+			token = f"{b64}.{sig}"
+			return {
+				"token": token,
+				"user": {"id": user_ips.id, "username": user_ips.username, "name": user_ips.ips_name, "role": "ips_user", "ips_name": user_ips.ips_name, "ips_code": user_ips.ips_code},
+			}
+
+		# 2) Buscar en tabla users (prestadores asignados a IPS)
+		from sqlalchemy import text as _sa_text
+		user = db.query(User).filter(User.username == payload.username.strip(), User.active == True).first()
+		if user and verify_password(payload.password, user.password_hash):
+			prest = db.query(Prestador).filter(Prestador.user_id == user.id).first()
+			if prest:
+				ips_name = str(prest.ips or prest.nombre or "IPS").strip()
+				ips_code = str(prest.ips or "").strip()
+				token_data = {
+					"sub": user.username,
+					"uid": user.id,
+					"role": "ips_user",
+					"ips_name": ips_name,
+					"ips_code": ips_code,
+					"exp": (datetime.utcnow() + timedelta(hours=8)).isoformat(),
+				}
+				b64 = base64.urlsafe_b64encode(json.dumps(token_data).encode()).decode().rstrip("=")
+				sig = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
+				token = f"{b64}.{sig}"
+				return {
+					"token": token,
+					"user": {"id": user.id, "username": user.username, "name": ips_name, "role": "ips_user", "ips_name": ips_name, "ips_code": ips_code},
+				}
+
+		raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+	finally:
+		db.close()
 
 
 @app.get("/auth/ips-me")
@@ -278,8 +303,6 @@ def seed_admin():
 _db_ready = False
 
 def ensure_db_ready():
-    # Inicializa la BD de forma perezosa (solo al primer login), para no
-    # bloquear el cold start de las funciones serverless con la conexión a BD.
     global _db_ready
     if _db_ready:
         return
@@ -289,6 +312,23 @@ def ensure_db_ready():
         pass
     try:
         seed_admin()
+    except Exception:
+        pass
+    # Crear tabla usuarios_ips si no existe
+    try:
+        with engine.begin() as conn:
+            from sqlalchemy import text as _t
+            conn.execute(_t("""
+                CREATE TABLE IF NOT EXISTS usuarios_ips (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(120) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    ips_name VARCHAR(255) NOT NULL,
+                    ips_code VARCHAR(60),
+                    active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
     except Exception:
         pass
     _db_ready = True
@@ -4089,49 +4129,53 @@ def _check_gestante_ips(db, current_user, registro_id):
 @app.get("/data/gestantes/by-numid/{numero_id}")
 async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depends(get_current_user)):
 	"""Obtiene todos los campos de una gestante por numero de identificacion.
-	Primero busca en la tabla gestantes, si no encuentra lee del correctedText del ultimo cargue."""
+	Prioriza el correctedText del cargue (datos validados completos)."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text as sa_text
 		import base64, gzip, io as _io, pandas as _pd
 
-		# 1) Buscar en tabla gestantes
-		row = db.execute(sa_text('SELECT * FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :num'), {"num": numero_id.strip()}).fetchone()
+		num_clean = numero_id.strip()
+
+		# 1) Prioridad: leer del correctedText del ultimo cargue (tiene los datos validados)
+		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
+		if cargues:
+			cargue = cargues[0]
+			texto = cargue.corrected_text or cargue.raw_text or ""
+			if cargue.compressed and texto:
+				try: texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
+				except: pass
+			if texto:
+				try:
+					meta = get_template_by_key("gestante")
+					tmpl_names = [t["name"] for t in meta["template"]]
+					df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+					df = df.fillna('').astype(str)
+
+					has_cols = len(df.columns) == len(tmpl_names)
+					if has_cols:
+						df.columns = tmpl_names
+
+					num_col = tmpl_names[2] if has_cols else 2
+					for idx, row_data in df.iterrows():
+						if str(row_data.get(num_col, "")).strip() == num_clean:
+							result = {}
+							for c in df.columns:
+								result[str(c)] = str(row_data[c]).strip()
+							return result
+				except Exception:
+					pass
+
+		# 2) Fallback: buscar en tabla gestantes
+		row = db.execute(sa_text('SELECT * FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :num'), {"num": num_clean}).fetchone()
 		if row:
 			columnas = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
-			return dict(zip(columnas, [str(v) if v is not None else "" for v in row]))
-
-		# 2) Buscar en el correctedText del ultimo cargue
-		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
-		if not cargues:
-			raise HTTPException(status_code=404, detail="No se encontro gestante con ese documento")
-
-		cargue = cargues[0]
-		texto = cargue.corrected_text or cargue.raw_text or ""
-		if cargue.compressed and texto:
-			try: texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
-			except: pass
-		if not texto:
-			raise HTTPException(status_code=404, detail="No se encontro gestante con ese documento")
-
-		meta = get_template_by_key("gestante")
-		tmpl_names = [t["name"] for t in meta["template"]]
-		df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
-		df = df.fillna('').astype(str)
-
-		has_cols = len(df.columns) == len(tmpl_names)
-		if has_cols:
-			df.columns = tmpl_names
-
-		# Buscar por numero_id (posicion 2 del template)
-		num_col = tmpl_names[2] if has_cols else 2
-		for idx, row_data in df.iterrows():
-			if str(row_data.get(num_col, "")).strip() == numero_id.strip():
-				result = {}
-				for c in df.columns:
-					result[str(c)] = str(row_data[c]).strip()
-				return result
+			registro = dict(zip(columnas, [str(v) if v is not None else "" for v in row]))
+			# Verificar que tenga datos reales
+			non_empty = sum(1 for v in registro.values() if v and str(v).strip())
+			if non_empty > 5:
+				return registro
 
 		raise HTTPException(status_code=404, detail="No se encontro gestante con ese documento")
 	except HTTPException:

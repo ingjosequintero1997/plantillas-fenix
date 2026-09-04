@@ -116,27 +116,31 @@ export default function DataManagement({ correctedText }) {
   }
 
   const startEdit = async (u) => {
+    setView('editing')
+    setEditing(null)
+    const numeroId = u.numero_id
+    if (numeroId) {
+      try {
+        const fullData = await fetchGestanteByNumId(numeroId)
+        if (fullData && Object.keys(fullData).length > 2) {
+          const editId = fullData.id || null
+          if (editId) delete fullData.id
+          setEditing({ ...fullData, id: editId, _from_gestantes: !!editId })
+          return
+        }
+      } catch (e) { /* fallback */ }
+    }
     const gid = u.gestante_id || u.id
     if (gid) {
       try {
         const fullData = await fetchGestante(gid)
-        setEditing({ ...fullData, _from_gestantes: true })
-        setView('editing')
-        return
-      } catch (e) { /* fallback */ }
-    }
-    if (u.numero_id) {
-      try {
-        const fullData = await fetchGestanteByNumId(u.numero_id)
-        const editId = fullData.id
-        delete fullData.id
-        setEditing({ ...fullData, id: editId, _from_gestantes: !!editId })
-        setView('editing')
-        return
+        if (fullData && Object.keys(fullData).length > 2) {
+          setEditing({ ...fullData, _from_gestantes: true })
+          return
+        }
       } catch (e) { /* fallback */ }
     }
     setEditing({ ...mapInstToGestanteKeys(u), _from_gestantes: false })
-    setView('editing')
   }
 
   const handleSaveEdit = async (data) => {
