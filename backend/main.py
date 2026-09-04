@@ -124,13 +124,14 @@ async def ips_login(payload: LoginPayload):
 	db = SessionLocal()
 	try:
 		# 1) Buscar en tabla usuarios_ips
+		user_ips = None
 		try:
 			user_ips = db.query(UsuarioIPS).filter(
 				UsuarioIPS.username == payload.username.strip(),
 				UsuarioIPS.active == True,
 			).first()
 		except Exception:
-			user_ips = None
+			pass
 		if user_ips and verify_password(payload.password, user_ips.password_hash):
 			token_data = {
 				"sub": user_ips.username,
@@ -149,35 +150,47 @@ async def ips_login(payload: LoginPayload):
 			}
 
 		# 2) Buscar en tabla users (prestadores asignados a IPS)
-		user = db.query(User).filter(User.username == payload.username.strip(), User.active == True).first()
+		user = None
+		try:
+			user = db.query(User).filter(User.username == payload.username.strip(), User.active == True).first()
+		except Exception:
+			pass
 		if user and verify_password(payload.password, user.password_hash):
-			prest = db.query(Prestador).filter(Prestador.user_id == user.id).first()
-			if prest and prest.ips:
-				ips_code = str(prest.ips).strip()
-				ips_name = str(prest.nombre or "IPS").strip()
+			prest = None
+			try:
+				prest = db.query(Prestador).filter(Prestador.user_id == user.id).first()
+			except Exception:
+				pass
+			ips_code = str(prest.ips).strip() if prest and prest.ips else ""
+			ips_name = str(prest.nombre or "IPS").strip() if prest else "IPS"
+			if ips_code:
 				try:
 					nombre_ips = obtener_nombre_ips_individual(ips_code)
 					if nombre_ips:
 						ips_name = nombre_ips
 				except Exception:
 					pass
-				token_data = {
-					"sub": user.username,
-					"uid": user.id,
-					"role": "ips_user",
-					"ips_name": ips_name,
-					"ips_code": ips_code,
-					"exp": (datetime.utcnow() + timedelta(hours=8)).isoformat(),
-				}
-				b64 = base64.urlsafe_b64encode(json.dumps(token_data).encode()).decode().rstrip("=")
-				sig = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
-				token = f"{b64}.{sig}"
-				return {
-					"token": token,
-					"user": {"id": user.id, "username": user.username, "name": ips_name, "role": "ips_user", "ips_name": ips_name, "ips_code": ips_code},
-				}
+			token_data = {
+				"sub": user.username,
+				"uid": user.id,
+				"role": "ips_user",
+				"ips_name": ips_name,
+				"ips_code": ips_code,
+				"exp": (datetime.utcnow() + timedelta(hours=8)).isoformat(),
+			}
+			b64 = base64.urlsafe_b64encode(json.dumps(token_data).encode()).decode().rstrip("=")
+			sig = hmac.new(TOKEN_SECRET.encode(), b64.encode(), hashlib.sha256).hexdigest()
+			token = f"{b64}.{sig}"
+			return {
+				"token": token,
+				"user": {"id": user.id, "username": user.username, "name": ips_name, "role": "ips_user", "ips_name": ips_name, "ips_code": ips_code},
+			}
 
 		raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+	except HTTPException:
+		raise
+	except Exception as e:
+		raise HTTPException(status_code=401, detail="Error de autenticación")
 	finally:
 		db.close()
 
