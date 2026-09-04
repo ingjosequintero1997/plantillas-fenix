@@ -212,14 +212,14 @@ async def debug_corporate_db():
 				from sqlalchemy import text
 				conn = engine.connect()
 				try:
-					result = conn.execute(text('SELECT COUNT(*) FROM administrativo."af_Afiliados"')).scalar()
+					result = conn.execute(text('SELECT COUNT(*) FROM administrativo."af_afiliado"')).scalar()
 					host = os.environ.get("CORP_DB_HOST", "")
 					port = os.environ.get("CORP_DB_PORT", "")
 					dbname = os.environ.get("CORP_DB_NAME", "")
 					return {
 						"conectado": True,
 						"db_corporativa": f"postgresql://***@{host}:{port}/{dbname}",
-						"tabla_afiliados": "administrativo.af_Afiliados",
+						"tabla_afiliados": "administrativo.af_afiliado",
 						"total_afiliados": int(result),
 						"error": None
 					}
@@ -231,7 +231,7 @@ async def debug_corporate_db():
 		return {
 			"conectado": False,
 			"db_corporativa": f"postgresql://***@{host}:{port}/{dbname}",
-			"tabla_afiliados": "administrativo.af_Afiliados",
+			"tabla_afiliados": "administrativo.af_afiliado",
 			"error": "No se pudo establecer conexión con BD corporativa"
 		}
 	except Exception as e:
@@ -3224,7 +3224,7 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 
 @app.post("/validate-affiliation")
 async def validate_affiliation(payload: dict, current_user: User = Depends(get_current_user)):
-	"""Valida afiliación institucional: tipo+numero vs administrativo.af_Afiliados.
+	"""Valida afiliación institucional: tipo+numero vs administrativo.af_afiliado.
 	Devuelve lista de errores (usuarias no encontradas) y lista de usuarias válidas con IPS."""
 	corrected_text = payload.get("corrected_text", "")
 	template_key = payload.get("template_key", "gestante")
@@ -3278,7 +3278,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	if not usuarios:
 		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}}
 	
-	# Validar contra af_Afiliados (consultas por lotes)
+	# Validar contra af_afiliado (consultas por lotes)
 	try:
 		from .corporate_db import validar_afiliados_lote, obtener_nombres_ips
 	except ImportError:

@@ -1,16 +1,37 @@
 """
 Servicio para consultar afiliados desde la BD corporativa Dusakawi.
 Schema: administrativo
-Tabla: af_Afiliados
+Tabla: af_afiliado (singular, minusculas)
 """
 
 import os
 from typing import Optional, Dict, List
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+
+# Mapeo de tipo de documento string -> codigo numerico en BD corporativa
+TIPO_DOC_MAP = {
+    "CC": 3,   # Cedula de Ciudadania
+    "TI": 6,   # Tarjeta de Identidad
+    "RC": 5,   # Registro Civil
+    "CE": 7,   # Cedula de Extranjeria
+    "PA": 8,   # Pasaporte
+    "MS": 4,   # Menor sin Identificacion
+    "AS": 9,   # Adulto sin Identificacion
+    "CN": 11,  # Certificado Nacido Vivo
+    "SC": 12,  # Salvo Conducto
+    "CD": 10,  # Carnet Diplomatico
+    "PE": 13,  # Permiso Especial de Permanencia
+    "PT": 14,  # Permiso Proteccion Temporal
+    "NI": 1,   # NIT
+    "NIT": 1,
+}
+
+# Inverso: codigo numerico -> string
+TIPO_DOC_REVERSE = {v: k for k, v in TIPO_DOC_MAP.items()}
 
 
 def _build_corporate_url() -> str:
-    """Construye la URL de conexión a BD corporativa desde variables de entorno."""
+    """Construye la URL de conexion a BD corporativa desde variables de entorno."""
     host = os.environ.get("CORP_DB_HOST", "")
     port = os.environ.get("CORP_DB_PORT", "5435")
     name = os.environ.get("CORP_DB_NAME", "")
@@ -46,7 +67,7 @@ def get_corporate_connection():
 
 def validar_afiliado_corporativo(tipo_id: str, numero_id: str, apellido1: str, nombre1: str) -> Dict:
     """
-    Valida un afiliado consultando administrativo."af_Afiliados" en la BD corporativa.
+    Valida un afiliado consultando administrativo."af_afiliado" en la BD corporativa.
     
     Args:
         tipo_id: Tipo de identificación (CC, TI, etc.)
@@ -89,7 +110,7 @@ def validar_afiliado_corporativo(tipo_id: str, numero_id: str, apellido1: str, n
                     "fecha_nacimiento",
                     "sexo",
                     "ips"
-                FROM administrativo."af_Afiliados"
+                FROM administrativo."af_afiliado"
                 WHERE "numero_identificacion" = :numero_id
                   AND "tipo_identificacion" = :tipo_id
                 LIMIT 1
@@ -97,7 +118,7 @@ def validar_afiliado_corporativo(tipo_id: str, numero_id: str, apellido1: str, n
             
             result = conn.execute(query, {
                 "numero_id": str(numero_id).strip(),
-                "tipo_id": str(tipo_id).strip().upper()
+                "tipo_id": TIPO_DOC_MAP.get(str(tipo_id).strip().upper(), 0)
             }).fetchone()
             
             if result:
@@ -130,7 +151,7 @@ def validar_afiliado_corporativo(tipo_id: str, numero_id: str, apellido1: str, n
                     "fecha_nacimiento",
                     "sexo",
                     "ips"
-                FROM administrativo."af_Afiliados"
+                FROM administrativo."af_afiliado"
                 WHERE "tipo_identificacion" = :tipo_id
                   AND (
                     "primer_apellido" ILIKE :apellido OR
@@ -140,7 +161,7 @@ def validar_afiliado_corporativo(tipo_id: str, numero_id: str, apellido1: str, n
             ''')
             
             results = conn.execute(query_fuzzy, {
-                "tipo_id": str(tipo_id).strip().upper(),
+                "tipo_id": TIPO_DOC_MAP.get(str(tipo_id).strip().upper(), 0),
                 "apellido": f"%{apellido1.strip()}%",
                 "nombre": f"%{nombre1.strip()}%",
             }).fetchall()
@@ -220,7 +241,7 @@ def obtener_ips_de_afiliado(numero_id: str, tipo_id: str = "CC") -> Optional[str
         try:
             query = text('''
                 SELECT "ips"
-                FROM administrativo."af_Afiliados"
+                FROM administrativo."af_afiliado"
                 WHERE "numero_identificacion" = :numero_id
                   AND "tipo_identificacion" = :tipo_id
                 LIMIT 1
@@ -228,7 +249,7 @@ def obtener_ips_de_afiliado(numero_id: str, tipo_id: str = "CC") -> Optional[str
             
             result = conn.execute(query, {
                 "numero_id": str(numero_id).strip(),
-                "tipo_id": str(tipo_id).strip().upper()
+                "tipo_id": TIPO_DOC_MAP.get(str(tipo_id).strip().upper(), 0)
             }).fetchone()
             
             return result[0] if result else None
@@ -243,7 +264,7 @@ def obtener_ips_de_afiliado(numero_id: str, tipo_id: str = "CC") -> Optional[str
 
 def validar_afiliados_lote(usuarios: list) -> dict:
     """
-    Valida un lote de usuarios contra administrativo."af_Afiliados".
+    Valida un lote de usuarios contra administrativo."af_afiliado".
     
     Args:
         usuarios: lista de dicts con "tipo_id" y "numero_id"
@@ -273,20 +294,21 @@ def validar_afiliados_lote(usuarios: list) -> dict:
             for i in range(0, len(usuarios), BATCH_SIZE):
                 batch = usuarios[i:i + BATCH_SIZE]
                 
-                # Construir lista de parámetros para IN clause
                 params = {}
                 conditions = []
                 for idx, u in enumerate(batch):
                     key_tipo = f"tipo_{idx}"
                     key_num = f"num_{idx}"
-                    params[key_tipo] = str(u["tipo_id"]).strip().upper()
+                    tipo_str = str(u["tipo_id"]).strip().upper()
+                    tipo_num = TIPO_DOC_MAP.get(tipo_str, 0)
+                    params[key_tipo] = tipo_num
                     params[key_num] = str(u["numero_id"]).strip()
                     conditions.append(f"(a.\"tipo_identificacion\" = :{key_tipo} AND a.\"numero_identificacion\" = :{key_num})")
                 
                 where_clause = " OR ".join(conditions)
                 query = text(f'''
                     SELECT a."tipo_identificacion", a."numero_identificacion", a."ips"
-                    FROM administrativo."af_Afiliados" a
+                    FROM administrativo."af_afiliado" a
                     WHERE {where_clause}
                 ''')
                 
