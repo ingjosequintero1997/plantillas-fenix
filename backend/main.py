@@ -4181,11 +4181,12 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text as sa_text
-		import base64 as _b64, gzip as _gzip, io as _io, pandas as _pd
+		import base64 as _b64, gzip as _gzip
 
 		num_clean = numero_id.strip()
+		resultado = None
 
-		# 1) Buscar en tabla gestantes primero (si tiene datos)
+		# 1) Buscar en tabla gestantes
 		try:
 			row = db.execute(sa_text('SELECT * FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :num'), {"num": num_clean}).fetchone()
 			if row:
@@ -4194,36 +4195,39 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 				non_empty = sum(1 for k, v in registro.items() if v and str(v).strip() and k not in ('id', 'created_at'))
 				if non_empty > 10:
 					return registro
+				resultado = registro
 		except Exception:
 			pass
 
-		# 2) Leer del correctedText del ultimo cargue
+		# 2) Leer del correctedText usando pandas (maneja quotes, comas, etc.)
 		try:
 			cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
-			if not cargues:
-				raise HTTPException(status_code=404, detail="No se encontro gestante")
-
-			texto = cargues[0].corrected_text or cargues[0].raw_text or ""
-			if cargues[0].compressed and texto:
-				try: texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
-				except: pass
-			if not texto:
-				raise HTTPException(status_code=404, detail="No se encontro gestante")
-
-			meta = get_template_by_key("gestante")
-			tmpl_names = [t["name"] for t in meta["template"]]
-			lines = texto.strip().split("\n")
-			for line in lines:
-				parts = line.split("|")
-				if len(parts) > 2 and parts[2].strip() == num_clean:
-					result = {}
-					for i, name in enumerate(tmpl_names):
-						result[name] = parts[i].strip() if i < len(parts) else ""
-					return result
-		except HTTPException:
-			raise
+			if cargues:
+				texto = cargues[0].corrected_text or cargues[0].raw_text or ""
+				if cargues[0].compressed and texto:
+					try: texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
+					except: pass
+				if texto:
+					meta = get_template_by_key("gestante")
+					tmpl_names = [t["name"] for t in meta["template"]]
+					import pandas as _pd, io as _io
+					df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+					df = df.fillna('').astype(str)
+					has_cols = len(df.columns) == len(tmpl_names)
+					if has_cols:
+						df.columns = tmpl_names
+					num_col = tmpl_names[2] if has_cols else 2
+					for idx, row_data in df.iterrows():
+						if str(row_data.get(num_col, "")).strip() == num_clean:
+							resultado_full = {}
+							for c in (df.columns if has_cols else range(len(df.columns))):
+								resultado_full[str(c)] = str(row_data[c]).strip()
+							return resultado_full
 		except Exception:
 			pass
+
+		if resultado:
+			return resultado
 
 		raise HTTPException(status_code=404, detail="No se encontro gestante con ese documento")
 	except HTTPException:
