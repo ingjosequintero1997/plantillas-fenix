@@ -3245,16 +3245,25 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	meta = get_template_by_key(template_key)
 	tmpl = meta["template"]
 	tmpl_names = [t['name'] for t in tmpl]
-	if len(df.columns) == len(tmpl_names):
+	has_cols = len(df.columns) == len(tmpl_names)
+	if has_cols:
 		df.columns = tmpl_names
 	
-	# Extraer tipo y número de identificación
-	tipo_col = tmpl_names[1] if len(tmpl_names) > 1 else "Tipo de documento de identidad"
-	num_col = tmpl_names[2] if len(tmpl_names) > 2 else "No. De Identificación"
-	nombre1_col = tmpl_names[5] if len(tmpl_names) > 5 else "Nombre_1,"
-	apellido1_col = tmpl_names[3] if len(tmpl_names) > 3 else "Apellido_1,"
-	nombre2_col = tmpl_names[6] if len(tmpl_names) > 6 else "Nombre_2"
-	apellido2_col = tmpl_names[4] if len(tmpl_names) > 4 else "Apellido_2"
+	# Extraer tipo y número de identificación (por nombre o por índice)
+	if has_cols:
+		tipo_col = tmpl_names[1]
+		num_col = tmpl_names[2]
+		nombre1_col = tmpl_names[5]
+		apellido1_col = tmpl_names[3]
+		nombre2_col = tmpl_names[6]
+		apellido2_col = tmpl_names[4]
+	else:
+		tipo_col = 1
+		num_col = 2
+		nombre1_col = 5
+		apellido1_col = 3
+		nombre2_col = 6
+		apellido2_col = 4
 	
 	usuarios = []
 	for idx, row in df.iterrows():
