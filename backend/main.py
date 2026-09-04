@@ -4199,7 +4199,7 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 		except Exception:
 			pass
 
-		# 2) Leer del correctedText usando pandas (maneja quotes, comas, etc.)
+		# 2) Leer del correctedText
 		try:
 			cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
 			if cargues:
@@ -4213,16 +4213,21 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 					import pandas as _pd, io as _io
 					df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 					df = df.fillna('').astype(str)
-					has_cols = len(df.columns) == len(tmpl_names)
-					if has_cols:
-						df.columns = tmpl_names
-					num_col = tmpl_names[2] if has_cols else 2
-					for idx, row_data in df.iterrows():
-						if str(row_data.get(num_col, "")).strip() == num_clean:
-							resultado_full = {}
-							for c in (df.columns if has_cols else range(len(df.columns))):
-								resultado_full[str(c)] = str(row_data[c]).strip()
-							return resultado_full
+
+					# Siempre mapear a template names por posicion
+					n_cols = len(df.columns)
+					n_tmpl = len(tmpl_names)
+					col_map = {i: tmpl_names[i] for i in range(min(n_cols, n_tmpl))}
+
+					num_col_idx = 2
+					if n_cols > num_col_idx:
+						for idx, row_data in df.iterrows():
+							val = str(row_data.iloc[num_col_idx]).strip()
+							if val == num_clean:
+								resultado_full = {}
+								for i in range(min(n_cols, n_tmpl)):
+									resultado_full[tmpl_names[i]] = str(row_data.iloc[i]).strip()
+								return resultado_full
 		except Exception:
 			pass
 

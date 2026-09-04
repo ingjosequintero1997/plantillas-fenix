@@ -116,31 +116,28 @@ export default function DataManagement({ correctedText }) {
   }
 
   const startEdit = async (u) => {
-    setView('editing')
-    setEditing(null)
     const numeroId = u.numero_id
+    let fullData = null
     if (numeroId) {
       try {
-        const fullData = await fetchGestanteByNumId(numeroId)
-        if (fullData && Object.keys(fullData).length > 2) {
-          const editId = fullData.id || null
-          if (editId) delete fullData.id
-          setEditing({ ...fullData, id: editId, _from_gestantes: !!editId })
-          return
-        }
-      } catch (e) { /* fallback */ }
+        fullData = await fetchGestanteByNumId(numeroId)
+        if (!fullData || Object.keys(fullData).length <= 2) fullData = null
+      } catch (e) { fullData = null }
     }
-    const gid = u.gestante_id || u.id
-    if (gid) {
-      try {
-        const fullData = await fetchGestante(gid)
-        if (fullData && Object.keys(fullData).length > 2) {
-          setEditing({ ...fullData, _from_gestantes: true })
-          return
-        }
-      } catch (e) { /* fallback */ }
+    if (!fullData) {
+      const gid = u.gestante_id || u.id
+      if (gid) {
+        try {
+          fullData = await fetchGestante(gid)
+          if (!fullData || Object.keys(fullData).length <= 2) fullData = null
+        } catch (e) { fullData = null }
+      }
     }
-    setEditing({ ...mapInstToGestanteKeys(u), _from_gestantes: false })
+    if (!fullData) fullData = mapInstToGestanteKeys(u)
+    const editId = fullData.id || null
+    if (editId) delete fullData.id
+    setEditing({ ...fullData, id: editId, _from_gestantes: !!editId, _key: Date.now() })
+    setView('editing')
   }
 
   const handleSaveEdit = async (data) => {
