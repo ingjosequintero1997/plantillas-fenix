@@ -3485,28 +3485,28 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 
 @app.post("/data/gestantes/populate")
 async def populate_gestantes_from_cargues(current_user: User = Depends(require_admin)):
-	"""Lee el ultimo cargue y puebla la tabla gestantes, dividiendo por prestador segun IPS."""
+	"""Lee el ultimo cargue y puebla la tabla gestantes.
+	El correctedText NO tiene headers (generado con header=False).
+	TODAS las lineas son datos — no se salta ninguna."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
 		crear_tabla_gestantes()
 
 		from sqlalchemy import text as sa_text
-		import base64, gzip
+		import base64, gzip, io as _io
+		import pandas as _pd
 
 		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
 		if not cargues:
 			return {"error": "No hay cargues de gestantes", "insertadas": 0}
 
+		cargue = cargues[0]
 		db_cols = GESTANTE_COLUMNS
 		try:
 			real_cols = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
 		except Exception as e:
 			return {"error": f"No se pudo leer columnas de gestantes: {str(e)[:200]}", "insertadas": 0}
-
-		total_insertadas = 0
-		total_errores = []
-		cargue = cargues[0]
 
 		texto = cargue.corrected_text or cargue.raw_text or ""
 		if not texto:
@@ -3518,33 +3518,28 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 			except Exception as e:
 				return {"error": f"Cargue {cargue.id}: error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
 
-		lineas = [l for l in texto.strip().split("\n") if l.strip()]
-		lineas_data = lineas[1:] if len(lineas) > 1 else []
-		if not lineas_data:
-			return {"error": f"Cargue {cargue.id}: 0 lineas de datos (solo header)", "insertadas": 0, "texto_len": len(texto), "primeros_200": texto[:200]}
+		# ── Leer correctedText como DataFrame SIN headers ──
+		# correctedText tiene 200 columnas en orden del template (sin header row)
+		try:
+			meta = get_template_by_key("gestante")
+			tmpl = meta["template"]
+			tmpl_names = [t["name"] for t in tmpl]
+		except Exception:
+			tmpl_names = []
 
-		debug_info = {
-			"total_lineas": len(lineas),
-			"db_cols_count": len(db_cols),
-			"real_cols_count": len(real_cols),
-			"header_map_count": len(header_map),
-			"unmapped_headers": [first_cols[i] for i in range(len(first_cols)) if i not in header_map][:10],
-		}
+		# Preparar header para pandas: insertar fila de template names
+		if tmpl_names:
+			header_line = "|".join(tmpl_names)
+			full_text = header_line + "\n" + texto
+			df = _pd.read_csv(_io.StringIO(full_text), sep='|', header=0, dtype=str, engine='python', keep_default_na=False)
+		else:
+			df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+			if len(df.columns) == len(GESTANTE_COLUMNS):
+				df.columns = GESTANTE_COLUMNS
 
-		# Mapeo de nombres de IPS a prestadores para asignar prestador_id
-		ips_to_prestador = {}
-		prestadores = db.query(Prestador).all()
-		for prest in prestadores:
-			ips_key = str(prest.ips).strip().upper() if prest.ips else ""
-			if ips_key:
-				ips_to_prestador[ips_key] = prest.id
-			# También mapear por nombre si existe
-			if prest.nombre:
-				name_key = str(prest.nombre).strip().upper()
-				if name_key not in ips_to_prestador:  # No sobrescribir mapeo por código
-					ips_to_prestador[name_key] = prest.id
+		df = df.fillna('').astype(str)
 
-		# Construir mapeo de nombre normalizado -> columna DB
+		# ── Mapear nombre de template → nombre de columna DB ──
 		def _norm(s):
 			import unicodedata
 			s = str(s).strip()
@@ -3559,52 +3554,49 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 		for col in db_cols:
 			norm_to_db[_norm(col)] = col
 
-		# Mapeo explicito CSV_header_norm -> DB_column para nombres que no coinciden por _norm()
-		CSV_TO_DB_OVERRIDE = {
-			"NO": "CONSECUTIVO",
-			"NO_DE_IDENTIFICACION": "NO_DE_IDENTIFICACION",
-			"REGIMEN_AFILIACION": "REGIMEN_DE_AFILIACION",
-			"DEPARTAMENTO_RESIDENCIA": "DEPARTAMENTO_DE_RESIDENCIA",
-			"MUNICIPIO_DE_RESIDENCIA": "MUNICIPIO_DE_RESIDENCIA",
-			"TELEFONO_USUARIA": "TELEFONO_USUARIA",
-			"NIVEL_EDUCATIVO": "NIVEL_EDUCATIVO",
-			"MUJER_CABEZA_DE_HOGAR": "MUJER_CABEZA_DE_HOGAR",
-			"ESTADO_CIVIL": "ESTADO_CIVIL",
-			"CONTROL_TRADICIONAL": "CONTROL_TRADICIONAL",
-			"GESTANTE_RENUENTE": "GESTANTE_RENUENTE",
-			"NOMBRE_DE_LA_IPS_PRIMARIA": "NOMBRE_DE_LA_IPS_PRIMARIA",
-			"FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO": "FECHA_DE_DIAGNOSTICO",
-			"FECHA_DE_INGRESO_AL_CONTROL_PRENATAL": "FECHA_DE_INGRESO_AL_CONTROL_PRENATAL",
-			"EDAD_ANOS": "EDAD",
-			"FECHA_DE_NACIMIENTO": "FECHA_DE_NACIMIENTO",
-			"FECHA_DE_DIAGNOSTICO": "FECHA_DE_DIAGNOSTICO",
-			"TIPO_DE_DOCUMENTO_DE_IDENTIDAD": "TIPO_DE_DOCUMENTO_DE_IDENTIDAD",
-			"ASENTAMIENTO_RANCHERIA_COMUNIDAD": "ASENTAMIENTO_RANCHERIA_COMUNIDAD",
-			"PERTENECIA_ETNICA": "PERTENECIA_ETNICA",
-			"GRUPO_POBLACIONAL": "GRUPO_POBLACIONAL",
-		}
+		# ── Mapeo template_name → db_col_name (con fuzzy matching) ──
+		def _find_db_col(tmpl_name):
+			n = _norm(tmpl_name)
+			# Strategy 1: exact match
+			if n in norm_to_db:
+				return norm_to_db[n]
+			# Strategy 2: one contains the other (fuzzy)
+			for db_norm, db_col in norm_to_db.items():
+				if len(n) >= 3 and len(db_norm) >= 3:
+					if n in db_norm or db_norm in n:
+						return db_col
+			return None
 
-		# Primera linea = headers del instructivo
-		first_cols = lineas[0].split("|") if lineas else []
-		header_map = {}  # indice CSV -> nombre columna DB
-		for ci, hdr in enumerate(first_cols):
-			hdr_norm = _norm(hdr)
-			if hdr_norm in CSV_TO_DB_OVERRIDE:
-				header_map[ci] = CSV_TO_DB_OVERRIDE[hdr_norm]
-			elif hdr_norm in norm_to_db:
-				header_map[ci] = norm_to_db[hdr_norm]
+		tmpl_to_db = {}
+		for cname in df.columns:
+			db_match = _find_db_col(cname)
+			if db_match:
+				tmpl_to_db[cname] = db_match
 
-		for idx, linea in enumerate(lineas_data, start=1):
-			cols = linea.split("|")
-			if len(cols) < 3:
-				continue
+		# ── Mapeo de nombres de IPS a prestadores ──
+		ips_to_prestador = {}
+		prestadores = db.query(Prestador).all()
+		for prest in prestadores:
+			ips_key = str(prest.ips).strip().upper() if prest.ips else ""
+			if ips_key:
+				ips_to_prestador[ips_key] = prest.id
+			if prest.nombre:
+				name_key = str(prest.nombre).strip().upper()
+				if name_key not in ips_to_prestador:
+					ips_to_prestador[name_key] = prest.id
 
+		# ── Insertar filas ──
+		total_insertadas = 0
+		total_errores = []
+		mapped_count = len(tmpl_to_db)
+
+		for idx, row in df.iterrows():
 			registro = {}
-			for ci, val in enumerate(cols):
-				if ci in header_map:
-					registro[header_map[ci]] = val.strip()
+			for tmpl_name, val in row.items():
+				db_col = tmpl_to_db.get(tmpl_name)
+				if db_col:
+					registro[db_col] = str(val).strip()
 
-			# Buscar prestador según NOMBRE_DE_LA_IPS_PRIMARIA
 			ips_primaria = registro.get("NOMBRE_DE_LA_IPS_PRIMARIA", "").strip().upper()
 			prestador_id = ips_to_prestador.get(ips_primaria)
 
@@ -3631,10 +3623,18 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 		return {
 			"ok": True,
 			"cargue_id": cargue.id,
-			"total_lineas": len(lineas_data),
+			"total_lineas": len(df),
 			"insertadas": total_insertadas,
+			"headers_mapeados": mapped_count,
+			"total_template_cols": len(tmpl_names),
 			"errores": total_errores[:10],
-			"debug": debug_info,
+			"debug": {
+				"total_lineas": len(df),
+				"db_cols_count": len(db_cols),
+				"tmpl_cols_count": len(tmpl_names),
+				"mapped_count": mapped_count,
+				"sample_mapping": list(tmpl_to_db.items())[:10],
+			},
 		}
 	except Exception as e:
 		db.rollback()
@@ -3645,19 +3645,22 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 
 @app.post("/data/gestantes/clean-repopulate")
 async def clean_and_repopulate(current_user: User = Depends(require_admin)):
-	"""Limpia la tabla gestantes y re-puebla desde el ultimo cargue con diagnóstico detallado."""
+	"""Limpia la tabla gestantes y re-puebla desde el ultimo cargue.
+	Misma logica que populate pero primero borra todo."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text as sa_text
-		import base64, gzip
+		import base64, gzip, io as _io
+		import pandas as _pd
 
-		# Paso 1: Diagnóstico del cargue
 		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
 		if not cargues:
 			return {"error": "No hay cargues", "insertadas": 0}
 
 		cargue = cargues[0]
+		db_cols = GESTANTE_COLUMNS
+
 		texto = cargue.corrected_text or cargue.raw_text or ""
 		if not texto:
 			return {"error": f"Cargue {cargue.id} vacio", "insertadas": 0}
@@ -3668,13 +3671,22 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 			except Exception as e:
 				return {"error": f"Error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
 
-		lineas = [l for l in texto.strip().split("\n") if l.strip()]
-		if not lineas:
-			return {"error": "0 lineas", "insertadas": 0}
+		# Leer como DataFrame con headers del template
+		try:
+			meta = get_template_by_key("gestante")
+			tmpl = meta["template"]
+			tmpl_names = [t["name"] for t in tmpl]
+		except Exception:
+			tmpl_names = []
 
-		# Paso 2: Analizar headers del cargue
-		first_cols = lineas[0].split("|")
-		db_cols = GESTANTE_COLUMNS
+		if tmpl_names:
+			header_line = "|".join(tmpl_names)
+			full_text = header_line + "\n" + texto
+			df = _pd.read_csv(_io.StringIO(full_text), sep='|', header=0, dtype=str, engine='python', keep_default_na=False)
+		else:
+			df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+
+		df = df.fillna('').astype(str)
 
 		def _norm(s):
 			import unicodedata
@@ -3690,68 +3702,23 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 		for col in db_cols:
 			norm_to_db[_norm(col)] = col
 
-		# Mapeo explicito CSV_header_norm -> DB_column para nombres que no coinciden por _norm()
-		CSV_TO_DB_OVERRIDE = {
-			"NO": "CONSECUTIVO",
-			"NO_DE_IDENTIFICACION": "NO_DE_IDENTIFICACION",
-			"REGIMEN_AFILIACION": "REGIMEN_DE_AFILIACION",
-			"DEPARTAMENTO_RESIDENCIA": "DEPARTAMENTO_DE_RESIDENCIA",
-			"MUNICIPIO_DE_RESIDENCIA": "MUNICIPIO_DE_RESIDENCIA",
-			"TELEFONO_USUARIA": "TELEFONO_USUARIA",
-			"NIVEL_EDUCATIVO": "NIVEL_EDUCATIVO",
-			"MUJER_CABEZA_DE_HOGAR": "MUJER_CABEZA_DE_HOGAR",
-			"ESTADO_CIVIL": "ESTADO_CIVIL",
-			"CONTROL_TRADICIONAL": "CONTROL_TRADICIONAL",
-			"GESTANTE_RENUENTE": "GESTANTE_RENUENTE",
-			"NOMBRE_DE_LA_IPS_PRIMARIA": "NOMBRE_DE_LA_IPS_PRIMARIA",
-			"FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO": "FECHA_DE_DIAGNOSTICO",
-			"FECHA_DE_INGRESO_AL_CONTROL_PRENATAL": "FECHA_DE_INGRESO_AL_CONTROL_PRENATAL",
-			"EDAD_ANOS": "EDAD",
-			"FECHA_DE_NACIMIENTO": "FECHA_DE_NACIMIENTO",
-			"FECHA_DE_DIAGNOSTICO": "FECHA_DE_DIAGNOSTICO",
-			"TIPO_DE_DOCUMENTO_DE_IDENTIDAD": "TIPO_DE_DOCUMENTO_DE_IDENTIDAD",
-			"ASENTAMIENTO_RANCHERIA_COMUNIDAD": "ASENTAMIENTO_RANCHERIA_COMUNIDAD",
-			"PERTENECIA_ETNICA": "PERTENECIA_ETNICA",
-			"GRUPO_POBLACIONAL": "GRUPO_POBLACIONAL",
-		}
+		def _find_db_col(tmpl_name):
+			n = _norm(tmpl_name)
+			if n in norm_to_db:
+				return norm_to_db[n]
+			for db_norm, db_col in norm_to_db.items():
+				if len(n) >= 3 and len(db_norm) >= 3:
+					if n in db_norm or db_norm in n:
+						return db_col
+			return None
 
-		# Mapear headers
-		header_map = {}
-		for ci, hdr in enumerate(first_cols):
-			hdr_norm = _norm(hdr)
-			if hdr_norm in CSV_TO_DB_OVERRIDE:
-				header_map[ci] = CSV_TO_DB_OVERRIDE[hdr_norm]
-			elif hdr_norm in norm_to_db:
-				header_map[ci] = norm_to_db[hdr_norm]
+		tmpl_to_db = {}
+		for cname in df.columns:
+			db_match = _find_db_col(cname)
+			if db_match:
+				tmpl_to_db[cname] = db_match
 
-		# Diagnóstico: ver qué columna mapea a qué
-		ips_col_index = None
-		ips_mapped_correctly = False
-		for ci, db_name in header_map.items():
-			if db_name == "NOMBRE_DE_LA_IPS_PRIMARIA":
-				ips_col_index = ci
-				ips_mapped_correctly = True
-				break
-
-		diagnostico_headers = []
-		for ci, hdr in enumerate(first_cols[:40]):
-			db_col = header_map.get(ci, "???")
-			diagnostico_headers.append({
-				"csv_index": ci,
-				"csv_header": hdr.strip()[:50],
-				"db_column": db_col,
-				"is_ips": db_col == "NOMBRE_DE_LA_IPS_PRIMARIA"
-			})
-
-		# Paso 3: Leer primera fila de datos para verificar mapeo
-		lineas_data = [l for l in lineas[1:] if l.strip()]
-		if lineas_data:
-			cols_sample = lineas_data[0].split("|")
-			sample_ips_csv = cols_sample[ips_col_index].strip() if ips_col_index is not None and len(cols_sample) > ips_col_index else "N/A"
-		else:
-			sample_ips_csv = "sin datos"
-
-		# Paso 4: Limpiar y re-poblar
+		# Limpiar tabla
 		db.execute(sa_text('DELETE FROM gestantes'))
 		db.flush()
 
@@ -3773,15 +3740,13 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 
 		total_insertadas = 0
 		errores = []
-		for idx, linea in enumerate(lineas_data, start=1):
-			cols = linea.split("|")
-			if len(cols) < 3:
-				continue
 
+		for idx, row in df.iterrows():
 			registro = {}
-			for ci, val in enumerate(cols):
-				if ci in header_map:
-					registro[header_map[ci]] = val.strip()
+			for tmpl_name, val in row.items():
+				db_col = tmpl_to_db.get(tmpl_name)
+				if db_col:
+					registro[db_col] = str(val).strip()
 
 			ips_primaria = registro.get("NOMBRE_DE_LA_IPS_PRIMARIA", "").strip().upper()
 			prestador_id = ips_to_prestador.get(ips_primaria)
@@ -3801,7 +3766,7 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 				db.execute(sa_text(f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'), params_ins)
 				total_insertadas += 1
 			except Exception as e:
-				errores.append(f"Fila {idx}: {str(e)[:100]}")
+				errores.append(f"Fila {idx+1}: {str(e)[:100]}")
 				if len(errores) >= 10:
 					break
 
@@ -3812,17 +3777,11 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 			"insertadas": total_insertadas,
 			"errores": len(errores),
 			"muestra_errores": errores[:5],
-			"diagnostico": {
-				"ips_col_index_csv": ips_col_index,
-				"ips_mapped_correctly": ips_mapped_correctly,
-				"sample_ips_value": sample_ips_csv,
-				"total_headers_csv": len(first_cols),
-				"total_db_cols": len(db_cols),
-				"total_mapped": len(header_map),
-				"headers_40_primeros": diagnostico_headers[:40],
-			}
+			"headers_mapeados": len(tmpl_to_db),
+			"total_template_cols": len(tmpl_names),
 		}
 	except Exception as e:
+		db.rollback()
 		return {"error": str(e)[:400], "insertadas": 0}
 	finally:
 		db.close()
