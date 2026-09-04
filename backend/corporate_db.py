@@ -1,18 +1,27 @@
 """
 Servicio para consultar afiliados desde la BD corporativa Dusakawi.
-Conecta a: postgres://postgres:qazwsx12A.@129.80.159.38:5435/base_sie_dusakawi
 Schema: administrativo
 Tabla: af_Afiliados
 """
 
 import os
 from typing import Optional, Dict, List
+from sqlalchemy import create_engine
 
-# URL de la BD corporativa (puede ser variable de entorno)
-CORPORATE_DB_URL = os.environ.get(
-    "CORPORATE_DATABASE_URL",
-    "postgresql://postgres:qazwsx12A.@129.80.159.38:5435/base_sie_dusakawi"
-)
+
+def _build_corporate_url() -> str:
+    """Construye la URL de conexión a BD corporativa desde variables de entorno."""
+    host = os.environ.get("CORP_DB_HOST", "")
+    port = os.environ.get("CORP_DB_PORT", "5435")
+    name = os.environ.get("CORP_DB_NAME", "")
+    user = os.environ.get("CORP_DB_USER", "")
+    password = os.environ.get("CORP_DB_PASSWORD", "")
+    if host and name and user:
+        return f"postgresql://{user}:{password}@{host}:{port}/{name}"
+    return ""
+
+
+CORPORATE_DB_URL = _build_corporate_url()
 
 
 def get_corporate_connection():
@@ -20,9 +29,10 @@ def get_corporate_connection():
     Obtiene una conexión a la BD corporativa.
     Se usa sqlalchemy con URL de conexión.
     """
+    if not CORPORATE_DB_URL:
+        print("[corporate_db] CORP_DB_HOST/CORP_DB_NAME/CORP_DB_USER no configurados")
+        return None
     try:
-        from sqlalchemy import create_engine
-        # Convertir postgres:// a postgresql:// si es necesario
         url = CORPORATE_DB_URL
         if url.startswith("postgres://"):
             url = "postgresql://" + url[len("postgres://"):]

@@ -213,18 +213,24 @@ async def debug_corporate_db():
 				conn = engine.connect()
 				try:
 					result = conn.execute(text('SELECT COUNT(*) FROM administrativo."af_Afiliados"')).scalar()
+					host = os.environ.get("CORP_DB_HOST", "")
+					port = os.environ.get("CORP_DB_PORT", "")
+					dbname = os.environ.get("CORP_DB_NAME", "")
 					return {
 						"conectado": True,
-						"db_corporativa": "postgres://...@129.80.159.38:5435/base_sie_dusakawi",
+						"db_corporativa": f"postgresql://***@{host}:{port}/{dbname}",
 						"tabla_afiliados": "administrativo.af_Afiliados",
 						"total_afiliados": int(result),
 						"error": None
 					}
 				finally:
 					conn.close()
+		host = os.environ.get("CORP_DB_HOST", "")
+		port = os.environ.get("CORP_DB_PORT", "")
+		dbname = os.environ.get("CORP_DB_NAME", "")
 		return {
 			"conectado": False,
-			"db_corporativa": "postgres://...@129.80.159.38:5435/base_sie_dusakawi",
+			"db_corporativa": f"postgresql://***@{host}:{port}/{dbname}",
 			"tabla_afiliados": "administrativo.af_Afiliados",
 			"error": "No se pudo establecer conexión con BD corporativa"
 		}

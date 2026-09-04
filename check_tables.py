@@ -1,12 +1,13 @@
+import os
 import psycopg2
 
 try:
     conn = psycopg2.connect(
-        host='129.80.159.38',
-        port=5435,
-        user='postgres',
-        password='qazwsx12A.',
-        database='base_sie_dusakawi'
+        host=os.environ.get("CORP_DB_HOST", "129.80.159.38"),
+        port=os.environ.get("CORP_DB_PORT", "5435"),
+        user=os.environ.get("CORP_DB_USER", "postgres"),
+        password=os.environ.get("CORP_DB_PASSWORD", ""),
+        database=os.environ.get("CORP_DB_NAME", "base_sie_dusakawi")
     )
     cur = conn.cursor()
     cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;")
