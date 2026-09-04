@@ -3225,23 +3225,44 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 @app.post("/validate-affiliation")
 async def validate_affiliation(payload: dict, current_user: User = Depends(get_current_user)):
 	"""Valida afiliación institucional: tipo+numero vs administrativo.af_afiliado.
-	Devuelve lista de errores (usuarias no encontradas) y lista de usuarias válidas con IPS."""
+	Si no se envía corrected_text, lee del último cargue en la BD."""
+	import base64 as _b64, gzip as _gzip
+	ensure_db_ready()
+	
 	corrected_text = payload.get("corrected_text", "")
-	template_key = payload.get("template_key", "gestante")
+	
+	# Si no viene texto, leer del último cargue
+	if not corrected_text or not corrected_text.strip():
+		try:
+			db = SessionLocal()
+			from sqlalchemy import text as sa_text
+			cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
+			if cargues:
+				c = cargues[0]
+				texto = c.corrected_text or c.raw_text or ""
+				if c.compressed and texto:
+					try:
+						texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
+					except Exception:
+						pass
+				corrected_text = texto
+			db.close()
+		except Exception:
+			pass
 	
 	if not corrected_text or not corrected_text.strip():
-		raise HTTPException(status_code=400, detail="No hay datos para validar afiliación")
+		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "No hay datos para validar"}
 	
 	try:
 		df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 		df = df.fillna('').astype(str)
 	except Exception as e:
-		raise HTTPException(status_code=400, detail=f"Error al parsear datos: {e}")
+		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": f"Error parseando datos: {str(e)[:200]}"}
 	
 	if df.empty:
-		raise HTTPException(status_code=400, detail="No hay datos para validar")
+		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Sin datos"}
 	
-	# Columnas del template: index 1 = Tipo de documento, index 2 = No. De Identificación
+	template_key = payload.get("template_key", "gestante")
 	meta = get_template_by_key(template_key)
 	tmpl = meta["template"]
 	tmpl_names = [t['name'] for t in tmpl]
@@ -3249,7 +3270,6 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	if has_cols:
 		df.columns = tmpl_names
 	
-	# Extraer tipo y número de identificación (por nombre o por índice)
 	if has_cols:
 		tipo_col = tmpl_names[1]
 		num_col = tmpl_names[2]
@@ -3291,13 +3311,19 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	try:
 		from .corporate_db import validar_afiliados_lote, obtener_nombres_ips
 	except ImportError:
-		from corporate_db import validar_afiliados_lote, obtener_nombres_ips
+		try:
+			from corporate_db import validar_afiliados_lote, obtener_nombres_ips
+		except ImportError:
+			return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Modulo corporativo no disponible"}
 	
-	lote_input = [{"tipo_id": u["tipo_id"], "numero_id": u["numero_id"]} for u in usuarios]
-	resultado_lote = validar_afiliados_lote(lote_input)
+	try:
+		lote_input = [{"tipo_id": u["tipo_id"], "numero_id": u["numero_id"]} for u in usuarios]
+		resultado_lote = validar_afiliados_lote(lote_input)
+	except Exception as e:
+		return {"success": True, "encontrados": 0, "no_encontrados": len(usuarios), "errors": [{"row": 0, "column": "DB", "original": "", "corrected": f"Error consultando BD corporativa: {str(e)[:200]}", "status": "error"}], "valid_users": [], "ips_groups": {}, "info": f"Error BD corporativa: {str(e)[:200]}"}
 	
 	if resultado_lote.get("error"):
-		raise HTTPException(status_code=502, detail=f"Error consultando BD corporativa: {resultado_lote['error']}")
+		return {"success": True, "encontrados": 0, "no_encontrados": len(usuarios), "errors": [{"row": 0, "column": "DB", "original": "", "corrected": f"Error BD corporativa: {resultado_lote['error'][:200]}", "status": "error"}], "valid_users": [], "ips_groups": {}, "info": f"Error BD: {resultado_lote['error'][:200]}"}
 	
 	# Indexar encontrados por (tipo, numero) -> ips_code
 	indx_encontrados = {}
@@ -3328,7 +3354,10 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	
 	# Obtener nombres de IPS desde ct_ips
 	ips_codes = list({e["ips_code"] for e in encontrados if e.get("ips_code")})
-	nombres_ips = obtener_nombres_ips(ips_codes) if ips_codes else {}
+	try:
+		nombres_ips = obtener_nombres_ips(ips_codes) if ips_codes else {}
+	except Exception:
+		nombres_ips = {}
 	
 	# Construir grupos de IPS
 	ips_groups = {}
@@ -3577,9 +3606,13 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 				if db_match:
 					tmpl_to_db[cname] = db_match
 		else:
-			# Fallback: mapear por indice (template order ~= DB order for first columns)
-			for i in range(min(len(df.columns), len(db_cols))):
-				tmpl_to_db[i] = db_cols[i]
+			# Fallback: mapear por indice. Position i in CSV → template[i] → DB col
+			for i in range(min(len(df.columns), len(tmpl_names), len(db_cols))):
+				db_match = _find_db_col(tmpl_names[i]) if i < len(tmpl_names) else None
+				if db_match:
+					tmpl_to_db[i] = db_match
+
+		mapped_count = len(tmpl_to_db)
 
 		# ── Mapeo de nombres de IPS a prestadores ──
 		ips_to_prestador = {}

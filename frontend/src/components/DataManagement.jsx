@@ -54,23 +54,24 @@ export default function DataManagement({ correctedText }) {
   const [instValidating, setInstValidating] = useState(false)
 
   const runAffiliationValidation = useCallback(async () => {
-    if (!correctedText || instValidating || instResult) return
+    if (instValidating || instResult) return
     setInstValidating(true); setError('')
     try {
-      const data = await validateAffiliation(correctedText)
+      const data = await validateAffiliation('')
       setInstResult(data)
     } catch (e) {
       setError(e.message || 'Error validando afiliación')
+      setInstResult({ error: true })
     } finally {
       setInstValidating(false)
     }
-  }, [correctedText, instValidating, instResult])
+  }, [instValidating, instResult])
 
   useEffect(() => {
-    if (correctedText && !instResult && !instValidating) {
+    if (!instResult && !instValidating) {
       runAffiliationValidation()
     }
-  }, [correctedText, instResult, instValidating, runAffiliationValidation])
+  }, [instResult, instValidating, runAffiliationValidation])
 
   const ipsGroups = instResult?.ips_groups || {}
   const ipsNames = Object.keys(ipsGroups)
