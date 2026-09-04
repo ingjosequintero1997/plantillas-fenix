@@ -45,6 +45,9 @@ test_export.py
 debug_columns.py
 debug2.py
 generar_pruebas.py
+check_tables.py
+test_debug_glicemia.py
+test_glicemia.py
 
 
 .vercel
