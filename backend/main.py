@@ -3518,8 +3518,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 			except Exception as e:
 				return {"error": f"Cargue {cargue.id}: error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
 
-		# ── Leer correctedText como DataFrame SIN headers ──
-		# correctedText tiene 200 columnas en orden del template (sin header row)
+		# ── Leer correctedText como DataFrame (sin headers, lines may vary in length) ──
 		try:
 			meta = get_template_by_key("gestante")
 			tmpl = meta["template"]
@@ -3527,17 +3526,14 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 		except Exception:
 			tmpl_names = []
 
-		# Preparar header para pandas: insertar fila de template names
-		if tmpl_names:
-			header_line = "|".join(tmpl_names)
-			full_text = header_line + "\n" + texto
-			df = _pd.read_csv(_io.StringIO(full_text), sep='|', header=0, dtype=str, engine='python', keep_default_na=False)
-		else:
-			df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
-			if len(df.columns) == len(GESTANTE_COLUMNS):
-				df.columns = GESTANTE_COLUMNS
-
+		# Leer SIN headers. correctedText NO tiene fila de headers.
+		df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 		df = df.fillna('').astype(str)
+
+		# Asignar nombres de columnas del template si la cantidad coincide
+		has_template_names = len(df.columns) == len(tmpl_names)
+		if has_template_names:
+			df.columns = tmpl_names
 
 		# ── Mapear nombre de template → nombre de columna DB ──
 		def _norm(s):
@@ -3554,24 +3550,27 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 		for col in db_cols:
 			norm_to_db[_norm(col)] = col
 
-		# ── Mapeo template_name → db_col_name (con fuzzy matching) ──
 		def _find_db_col(tmpl_name):
 			n = _norm(tmpl_name)
-			# Strategy 1: exact match
 			if n in norm_to_db:
 				return norm_to_db[n]
-			# Strategy 2: one contains the other (fuzzy)
 			for db_norm, db_col in norm_to_db.items():
 				if len(n) >= 3 and len(db_norm) >= 3:
 					if n in db_norm or db_norm in n:
 						return db_col
 			return None
 
+		# Construir mapping: si tenemos nombres de template, usarlos; si no, usar indice
 		tmpl_to_db = {}
-		for cname in df.columns:
-			db_match = _find_db_col(cname)
-			if db_match:
-				tmpl_to_db[cname] = db_match
+		if has_template_names:
+			for cname in df.columns:
+				db_match = _find_db_col(cname)
+				if db_match:
+					tmpl_to_db[cname] = db_match
+		else:
+			# Fallback: mapear por indice (template order ~= DB order for first columns)
+			for i in range(min(len(df.columns), len(db_cols))):
+				tmpl_to_db[i] = db_cols[i]
 
 		# ── Mapeo de nombres de IPS a prestadores ──
 		ips_to_prestador = {}
@@ -3671,7 +3670,7 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 			except Exception as e:
 				return {"error": f"Error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
 
-		# Leer como DataFrame con headers del template
+		# Leer como DataFrame (sin headers)
 		try:
 			meta = get_template_by_key("gestante")
 			tmpl = meta["template"]
@@ -3679,14 +3678,12 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 		except Exception:
 			tmpl_names = []
 
-		if tmpl_names:
-			header_line = "|".join(tmpl_names)
-			full_text = header_line + "\n" + texto
-			df = _pd.read_csv(_io.StringIO(full_text), sep='|', header=0, dtype=str, engine='python', keep_default_na=False)
-		else:
-			df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
-
+		df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 		df = df.fillna('').astype(str)
+
+		has_template_names = len(df.columns) == len(tmpl_names)
+		if has_template_names:
+			df.columns = tmpl_names
 
 		def _norm(s):
 			import unicodedata
@@ -3713,10 +3710,14 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 			return None
 
 		tmpl_to_db = {}
-		for cname in df.columns:
-			db_match = _find_db_col(cname)
-			if db_match:
-				tmpl_to_db[cname] = db_match
+		if has_template_names:
+			for cname in df.columns:
+				db_match = _find_db_col(cname)
+				if db_match:
+					tmpl_to_db[cname] = db_match
+		else:
+			for i in range(min(len(df.columns), len(db_cols))):
+				tmpl_to_db[i] = db_cols[i]
 
 		# Limpiar tabla
 		db.execute(sa_text('DELETE FROM gestantes'))
