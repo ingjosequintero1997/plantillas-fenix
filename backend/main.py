@@ -3550,7 +3550,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 			s = str(s).strip()
 			s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('ascii')
 			s = s.upper()
-			s = ''.join(c for c in s if c.isalnum() or c == ' ')
+			s = ''.join(c for c in s if c.isalnum() or c in (' ', '_'))
 			s = s.strip()
 			s = '_'.join(s.split())
 			return s
@@ -3559,12 +3559,39 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 		for col in db_cols:
 			norm_to_db[_norm(col)] = col
 
+		# Mapeo explicito CSV_header_norm -> DB_column para nombres que no coinciden por _norm()
+		CSV_TO_DB_OVERRIDE = {
+			"NO": "CONSECUTIVO",
+			"NO_DE_IDENTIFICACION": "NO_DE_IDENTIFICACION",
+			"REGIMEN_AFILIACION": "REGIMEN_DE_AFILIACION",
+			"DEPARTAMENTO_RESIDENCIA": "DEPARTAMENTO_DE_RESIDENCIA",
+			"MUNICIPIO_DE_RESIDENCIA": "MUNICIPIO_DE_RESIDENCIA",
+			"TELEFONO_USUARIA": "TELEFONO_USUARIA",
+			"NIVEL_EDUCATIVO": "NIVEL_EDUCATIVO",
+			"MUJER_CABEZA_DE_HOGAR": "MUJER_CABEZA_DE_HOGAR",
+			"ESTADO_CIVIL": "ESTADO_CIVIL",
+			"CONTROL_TRADICIONAL": "CONTROL_TRADICIONAL",
+			"GESTANTE_RENUENTE": "GESTANTE_RENUENTE",
+			"NOMBRE_DE_LA_IPS_PRIMARIA": "NOMBRE_DE_LA_IPS_PRIMARIA",
+			"FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO": "FECHA_DE_DIAGNOSTICO",
+			"FECHA_DE_INGRESO_AL_CONTROL_PRENATAL": "FECHA_DE_INGRESO_AL_CONTROL_PRENATAL",
+			"EDAD_ANOS": "EDAD",
+			"FECHA_DE_NACIMIENTO": "FECHA_DE_NACIMIENTO",
+			"FECHA_DE_DIAGNOSTICO": "FECHA_DE_DIAGNOSTICO",
+			"TIPO_DE_DOCUMENTO_DE_IDENTIDAD": "TIPO_DE_DOCUMENTO_DE_IDENTIDAD",
+			"ASENTAMIENTO_RANCHERIA_COMUNIDAD": "ASENTAMIENTO_RANCHERIA_COMUNIDAD",
+			"PERTENECIA_ETNICA": "PERTENECIA_ETNICA",
+			"GRUPO_POBLACIONAL": "GRUPO_POBLACIONAL",
+		}
+
 		# Primera linea = headers del instructivo
 		first_cols = lineas[0].split("|") if lineas else []
 		header_map = {}  # indice CSV -> nombre columna DB
 		for ci, hdr in enumerate(first_cols):
 			hdr_norm = _norm(hdr)
-			if hdr_norm in norm_to_db:
+			if hdr_norm in CSV_TO_DB_OVERRIDE:
+				header_map[ci] = CSV_TO_DB_OVERRIDE[hdr_norm]
+			elif hdr_norm in norm_to_db:
 				header_map[ci] = norm_to_db[hdr_norm]
 
 		for idx, linea in enumerate(lineas_data, start=1):
@@ -3654,7 +3681,7 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 			s = str(s).strip()
 			s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('ascii')
 			s = s.upper()
-			s = ''.join(c for c in s if c.isalnum() or c == ' ')
+			s = ''.join(c for c in s if c.isalnum() or c in (' ', '_'))
 			s = s.strip()
 			s = '_'.join(s.split())
 			return s
@@ -3663,11 +3690,38 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 		for col in db_cols:
 			norm_to_db[_norm(col)] = col
 
+		# Mapeo explicito CSV_header_norm -> DB_column para nombres que no coinciden por _norm()
+		CSV_TO_DB_OVERRIDE = {
+			"NO": "CONSECUTIVO",
+			"NO_DE_IDENTIFICACION": "NO_DE_IDENTIFICACION",
+			"REGIMEN_AFILIACION": "REGIMEN_DE_AFILIACION",
+			"DEPARTAMENTO_RESIDENCIA": "DEPARTAMENTO_DE_RESIDENCIA",
+			"MUNICIPIO_DE_RESIDENCIA": "MUNICIPIO_DE_RESIDENCIA",
+			"TELEFONO_USUARIA": "TELEFONO_USUARIA",
+			"NIVEL_EDUCATIVO": "NIVEL_EDUCATIVO",
+			"MUJER_CABEZA_DE_HOGAR": "MUJER_CABEZA_DE_HOGAR",
+			"ESTADO_CIVIL": "ESTADO_CIVIL",
+			"CONTROL_TRADICIONAL": "CONTROL_TRADICIONAL",
+			"GESTANTE_RENUENTE": "GESTANTE_RENUENTE",
+			"NOMBRE_DE_LA_IPS_PRIMARIA": "NOMBRE_DE_LA_IPS_PRIMARIA",
+			"FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO": "FECHA_DE_DIAGNOSTICO",
+			"FECHA_DE_INGRESO_AL_CONTROL_PRENATAL": "FECHA_DE_INGRESO_AL_CONTROL_PRENATAL",
+			"EDAD_ANOS": "EDAD",
+			"FECHA_DE_NACIMIENTO": "FECHA_DE_NACIMIENTO",
+			"FECHA_DE_DIAGNOSTICO": "FECHA_DE_DIAGNOSTICO",
+			"TIPO_DE_DOCUMENTO_DE_IDENTIDAD": "TIPO_DE_DOCUMENTO_DE_IDENTIDAD",
+			"ASENTAMIENTO_RANCHERIA_COMUNIDAD": "ASENTAMIENTO_RANCHERIA_COMUNIDAD",
+			"PERTENECIA_ETNICA": "PERTENECIA_ETNICA",
+			"GRUPO_POBLACIONAL": "GRUPO_POBLACIONAL",
+		}
+
 		# Mapear headers
 		header_map = {}
 		for ci, hdr in enumerate(first_cols):
 			hdr_norm = _norm(hdr)
-			if hdr_norm in norm_to_db:
+			if hdr_norm in CSV_TO_DB_OVERRIDE:
+				header_map[ci] = CSV_TO_DB_OVERRIDE[hdr_norm]
+			elif hdr_norm in norm_to_db:
 				header_map[ci] = norm_to_db[hdr_norm]
 
 		# Diagnóstico: ver qué columna mapea a qué
