@@ -124,10 +124,13 @@ async def ips_login(payload: LoginPayload):
 	db = SessionLocal()
 	try:
 		# 1) Buscar en tabla usuarios_ips
-		user_ips = db.query(UsuarioIPS).filter(
-			UsuarioIPS.username == payload.username.strip(),
-			UsuarioIPS.active == True,
-		).first()
+		try:
+			user_ips = db.query(UsuarioIPS).filter(
+				UsuarioIPS.username == payload.username.strip(),
+				UsuarioIPS.active == True,
+			).first()
+		except Exception:
+			user_ips = None
 		if user_ips and verify_password(payload.password, user_ips.password_hash):
 			token_data = {
 				"sub": user_ips.username,
@@ -146,13 +149,18 @@ async def ips_login(payload: LoginPayload):
 			}
 
 		# 2) Buscar en tabla users (prestadores asignados a IPS)
-		from sqlalchemy import text as _sa_text
 		user = db.query(User).filter(User.username == payload.username.strip(), User.active == True).first()
 		if user and verify_password(payload.password, user.password_hash):
 			prest = db.query(Prestador).filter(Prestador.user_id == user.id).first()
-			if prest:
-				ips_name = str(prest.ips or prest.nombre or "IPS").strip()
-				ips_code = str(prest.ips or "").strip()
+			if prest and prest.ips:
+				ips_code = str(prest.ips).strip()
+				ips_name = str(prest.nombre or "IPS").strip()
+				try:
+					nombre_ips = obtener_nombre_ips_individual(db, ips_code)
+					if nombre_ips:
+						ips_name = nombre_ips
+				except Exception:
+					pass
 				token_data = {
 					"sub": user.username,
 					"uid": user.id,
@@ -172,6 +180,18 @@ async def ips_login(payload: LoginPayload):
 		raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 	finally:
 		db.close()
+
+
+def obtener_nombre_ips_individual(db, ips_code):
+	"""Obtiene el nombre de una IPS por su codigo desde ct_ips."""
+	try:
+		from sqlalchemy import text as _sa_text
+		row = db.execute(_sa_text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :code'), {"code": ips_code}).fetchone()
+		if row and row[0]:
+			return str(row[0]).strip()
+	except Exception:
+		pass
+	return None
 
 
 @app.get("/auth/ips-me")
@@ -4128,54 +4148,54 @@ def _check_gestante_ips(db, current_user, registro_id):
 
 @app.get("/data/gestantes/by-numid/{numero_id}")
 async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depends(get_current_user)):
-	"""Obtiene todos los campos de una gestante por numero de identificacion.
-	Prioriza el correctedText del cargue (datos validados completos)."""
+	"""Obtiene todos los campos de una gestante por numero de identificacion."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text as sa_text
-		import base64, gzip, io as _io, pandas as _pd
+		import base64 as _b64, gzip as _gzip, io as _io, pandas as _pd
 
 		num_clean = numero_id.strip()
 
-		# 1) Prioridad: leer del correctedText del ultimo cargue (tiene los datos validados)
-		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
-		if cargues:
-			cargue = cargues[0]
-			texto = cargue.corrected_text or cargue.raw_text or ""
-			if cargue.compressed and texto:
-				try: texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
+		# 1) Buscar en tabla gestantes primero (si tiene datos)
+		try:
+			row = db.execute(sa_text('SELECT * FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :num'), {"num": num_clean}).fetchone()
+			if row:
+				columnas = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+				registro = dict(zip(columnas, [str(v) if v is not None else "" for v in row]))
+				non_empty = sum(1 for k, v in registro.items() if v and str(v).strip() and k not in ('id', 'created_at'))
+				if non_empty > 10:
+					return registro
+		except Exception:
+			pass
+
+		# 2) Leer del correctedText del ultimo cargue
+		try:
+			cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
+			if not cargues:
+				raise HTTPException(status_code=404, detail="No se encontro gestante")
+
+			texto = cargues[0].corrected_text or cargues[0].raw_text or ""
+			if cargues[0].compressed and texto:
+				try: texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
 				except: pass
-			if texto:
-				try:
-					meta = get_template_by_key("gestante")
-					tmpl_names = [t["name"] for t in meta["template"]]
-					df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
-					df = df.fillna('').astype(str)
+			if not texto:
+				raise HTTPException(status_code=404, detail="No se encontro gestante")
 
-					has_cols = len(df.columns) == len(tmpl_names)
-					if has_cols:
-						df.columns = tmpl_names
-
-					num_col = tmpl_names[2] if has_cols else 2
-					for idx, row_data in df.iterrows():
-						if str(row_data.get(num_col, "")).strip() == num_clean:
-							result = {}
-							for c in df.columns:
-								result[str(c)] = str(row_data[c]).strip()
-							return result
-				except Exception:
-					pass
-
-		# 2) Fallback: buscar en tabla gestantes
-		row = db.execute(sa_text('SELECT * FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :num'), {"num": num_clean}).fetchone()
-		if row:
-			columnas = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
-			registro = dict(zip(columnas, [str(v) if v is not None else "" for v in row]))
-			# Verificar que tenga datos reales
-			non_empty = sum(1 for v in registro.values() if v and str(v).strip())
-			if non_empty > 5:
-				return registro
+			meta = get_template_by_key("gestante")
+			tmpl_names = [t["name"] for t in meta["template"]]
+			lines = texto.strip().split("\n")
+			for line in lines:
+				parts = line.split("|")
+				if len(parts) > 2 and parts[2].strip() == num_clean:
+					result = {}
+					for i, name in enumerate(tmpl_names):
+						result[name] = parts[i].strip() if i < len(parts) else ""
+					return result
+		except HTTPException:
+			raise
+		except Exception:
+			pass
 
 		raise HTTPException(status_code=404, detail="No se encontro gestante con ese documento")
 	except HTTPException:
