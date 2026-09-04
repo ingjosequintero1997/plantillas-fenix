@@ -399,7 +399,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         <div className="flex items-center justify-between">
           <div>
             <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {mode === 'create' ? 'Nuevo registro de gestante' : `Editar — ${form.NO_DE_IDENTIFICACION || ''}`}
+              {mode === 'create' ? 'Nuevo registro de gestante' : `Actualizar — ${form.NO_DE_IDENTIFICACION || ''}`}
             </div>
             <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {mode === 'create'

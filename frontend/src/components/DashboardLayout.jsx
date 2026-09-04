@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../AuthContext'
 
 const MENU_ITEMS = [
-  { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador', 'lider'],
+  { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador', 'lider', 'ips_user'],
     icon: 'M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10' },
 ]
 
@@ -26,8 +26,6 @@ const GESTION_ITEMS = [
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
     icon: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7' },
-  { key: 'usuarios-ips', label: 'Usuarios IPS', roles: ['admin'],
-    icon: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7' },
 ]
 
 const META = {
@@ -39,7 +37,6 @@ const META = {
   historias: { title: 'Historias clinicas', sub: 'Expedientes clinicos' },
   verificar: { title: 'Verificar afiliado', sub: 'Consulta de datos demograficos por documento' },
   prestadores: { title: 'Usuarios', sub: 'Prestadores y lideres de programa' },
-  'usuarios-ips': { title: 'Usuarios IPS', sub: 'Crear y administrar usuarios por IPS' },
   data: { title: 'Gestion de data', sub: 'Ver y editar registros de gestantes' },
 }
 const ROLE_TITLE = { historial: { admin: 'Verificar data', lider: 'Verificar data', prestador: 'Mis cargues' } }
@@ -101,8 +98,8 @@ export default function DashboardLayout({ section, onNavigate, children, templat
 
   useEffect(() => { document.documentElement.classList.toggle('dark', dark) }, [dark])
 
-  const role = user?.role === 'admin' ? 'admin' : user?.role === 'lider' ? 'lider' : 'prestador'
-  const roleLabel = user?.role === 'admin' ? 'Administrador' : user?.role === 'lider' ? 'Lider' : 'Prestador'
+  const role = user?.role || 'prestador'
+  const roleLabel = user?.role === 'admin' ? 'Administrador' : user?.role === 'lider' ? 'Lider de Programa' : user?.role === 'ips_user' ? 'IPS' : 'Prestador'
   const meta = { ...(META[section] || META.inicio) }
   const rt = ROLE_TITLE[section]?.[role]
   if (rt) meta.title = rt

@@ -3535,6 +3535,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"apellido1": u["apellido1"],
 				"apellido2": u["apellido2"],
 				"gestante_id": gid,
+				"ips_code": str(ips_code).strip(),
 			})
 	
 	return {
