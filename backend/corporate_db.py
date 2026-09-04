@@ -8,6 +8,12 @@ import os
 from typing import Optional, Dict, List
 from sqlalchemy import create_engine, text
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Mapeo de tipo de documento string -> codigo numerico en BD corporativa
 TIPO_DOC_MAP = {
     "CC": 3,   # Cedula de Ciudadania
@@ -49,16 +55,17 @@ def get_corporate_connection():
     """
     Obtiene una conexión a la BD corporativa.
     Se usa sqlalchemy con URL de conexión.
+    Reconstruye la URL en cada llamada para capturar variables de entorno.
     """
-    if not CORPORATE_DB_URL:
+    url = _build_corporate_url()
+    if not url:
         print("[corporate_db] CORP_DB_HOST/CORP_DB_NAME/CORP_DB_USER no configurados")
         return None
     try:
-        url = CORPORATE_DB_URL
         if url.startswith("postgres://"):
             url = "postgresql://" + url[len("postgres://"):]
         
-        engine = create_engine(url, echo=False, pool_pre_ping=True, connect_args={"connect_timeout": 5})
+        engine = create_engine(url, echo=False, pool_pre_ping=True, connect_args={"connect_timeout": 8})
         return engine
     except Exception as e:
         print(f"Error al conectar con BD corporativa: {str(e)[:200]}")
