@@ -53,6 +53,7 @@ try:
         require_admin,
         verify_credentials,
         verify_token,
+        TOKEN_SECRET,
     )
     from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS
     from . import gcs_storage
@@ -65,6 +66,7 @@ except ImportError:
         require_admin,
         verify_credentials,
         verify_token,
+        TOKEN_SECRET,
     )
     from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS
     import gcs_storage
@@ -120,8 +122,12 @@ async def auth_me(current_user: User = Depends(get_current_user)):
 @app.post("/auth/ips-login")
 async def ips_login(payload: LoginPayload):
 	"""Login para usuarios IPS. Busca en usuarios_ips, luego en users con prestador."""
-	ensure_db_ready()
-	db = SessionLocal()
+	db = None
+	try:
+		ensure_db_ready()
+		db = SessionLocal()
+	except Exception:
+		raise HTTPException(status_code=401, detail="Error de conexion a base de datos")
 	try:
 		# 1) Buscar en tabla usuarios_ips
 		user_ips = None
@@ -189,10 +195,11 @@ async def ips_login(payload: LoginPayload):
 		raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 	except HTTPException:
 		raise
-	except Exception as e:
+	except Exception:
 		raise HTTPException(status_code=401, detail="Error de autenticación")
 	finally:
-		db.close()
+		if db:
+			db.close()
 
 
 def obtener_nombre_ips_individual(ips_code):
