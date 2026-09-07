@@ -4199,7 +4199,7 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 		except Exception:
 			pass
 
-		# 2) Leer del correctedText
+		# 2) Leer del correctedText con mapeo por NOMBRE (no por posición)
 		try:
 			cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
 			if cargues:
@@ -4210,6 +4210,12 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 				if texto:
 					meta = get_template_by_key("gestante")
 					tmpl_names = [t["name"] for t in meta["template"]]
+
+					try:
+						from .template_to_db_map import TEMPLATE_TO_DB_EXPLICIT
+					except ImportError:
+						from template_to_db_map import TEMPLATE_TO_DB_EXPLICIT
+
 					import pandas as _pd, io as _io
 					df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 					df = df.fillna('').astype(str)
@@ -4224,8 +4230,14 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 							if val == num_clean:
 								resultado_full = {}
 								for i in range(min(n_cols, n_tmpl)):
-									db_col = GESTANTE_COLUMNS[i] if i < len(GESTANTE_COLUMNS) else tmpl_names[i]
-									resultado_full[db_col] = str(row_data.iloc[i]).strip()
+									db_col = TEMPLATE_TO_DB_EXPLICIT.get(i)
+									if not db_col:
+										tname = tmpl_names[i]
+										tn = tname.upper().strip().replace(' ', '_').replace('(', '').replace(')', '').replace('¿', '').replace('?', '').replace(',', '').replace('\n', '_').replace('-', '_').replace('/', '_').replace('.', '').replace('  ', '_')
+										gcol_set = {c.upper(): c for c in GESTANTE_COLUMNS}
+										db_col = gcol_set.get(tn)
+									if db_col:
+										resultado_full[db_col] = str(row_data.iloc[i]).strip()
 								return resultado_full
 		except Exception:
 			pass
