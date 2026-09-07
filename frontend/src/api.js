@@ -275,7 +275,7 @@ export async function fetchIpsGrupos() {
 }
 
 export async function fetchGestanteColumns() {
-  return apiFetch(`${API_BASE}/data/gestantes/columns`)
+  return apiFetch(`${API_BASE}/data/gestantes/columnas-planilla`)
 }
 
 export async function populateGestantes() {
