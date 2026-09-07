@@ -4227,14 +4227,14 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 					if n_cols > num_col_idx:
 						for idx, row_data in df.iterrows():
 							val = str(row_data.iloc[num_col_idx]).strip()
-						if val == num_clean:
-							resultado_full = {}
-							for i in range(min(n_cols, n_tmpl)):
-								db_col = TEMPLATE_TO_DB_EXPLICIT.get(i)
-								if not db_col:
-									db_col = tmpl_names[i]
-								resultado_full[db_col] = str(row_data.iloc[i]).strip()
-							return resultado_full
+							if val == num_clean:
+								resultado_full = {}
+								for i in range(min(n_cols, n_tmpl)):
+									db_col = TEMPLATE_TO_DB_EXPLICIT.get(i)
+									if not db_col:
+										db_col = tmpl_names[i]
+									resultado_full[db_col] = str(row_data.iloc[i]).strip()
+								return resultado_full
 		except Exception:
 			pass
 
