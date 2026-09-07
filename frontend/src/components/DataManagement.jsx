@@ -60,44 +60,43 @@ export default function DataManagement({ correctedText }) {
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {
-      const workbook = new ExcelJS.Workbook()
-      workbook.creator = 'FENIX DATA'
-      workbook.created = new Date()
-      const sheet = workbook.addWorksheet(ipsName.substring(0, 31))
-      const cols = [
-        { header: 'Tipo Doc', key: 'TIPO_DE_DOCUMENTO_DE_IDENTIDAD', width: 10 },
-        { header: 'No. Identificacion', key: 'NO_DE_IDENTIFICACION', width: 18 },
-        { header: 'Apellido 1', key: 'APELLIDO_1', width: 15 },
-        { header: 'Apellido 2', key: 'APELLIDO_2', width: 15 },
-        { header: 'Nombre 1', key: 'NOMBRE_1', width: 15 },
-        { header: 'Nombre 2', key: 'NOMBRE_2', width: 15 },
-        { header: 'Fecha Nacimiento', key: 'FECHA_DE_NACIMIENTO', width: 15 },
-        { header: 'Edad', key: 'EDAD', width: 8 },
-        { header: 'Sexo', key: 'SEXO', width: 10 },
-        { header: 'Regimen', key: 'REGIMEN_DE_AFILIACION', width: 12 },
-        { header: 'Depto Residencia', key: 'DEPARTAMENTO_DE_RESIDENCIA', width: 18 },
-        { header: 'Municipio', key: 'MUNICIPIO_DE_RESIDENCIA', width: 18 },
-        { header: 'Zona', key: 'ZONA', width: 10 },
-        { header: 'Telefono', key: 'TELEFONO_USUARIA', width: 15 },
-        { header: 'Direccion', key: 'DIRECCION', width: 25 },
-        { header: 'FUM', key: 'FUM', width: 15 },
-        { header: 'IPS Primaria', key: 'NOMBRE_DE_LA_IPS_PRIMARIA', width: 30 },
-        { header: 'Clasif Riesgo', key: 'CLASIFICACION_DEL_RIESGO', width: 20 },
-        { header: 'Caso Cerrado', key: 'CASO_CERRADO', width: 12 },
-        { header: 'Observaciones', key: 'OBSERVACIONES_GENERALES', width: 30 },
-      ]
-      sheet.columns = cols
-      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
-      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
+      let allCols = null
+      const allRows = []
       for (const u of usuarios) {
         let fullData = null
         if (u.numero_id) {
           try { fullData = await fetchGestanteByNumId(u.numero_id) } catch { fullData = null }
         }
         if (!fullData) fullData = mapInstToGestanteKeys(u)
-        const row = {}
-        for (const c of cols) { row[c.key] = fullData[c.key] || '' }
-        sheet.addRow(row)
+        if (!allCols) {
+          allCols = Object.keys(fullData).filter(k => k !== 'id' && k !== 'created_at' && k !== '_from_gestantes' && k !== '_key')
+          allCols.forEach(k => { allCols[k] = k })
+        }
+        allRows.push(fullData)
+      }
+      if (!allCols || !allRows.length) return
+      const workbook = new ExcelJS.Workbook()
+      workbook.creator = 'FENIX DATA'
+      workbook.created = new Date()
+      const sheet = workbook.addWorksheet(ipsName.substring(0, 31))
+      sheet.columns = allCols.map(k => ({ header: k, key: k, width: Math.min(Math.max(k.length + 2, 12), 35) }))
+      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 }
+      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
+      sheet.getRow(1).eachCell(c => { c.alignment = { wrapText: true } })
+      for (const fullData of allRows) {
+        const rowData = {}
+        for (const k of allCols) { rowData[k] = fullData[k] || '' }
+        const addedRow = sheet.addRow(rowData)
+        if (rowData.FUM && rowData.FUM.trim()) {
+          const fumDate = new Date(rowData.FUM)
+          if (!isNaN(fumDate.getTime())) {
+            const fppDate = new Date(fumDate)
+            fppDate.setDate(fppDate.getDate() + 280)
+            const fppCell = addedRow.getCell('FPP')
+            fppCell.value = fppDate
+            fppCell.numFmt = 'yyyy-mm-dd'
+          }
+        }
       }
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
