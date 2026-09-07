@@ -407,7 +407,17 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
 
   useEffect(() => {
     if (mode === 'edit' && initialData && Object.keys(initialData).length > 0) {
-      setForm({ ...initialData })
+      const cleaned = {}
+      for (const [k, v] of Object.entries(initialData)) {
+        if (k === '_key' || k === 'id' || k === 'created_at' || k === '_from_gestantes') continue
+        let val = v
+        if (val !== null && val !== undefined) {
+          val = String(val).trim()
+          if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(val)) val = val.split(' ')[0]
+        } else { val = '' }
+        cleaned[k] = val
+      }
+      setForm(cleaned)
     } else {
       setForm({
         TIPO_DE_DOCUMENTO_DE_IDENTIDAD: 'CC',
@@ -477,7 +487,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   const sanitizeVal = (v) => {
     if (v === null || v === undefined) return ''
     const s = String(v).trim()
-    if (!s || s === 'NA' || s === 'None' || s === 'null') return ''
+    if (!s) return ''
     if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(s)) return s.split(' ')[0]
     return s
   }
@@ -499,6 +509,9 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
             disabled={loadingIps}
           >
             <option value="">{loadingIps ? 'Cargando IPS...' : 'Seleccionar IPS'}</option>
+            {val && !ipsOptions.includes(val) && (
+              <option key={val} value={val}>{val}</option>
+            )}
             {ipsOptions.map((ips) => (
               <option key={ips} value={ips}>{ips}</option>
             ))}
@@ -623,12 +636,8 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-2" key={`sec-${activeSection}`}>
-          {SECCIONES[activeSection].fields.map((fieldDef) => (
-            <React.Fragment key={`${activeSection}-${fieldDef.key}`}>
-              {renderField(fieldDef)}
-            </React.Fragment>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-2">
+          {SECCIONES[activeSection].fields.map((fieldDef) => renderField(fieldDef))}
         </div>
 
         <div className="flex items-center justify-between pt-4 mt-4 border-t" style={{ borderColor: 'var(--border)' }}>

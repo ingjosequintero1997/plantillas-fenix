@@ -60,14 +60,29 @@ export default function DataManagement({ correctedText }) {
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {
-      let colMeta = null
-      try { colMeta = await fetchGestanteColumns() } catch { colMeta = null }
-      const allCols = colMeta?.columns || []
-      const labels = colMeta?.labels || {}
+      let allCols = []
+      let labels = {}
+      try {
+        const colMeta = await fetchGestanteColumns()
+        allCols = colMeta?.columns || []
+        labels = colMeta?.labels || {}
+      } catch {}
       const workbook = new ExcelJS.Workbook()
       workbook.creator = 'FENIX DATA'
       workbook.created = new Date()
       const sheet = workbook.addWorksheet(ipsName.substring(0, 31))
+      const allRows = []
+      for (const u of usuarios) {
+        let fullData = null
+        if (u.numero_id) {
+          try { fullData = await fetchGestanteByNumId(u.numero_id) } catch { fullData = null }
+        }
+        if (!fullData) fullData = mapInstToGestanteKeys(u)
+        allRows.push(fullData)
+      }
+      if (!allCols.length && allRows.length) {
+        allCols = Object.keys(allRows[0]).filter(k => k !== 'id' && k !== 'created_at')
+      }
       sheet.columns = allCols.map(k => ({
         header: labels[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
         key: k,
@@ -76,31 +91,31 @@ export default function DataManagement({ correctedText }) {
       sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 }
       sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
       sheet.getRow(1).eachCell(c => { c.alignment = { wrapText: true, vertical: 'middle' } })
-      for (const u of usuarios) {
-        let fullData = null
-        if (u.numero_id) {
-          try { fullData = await fetchGestanteByNumId(u.numero_id) } catch { fullData = null }
-        }
-        if (!fullData) fullData = mapInstToGestanteKeys(u)
+      for (const fullData of allRows) {
         const rowData = {}
         for (const k of allCols) {
           let v = fullData[k] || ''
           if (v && typeof v === 'string') {
             v = v.trim()
-            if (v === 'NA' || v === 'None' || v === 'null') v = ''
+            if (v === 'None' || v === 'null') v = ''
             if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(v)) v = v.split(' ')[0]
           }
           rowData[k] = v
         }
         const addedRow = sheet.addRow(rowData)
-        if (rowData.FUM && rowData.FUM.trim()) {
-          const fumDate = new Date(rowData.FUM)
-          if (!isNaN(fumDate.getTime())) {
-            const fppDate = new Date(fumDate)
-            fppDate.setDate(fppDate.getDate() + 280)
-            const fppCell = addedRow.getCell(allCols.indexOf('FPP') + 1)
-            fppCell.value = fppDate
-            fppCell.numFmt = 'yyyy-mm-dd'
+        const fppIdx = allCols.indexOf('FPP')
+        const fumIdx = allCols.indexOf('FUM')
+        if (fppIdx >= 0 && fumIdx >= 0) {
+          const fumVal = rowData.FUM
+          if (fumVal && fumVal.trim()) {
+            const fumDate = new Date(fumVal)
+            if (!isNaN(fumDate.getTime())) {
+              const fppDate = new Date(fumDate)
+              fppDate.setDate(fppDate.getDate() + 280)
+              const fppCell = addedRow.getCell(fppIdx + 1)
+              fppCell.value = fppDate
+              fppCell.numFmt = 'yyyy-mm-dd'
+            }
           }
         }
       }
