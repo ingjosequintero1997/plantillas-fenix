@@ -4194,7 +4194,19 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 				registro = dict(zip(columnas, [str(v) if v is not None else "" for v in row]))
 				non_empty = sum(1 for k, v in registro.items() if v and str(v).strip() and k not in ('id', 'created_at'))
 				if non_empty > 10:
-					return registro
+					# Normalize to template keys only
+					from gestante_config import build_gestante_template
+					_tmpl = build_gestante_template()
+					_norm_map = {}
+					for _i, _t in enumerate(_tmpl):
+						_nk = _norm(_t["name"])
+						if _nk in registro:
+							_norm_map[_nk] = registro[_nk]
+						elif _LEGACY_MAP.get(_i) and _LEGACY_MAP[_i] in registro:
+							_norm_map[_nk] = registro[_LEGACY_MAP[_i]]
+						else:
+							_norm_map[_nk] = ""
+					return _norm_map
 				resultado = registro
 		except Exception:
 			pass
@@ -4243,9 +4255,6 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 									key = _norm(tmpl_names[i])
 									val_i = str(row_data.iloc[i]).strip()
 									resultado_full[key] = val_i
-									legacy = _LEGACY_MAP.get(i)
-									if legacy and legacy != key:
-										resultado_full[legacy] = val_i
 								return resultado_full
 		except Exception:
 			pass
@@ -4588,19 +4597,24 @@ async def listar_caso_cerrado(
 		db.close()
 
 
-@app.get("/data/gestantes/columns")
-async def listar_columnas_gestantes(current_user: User = Depends(get_current_user)):
-	"""Devuelve la lista de columnas GESTANTE_COLUMNS con sus etiquetas legibles."""
-	from .database import GESTANTE_COLUMNS
-	from .gestante_config import RAW_FIELDS
-	labels = {}
-	raw_names = [r[0].strip() for r in RAW_FIELDS]
-	for i, col in enumerate(GESTANTE_COLUMNS):
-		if i < len(raw_names):
-			labels[col] = raw_names[i]
-		else:
-			labels[col] = col.replace('_', ' ').title()
-	return {"columns": GESTANTE_COLUMNS, "labels": labels}
+@app.get("/data/gestantes/columnas-planilla")
+async def listar_columnas_gestantes_planilla(current_user: User = Depends(get_current_user)):
+	"""Devuelve la lista de 200 columnas del template con sus etiquetas legibles."""
+	import unicodedata as _ud
+	def _norm(s):
+		s = str(s).strip()
+		s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+		s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+		s = '__'.join(filter(None, s.split('__')))
+		return s.strip('_')
+	try:
+		from .gestante_config import build_gestante_template
+	except ImportError:
+		from gestante_config import build_gestante_template
+	tmpl = build_gestante_template()
+	columns = [_norm(t["name"]) for t in tmpl]
+	labels = {col: t["name"] for col, t in zip(columns, tmpl)}
+	return {"columns": columns, "labels": labels}
 
 
 if __name__ == "__main__":
