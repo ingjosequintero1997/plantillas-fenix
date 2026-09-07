@@ -4226,7 +4226,7 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 					def _norm(s):
 						s = str(s).strip()
 						s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
-						s = s.upper().replace(' ', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+						s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
 						s = '__'.join(filter(None, s.split('__')))
 						return s.strip('_')
 
