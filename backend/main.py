@@ -4568,6 +4568,21 @@ async def listar_caso_cerrado(
 		db.close()
 
 
+@app.get("/data/gestantes/columns")
+async def listar_columnas_gestantes(current_user: User = Depends(get_current_user)):
+	"""Devuelve la lista de columnas GESTANTE_COLUMNS con sus etiquetas legibles."""
+	from .database import GESTANTE_COLUMNS
+	from .gestante_config import RAW_FIELDS
+	labels = {}
+	raw_names = [r[0].strip() for r in RAW_FIELDS]
+	for i, col in enumerate(GESTANTE_COLUMNS):
+		if i < len(raw_names):
+			labels[col] = raw_names[i]
+		else:
+			labels[col] = col.replace('_', ' ').title()
+	return {"columns": GESTANTE_COLUMNS, "labels": labels}
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)

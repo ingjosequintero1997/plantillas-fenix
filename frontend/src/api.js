@@ -274,6 +274,10 @@ export async function fetchIpsGrupos() {
   return apiFetch(`${API_BASE}/data/gestantes/ips-grupos`)
 }
 
+export async function fetchGestanteColumns() {
+  return apiFetch(`${API_BASE}/data/gestantes/columns`)
+}
+
 export async function populateGestantes() {
   return apiFetch(`${API_BASE}/data/gestantes/populate`, { method: 'POST', signal: AbortSignal.timeout(120000) })
 }

@@ -426,8 +426,9 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   }, [mode, initialData])
 
   useEffect(() => {
-    if (ipsList.length > 0) {
+    if (ipsList && ipsList.length > 0) {
       setIpsOptions(ipsList)
+      setLoadingIps(false)
     } else {
       setLoadingIps(true)
       fetchIps()
@@ -473,8 +474,16 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
   }
 
+  const sanitizeVal = (v) => {
+    if (v === null || v === undefined) return ''
+    const s = String(v).trim()
+    if (!s || s === 'NA' || s === 'None' || s === 'null') return ''
+    if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(s)) return s.split(' ')[0]
+    return s
+  }
+
   const renderField = (fieldDef) => {
-    const val = form[fieldDef.key] || ''
+    const val = sanitizeVal(form[fieldDef.key])
 
     if (fieldDef.type === 'ips-dropdown') {
       return (
@@ -614,8 +623,12 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
           ))}
         </div>
 
-        <div key={activeSection} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-2">
-          {SECCIONES[activeSection].fields.map((fieldDef) => renderField(fieldDef))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-2" key={`sec-${activeSection}`}>
+          {SECCIONES[activeSection].fields.map((fieldDef) => (
+            <React.Fragment key={`${activeSection}-${fieldDef.key}`}>
+              {renderField(fieldDef)}
+            </React.Fragment>
+          ))}
         </div>
 
         <div className="flex items-center justify-between pt-4 mt-4 border-t" style={{ borderColor: 'var(--border)' }}>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
-import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId } from '../api'
+import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns } from '../api'
 import GestanteForm from './GestanteForm'
 import ExcelJS from 'exceljs'
 
@@ -60,39 +60,45 @@ export default function DataManagement({ correctedText }) {
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {
-      let allCols = null
-      const allRows = []
+      let colMeta = null
+      try { colMeta = await fetchGestanteColumns() } catch { colMeta = null }
+      const allCols = colMeta?.columns || []
+      const labels = colMeta?.labels || {}
+      const workbook = new ExcelJS.Workbook()
+      workbook.creator = 'FENIX DATA'
+      workbook.created = new Date()
+      const sheet = workbook.addWorksheet(ipsName.substring(0, 31))
+      sheet.columns = allCols.map(k => ({
+        header: labels[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        key: k,
+        width: Math.min(Math.max((labels[k] || k).length + 2, 12), 40),
+      }))
+      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 }
+      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
+      sheet.getRow(1).eachCell(c => { c.alignment = { wrapText: true, vertical: 'middle' } })
       for (const u of usuarios) {
         let fullData = null
         if (u.numero_id) {
           try { fullData = await fetchGestanteByNumId(u.numero_id) } catch { fullData = null }
         }
         if (!fullData) fullData = mapInstToGestanteKeys(u)
-        if (!allCols) {
-          allCols = Object.keys(fullData).filter(k => k !== 'id' && k !== 'created_at' && k !== '_from_gestantes' && k !== '_key')
-          allCols.forEach(k => { allCols[k] = k })
-        }
-        allRows.push(fullData)
-      }
-      if (!allCols || !allRows.length) return
-      const workbook = new ExcelJS.Workbook()
-      workbook.creator = 'FENIX DATA'
-      workbook.created = new Date()
-      const sheet = workbook.addWorksheet(ipsName.substring(0, 31))
-      sheet.columns = allCols.map(k => ({ header: k, key: k, width: Math.min(Math.max(k.length + 2, 12), 35) }))
-      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 }
-      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
-      sheet.getRow(1).eachCell(c => { c.alignment = { wrapText: true } })
-      for (const fullData of allRows) {
         const rowData = {}
-        for (const k of allCols) { rowData[k] = fullData[k] || '' }
+        for (const k of allCols) {
+          let v = fullData[k] || ''
+          if (v && typeof v === 'string') {
+            v = v.trim()
+            if (v === 'NA' || v === 'None' || v === 'null') v = ''
+            if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(v)) v = v.split(' ')[0]
+          }
+          rowData[k] = v
+        }
         const addedRow = sheet.addRow(rowData)
         if (rowData.FUM && rowData.FUM.trim()) {
           const fumDate = new Date(rowData.FUM)
           if (!isNaN(fumDate.getTime())) {
             const fppDate = new Date(fumDate)
             fppDate.setDate(fppDate.getDate() + 280)
-            const fppCell = addedRow.getCell('FPP')
+            const fppCell = addedRow.getCell(allCols.indexOf('FPP') + 1)
             fppCell.value = fppDate
             fppCell.numFmt = 'yyyy-mm-dd'
           }
@@ -248,13 +254,13 @@ export default function DataManagement({ correctedText }) {
 
   if (view === 'editing' && editing) {
     return <GestanteForm mode="edit" initialData={editing} onSave={handleSaveEdit}
-      onClose={() => { setEditing(null); setView('ips_detail') }} />
+      onClose={() => { setEditing(null); setView('ips_detail') }} ipsList={ipsNames} />
   }
 
   if (view === 'ips_detail' && showNewForm) {
     return <GestanteForm mode="create" onSave={handleCreate}
       onClose={() => { setShowNewForm(false); setView('ips_detail') }}
-      initialData={{ NOMBRE_DE_LA_IPS_PRIMARIA: selectedIps || '' }} />
+      initialData={{ NOMBRE_DE_LA_IPS_PRIMARIA: selectedIps || '' }} ipsList={ipsNames} />
   }
 
   if (view === 'list') {
