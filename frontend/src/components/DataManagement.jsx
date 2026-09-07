@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
 import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId } from '../api'
 import GestanteForm from './GestanteForm'
+import ExcelJS from 'exceljs'
 
 const PAGE_SIZE = 50
 
@@ -52,6 +53,63 @@ export default function DataManagement({ correctedText }) {
   const [populateMsg, setPopulateMsg] = useState('')
   const [instResult, setInstResult] = useState(null)
   const [instValidating, setInstValidating] = useState(false)
+  const [downloadingIps, setDownloadingIps] = useState(null)
+
+  const downloadIpsExcel = async (ipsName) => {
+    const usuarios = filteredIpsGroups[ipsName] || []
+    if (!usuarios.length) return
+    setDownloadingIps(ipsName)
+    try {
+      const workbook = new ExcelJS.Workbook()
+      workbook.creator = 'FENIX DATA'
+      workbook.created = new Date()
+      const sheet = workbook.addWorksheet(ipsName.substring(0, 31))
+      const cols = [
+        { header: 'Tipo Doc', key: 'TIPO_DE_DOCUMENTO_DE_IDENTIDAD', width: 10 },
+        { header: 'No. Identificacion', key: 'NO_DE_IDENTIFICACION', width: 18 },
+        { header: 'Apellido 1', key: 'APELLIDO_1', width: 15 },
+        { header: 'Apellido 2', key: 'APELLIDO_2', width: 15 },
+        { header: 'Nombre 1', key: 'NOMBRE_1', width: 15 },
+        { header: 'Nombre 2', key: 'NOMBRE_2', width: 15 },
+        { header: 'Fecha Nacimiento', key: 'FECHA_DE_NACIMIENTO', width: 15 },
+        { header: 'Edad', key: 'EDAD', width: 8 },
+        { header: 'Sexo', key: 'SEXO', width: 10 },
+        { header: 'Regimen', key: 'REGIMEN_DE_AFILIACION', width: 12 },
+        { header: 'Depto Residencia', key: 'DEPARTAMENTO_DE_RESIDENCIA', width: 18 },
+        { header: 'Municipio', key: 'MUNICIPIO_DE_RESIDENCIA', width: 18 },
+        { header: 'Zona', key: 'ZONA', width: 10 },
+        { header: 'Telefono', key: 'TELEFONO_USUARIA', width: 15 },
+        { header: 'Direccion', key: 'DIRECCION', width: 25 },
+        { header: 'FUM', key: 'FUM', width: 15 },
+        { header: 'IPS Primaria', key: 'NOMBRE_DE_LA_IPS_PRIMARIA', width: 30 },
+        { header: 'Clasif Riesgo', key: 'CLASIFICACION_DEL_RIESGO', width: 20 },
+        { header: 'Caso Cerrado', key: 'CASO_CERRADO', width: 12 },
+        { header: 'Observaciones', key: 'OBSERVACIONES_GENERALES', width: 30 },
+      ]
+      sheet.columns = cols
+      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
+      for (const u of usuarios) {
+        let fullData = null
+        if (u.numero_id) {
+          try { fullData = await fetchGestanteByNumId(u.numero_id) } catch { fullData = null }
+        }
+        if (!fullData) fullData = mapInstToGestanteKeys(u)
+        const row = {}
+        for (const c of cols) { row[c.key] = fullData[c.key] || '' }
+        sheet.addRow(row)
+      }
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `data_${ipsName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) { alert('Error descargando: ' + (e.message || e)) }
+    finally { setDownloadingIps(null) }
+  }
 
   const runAffiliationValidation = useCallback(async () => {
     if (instValidating || instResult) return
@@ -265,6 +323,17 @@ export default function DataManagement({ correctedText }) {
                     <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{ipsName}</div>
                     <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{filteredIpsGroups[ipsName].length} afiliadas</div>
                   </div>
+                  <button onClick={(e) => { e.stopPropagation(); downloadIpsExcel(ipsName) }}
+                    disabled={downloadingIps === ipsName}
+                    className="btn-ghost text-xs px-2 py-1" title="Descargar Excel">
+                    {downloadingIps === ipsName ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    )}
+                  </button>
                   <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
@@ -326,10 +395,20 @@ export default function DataManagement({ correctedText }) {
               <div className="page-subtitle">{usuarias.length} afiliadas verificadas</div>
             </div>
           </div>
-          <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            Nueva usuaria
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => downloadIpsExcel(selectedIps)} disabled={downloadingIps === selectedIps}
+              className="btn-secondary text-sm">
+              {downloadingIps === selectedIps ? (
+                <svg className="w-4 h-4 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+              ) : (
+                <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              )} Descargar Excel
+            </button>
+            <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              Nueva usuaria
+            </button>
+          </div>
         </div>
 
         {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
