@@ -4212,13 +4212,23 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 					tmpl_names = [t["name"] for t in meta["template"]]
 
 					try:
-						from .template_to_db_map import TEMPLATE_TO_DB_EXPLICIT
+						from .template_to_db_map import TEMPLATE_TO_DB_EXPLICIT as _LEGACY_MAP
 					except ImportError:
-						from template_to_db_map import TEMPLATE_TO_DB_EXPLICIT
+						try:
+							from template_to_db_map import TEMPLATE_TO_DB_EXPLICIT as _LEGACY_MAP
+						except ImportError:
+							_LEGACY_MAP = {}
 
-					import pandas as _pd, io as _io
+					import pandas as _pd, io as _io, unicodedata as _ud
 					df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 					df = df.fillna('').astype(str)
+
+					def _norm(s):
+						s = str(s).strip()
+						s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+						s = s.upper().replace(' ', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+						s = '__'.join(filter(None, s.split('__')))
+						return s.strip('_')
 
 					n_cols = len(df.columns)
 					n_tmpl = len(tmpl_names)
@@ -4230,10 +4240,12 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 							if val == num_clean:
 								resultado_full = {}
 								for i in range(min(n_cols, n_tmpl)):
-									db_col = TEMPLATE_TO_DB_EXPLICIT.get(i)
-									if not db_col:
-										db_col = tmpl_names[i]
-									resultado_full[db_col] = str(row_data.iloc[i]).strip()
+									key = _norm(tmpl_names[i])
+									val_i = str(row_data.iloc[i]).strip()
+									resultado_full[key] = val_i
+									legacy = _LEGACY_MAP.get(i)
+									if legacy and legacy != key:
+										resultado_full[legacy] = val_i
 								return resultado_full
 		except Exception:
 			pass
