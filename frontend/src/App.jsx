@@ -710,7 +710,7 @@ export default function App() {
             {/* ─── INDICADORES ─── */}
             {section === 'indicadores' && (
               <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} />
+                <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} ipsName={user?.role === 'ips_user' ? user?.ips_name || '' : ''} />
               </Suspense>
             )}
 
