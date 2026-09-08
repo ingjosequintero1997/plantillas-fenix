@@ -13,10 +13,10 @@ const OPERACIONES_ITEMS = [
     icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
   { key: 'historial', label: 'Verificar data', roles: ['admin', 'lider'],
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-  { key: 'historial', label: 'Mis cargues', roles: ['prestador'],
-    icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { key: 'consolidar', label: 'Consolidar', roles: ['admin', 'lider'],
     icon: 'M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z' },
+  { key: 'indicadores', label: 'Indicadores', roles: ['admin', 'prestador', 'lider'],
+    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
 ]
 
 const GESTION_ITEMS = [
@@ -49,7 +49,7 @@ const META = {
   verificar: { title: 'Verificar afiliado', sub: 'Consulta de datos demograficos por documento' },
   prestadores: { title: 'Usuarios', sub: 'Prestadores y lideres de programa' },
   data: { title: 'Gestion de data', sub: 'Ver y editar registros de gestantes' },
-  indicadores: { title: 'Indicadores', sub: 'Metricas y estadisticas de la IPS' },
+  indicadores: { title: 'Indicadores', sub: 'Metricas y estadisticas' },
 }
 const ROLE_TITLE = { historial: { admin: 'Verificar data', lider: 'Verificar data', prestador: 'Mis cargues' } }
 
