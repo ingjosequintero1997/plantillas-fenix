@@ -14,4 +14,4 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
   const [verPorMunicipio, setVerPorMunicipio] = useState(false)
   const [cargues, setCargues] = useState([])
   const [cargueId, setCargueId] = useState('')
-  const [carguesLoaded, setCarguesLoaded] = useState(false]
+  const [carguesLoaded, setCarguesLoaded] = useState(false)
