@@ -593,7 +593,21 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
+        <div className="px-5 py-3" style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
+          {/* Mensajes inline cerca del boton */}
+          {error && (
+            <div className="mb-2 px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              {error}
+            </div>
+          )}
+          {msg && (
+            <div className="mb-2 px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5" style={{ color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0' }}>
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {msg}
+            </div>
+          )}
+          <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {SECCIONES.map((_, i) => (
               <button key={i} type="button" onClick={() => setActiveSection(i)}
@@ -613,15 +627,22 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
                 &larr; Anterior
               </button>
             )}
-            {activeSection < SECCIONES.length - 1 ? (
+            {activeSection < SECCIONES.length - 1 && (
               <button type="button" onClick={() => setActiveSection(activeSection + 1)} className="px-4 py-1.5 rounded-lg text-xs font-medium" style={{ color: '#fff', backgroundColor: 'var(--green-500)', border: '1px solid var(--green-500)' }}>
                 Siguiente &rarr;
               </button>
-            ) : (
-              <button type="submit" className="px-4 py-1.5 rounded-lg text-xs font-medium" disabled={saving} style={{ color: '#fff', backgroundColor: saving ? 'var(--text-muted)' : 'var(--green-600)', border: '1px solid var(--green-600)' }}>
-                {saving ? 'Guardando...' : mode === 'create' ? 'Guardar registro' : 'Actualizar registro'}
-              </button>
             )}
+            <button type="submit" className="px-4 py-1.5 rounded-lg text-xs font-semibold" disabled={saving}
+              style={{ color: '#fff', backgroundColor: saving ? 'var(--text-muted)' : 'var(--green-600)', border: '1px solid var(--green-600)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              {saving ? (
+                <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Guardando...</>
+              ) : mode === 'create' ? (
+                <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg> Guardar registro</>
+              ) : (
+                <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg> Actualizar registro</>
+              )}
+            </button>
+          </div>
           </div>
         </div>
       </form>
