@@ -108,7 +108,8 @@ export default function App() {
   const [lastCargueId, setLastCargueId] = useState('')
 
   useEffect(() => {
-    if (user?.role === 'ips_user' && section !== 'data') {
+    const ipsSections = ['data', 'verificar', 'historias']
+    if (user?.role === 'ips_user' && !ipsSections.includes(section)) {
       setSection('data')
     }
   }, [user, section])

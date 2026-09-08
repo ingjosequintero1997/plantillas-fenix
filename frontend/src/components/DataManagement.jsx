@@ -513,18 +513,28 @@ export default function DataManagement({ correctedText }) {
       const q = search.toLowerCase()
       return (r.NO_DE_IDENTIFICACION || '').toLowerCase().includes(q) ||
              (r.APELLIDO_1 || '').toLowerCase().includes(q) ||
-             (r.NOMBRE_1 || '').toLowerCase().includes(q)
+             (r.NOMBRE_1 || '').toLowerCase().includes(q) ||
+             (r.APELLIDO_2 || '').toLowerCase().includes(q) ||
+             (r.NOMBRE_2 || '').toLowerCase().includes(q)
     }) : ipsRows
     const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
     const pTotal = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
+    const pageNumbers = []
+    const maxVisible = 5
+    let startPage = Math.max(1, page - Math.floor(maxVisible / 2))
+    let endPage = Math.min(pTotal, startPage + maxVisible - 1)
+    if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1)
+    for (let i = startPage; i <= endPage; i++) pageNumbers.push(i)
+
     return (
       <div className="space-y-5 fade-in">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="page-title">{ipsUserName}</div>
+            <div className="page-title">Gestion de data</div>
             <div className="page-subtitle">
-              {ipsLoading ? 'Cargando gestantes...' : `${filtered.length} gestantes`}
+              {ipsLoading ? 'Cargando gestantes...' : `${filtered.length} gestantes registradas`}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -534,15 +544,18 @@ export default function DataManagement({ correctedText }) {
                 <svg className="w-4 h-4 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
               ) : (
                 <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              )} Descargar Excel
+              )} Descargar
             </button>
             <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Nueva usuaria
+              Nueva
             </button>
           </div>
         </div>
+
         {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
+
+        {/* Barra de busqueda + info */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -552,54 +565,140 @@ export default function DataManagement({ correctedText }) {
               onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
               placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
           </div>
+          {search && (
+            <button onClick={() => { setSearch(''); setPage(1) }} className="btn-ghost text-xs px-2 py-1" style={{ color: 'var(--text-secondary)' }}>
+              Limpiar
+            </button>
+          )}
         </div>
+
         {ipsLoading ? (
           <div className="space-y-3">
-            <div className="skeleton h-10 w-full rounded-xl" />
-            <div className="skeleton h-10 w-full rounded-xl" />
-            <div className="skeleton h-10 w-full rounded-xl" />
+            <div className="skeleton h-12 w-full rounded-xl" />
+            <div className="skeleton h-12 w-full rounded-xl" />
+            <div className="skeleton h-12 w-full rounded-xl" />
+            <div className="skeleton h-12 w-full rounded-xl" />
+            <div className="skeleton h-12 w-full rounded-xl" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="empty">
-            <div className="empty-title">Sin registros</div>
-            <div className="empty-desc">No se encontraron gestantes para esta IPS.</div>
+          <div className="panel" style={{ padding: '3rem', textAlign: 'center' }}>
+            <svg className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sin resultados</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+              {search ? 'No se encontraron gestantes con ese criterio.' : 'No hay gestantes registradas para tu IPS.'}
+            </div>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th className="text-center">#</th>
-                  {IPS_TABLE_COLS.map((col) => <th key={col.key}>{col.label}</th>)}
-                  <th className="text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.map((r, i) => (
-                  <tr key={`${r.NO_DE_IDENTIFICACION}-${i}`}>
-                    <td className="text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      {(page - 1) * PAGE_SIZE + i + 1}
-                    </td>
-                    {IPS_TABLE_COLS.map((col) => (
-                      <td key={col.key} className="text-sm max-w-[120px] truncate">
-                        {r[col.key] || '—'}
-                      </td>
-                    ))}
-                    <td className="text-right">
-                      <button onClick={() => startEdit(r)} className="btn-ghost text-xs px-2 py-1" title="Actualizar">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                      </button>
-                    </td>
+          <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+            {/* Tabla */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--green-50)', borderBottom: '2px solid var(--green-200)' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>#</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Documento</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Nombre</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Edad</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>FUM</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>FPP</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Municipio</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', width: '60px' }}>Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paged.map((r, i) => {
+                    const rowNum = (page - 1) * PAGE_SIZE + i + 1
+                    const isEven = i % 2 === 0
+                    return (
+                      <tr key={`${r.NO_DE_IDENTIFICACION}-${i}`}
+                        style={{
+                          backgroundColor: isEven ? 'var(--bg-canvas)' : 'var(--bg-surface)',
+                          borderBottom: '1px solid var(--border-subtle)',
+                          transition: 'background-color 0.15s',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--green-50)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isEven ? 'var(--bg-canvas)' : 'var(--bg-surface)'}>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: '500' }}>
+                          {rowNum}
+                        </td>
+                        <td style={{ padding: '10px 12px', fontWeight: '500', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                          <span className="badge-neutral" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>{r.NO_DE_IDENTIFICACION || '—'}</span>
+                        </td>
+                        <td style={{ padding: '10px 12px', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: '500' }}>{r.APELLIDO_1 || ''}</span>{' '}
+                          {r.APELLIDO_2 ? r.APELLIDO_2 + ' ' : ''}/ {' '}
+                          <span style={{ fontWeight: '500' }}>{r.NOMBRE_1 || ''}</span>{' '}
+                          {r.NOMBRE_2 || ''}
+                        </td>
+                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                          {r.EDAD_ANOS ? `${r.EDAD_ANOS} años` : '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
+                          {r.FUM || '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
+                          {r.FPP || '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.MUNICIPIO_DE_RESIDENCIA || '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          <button onClick={() => startEdit(r)}
+                            title="Editar registro"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--green-200)',
+                              backgroundColor: 'var(--green-50)', color: 'var(--green-600)', cursor: 'pointer',
+                              transition: 'all 0.15s',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-500)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'var(--green-500)' }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.borderColor = 'var(--green-200)' }}>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Paginacion */}
             {pTotal > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
-                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {page} de {pTotal}</span>
-                <div className="flex gap-1">
-                  <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>
-                  <button onClick={() => setPage(Math.min(pTotal, page + 1))} disabled={page >= pTotal} className="btn-secondary px-2.5 py-1 text-xs">Siguiente →</button>
+              <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Mostrando <strong style={{ color: 'var(--text-primary)' }}>{(page - 1) * PAGE_SIZE + 1}</strong> - <strong style={{ color: 'var(--text-primary)' }}>{Math.min(page * PAGE_SIZE, filtered.length)}</strong> de <strong style={{ color: 'var(--text-primary)' }}>{filtered.length}</strong>
+                </span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setPage(1)} disabled={page <= 1}
+                    style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)', color: page <= 1 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page <= 1 ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: '500', transition: 'all 0.15s' }}>
+                    &laquo;
+                  </button>
+                  <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1}
+                    style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)', color: page <= 1 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page <= 1 ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: '500', transition: 'all 0.15s' }}>
+                    &lsaquo;
+                  </button>
+                  {pageNumbers.map(pn => (
+                    <button key={pn} onClick={() => setPage(pn)}
+                      style={{
+                        padding: '4px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: pn === page ? '600' : '500', cursor: 'pointer', transition: 'all 0.15s',
+                        border: pn === page ? '1px solid var(--green-500)' : '1px solid var(--border-subtle)',
+                        backgroundColor: pn === page ? 'var(--green-500)' : 'var(--bg-canvas)',
+                        color: pn === page ? '#fff' : 'var(--text-primary)',
+                      }}>
+                      {pn}
+                    </button>
+                  ))}
+                  <button onClick={() => setPage(Math.min(pTotal, page + 1))} disabled={page >= pTotal}
+                    style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)', color: page >= pTotal ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page >= pTotal ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: '500', transition: 'all 0.15s' }}>
+                    &rsaquo;
+                  </button>
+                  <button onClick={() => setPage(pTotal)} disabled={page >= pTotal}
+                    style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)', color: page >= pTotal ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page >= pTotal ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: '500', transition: 'all 0.15s' }}>
+                    &raquo;
+                  </button>
                 </div>
               </div>
             )}
