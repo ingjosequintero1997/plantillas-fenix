@@ -21,6 +21,9 @@ const INST_COLS = [
   { key: 'apellido2', label: 'Apellido 2' },
   { key: 'nombre1', label: 'Nombre 1' },
   { key: 'nombre2', label: 'Nombre 2' },
+  { key: 'fum', label: 'FUM', fmt: fmtDate },
+  { key: 'fpp', label: 'FPP', fmt: fmtDate },
+  { key: 'municipio', label: 'Municipio' },
 ]
 
 const IPS_TABLE_COLS = [
@@ -390,15 +393,31 @@ export default function DataManagement({ correctedText }) {
           <div className="mt-6">
             <div className="text-sm font-medium mb-2" style={{ color: 'var(--error)' }}>Usuarias no encontradas ({instErrors.length})</div>
             <div className="table-wrap" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              <table className="table">
-                <thead><tr><th>Fila</th><th>Tipo ID</th><th>Número ID</th><th>Detalle</th></tr></thead>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead style={{ backgroundColor: 'var(--green-50)', borderBottom: '2px solid var(--green-200)' }}>
+                  <tr style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--green-700)', fontWeight: '600' }}>#</th>
+                    {INST_COLS.map((col) => <th key={col.key} style={{ padding: '10px 12px', textAlign: 'left', color: 'var(--green-700)', fontWeight: '600', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{col.label}</th>)}
+                    <th style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--green-700)', fontWeight: '600', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Acciones</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {instErrors.map((err, i) => (
-                    <tr key={i}>
-                      <td className="text-xs">{err.row}</td>
-                      <td className="text-xs">{err.original?.split(' ')[0]}</td>
-                      <td className="text-xs">{err.original?.split(' ')[1]}</td>
-                      <td className="text-xs" style={{ color: 'var(--error)' }}>{err.corrected}</td>
+                    <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'var(--bg-canvas)' : 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', transition: 'background-color 0.15s' }}>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: '500' }}>
+                        {i + 1}
+                      </td>
+                      {INST_COLS.map((col) => {
+                        const val = col.fmt ? col.fmt(err[col.key] || '') : (err[col.key] || '—')
+                        return <td key={col.key} style={{ padding: '10px 12px', color: 'var(--text-secondary)', fontSize: col.fmt ? '0.75rem' : '0.72rem', whiteSpace: 'nowrap' }}>
+                          {val}
+                        </td>
+                      })}
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        <button onClick={() => startEdit(err)} className="btn-ghost text-xs px-2 py-1" title="Actualizar">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
