@@ -348,6 +348,10 @@ export async function revalidateData(raw_text, mapping, templateKey, mode = 'lim
   })
 }
 
+export async function fetchMisGestantes() {
+  return apiFetch(`${API_BASE}/data/gestantes/mis-gestantes`)
+}
+
 export async function deleteCargue(id) {
   return apiFetch(`${API_BASE}/cargues/${id}`, { method: 'DELETE' })
 }

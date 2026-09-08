@@ -4311,6 +4311,79 @@ def _check_gestante_ips(db, current_user, registro_id):
 		raise HTTPException(status_code=403, detail="No autorizado: esta gestante pertenece a otra IPS")
 
 
+@app.get("/data/gestantes/mis-gestantes")
+async def mis_gestantes(current_user: User = Depends(get_current_user)):
+	"""Retorna TODA la data de las gestantes de la IPS del usuario logueado, leida del cargue."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		import base64 as _b64, gzip as _gzip, pandas as _pd, io as _io, unicodedata as _ud
+		from sqlalchemy import text as sa_text
+
+		ips_nombre = ""
+		if getattr(current_user, "role", "") == "ips_user":
+			ips_nombre = getattr(current_user, "ips_name", "") or ""
+		if not ips_nombre:
+			raise HTTPException(status_code=400, detail="No se encontro IPS para este usuario")
+
+		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
+		if not cargues:
+			return {"columns": [], "rows": [], "total": 0, "ips_name": ips_nombre}
+
+		texto = cargues[0].corrected_text or cargues[0].raw_text or ""
+		if cargues[0].compressed and texto:
+			try: texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
+			except: pass
+		if not texto:
+			return {"columns": [], "rows": [], "total": 0, "ips_name": ips_nombre}
+
+		meta = get_template_by_key("gestante")
+		tmpl_names = [t["name"] for t in meta["template"]]
+
+		def _norm(s):
+			s = str(s).strip()
+			s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+			s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+			s = '__'.join(filter(None, s.split('__')))
+			return s.strip('_')
+
+		df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+		df = df.fillna('').astype(str)
+
+		n_cols = len(df.columns)
+		n_tmpl = len(tmpl_names)
+
+		norm_names = [_norm(tmpl_names[i]) if i < n_tmpl else f"COL_{i}" for i in range(n_cols)]
+
+		ips_col_idx = 28
+		norm_ips_col = norm_names[ips_col_idx] if ips_col_idx < n_cols else ""
+
+		norm_ips_user = _norm(ips_nombre)
+
+		mask = []
+		for _, row_data in df.iterrows():
+			val_ips = _norm(str(row_data.iloc[ips_col_idx])) if ips_col_idx < n_cols else ""
+			match = (norm_ips_user in val_ips) or (val_ips in norm_ips_user) or (norm_ips_user.replace('_', '') in val_ips.replace('_', ''))
+			mask.append(match)
+
+		filtered = df[mask]
+
+		result_rows = []
+		for _, row_data in filtered.iterrows():
+			reg = {}
+			for i in range(min(n_cols, n_tmpl)):
+				reg[norm_names[i]] = str(row_data.iloc[i]).strip()
+			result_rows.append(reg)
+
+		return {"columns": norm_names[:min(n_cols, n_tmpl)], "rows": result_rows, "total": len(result_rows), "ips_name": ips_nombre}
+	except HTTPException:
+		raise
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=str(e)[:300])
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/by-numid/{numero_id}")
 async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depends(get_current_user)):
 	"""Obtiene todos los campos de una gestante por numero de identificacion."""

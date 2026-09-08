@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
-import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns } from '../api'
+import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns, fetchMisGestantes } from '../api'
 import GestanteForm from './GestanteForm'
 import ExcelJS from 'exceljs'
 
@@ -15,15 +15,22 @@ const INST_COLS = [
   { key: 'nombre2', label: 'Nombre 2' },
 ]
 
-const GESTANTE_TABLE_COLS = [
+const IPS_TABLE_COLS = [
   { key: 'TIPO_DE_DOCUMENTO_DE_IDENTIDAD', label: 'Tipo Doc' },
   { key: 'NO_DE_IDENTIFICACION', label: 'Documento' },
   { key: 'APELLIDO_1', label: 'Apellido 1' },
   { key: 'APELLIDO_2', label: 'Apellido 2' },
   { key: 'NOMBRE_1', label: 'Nombre 1' },
   { key: 'NOMBRE_2', label: 'Nombre 2' },
+  { key: 'EDAD_ANOS', label: 'Edad' },
   { key: 'FUM', label: 'FUM' },
-  { key: 'CASO_CERRADO', label: 'Caso Cerrado' },
+  { key: 'FPP', label: 'FPP' },
+  { key: 'TRIMESTRE_INICIO_CONTROL', label: 'Trimestre' },
+  { key: 'ESTADO_CIVIL', label: 'Estado Civil' },
+  { key: 'NIVEL_EDUCATIVO', label: 'Nivel Educativo' },
+  { key: 'DEPARTAMENTO_RESIDENCIA', label: 'Depto' },
+  { key: 'MUNICIPIO_DE_RESIDENCIA', label: 'Municipio' },
+  { key: 'TELEFONO_USUARIA', label: 'Telefono' },
 ]
 
 function mapInstToGestanteKeys(u) {
@@ -40,6 +47,9 @@ function mapInstToGestanteKeys(u) {
 export default function DataManagement({ correctedText }) {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const isIpsUser = user?.role === 'ips_user'
+  const ipsUserName = user?.ips_name || user?.name || ''
+
   const [view, setView] = useState('list')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -55,135 +65,92 @@ export default function DataManagement({ correctedText }) {
   const [instValidating, setInstValidating] = useState(false)
   const [downloadingIps, setDownloadingIps] = useState(null)
 
+  const [ipsRows, setIpsRows] = useState([])
+  const [ipsColumns, setIpsColumns] = useState([])
+  const [ipsLoading, setIpsLoading] = useState(false)
+
+  const loadIpsData = useCallback(async () => {
+    if (!isIpsUser) return
+    setIpsLoading(true); setError('')
+    try {
+      const data = await fetchMisGestantes()
+      setIpsRows(data.rows || [])
+      setIpsColumns(data.columns || [])
+    } catch (e) {
+      setError(e.message || 'Error cargando gestantes')
+    } finally {
+      setIpsLoading(false)
+    }
+  }, [isIpsUser])
+
+  useEffect(() => {
+    if (isIpsUser && ipsRows.length === 0 && !ipsLoading) {
+      loadIpsData()
+    }
+  }, [isIpsUser, ipsRows.length, ipsLoading, loadIpsData])
+
   const downloadIpsExcel = async (ipsName) => {
-    const usuarios = filteredIpsGroups[ipsName] || []
+    const usuarios = isIpsUser ? ipsRows : (filteredIpsGroups[ipsName] || [])
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {
-      let allCols = []
-      let labels = {}
-      try {
-        const colMeta = await fetchGestanteColumns()
-        allCols = colMeta?.columns || []
-        labels = colMeta?.labels || {}
-      } catch {}
       const workbook = new ExcelJS.Workbook()
       workbook.creator = 'FENIX DATA'
       workbook.created = new Date()
       const sheet = workbook.addWorksheet(ipsName.substring(0, 31))
-      const allRows = []
-      for (const u of usuarios) {
-        let fullData = null
-        if (u.numero_id) {
-          try { fullData = await fetchGestanteByNumId(u.numero_id) } catch { fullData = null }
-        }
-        if (!fullData) fullData = mapInstToGestanteKeys(u)
-        allRows.push(fullData)
-      }
-      // Usar siempre 200 columns template-normalized (no Object.keys que trae 238)
-      if (!allCols.length) {
-        // Si la API falla, usar las 200 keys template del formulario
-        allCols = [
-          'NO', 'TIPO_DE_DOCUMENTO_DE_IDENTIDAD', 'NO_DE_IDENTIFICACION', 'APELLIDO_1', 'APELLIDO_2',
-          'NOMBRE_1', 'NOMBRE_2', 'FECHA_DE_NACIMIENTO', 'EDAD_ANOS', 'SEXO', 'REGIMEN_AFILIACION',
-          'PERTENECIA_ETNICA', 'GRUPO_POBLACIONAL', 'DEPARTAMENTO_RESIDENCIA', 'MUNICIPIO_DE_RESIDENCIA',
-          'ZONA', 'ETNIA', 'ASENTAMIENTO_RANCHERIA_COMUNIDAD', 'TELEFONO_USUARIA', 'DIRECCION',
-          'NIVEL_EDUCATIVO', 'DISCAPACIDAD', 'MUJER_CABEZA_DE_HOGAR', 'OCUPACION', 'ESTADO_CIVIL',
-          'CONTROL_TRADICIONAL', 'GESTANTE_RENUENTE', 'INASISTENTE', 'NOMBRE_DE_LA_IPS_PRIMARIA',
-          'FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO', 'FECHA_DE_INGRESO_AL_CONTROL_PRENATAL', 'FUM', 'FPP',
-          'DIAS_PARA_EL_PARTO', 'ALARMA', 'EDAD_GEST_INICIO_CONTROL', 'TRIMESTRE_INICIO_CONTROL',
-          'G', 'P', 'C', 'A', 'M', 'V', 'HIPERTENSION_ARTERIAL', 'DIABETES', 'VIH', 'SIFILIS',
-          'TUBERCULOSIS', 'OTRAS_CONDICIONES_MEDICAS_GRAVES', 'SI_LA_RESPUESTA_ANTERIOR_ES__SI_DESCRIBA_LA_OTRA_CONDICION_MEDICA_GRAVE',
-          'ANTECEDENTES_DE_EVENTOS_OBSTETRICOS_DESFAVORABLES', 'PERIODO_INTERGENESICO', 'PESO_INICIAL_KG',
-          'TALLA_METROS', 'INDICE_DE_MASA_CORPORAL_IMC', 'CLASIFICACION_DEL_IMC', 'HISTORIA_REPRODUCTVA',
-          'EMBARAZO_ACTUAL', 'RIESGO_PSICOSOCIAL', 'PUNTAJE_TOTAL', 'SOLICITA_IVE_IVE',
-          'CLASIFICACION_DEL_RIESGO_OBSTETRICO', 'CAUSAS_DE_ALTO_RIESGO_OBSTETRICO',
-          'CLACIFICACION_DEL_RIESGO_DE_PREECLAMPSIA', 'CAUSAS_DE_ALTO_RIESGO_DE_PREECLAMPSIA',
-          'CLACIFICACION_DEL_RIESGO_TROMBOEMBOLICO', 'CAUSAS_DE_ALTO_RIESGO_TROMBOEMBOLICO',
-          'FECHA_DE_SUMINISTRO_DE_TRATAMIENTO', 'TRATAMIENTO_INSTAURADO', 'REMITIDA_A_ESPECIALISTA',
-          'DESCRIBE_CUALES_ESPECIALISTAS_LA_HAN_ATENDIDO', 'ASESORIA_PRUEBA_VIH', 'TRIMESTRE_ASESORIA_VIH',
-          'FECHA_TOMA_PRUEBA_VIH_PRIMER_TAMIZAJE', 'RESULTADO_PRIMER_TAMIZAJE_PRUEBA_DE_VIH',
-          'TRIMESTRE_TOMA_PRUEBA_VIH_PRIMER_TAMIZAJE', 'FECHA_TOMA_PRUEBA_VIH_SEGUNDO_TAMIZAJE',
-          'RESULTADO_SEGUNDO_TAMIZAJE_PRUEBA_DE_VIH', 'TRIMESTRE_TOMA_PRUEBA_VIH_SEGUNDO_TAMIZAJE',
-          'FECHA_TOMA_PRUEBA_VIH_TERCER_TAMIZAJE', 'RESULTADO_TERCER_TAMIZAJE_PRUEBA_DE_VIH',
-          'TRIMESTRE_TOMA_PRUEBA_VIH_TERCER_TAMIZAJE', 'FECHA_TOMA_SEGUNDA_PRUEBA_VIH',
-          'RESULTADO_TOMA_SEGUNDA_PRUEBA_VIH', 'TRIMESTRE_TOMA_SEGUNDA_PRUEBA_VIH',
-          'FECHA_PRUEBA_CONFIRMATORIA_SEGUN_ALGORITMO', 'TRIMESTRE_PRUEBA_CONFIRMATORIA_SEGUN_ALGORITMO',
-          'FECHA_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'RESULTADO_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS',
-          'TRIMESTRE_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'FECHA_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS',
-          'RESULTADO_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'TRIMESTRE_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS',
-          'FECHA_TERCERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'RESULTADO_TERCERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS',
-          'TRIMESTRE_TERCERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'FECHA_DE_DIAGNOSTICO_DE_SIFILIS',
-          'TRATAMIENTO_INSTAURADO', 'FECHA_DE_INICIO_DEL_TRATAMIENTO', 'FECHA_DE_SEGUNDA_DOSIS_DEL_TRATAMIENTO',
-          'FECHA_DE_TERCERA_DOSIS_DEL_TRATAMIENTO', 'FECHA_DE_TOMA_DE_UROCULTIVO', 'RESULTADO_UROCULTIVO',
-          'FECHA_TOMA_GLICEMIA', 'RESULTADO_GLICEMIA', 'FECHA_PRUEBA_DE_TOLERANCIA_ORAL_GLUCOSA',
-          'RESULTADO_PRUEBA_DE_TOLERANCIA_ORAL_GLUCOSA', 'FECHA_1RA_REALIZACION_HEMOGLOBINA',
-          'RESULTADO_1RA_HEMOGLOBINA', 'FECHA_2DA_REALIZACION_HEMOGLOBINA', 'RESULTADO_2DA_HEMOGLOBINA',
-          'FECHA_3RA_REALIZACION_HEMOGLOBINA', 'RESULTADO_3RA_HEMOGLOBINA', 'RESULTADO_REALIZACION_HEMOCLASIFICACION_FACTOR_RH',
-          'FECHA_DE_ANTIGENO_SUPERFICIE_HEPATITIS_B', 'RESULTADO_ANTIGENO_SUPERFICIE_HEPATITIS_B',
-          'FECHA_TAMIZAJE_TOXOPLASMA', 'RESULTADO_TOXOPLASMA', 'FECHA_CITOLOGIA_CERVICOUTERINA',
-          'RESULTADO_TAMIZAJE_DE_CUELLO_UTERINO', 'FECHA_DE_LA_PRUEBA_DE_RUBEOLA', 'RESULTADO_RUBEOLA',
-          'FECHA_PRUEBA_DE_TAMIZAJE_PARA_ESTREPTOCOCO_GRUPO_B', 'RESULTADO_PRUEBA_DE_TAMIZAJE_PARA_ESTREPTOCOCO_GRUPO_B',
-          'FECHA_TOMA_DE_GOTA_GRUESA_MALARIA', 'RESULTADO_GOTA_GRUESA_MALARIA', 'FECHA_DE_REALIZACION_TAMIZAJE_CHAGAS',
-          'RESULTADO_CHAGAS', 'FECHA_DE_APLICACION_INFLUENZA_DESDE_SEMANA_14',
-          'FECHA_DE_APLICACION_TOXOIDE_SEGUN_ANTECEDENTE_VACUNAL', 'FECHA_DE_APLICACION_DPT_ACELULAR_SEMANA_26',
-          'FECHA_DE_APLICACION_COVID_19_1_EN_LA_GESTACION', 'FECHA_DE_APLICACION_VSR_SEMANA_28___36',
-          'FECHA_CONSULTA_ODONTOLOGICA', 'ECOGRAFIA_OBSTETRICA_CON_TRANSLUCENCIA_NUCAL_106___136',
-          'ECOGRAFIA_OBSTETRICA_PARA_LA_DETECCION_DE_ANOMALIAS_ESTRUCTURALES_18___23', 'OTRAS_ECOGRAFIAS',
-          'FECHA_SUMINISTRO_ACIDO_FOLICO', 'FECHA_SUMINISTRO_CALCIO_SEMANA_14', 'FECHA_SUMINISTRO_HIERRO',
-          'TIPO_DE_TRATAMIENTO_SUMINITRADO_PARA_ANEMIA', 'RELACION_ENTRE_ANEMIA_VS_TRATAMIENTO',
-          'CONDICION_DEL_SUMINISTRO_DEL_ASA', 'FECHA_DE_SUMINISTRO', 'FECHA_DESPARASITACION_ANTIHELMINTICA_II_Y_III_TRIMESTRE_ALBENDAZO_400_MG_DOSIS_UNICA',
-          'FECHA_1ER_CONTROL', 'QUIEN_REALIZO_EL_CONTROL', 'FECHA_2DO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_2',
-          'FECHA_3ER_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_3', 'FECHA_4TO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_4',
-          'FECHA_5TO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_5', 'FECHA_6TO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_6',
-          'FECHA_7MO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_7', 'FECHA_8VO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_8',
-          'FECHA_9NO_CONTROL', 'QUIEN_REALIZO_EL_CONTROL_9', 'NUMERO_TOTAL_DE_CONTROLES_PRENATALES',
-          'ULTIMO_CONTROL_PRENATAL', 'EDAD_GESTACIONAL_ACTUAL', 'PESO_ACTUAL', 'TALLA_ACTUAL', 'IMC_ACTUAL',
-          'CLASIFICACION_DEL_IMC_ACTUAL', 'TA_ACTUAL', 'ALTURA_UTERINA', 'FCF',
-          'FECHA_PRIMERA_CONSULTA_GINECOLOGIA', 'FECHA_SEGUNDA_CONSULTA_GINECOLOGIA',
-          'FECHA_TERCERA_CONSULTA_GINECOLOGIA', 'FECHA_CONSULTA_NUTRICION', 'FECHA_CONSULTA_PSICOLOGIA',
-          'FECHA_DE_ATENCION_OTRO_ESPECIALISTA', 'QUIEN_REALIZO_LA_CONSULTA', 'TIPO', 'FECHA_DE_ABORTO',
-          'SEMANAS_DE_GESTACION', 'COMPLICACIONES', 'FECHA_DE_PARTO', 'CARACTERISTICAS_DEL_PARTO',
-          'PARTO_ATENDIDO_POR', 'NO_SEMANAS_DE_GESTACION', 'MULTIPLICIDAD_DEL_EMBARAZO',
-          'COMPLICACIONES_DURANTE_EL_PARTO', 'TIPO_COMPLICACION', 'UCI_MATERNA', 'TOMA_DE_PRUEBAS_ITS_INTRAPARTO',
-          'RESULTADO_POSITIVO', 'FECHA', 'CAUSA_DE_LA_DEFUNCION', 'TIPO', 'FECHA', 'RENUENTE_A_PLANIFICACION_FAMILIAR',
-          'OBSERVACIONES_GENERALES'
-        ]
-      }
-      sheet.columns = allCols.map(k => ({
-        header: labels[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-        key: k,
-        width: Math.min(Math.max((labels[k] || k).length + 2, 12), 40),
-      }))
-      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 }
-      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
-      sheet.getRow(1).eachCell(c => { c.alignment = { wrapText: true, vertical: 'middle' } })
-      for (const fullData of allRows) {
-        const rowData = {}
-        for (const k of allCols) {
-          let v = fullData[k] || ''
-          if (v && typeof v === 'string') {
-            v = v.trim()
-            if (v === 'None' || v === 'null') v = ''
-            if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(v)) v = v.split(' ')[0]
+      if (isIpsUser && ipsColumns.length) {
+        sheet.columns = ipsColumns.map(k => ({
+          header: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          key: k,
+          width: Math.min(Math.max(k.length + 2, 12), 40),
+        }))
+        sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 }
+        sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
+        sheet.getRow(1).eachCell(c => { c.alignment = { wrapText: true, vertical: 'middle' } })
+        for (const row of usuarios) {
+          const rowData = {}
+          for (const k of ipsColumns) {
+            let v = row[k] || ''
+            if (v && typeof v === 'string') { v = v.trim(); if (v === 'None' || v === 'null') v = '' }
+            rowData[k] = v
           }
-          rowData[k] = v
+          sheet.addRow(rowData)
         }
-        const addedRow = sheet.addRow(rowData)
-        const fppIdx = allCols.indexOf('FPP')
-        const fumIdx = allCols.indexOf('FUM')
-        if (fppIdx >= 0 && fumIdx >= 0) {
-          const fumVal = rowData.FUM
-          if (fumVal && fumVal.trim()) {
-            const fumDate = new Date(fumVal)
-            if (!isNaN(fumDate.getTime())) {
-              const fppDate = new Date(fumDate)
-              fppDate.setDate(fppDate.getDate() + 280)
-              const fppCell = addedRow.getCell(fppIdx + 1)
-              fppCell.value = fppDate
-              fppCell.numFmt = 'yyyy-mm-dd'
-            }
+      } else {
+        let allCols = []
+        let labels = {}
+        try {
+          const colMeta = await fetchGestanteColumns()
+          allCols = colMeta?.columns || []
+          labels = colMeta?.labels || {}
+        } catch {}
+        const allRows = []
+        for (const u of usuarios) {
+          let fullData = null
+          if (u.numero_id) {
+            try { fullData = await fetchGestanteByNumId(u.numero_id) } catch { fullData = null }
           }
+          if (!fullData) fullData = mapInstToGestanteKeys(u)
+          allRows.push(fullData)
+        }
+        if (!allCols.length) {
+          allCols = Object.keys(allRows[0] || {})
+        }
+        sheet.columns = allCols.map(k => ({
+          header: labels[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          key: k,
+          width: Math.min(Math.max((labels[k] || k).length + 2, 12), 40),
+        }))
+        sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 }
+        sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
+        for (const fullData of allRows) {
+          const rowData = {}
+          for (const k of allCols) {
+            let v = fullData[k] || ''
+            if (v && typeof v === 'string') { v = v.trim(); if (v === 'None' || v === 'null') v = '' }
+            rowData[k] = v
+          }
+          sheet.addRow(rowData)
         }
       }
       const buffer = await workbook.xlsx.writeBuffer()
@@ -213,15 +180,12 @@ export default function DataManagement({ correctedText }) {
   }, [instValidating, instResult])
 
   useEffect(() => {
-    if (!instResult && !instValidating) {
+    if (!isIpsUser && !instResult && !instValidating) {
       runAffiliationValidation()
     }
-  }, [instResult, instValidating, runAffiliationValidation])
+  }, [isIpsUser, instResult, instValidating, runAffiliationValidation])
 
   const ipsGroups = instResult?.ips_groups || {}
-  const isIpsUser = user?.role === 'ips_user'
-  const ipsUserName = user?.ips_name || user?.name || ''
-
   const normalizeForMatch = (s) => (s || '').toUpperCase().replace(/[\.\-]/g, '').replace(/\s+/g, ' ').trim()
 
   const filteredIpsGroups = isIpsUser && ipsUserName
@@ -236,11 +200,10 @@ export default function DataManagement({ correctedText }) {
   const ipsNames = Object.keys(filteredIpsGroups)
 
   useEffect(() => {
-    if (isIpsUser && ipsNames.length === 1 && view === 'list' && !selectedIps) {
-      setSelectedIps(ipsNames[0])
+    if (isIpsUser && ipsRows.length === 1 && view === 'list' && !selectedIps) {
       setView('ips_detail')
     }
-  }, [isIpsUser, ipsNames, view, selectedIps])
+  }, [isIpsUser, ipsRows, view, selectedIps])
 
   const noEncontrados = instResult?.no_encontrados || 0
   const instErrors = instResult?.errors || []
@@ -257,7 +220,7 @@ export default function DataManagement({ correctedText }) {
   }
 
   const startEdit = async (u) => {
-    const numeroId = u.numero_id
+    const numeroId = u.NO_DE_IDENTIFICACION || u.numero_id
     let fullData = null
     if (numeroId) {
       try {
@@ -274,7 +237,7 @@ export default function DataManagement({ correctedText }) {
         } catch (e) { fullData = null }
       }
     }
-    if (!fullData) fullData = mapInstToGestanteKeys(u)
+    if (!fullData) fullData = u
     const editId = fullData.id || null
     if (editId) delete fullData.id
     setEditing({ ...fullData, id: editId, _from_gestantes: !!editId, _key: Date.now() })
@@ -290,6 +253,7 @@ export default function DataManagement({ correctedText }) {
         await createGestante(data)
       }
       setEditing(null); setView('ips_detail')
+      if (isIpsUser) loadIpsData()
     } catch (e) {
       setError('Error al guardar: ' + (e.message || ''))
     } finally {
@@ -302,6 +266,7 @@ export default function DataManagement({ correctedText }) {
     try {
       await createGestante(data)
       setShowNewForm(false); setView('ips_detail')
+      if (isIpsUser) loadIpsData()
     } catch (e) {
       setError('Error al crear: ' + (e.message || ''))
     } finally {
@@ -338,10 +303,10 @@ export default function DataManagement({ correctedText }) {
   if (view === 'ips_detail' && showNewForm) {
     return <GestanteForm mode="create" onSave={handleCreate}
       onClose={() => { setShowNewForm(false); setView('ips_detail') }}
-      initialData={{ NOMBRE_DE_LA_IPS_PRIMARIA: selectedIps || '' }} ipsList={ipsNames} />
+      initialData={{ NOMBRE_DE_LA_IPS_PRIMARIA: ipsUserName }} ipsList={ipsNames} />
   }
 
-  if (view === 'list') {
+  if (view === 'list' && !isIpsUser) {
     return (
       <div className="space-y-5 fade-in">
         <div className="flex items-center justify-between">
@@ -364,17 +329,14 @@ export default function DataManagement({ correctedText }) {
             )}
           </div>
         </div>
-
         {autoFillMsg && <div className="px-3 py-2 rounded-md text-sm" style={{ color: autoFillMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: autoFillMsg.includes('Error') ? '#FBE9E9' : '#EEF3F7' }}>{autoFillMsg}</div>}
         {populateMsg && <div className="px-3 py-2 rounded-md text-sm" style={{ color: populateMsg.includes('Error') ? 'var(--error)' : 'var(--text-secondary)', backgroundColor: populateMsg.includes('Error') ? '#FBE9E9' : '#F0F0F0', whiteSpace: 'pre-wrap' }}>{populateMsg}</div>}
         {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
-
         {noEncontrados > 0 && (
           <div className="px-3 py-2 rounded-md text-xs" style={{ color: '#e67e22', backgroundColor: '#FEF3E2' }}>
             {noEncontrados} usuaria(s) no encontradas en base de afiliados.
           </div>
         )}
-
         {instValidating ? (
           <div className="space-y-3">
             <div className="skeleton h-10 w-full rounded-xl" />
@@ -425,20 +387,12 @@ export default function DataManagement({ correctedText }) {
             ))}
           </div>
         )}
-
         {instErrors.length > 0 && (
           <div className="mt-6">
             <div className="text-sm font-medium mb-2" style={{ color: 'var(--error)' }}>Usuarias no encontradas ({instErrors.length})</div>
             <div className="table-wrap" style={{ maxHeight: '300px', overflowY: 'auto' }}>
               <table className="table">
-                <thead>
-                  <tr>
-                    <th>Fila</th>
-                    <th>Tipo ID</th>
-                    <th>Número ID</th>
-                    <th>Detalle</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Fila</th><th>Tipo ID</th><th>Número ID</th><th>Detalle</th></tr></thead>
                 <tbody>
                   {instErrors.map((err, i) => (
                     <tr key={i}>
@@ -457,7 +411,7 @@ export default function DataManagement({ correctedText }) {
     )
   }
 
-  if (view === 'ips_detail' && selectedIps) {
+  if (view === 'ips_detail' && !isIpsUser && selectedIps) {
     const usuarias = filteredIpsGroups[selectedIps] || []
     const filtered = search ? usuarias.filter(u => {
       const q = search.toLowerCase()
@@ -493,9 +447,7 @@ export default function DataManagement({ correctedText }) {
             </button>
           </div>
         </div>
-
         {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
-
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -506,7 +458,6 @@ export default function DataManagement({ correctedText }) {
               placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
           </div>
         </div>
-
         {filtered.length === 0 ? (
           <div className="empty">
             <div className="empty-title">Sin registros</div>
@@ -535,6 +486,107 @@ export default function DataManagement({ correctedText }) {
                     ))}
                     <td className="text-right">
                       <button onClick={() => startEdit(u)} className="btn-ghost text-xs px-2 py-1" title="Actualizar">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {pTotal > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {page} de {pTotal}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>
+                  <button onClick={() => setPage(Math.min(pTotal, page + 1))} disabled={page >= pTotal} className="btn-secondary px-2.5 py-1 text-xs">Siguiente →</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (isIpsUser && (view === 'list' || view === 'ips_detail')) {
+    const filtered = search ? ipsRows.filter(r => {
+      const q = search.toLowerCase()
+      return (r.NO_DE_IDENTIFICACION || '').toLowerCase().includes(q) ||
+             (r.APELLIDO_1 || '').toLowerCase().includes(q) ||
+             (r.NOMBRE_1 || '').toLowerCase().includes(q)
+    }) : ipsRows
+    const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    const pTotal = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+
+    return (
+      <div className="space-y-5 fade-in">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="page-title">{ipsUserName}</div>
+            <div className="page-subtitle">
+              {ipsLoading ? 'Cargando gestantes...' : `${filtered.length} gestantes`}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => downloadIpsExcel(ipsUserName)} disabled={downloadingIps === ipsUserName}
+              className="btn-secondary text-sm">
+              {downloadingIps === ipsUserName ? (
+                <svg className="w-4 h-4 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+              ) : (
+                <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              )} Descargar Excel
+            </button>
+            <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              Nueva usuaria
+            </button>
+          </div>
+        </div>
+        {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
+              placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
+          </div>
+        </div>
+        {ipsLoading ? (
+          <div className="space-y-3">
+            <div className="skeleton h-10 w-full rounded-xl" />
+            <div className="skeleton h-10 w-full rounded-xl" />
+            <div className="skeleton h-10 w-full rounded-xl" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="empty">
+            <div className="empty-title">Sin registros</div>
+            <div className="empty-desc">No se encontraron gestantes para esta IPS.</div>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="text-center">#</th>
+                  {IPS_TABLE_COLS.map((col) => <th key={col.key}>{col.label}</th>)}
+                  <th className="text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map((r, i) => (
+                  <tr key={`${r.NO_DE_IDENTIFICACION}-${i}`}>
+                    <td className="text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      {(page - 1) * PAGE_SIZE + i + 1}
+                    </td>
+                    {IPS_TABLE_COLS.map((col) => (
+                      <td key={col.key} className="text-sm max-w-[120px] truncate">
+                        {r[col.key] || '—'}
+                      </td>
+                    ))}
+                    <td className="text-right">
+                      <button onClick={() => startEdit(r)} className="btn-ghost text-xs px-2 py-1" title="Actualizar">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
                     </td>
