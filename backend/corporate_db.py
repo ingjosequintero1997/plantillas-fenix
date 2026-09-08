@@ -9,8 +9,10 @@ from typing import Optional, Dict, List
 from sqlalchemy import create_engine, text
 
 try:
+    from pathlib import Path
     from dotenv import load_dotenv
-    load_dotenv()
+    _backend_dir = Path(__file__).resolve().parent
+    load_dotenv(_backend_dir / ".env")
 except ImportError:
     pass
 

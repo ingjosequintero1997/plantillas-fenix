@@ -77,7 +77,7 @@ function maybeDecompress(data) {
 export default function App() {
   const { user } = useAuth()
 
-  const [section, setSection] = useState('inicio')
+  const [section, setSection] = useState(user?.role === 'ips_user' ? 'data' : 'inicio')
   const [activeTemplate, setActiveTemplate] = useState('')
   const [mapping, setMapping] = useState({})
   const [summary, setSummary] = useState(null)
@@ -106,6 +106,12 @@ export default function App() {
   const [tipoCargue, setTipoCargue] = useState('mensual')
   const [processingMode, setProcessingMode] = useState('validador')
   const [lastCargueId, setLastCargueId] = useState('')
+
+  useEffect(() => {
+    if (user?.role === 'ips_user' && section !== 'data') {
+      setSection('data')
+    }
+  }, [user, section])
 
   const isAdmin = user?.role === 'admin'
   // Los prestadores y lideres solo validan: forzar modo validador para ellos.

@@ -7,7 +7,9 @@ import re
 import gzip
 import base64
 import json
-from datetime import datetime
+import hmac
+import hashlib
+from datetime import datetime, timedelta
 from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError
 try:
@@ -138,13 +140,12 @@ async def ips_login(payload: LoginPayload):
 			).first()
 		except Exception:
 			pass
-		if user_ips and verify_password(payload.password, user_ips.password_hash):
+		if user_ips and payload.password.strip() == user_ips.contrasena:
 			token_data = {
 				"sub": user_ips.username,
 				"uid": user_ips.id,
 				"role": "ips_user",
 				"ips_name": user_ips.ips_name,
-				"ips_code": user_ips.ips_code or "",
 				"exp": (datetime.utcnow() + timedelta(hours=8)).isoformat(),
 			}
 			b64 = base64.urlsafe_b64encode(json.dumps(token_data).encode()).decode().rstrip("=")
@@ -152,7 +153,7 @@ async def ips_login(payload: LoginPayload):
 			token = f"{b64}.{sig}"
 			return {
 				"token": token,
-				"user": {"id": user_ips.id, "username": user_ips.username, "name": user_ips.ips_name, "role": "ips_user", "ips_name": user_ips.ips_name, "ips_code": user_ips.ips_code},
+				"user": {"id": user_ips.id, "username": user_ips.username, "name": user_ips.ips_name, "role": "ips_user", "ips_name": user_ips.ips_name},
 			}
 
 		# 2) Buscar en tabla users (prestadores asignados a IPS)
@@ -252,21 +253,20 @@ async def listar_usuarios_ips(current_user: User = Depends(require_admin)):
     db = SessionLocal()
     try:
         rows = db.query(UsuarioIPS).order_by(UsuarioIPS.ips_name).all()
-        return [{"id": r.id, "username": r.username, "ips_name": r.ips_name, "ips_code": r.ips_code, "active": r.active, "created_at": str(r.created_at)} for r in rows]
+        return [{"id": r.id, "username": r.username, "ips_name": r.ips_name, "contrasena": r.contrasena, "active": r.active} for r in rows]
     finally:
         db.close()
 
 
 @app.post("/data/usuarios-ips")
 async def crear_usuario_ips(payload: dict, current_user: User = Depends(require_admin)):
-    """Crea un usuario IPS. body: {username, password, ips_name, ips_code?}"""
+    """Crea un usuario IPS. body: {username, contrasena, ips_name}"""
     ensure_db_ready()
     username = payload.get("username", "").strip()
-    password = payload.get("password", "")
+    contrasena = payload.get("contrasena", "").strip()
     ips_name = payload.get("ips_name", "").strip()
-    ips_code = payload.get("ips_code", "").strip()
-    if not username or not password or not ips_name:
-        raise HTTPException(status_code=400, detail="username, password e ips_name son obligatorios")
+    if not username or not contrasena or not ips_name:
+        raise HTTPException(status_code=400, detail="username, contrasena e ips_name son obligatorios")
     db = SessionLocal()
     try:
         exists = db.query(UsuarioIPS).filter(UsuarioIPS.username == username).first()
@@ -274,9 +274,8 @@ async def crear_usuario_ips(payload: dict, current_user: User = Depends(require_
             raise HTTPException(status_code=409, detail=f"El usuario '{username}' ya existe")
         u = UsuarioIPS(
             username=username,
-            password_hash=hash_password(password),
             ips_name=ips_name,
-            ips_code=ips_code or None,
+            contrasena=contrasena,
             active=True,
         )
         db.add(u)
@@ -305,19 +304,17 @@ async def eliminar_usuario_ips(user_id: int, current_user: User = Depends(requir
 
 @app.put("/data/usuarios-ips/{user_id}")
 async def actualizar_usuario_ips(user_id: int, payload: dict, current_user: User = Depends(require_admin)):
-    """Actualiza un usuario IPS (password, ips_name, ips_code, active)."""
+    """Actualiza un usuario IPS (contrasena, ips_name, active)."""
     ensure_db_ready()
     db = SessionLocal()
     try:
         u = db.query(UsuarioIPS).get(user_id)
         if not u:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        if "password" in payload and payload["password"]:
-            u.password_hash = hash_password(payload["password"])
+        if "contrasena" in payload and payload["contrasena"]:
+            u.contrasena = payload["contrasena"]
         if "ips_name" in payload:
             u.ips_name = payload["ips_name"]
-        if "ips_code" in payload:
-            u.ips_code = payload["ips_code"]
         if "active" in payload:
             u.active = payload["active"]
         db.commit()
@@ -348,6 +345,69 @@ def seed_admin():
         pass  # Sin BD persistente: se usa el admin de respaldo
 
 
+def seed_ips_users():
+    """Crea usuario IPS por cada IPS unica en los cargues. Username = nombre normalizado."""
+    try:
+        import unicodedata, base64 as _b64, gzip as _gzip
+        db = SessionLocal()
+        try:
+            from sqlalchemy import text as _t
+            # Leer IPS del ultimo cargue (correctedText)
+            ips_set = set()
+            try:
+                cargue = db.execute(_t('SELECT corrected_text, compressed FROM cargues ORDER BY id DESC LIMIT 1')).fetchone()
+                if cargue and cargue[0]:
+                    texto = cargue[0]
+                    if cargue[1]:
+                        try:
+                            texto = _gzip.decompress(_b64.b64decode(texto)).decode('utf-8', errors='replace')
+                        except Exception:
+                            pass
+                    for linea in texto.strip().split('\n'):
+                        parts = linea.split('|')
+                        if len(parts) > 28:
+                            ips = parts[28].strip()
+                            if ips:
+                                ips_set.add(ips)
+            except Exception:
+                pass
+            # Fallback: leer de gestantes
+            if not ips_set:
+                rows = db.execute(_t(
+                    'SELECT DISTINCT "NOMBRE_DE_LA_IPS_PRIMARIA" FROM gestantes '
+                    'WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL '
+                    'AND TRIM("NOMBRE_DE_LA_IPS_PRIMARIA") != \'\' '
+                )).fetchall()
+                for r in rows:
+                    ips_set.add(str(r[0]).strip())
+
+            default_pass = "ips123"
+            for ips_name in sorted(ips_set):
+                if not ips_name:
+                    continue
+                norm = unicodedata.normalize('NFD', ips_name)
+                username = ''.join(c for c in norm if unicodedata.category(c) != 'Mn')
+                username = username.lower().replace(' ', '_').replace('-', '_')
+                username = ''.join(c for c in username if c.isalnum() or c == '_')
+                if not username:
+                    continue
+                exists = db.query(UsuarioIPS).filter(UsuarioIPS.username == username).first()
+                if not exists:
+                    u = UsuarioIPS(
+                        username=username,
+                        ips_name=ips_name,
+                        contrasena=default_pass,
+                        active=True,
+                    )
+                    db.add(u)
+                    db.flush()
+            db.commit()
+        finally:
+            db.close()
+    except Exception:
+        pass
+
+
 _db_ready = False
 
 def ensure_db_ready():
@@ -366,20 +426,35 @@ def ensure_db_ready():
     try:
         with engine.begin() as conn:
             from sqlalchemy import text as _t
-            conn.execute(_t("""
-                CREATE TABLE IF NOT EXISTS usuarios_ips (
-                    id SERIAL PRIMARY KEY,
-                    username VARCHAR(120) UNIQUE NOT NULL,
-                    password_hash VARCHAR(255) NOT NULL,
-                    ips_name VARCHAR(255) NOT NULL,
-                    ips_code VARCHAR(60),
-                    active BOOLEAN NOT NULL DEFAULT TRUE,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """))
+            is_pg = str(engine.url).startswith("postgresql")
+            if is_pg:
+                conn.execute(_t("""
+                    CREATE TABLE IF NOT EXISTS usuarios_ips (
+                        id INTEGER PRIMARY KEY GENERATED BY DEFAULT AS IDENTITY,
+                        username VARCHAR(120) UNIQUE NOT NULL,
+                        ips_name VARCHAR(255) NOT NULL,
+                        contrasena VARCHAR(100) NOT NULL,
+                        active BOOLEAN DEFAULT TRUE
+                    )
+                """))
+            else:
+                conn.execute(_t("""
+                    CREATE TABLE IF NOT EXISTS usuarios_ips (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username VARCHAR(120) UNIQUE NOT NULL,
+                        ips_name VARCHAR(255) NOT NULL,
+                        contrasena VARCHAR(100) NOT NULL,
+                        active BOOLEAN DEFAULT TRUE
+                    )
+                """))
     except Exception:
         pass
     _db_ready = True
+    # Seed: crear usuario IPS por cada IPS unica en gestantes
+    try:
+        seed_ips_users()
+    except Exception:
+        pass
 
 @app.get("/health")
 async def health():
@@ -3542,16 +3617,44 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 		try:
 			from corporate_db import validar_afiliados_lote, obtener_nombres_ips
 		except ImportError:
-			return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Modulo corporativo no disponible"}
+			validar_afiliados_lote = None
+			obtener_nombres_ips = None
 	
 	try:
 		lote_input = [{"tipo_id": u["tipo_id"], "numero_id": u["numero_id"]} for u in usuarios]
-		resultado_lote = validar_afiliados_lote(lote_input)
+		resultado_lote = validar_afiliados_lote(lote_input) if validar_afiliados_lote else {"error": "Modulo no disponible"}
 	except Exception as e:
-		return {"success": True, "encontrados": 0, "no_encontrados": len(usuarios), "errors": [{"row": 0, "column": "DB", "original": "", "corrected": f"Error consultando BD corporativa: {str(e)[:200]}", "status": "error"}], "valid_users": [], "ips_groups": {}, "info": f"Error BD corporativa: {str(e)[:200]}"}
+		resultado_lote = {"error": str(e)}
 	
 	if resultado_lote.get("error"):
-		return {"success": True, "encontrados": 0, "no_encontrados": len(usuarios), "errors": [{"row": 0, "column": "DB", "original": "", "corrected": f"Error BD corporativa: {resultado_lote['error'][:200]}", "status": "error"}], "valid_users": [], "ips_groups": {}, "info": f"Error BD: {resultado_lote['error'][:200]}"}
+		# Fallback: agrupar por NOMBRE_DE_LA_IPS_PRIMARIA del cargue
+		ips_col = tmpl_names[28] if len(tmpl_names) > 28 else 28
+		ips_groups = {}
+		for idx, row in df.iterrows():
+			ips_name = str(row.get(ips_col, "")).strip()
+			if not ips_name:
+				continue
+			num = str(row.get(num_col, "")).strip()
+			tipo = str(row.get(tipo_col, "")).strip().upper()
+			n1 = str(row.get(nombre1_col, "")).strip()
+			n2 = str(row.get(nombre2_col, "")).strip()
+			a1 = str(row.get(apellido1_col, "")).strip()
+			a2 = str(row.get(apellido2_col, "")).strip()
+			if not num or not tipo:
+				continue
+			if ips_name not in ips_groups:
+				ips_groups[ips_name] = []
+			ips_groups[ips_name].append({
+				"tipo_id": tipo, "numero_id": num,
+				"nombre1": n1, "nombre2": n2,
+				"apellido1": a1, "apellido2": a2,
+				"gestante_id": None, "ips_code": "",
+			})
+		return {
+			"success": True, "encontrados": len(usuarios), "no_encontrados": 0,
+			"errors": [], "valid_users": [], "ips_groups": ips_groups,
+			"info": "Agrupado por IPS del cargue (sin validacion corporativa)",
+		}
 	
 	# Indexar encontrados por numero_id -> ips_code
 	indx_encontrados = {}
@@ -3734,12 +3837,27 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
-		# Para prestadores, filtrar por su IPS
+		# Para prestadores/ips_users, filtrar por su IPS
 		ips_filtro = None
 		if current_user.role != "admin":
+			# Primero intentar por prestador
 			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 			if prestador and prestador.ips:
 				ips_filtro = str(prestador.ips).strip().upper()
+			# Si no encontro por prestador, intentar por ips_name del token (IPS users)
+			if not ips_filtro:
+				try:
+					ips_name_attr = getattr(current_user, 'ips_name', None)
+					if not ips_name_attr:
+						# Buscar en usuarios_ips
+						from sqlalchemy import text as _t2
+						row = db.execute(_t2('SELECT ips_name FROM usuarios_ips WHERE username = :u AND active = TRUE'), {"u": current_user.username}).fetchone()
+						if row and row[0]:
+							ips_name_attr = str(row[0]).strip()
+					if ips_name_attr:
+						ips_filtro = ips_name_attr.upper()
+				except Exception:
+					pass
 
 		# Valores de IPS que son claramente invalidos (confundidos con otra columna)
 		IPS_INVALIDOS = {"NO", "SI", "N/A", "NA", "SIN IPS", "S/N", "-", "0", "NO APLICA"}
@@ -3753,10 +3871,12 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 				 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
 		
 		if ips_filtro:
-			# Prestador: solo ver su IPS
+			# Prestador/IPS: filtrar por nombre de IPS (case-insensitive)
 			sql = '''SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
 					 FROM gestantes
-					 WHERE UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = UPPER(:ips)
+					 WHERE UPPER(TRIM("NOMBRE_DE_LA_IPS_PRIMARIA")) = :ips
+					   AND "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL
+					   AND "NOMBRE_DE_LA_IPS_PRIMARIA" != ''
 					 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
 					 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
 
@@ -4092,12 +4212,22 @@ async def listar_gestantes(
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
-		# Obtener IPS del prestador actual
+		# Obtener IPS del prestador/usuario actual
 		ips_filtro = None
 		if current_user.role != "admin":
+			# Primero intentar por prestador
 			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 			if prestador and prestador.ips:
 				ips_filtro = str(prestador.ips).strip().upper()
+			# Si no encontro por prestador, intentar por ips_name (IPS users)
+			if not ips_filtro:
+				try:
+					from sqlalchemy import text as _t2
+					row = db.execute(_t2('SELECT ips_name FROM usuarios_ips WHERE username = :u AND active = TRUE'), {"u": current_user.username}).fetchone()
+					if row and row[0]:
+						ips_filtro = str(row[0]).strip().upper()
+				except Exception:
+					pass
 
 		# Si se pasa el param ips explicitamente, usarlo (para admin que quiere filtrar por IPS)
 		if ips and current_user.role == "admin":
@@ -4145,16 +4275,23 @@ async def listar_gestantes(
 
 
 def _get_prestador_ips_name(db, current_user):
-	"""Obtiene el nombre de la IPS del prestador actual. Retorna None si es admin o no tiene IPS."""
+	"""Obtiene el nombre de la IPS del prestador/usuario actual. Retorna None si es admin o no tiene IPS."""
 	if current_user.role == "admin":
 		return None
+	# Primero intentar por prestador
 	prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
-	if not prestador or not prestador.ips:
-		return None
-	ips_code = str(prestador.ips).strip()
+	if prestador and prestador.ips:
+		ips_code = str(prestador.ips).strip()
+		try:
+			row = db.execute(text('SELECT razon_social FROM ct_ips WHERE ips = :code'), {"code": ips_code}).fetchone()
+			if row:
+				return str(row[0]).strip().upper()
+		except Exception:
+			pass
+	# Si no encontro por prestador, intentar por usuarios_ips (IPS users)
 	try:
-		row = db.execute(text('SELECT razon_social FROM ct_ips WHERE ips = :code'), {"code": ips_code}).fetchone()
-		if row:
+		row = db.execute(text('SELECT ips_name FROM usuarios_ips WHERE username = :u AND active = TRUE'), {"u": current_user.username}).fetchone()
+		if row and row[0]:
 			return str(row[0]).strip().upper()
 	except Exception:
 		pass
@@ -4387,26 +4524,37 @@ async def crear_gestante(payload: dict, current_user: User = Depends(get_current
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
-		# Obtener IPS del prestador
+		# Obtener IPS del prestador/usuario
 		ips_prestador = ""
+		ips_nombre_real = ""
 		if current_user.role != "admin":
+			# Primero intentar por prestador
 			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 			if prestador and prestador.ips:
 				ips_prestador = str(prestador.ips).strip()
+			# Si no encontro por prestador, intentar por usuarios_ips (IPS users)
+			if not ips_prestador:
+				try:
+					from sqlalchemy import text as _t2
+					row = db.execute(_t2('SELECT ips_name FROM usuarios_ips WHERE username = :u AND active = TRUE'), {"u": current_user.username}).fetchone()
+					if row and row[0]:
+						ips_nombre_real = str(row[0]).strip().upper()
+				except Exception:
+					pass
+			# Si encontro por prestador, buscar nombre real
+			if ips_prestador and not ips_nombre_real:
+				try:
+					from sqlalchemy import text as sa_text
+					row = db.execute(sa_text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'), {"cod": ips_prestador}).fetchone()
+					if row:
+						ips_nombre_real = str(row[0]).strip().upper()
+				except Exception:
+					pass
 
-		# Si el prestador tiene IPS, forzar que la gestante sea de esa IPS
-		if ips_prestador and "NOMBRE_DE_LA_IPS_PRIMARIA" in payload:
+		# Si el usuario tiene IPS, forzar que la gestante sea de esa IPS
+		if ips_nombre_real and "NOMBRE_DE_LA_IPS_PRIMARIA" in payload:
 			ips_gestante = str(payload["NOMBRE_DE_LA_IPS_PRIMARIA"]).strip().upper()
-			# Buscar nombre real de la IPS
-			ips_nombre_real = None
-			try:
-				from sqlalchemy import text as sa_text
-				row = db.execute(sa_text('SELECT "razon_social" FROM "administrativo"."ct_ips" WHERE "ips" = :cod LIMIT 1'), {"cod": ips_prestador}).fetchone()
-				if row:
-					ips_nombre_real = str(row[0]).strip().upper()
-			except Exception:
-				pass
-			if ips_nombre_real and ips_gestante and ips_gestante != ips_nombre_real:
+			if ips_gestante and ips_gestante != ips_nombre_real:
 				raise HTTPException(status_code=400, detail=f"No se puede crear: la gestante pertenece a otra IPS ({ips_gestante}). Tu IPS es: {ips_nombre_real}")
 
 		from sqlalchemy import text

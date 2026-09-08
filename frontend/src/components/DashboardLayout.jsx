@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../AuthContext'
 
 const MENU_ITEMS = [
-  { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador', 'lider', 'ips_user'],
+  { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador', 'lider'],
     icon: 'M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10' },
 ]
 
 const OPERACIONES_ITEMS = [
   { key: 'subir', label: 'Validar data', roles: ['admin', 'prestador'],
     icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
-  { key: 'data', label: 'Gestion de data', roles: ['admin', 'prestador', 'lider', 'ips_user'],
+  { key: 'data', label: 'Gestion de data', roles: ['admin', 'prestador', 'lider'],
     icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
   { key: 'historial', label: 'Verificar data', roles: ['admin', 'lider'],
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
@@ -20,12 +20,17 @@ const OPERACIONES_ITEMS = [
 ]
 
 const GESTION_ITEMS = [
-  { key: 'verificar', label: 'Verificar afiliado', roles: ['admin', 'prestador', 'lider', 'ips_user'],
+  { key: 'verificar', label: 'Verificar afiliado', roles: ['admin', 'prestador', 'lider'],
     icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-  { key: 'historias', label: 'Historias clinicas', roles: ['admin', 'prestador', 'lider', 'ips_user'],
+  { key: 'historias', label: 'Historias clinicas', roles: ['admin', 'prestador', 'lider'],
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
     icon: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7' },
+]
+
+const IPS_MENU_ITEMS = [
+  { key: 'data', label: 'Gestion de data', roles: ['ips_user'],
+    icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
 ]
 
 const META = {
@@ -129,42 +134,48 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2">
 
-        {/* Menu: siempre visible */}
-        <NavSection label="Menu" items={MENU_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
-
-        {/* Plantilla activa: indicador */}
-        {hasTemplate && templateMeta && (
-          <div className="mb-1">
-            <div className="px-5 pt-3 pb-1.5">
-              <span className="text-[0.58rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>Plantilla</span>
-            </div>
-            <div className="mx-2 mb-1">
-              <div className="flex items-center gap-3 px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--green-50)', border: '1px solid var(--green-100)' }}>
-                <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: 'var(--green-600)' }}>
-                  <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                </span>
-                <span className="truncate text-[0.8rem] font-medium" style={{ color: 'var(--green-700)' }}>{templateMeta.label}</span>
-              </div>
-              {templates.length > 1 && (
-                <button
-                  onClick={() => { if (onSelectTemplate) onSelectTemplate(''); onNavigate('inicio') }}
-                  className="w-full text-left px-3 py-1.5 mt-0.5 text-[0.7rem] rounded-lg transition-all"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}
-                >
-                  Cambiar plantilla
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Operaciones y Gestion: solo si hay plantilla activa */}
-        {hasTemplate && (
+        {role === 'ips_user' ? (
+          <NavSection label="Menu" items={IPS_MENU_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
+        ) : (
           <>
-            <NavSection label="Operaciones" items={OPERACIONES_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
-            <NavSection label="Gestion" items={GESTION_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
+            {/* Menu: siempre visible */}
+            <NavSection label="Menu" items={MENU_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
+
+            {/* Plantilla activa: indicador */}
+            {hasTemplate && templateMeta && (
+              <div className="mb-1">
+                <div className="px-5 pt-3 pb-1.5">
+                  <span className="text-[0.58rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>Plantilla</span>
+                </div>
+                <div className="mx-2 mb-1">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--green-50)', border: '1px solid var(--green-100)' }}>
+                    <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: 'var(--green-600)' }}>
+                      <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    </span>
+                    <span className="truncate text-[0.8rem] font-medium" style={{ color: 'var(--green-700)' }}>{templateMeta.label}</span>
+                  </div>
+                  {templates.length > 1 && (
+                    <button
+                      onClick={() => { if (onSelectTemplate) onSelectTemplate(''); onNavigate('inicio') }}
+                      className="w-full text-left px-3 py-1.5 mt-0.5 text-[0.7rem] rounded-lg transition-all"
+                      style={{ color: 'var(--text-muted)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}
+                    >
+                      Cambiar plantilla
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Operaciones y Gestion: solo si hay plantilla activa */}
+            {hasTemplate && (
+              <>
+                <NavSection label="Operaciones" items={OPERACIONES_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
+                <NavSection label="Gestion" items={GESTION_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
+              </>
+            )}
           </>
         )}
       </nav>

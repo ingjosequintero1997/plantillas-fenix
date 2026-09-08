@@ -220,23 +220,19 @@ export default function DataManagement({ correctedText }) {
 
   const ipsGroups = instResult?.ips_groups || {}
   const isIpsUser = user?.role === 'ips_user'
-  const ipsUserCode = user?.ips_code || ''
   const ipsUserName = user?.ips_name || user?.name || ''
 
-  const filteredIpsGroups = isIpsUser && ipsUserCode
+  const normalizeForMatch = (s) => (s || '').toUpperCase().replace(/[\.\-]/g, '').replace(/\s+/g, ' ').trim()
+
+  const filteredIpsGroups = isIpsUser && ipsUserName
     ? Object.fromEntries(
-        Object.entries(ipsGroups).filter(([, usuarios]) =>
-          usuarios.some(u => String(u.ips_code || '').trim() === String(ipsUserCode).trim())
-        )
+        Object.entries(ipsGroups).filter(([name]) => {
+          const normName = normalizeForMatch(name)
+          const normIps = normalizeForMatch(ipsUserName)
+          return normName.includes(normIps) || normIps.includes(normName)
+        })
       )
-    : isIpsUser && ipsUserName
-      ? Object.fromEntries(
-          Object.entries(ipsGroups).filter(([name]) =>
-            name.toUpperCase().includes(ipsUserName.toUpperCase()) ||
-            ipsUserName.toUpperCase().includes(name.toUpperCase())
-          )
-        )
-      : ipsGroups
+    : ipsGroups
   const ipsNames = Object.keys(filteredIpsGroups)
 
   useEffect(() => {

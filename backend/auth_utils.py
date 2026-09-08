@@ -94,6 +94,7 @@ def get_current_user(
         user = None
     if user is None or not user.active:
         # Fallback: si no hay BD, acepta el token firmado como fuente de verdad
+        # Para IPS users, incluir ips_name e ips_code del token
         fallback = User(
             id=payload.get("uid") or 1,
             username=payload.get("sub") or ADMIN_FALLBACK_USERNAME,
@@ -102,6 +103,9 @@ def get_current_user(
             role=payload.get("role") or "admin",
             active=True,
         )
+        # Agregar atributos IPS al usuario fallback desde el token
+        if payload.get("role") == "ips_user":
+            fallback.ips_name = payload.get("ips_name", "")
         return fallback
     return user
 
