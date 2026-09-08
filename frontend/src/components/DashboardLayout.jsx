@@ -59,22 +59,24 @@ function NavItem({ item, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-all relative"
+      className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-lg transition-all relative"
       style={{
-        fontSize: '0.8rem',
+        fontSize: '0.7rem',
         fontWeight: active ? '500' : '400',
         color: active ? 'var(--green-700)' : 'var(--text-secondary)',
         backgroundColor: active ? 'var(--green-50)' : 'transparent',
         transitionDuration: '150ms',
+        padding: '2px 4px',
+        margin: '1px 0',
       }}
       onMouseEnter={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
       onMouseLeave={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
     >
       {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full" style={{ backgroundColor: 'var(--green-500)' }} />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-3 rounded-r-full" style={{ backgroundColor: 'var(--green-500)' }} />
       )}
-      <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: active ? 'var(--green-600)' : 'var(--text-muted)' }}>
-        <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? '2' : '1.5'}><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
+      <span className="flex items-center justify-center w-4 h-4 shrink-0" style={{ color: active ? 'var(--green-600)' : 'var(--text-muted)' }}>
+        <svg className="w-[15px] h-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? '2' : '1.5'}><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
       </span>
       <span className="truncate">{item.label}</span>
     </button>
@@ -85,19 +87,13 @@ function NavSection({ label, items, role, section, onNavigate, onSidebarClose })
   const visible = items.filter((i) => i.roles.includes(role))
   if (visible.length === 0) return null
   return (
-    <div className="mb-1">
-      <div className="px-5 pt-3 pb-1.5">
-        <span className="text-[0.58rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>{label}</span>
+    <div className="mb-0.5">
+      <div className="px-2 pt-1 pb-0.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+        {label}
       </div>
       <div className="px-2">
         {visible.map((item, idx) => (
-          <NavItem
-            key={item.key + idx}
-            item={item}
-            active={section === item.key}
-            onClick={() => { onNavigate(item.key); onSidebarClose() }}
-          />
-        ))}
+          <NavItem key={item.key + idx} item={item} active={section === item.key} onClick={() => { onNavigate(item.key); onSidebarClose() }} />        ))}
       </div>
     </div>
   )
