@@ -236,15 +236,6 @@ export default function DataManagement({ correctedText }) {
         if (!fullData || Object.keys(fullData).length <= 2) fullData = null
       } catch (e) { fullData = null }
     }
-    if (!fullData) {
-      const gid = u.gestante_id || u.id
-      if (gid) {
-        try {
-          fullData = await fetchGestante(gid)
-          if (!fullData || Object.keys(fullData).length <= 2) fullData = null
-        } catch (e) { fullData = null }
-      }
-    }
     if (!fullData) fullData = u
     const editId = fullData.id || null
     if (editId) delete fullData.id

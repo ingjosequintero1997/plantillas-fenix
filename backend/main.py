@@ -4416,6 +4416,7 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 							_norm_map[_nk] = registro[_LEGACY_MAP[_i]]
 						else:
 							_norm_map[_nk] = ""
+					_norm_map["id"] = registro.get("id", "")
 					return _norm_map
 				resultado = registro
 		except Exception:
