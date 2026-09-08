@@ -312,6 +312,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         if (val !== null && val !== undefined) {
           val = String(val).trim()
           if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(val)) val = val.split(' ')[0]
+          if (val === 'None' || val === 'null') val = ''
         } else { val = '' }
         cleaned[k] = val
       }
@@ -325,10 +326,31 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         NOMBRE_1: '',
         NOMBRE_2: '',
         FECHA_DE_NACIMIENTO: '',
-        EDAD: '',
-        SEXO: 'FEMENINO',
+        EDAD_ANOS: '',
+        SEXO: 'Femenino',
+        REGIMEN_AFILIACION: '',
+        PERTENECIA_ETNICA: '',
+        GRUPO_POBLACIONAL: 'Mujer Embarazada',
+        DEPARTAMENTO_RESIDENCIA: '',
+        MUNICIPIO_DE_RESIDENCIA: '',
+        ZONA: '',
+        ETNIA: '',
+        ASENTAMIENTO_RANCHERIA_COMUNIDAD: '',
+        TELEFONO_USUARIA: '',
+        DIRECCION: '',
+        NIVEL_EDUCATIVO: '',
+        DISCAPACIDAD: '',
+        MUJER_CABEZA_DE_HOGAR: '',
+        OCUPACION: '',
+        ESTADO_CIVIL: '',
+        CONTROL_TRADICIONAL: '',
+        GESTANTE_RENUENTE: '',
+        INASISTENTE: '',
         NOMBRE_DE_LA_IPS_PRIMARIA: '',
+        FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO: '',
+        FECHA_DE_INGRESO_AL_CONTROL_PRENATAL: '',
         FUM: '',
+        FPP: '',
       })
     }
   }, [mode, initialData])
@@ -489,73 +511,117 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   }
 
   return (
-    <div className="panel fade-in">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fade-in" style={{ backgroundColor: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-subtle)', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--green-50)' }}>
         <div className="flex items-center justify-between">
-          <div>
-            <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {mode === 'create' ? 'Nuevo registro de gestante' : `Actualizar — ${form.NO_DE_IDENTIFICACION || ''}`}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--green-500)', color: '#fff' }}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                {mode === 'create'
+                  ? <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />}
+              </svg>
             </div>
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {mode === 'create'
-                ? 'Completa el formulario para registrar una nueva gestante.'
-                : `${form.APELLIDO_1 || ''} ${form.APELLIDO_2 || ''} ${form.NOMBRE_1 || ''} ${form.NOMBRE_2 || ''}`}
+            <div>
+              <div className="text-base font-semibold" style={{ color: 'var(--green-800)' }}>
+                {mode === 'create' ? 'Nueva gestante' : 'Editar gestante'}
+              </div>
+              <div className="text-xs" style={{ color: 'var(--green-600)' }}>
+                {mode === 'create'
+                  ? 'Completa los campos para registrar una nueva gestante'
+                  : `${form.NO_DE_IDENTIFICACION || ''} — ${form.APELLIDO_1 || ''} ${form.APELLIDO_2 || ''} ${form.NOMBRE_1 || ''} ${form.NOMBRE_2 || ''}`}
+              </div>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="btn-ghost text-sm">
-            <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Volver
+          <button type="button" onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+            style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FEE2E2'; e.currentTarget.style.color = '#B91C1C'; e.currentTarget.style.borderColor = '#FECACA' }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-canvas)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-subtle)' }}>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            Cerrar
           </button>
         </div>
+      </div>
 
+      <form onSubmit={handleSubmit}>
+        {/* Errores / Mensajes */}
         {error && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+          <div className="mx-5 mt-4 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            {error}
+          </div>
         )}
         {msg && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--success, #27ae60)', backgroundColor: '#E8F8F0' }}>{msg}</div>
+          <div className="mx-5 mt-4 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style={{ color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0' }}>
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {msg}
+          </div>
         )}
 
-        <div className="flex gap-1 mb-4 overflow-x-auto">
-          {SECCIONES.map((sec, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setActiveSection(i)}
-              className="px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors"
-              style={{
-                backgroundColor: activeSection === i ? 'var(--primary)' : 'var(--bg-secondary)',
-                color: activeSection === i ? 'white' : 'var(--text)',
-              }}
-            >
-              {sec.titulo}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-2">
-          {SECCIONES[activeSection].fields.map((fieldDef) => renderField(fieldDef))}
-        </div>
-
-        <div className="flex items-center justify-between pt-4 mt-4 border-t" style={{ borderColor: 'var(--border)' }}>
-          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            Seccion {activeSection + 1} de {SECCIONES.length}
+        {/* Navegacion de secciones */}
+        <div className="px-5 pt-4">
+          <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+            {SECCIONES.map((sec, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActiveSection(i)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all"
+                style={{
+                  backgroundColor: activeSection === i ? 'var(--green-500)' : 'transparent',
+                  color: activeSection === i ? '#fff' : 'var(--text-secondary)',
+                  border: activeSection === i ? '1px solid var(--green-500)' : '1px solid transparent',
+                }}
+                onMouseEnter={(e) => { if (activeSection !== i) { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-700)' } }}
+                onMouseLeave={(e) => { if (activeSection !== i) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d={sec.icono} /></svg>
+                {sec.titulo}
+              </button>
+            ))}
           </div>
-          <div className="flex gap-2">
-            {activeSection > 0 && (
-              <button type="button" onClick={() => setActiveSection(activeSection - 1)} className="btn-ghost text-sm">
-                Anterior
-              </button>
-            )}
-            {activeSection < SECCIONES.length - 1 && (
-              <button type="button" onClick={() => setActiveSection(activeSection + 1)} className="btn-secondary text-sm">
-                Siguiente
-              </button>
-            )}
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Guardando...' : mode === 'create' ? 'Guardar registro' : 'Actualizar registro'}
+        </div>
+
+        <div className="mx-5 mt-1" style={{ borderTop: '1px solid var(--border-subtle)' }} />
+
+        {/* Campos */}
+        <div className="px-5 py-4" style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {SECCIONES[activeSection].fields.map((fieldDef) => renderField(fieldDef))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
+          <div className="flex items-center gap-2">
+            {SECCIONES.map((_, i) => (
+              <button key={i} type="button" onClick={() => setActiveSection(i)}
+                className="rounded-full transition-all"
+                style={{
+                  width: activeSection === i ? '20px' : '8px', height: '8px',
+                  backgroundColor: activeSection === i ? 'var(--green-500)' : 'var(--border-subtle)',
+                }} />
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+              Cancelar
             </button>
+            {activeSection > 0 && (
+              <button type="button" onClick={() => setActiveSection(activeSection - 1)} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ color: 'var(--green-700)', border: '1px solid var(--green-200)', backgroundColor: 'var(--green-50)' }}>
+                &larr; Anterior
+              </button>
+            )}
+            {activeSection < SECCIONES.length - 1 ? (
+              <button type="button" onClick={() => setActiveSection(activeSection + 1)} className="px-4 py-1.5 rounded-lg text-xs font-medium" style={{ color: '#fff', backgroundColor: 'var(--green-500)', border: '1px solid var(--green-500)' }}>
+                Siguiente &rarr;
+              </button>
+            ) : (
+              <button type="submit" className="px-4 py-1.5 rounded-lg text-xs font-medium" disabled={saving} style={{ color: '#fff', backgroundColor: saving ? 'var(--text-muted)' : 'var(--green-600)', border: '1px solid var(--green-600)' }}>
+                {saving ? 'Guardando...' : mode === 'create' ? 'Guardar registro' : 'Actualizar registro'}
+              </button>
+            )}
           </div>
         </div>
       </form>

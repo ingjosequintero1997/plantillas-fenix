@@ -6,6 +6,14 @@ import ExcelJS from 'exceljs'
 
 const PAGE_SIZE = 50
 
+function fmtDate(v) {
+  if (!v) return '—'
+  const s = String(v).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(s)) return s.split(' ')[0]
+  return s
+}
+
 const INST_COLS = [
   { key: 'tipo_id', label: 'Tipo ID' },
   { key: 'numero_id', label: 'Número' },
@@ -636,10 +644,10 @@ export default function DataManagement({ correctedText }) {
                           {r.EDAD_ANOS ? `${r.EDAD_ANOS} años` : '—'}
                         </td>
                         <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
-                          {r.FUM || '—'}
+                          {fmtDate(r.FUM)}
                         </td>
                         <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
-                          {r.FPP || '—'}
+                          {fmtDate(r.FPP)}
                         </td>
                         <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {r.MUNICIPIO_DE_RESIDENCIA || '—'}
