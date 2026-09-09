@@ -101,7 +101,7 @@ export default function DataManagement({ correctedText }) {
     if (isIpsUser && ipsRows.length === 0 && !ipsLoading && !ipsLoadAttempted) {
       loadIpsData()
     }
-  }, [isIpsUser, ipsRows.length, ipsLoading, ipsLoadAttempted, loadIpsData])
+  }, [isIpsUser]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const downloadIpsExcel = async (ipsName) => {
     const usuarios = isIpsUser ? ipsRows : (filteredIpsGroups[ipsName] || [])

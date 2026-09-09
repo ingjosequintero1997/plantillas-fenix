@@ -4496,7 +4496,17 @@ async def mis_gestantes(current_user: User = Depends(get_current_user)):
 		ips_nombre = ""
 		if getattr(current_user, "role", "") == "ips_user":
 			ips_nombre = getattr(current_user, "ips_name", "") or ""
-		if not ips_nombre:
+		# Fallback: buscar ips_name en tabla usuarios_ips por uid
+		if not ips_nombre and getattr(current_user, "role", "") == "ips_user":
+			try:
+				_uid = getattr(current_user, "id", None)
+				if _uid:
+					_ips_row = db.query(UsuarioIPS).filter(UsuarioIPS.id == _uid).first()
+					if _ips_row:
+						ips_nombre = _ips_row.ips_name or ""
+			except Exception:
+				pass
+		if not ips_nombre and current_user.role == "ips_user":
 			raise HTTPException(status_code=400, detail="No se encontro IPS para este usuario")
 
 		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
