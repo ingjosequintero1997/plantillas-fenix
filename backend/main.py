@@ -449,6 +449,27 @@ def ensure_db_ready():
                 """))
     except Exception:
         pass
+    # Crear tabla system_config si no existe
+    try:
+        with engine.begin() as conn:
+            from sqlalchemy import text as _t2
+            is_pg2 = str(engine.url).startswith("postgresql")
+            if is_pg2:
+                conn.execute(_t2("""
+                    CREATE TABLE IF NOT EXISTS system_config (
+                        key VARCHAR(100) PRIMARY KEY,
+                        value VARCHAR(500) NOT NULL DEFAULT 'true'
+                    )
+                """))
+            else:
+                conn.execute(_t2("""
+                    CREATE TABLE IF NOT EXISTS system_config (
+                        key VARCHAR(100) PRIMARY KEY,
+                        value VARCHAR(500) NOT NULL DEFAULT 'true'
+                    )
+                """))
+    except Exception:
+        pass
     _db_ready = True
     # Seed: crear usuario IPS por cada IPS unica en gestantes
     try:
