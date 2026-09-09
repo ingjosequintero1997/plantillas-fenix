@@ -4485,7 +4485,7 @@ def _check_gestante_ips(db, current_user, registro_id):
 
 
 @app.get("/data/gestantes/mis-gestantes")
-async def mis_gestantes(current_user: User = Depends(get_current_user)):
+async def mis_gestantes(request: Request, current_user: User = Depends(get_current_user)):
 	"""Retorna TODA la data de las gestantes de la IPS del usuario logueado, leida del cargue."""
 	ensure_db_ready()
 	db = SessionLocal()
@@ -4494,20 +4494,34 @@ async def mis_gestantes(current_user: User = Depends(get_current_user)):
 		from sqlalchemy import text as sa_text
 
 		ips_nombre = ""
+		# 1) Intentar desde current_user
 		if getattr(current_user, "role", "") == "ips_user":
 			ips_nombre = getattr(current_user, "ips_name", "") or ""
-		# Fallback: buscar ips_name en tabla usuarios_ips por uid
-		if not ips_nombre and getattr(current_user, "role", "") == "ips_user":
+		# 2) Decodificar token JWT directamente del header
+		if not ips_nombre:
+			try:
+				auth_header = request.headers.get("authorization", "")
+				if auth_header.startswith("Bearer "):
+					token_str = auth_header[7:]
+					b64_part = token_str.split(".")[0]
+					# Agregar padding
+					padded = b64_part + "=" * (4 - len(b64_part) % 4)
+					decoded = json.loads(base64.urlsafe_b64decode(padded))
+					ips_nombre = decoded.get("ips_name", "")
+			except Exception:
+				pass
+		# 3) Buscar en usuarios_ips por uid
+		if not ips_nombre:
 			try:
 				_uid = getattr(current_user, "id", None)
 				if _uid:
-					_ips_row = db.query(UsuarioIPS).filter(UsuarioIPS.id == _uid).first()
+					_ips_row = db.query(UsuarioIPS).filter(UsuarioIPS.id == int(_uid)).first()
 					if _ips_row:
 						ips_nombre = _ips_row.ips_name or ""
 			except Exception:
 				pass
-		if not ips_nombre and current_user.role == "ips_user":
-			raise HTTPException(status_code=400, detail="No se encontro IPS para este usuario")
+		if not ips_nombre:
+			return {"columns": [], "rows": [], "total": 0, "ips_name": "", "error": "No se encontro IPS para este usuario"}
 
 		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
 		if not cargues:
