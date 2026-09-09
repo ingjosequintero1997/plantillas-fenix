@@ -3862,6 +3862,8 @@ async def set_admin_config(payload: dict, current_user: User = Depends(get_curre
 	value = (payload or {}).get("value", "")
 	if not key:
 		raise HTTPException(status_code=400, detail="Falta key")
+	# Guardar como string lowercase para consistencia
+	value_str = "true" if value in (True, "true", "True", "1", "yes") else "false"
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
@@ -3869,7 +3871,7 @@ async def set_admin_config(payload: dict, current_user: User = Depends(get_curre
 		db.execute(sa_text(
 			"INSERT INTO system_config (key, value) VALUES (:k, :v) "
 			"ON CONFLICT (key) DO UPDATE SET value = :v"
-		), {"k": key, "v": str(value)})
+		), {"k": key, "v": value_str})
 		db.commit()
 		return {"ok": True}
 	except Exception:
@@ -3878,7 +3880,7 @@ async def set_admin_config(payload: dict, current_user: User = Depends(get_curre
 			db.execute(sa_text(
 				"INSERT INTO system_config (key, value) VALUES (:k, :v) "
 				"ON CONFLICT (key) DO UPDATE SET value = :v"
-			), {"k": key, "v": str(value)})
+			), {"k": key, "v": value_str})
 			db.commit()
 			return {"ok": True}
 		except Exception as e:
@@ -3943,8 +3945,8 @@ async def get_public_config():
 		except Exception:
 			config = {}
 		return {
-			"cargue_masivo": config.get("cargue_masivo", "true") == "true",
-			"historias_pdf": config.get("historias_pdf", "true") == "true",
+			"cargue_masivo": config.get("cargue_masivo", "true").lower() in ("true", "1", "yes"),
+			"historias_pdf": config.get("historias_pdf", "true").lower() in ("true", "1", "yes"),
 		}
 	except Exception:
 		return {"cargue_masivo": True, "historias_pdf": True}
