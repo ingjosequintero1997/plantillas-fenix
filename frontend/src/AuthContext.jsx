@@ -16,8 +16,14 @@ function getApiBase() {
 
 async function fetchSystemConfig() {
   try {
-    const r = await fetch(`${getApiBase()}/config/public?t=${Date.now()}`, { cache: 'no-store' })
-    if (r.ok) return await r.json()
+    const r = await fetch(`${getApiBase()}/config/public?_=${Date.now()}`, { cache: 'no-store' })
+    if (r.ok) {
+      const data = await r.json()
+      return {
+        cargue_masivo: data.cargue_masivo === true || data.cargue_masivo === 'true',
+        historias_pdf: data.historias_pdf === true || data.historias_pdf === 'true',
+      }
+    }
   } catch {}
   return { cargue_masivo: true, historias_pdf: true }
 }
@@ -25,38 +31,42 @@ async function fetchSystemConfig() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStored())
   const [systemConfig, setSystemConfig] = useState({ cargue_masivo: true, historias_pdf: true })
-  const [checked, setChecked] = useState(false)
+  const [ready, setReady] = useState(false)
 
   const isAuthenticated = !!user
 
-  // Al montar: verificar si el token del IPS sigue valido
   useEffect(() => {
     const stored = getStored()
-    if (!stored?.token || stored?.role !== 'ips_user') {
-      setChecked(true)
+    if (!stored) {
+      setReady(true)
       return
     }
-    const base = getApiBase()
-    fetch(`${base}/auth/verify-ips-active`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${stored.token}` },
-    }).then((r) => {
-      if (!r.ok) {
-        sessionStorage.removeItem('auth')
-        setUser(null)
-      }
-      setChecked(true)
-    }).catch(() => {
-      setChecked(true)
-    })
-  }, [])
 
-  // Cargar config para IPS
-  useEffect(() => {
-    if (user?.role === 'ips_user') {
-      fetchSystemConfig().then(setSystemConfig)
+    const base = getApiBase()
+
+    if (stored.role === 'ips_user') {
+      fetch(`${base}/auth/verify-ips-active`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${stored.token}` },
+      }).then(async (r) => {
+        if (!r.ok) {
+          sessionStorage.removeItem('auth')
+          setUser(null)
+          setReady(true)
+          return
+        }
+        const cfg = await fetchSystemConfig()
+        setSystemConfig(cfg)
+        setReady(true)
+      }).catch(async () => {
+        const cfg = await fetchSystemConfig()
+        setSystemConfig(cfg)
+        setReady(true)
+      })
+    } else {
+      setReady(true)
     }
-  }, [user?.role])
+  }, [])
 
   const login = useCallback(async (username, password) => {
     const base = getApiBase()
@@ -131,9 +141,7 @@ export function AuthProvider({ children }) {
     setSystemConfig({ cargue_masivo: true, historias_pdf: true })
   }, [])
 
-  if (!checked && user?.role === 'ips_user') {
-    return null
-  }
+  if (!ready) return null
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, login, loginIps, logout, systemConfig, refreshConfig }}>
