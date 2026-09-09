@@ -16,7 +16,7 @@ function getApiBase() {
 
 async function fetchSystemConfig() {
   try {
-    const r = await fetch(`${getApiBase()}/config/public`)
+    const r = await fetch(`${getApiBase()}/config/public?t=${Date.now()}`, { cache: 'no-store' })
     if (r.ok) return await r.json()
   } catch {}
   return { cargue_masivo: true, historias_pdf: true }
