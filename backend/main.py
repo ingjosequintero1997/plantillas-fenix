@@ -2900,7 +2900,7 @@ async def indicadores_endpoint(payload: dict):
 
 
 @app.post("/indicadores-de-cargue/{cargue_id}")
-async def indicadores_de_cargue(cargue_id: int, current_user: User = Depends(get_current_user)):
+async def indicadores_de_cargue(cargue_id: int, body: dict = Body(default={}), current_user: User = Depends(get_current_user)):
 	"""Calcula los indicadores directamente desde un cargue guardado en la BD."""
 	ensure_db_ready()
 	db = SessionLocal()
@@ -2918,7 +2918,14 @@ async def indicadores_de_cargue(cargue_id: int, current_user: User = Depends(get
 				pass
 		if not text or not text.strip():
 			raise HTTPException(status_code=400, detail="El cargue no tiene datos validos")
-		# Reutilizar la logica del endpoint /indicadores con el texto del cargue
+		ips_name = (body or {}).get("ips_name", "")
+		if ips_name and text.strip():
+			lines = text.strip().split("\n")
+			header = lines[0] if lines else ""
+			data_lines = lines[1:] if len(lines) > 1 else []
+			ips_norm = _norm(ips_name)
+			filtered = [l for l in data_lines if ips_norm in _norm(l)]
+			text = header + "\n" + "\n".join(filtered) if filtered else header
 		return await indicadores_endpoint({
 			"template_key": cargue.template_key or "gestante",
 			"corrected_text": text,
@@ -2928,7 +2935,7 @@ async def indicadores_de_cargue(cargue_id: int, current_user: User = Depends(get
 
 
 @app.post("/indicadores-excel/{cargue_id}")
-async def indicadores_excel(cargue_id: int, current_user: User = Depends(get_current_user)):
+async def indicadores_excel(cargue_id: int, body: dict = Body(default={}), current_user: User = Depends(get_current_user)):
 	"""Exporta los indicadores PARE MM de un cargue a Excel."""
 	ensure_db_ready()
 	db = SessionLocal()
@@ -2946,6 +2953,14 @@ async def indicadores_excel(cargue_id: int, current_user: User = Depends(get_cur
 				pass
 		if not text or not text.strip():
 			raise HTTPException(status_code=400, detail="El cargue no tiene datos validos")
+		ips_name = (body or {}).get("ips_name", "")
+		if ips_name and text.strip():
+			lines = text.strip().split("\n")
+			header = lines[0] if lines else ""
+			data_lines = lines[1:] if len(lines) > 1 else []
+			ips_norm = _norm(ips_name)
+			filtered = [l for l in data_lines if ips_norm in _norm(l)]
+			text = header + "\n" + "\n".join(filtered) if filtered else header
 		data = await indicadores_endpoint({
 			"template_key": cargue.template_key or "gestante",
 			"corrected_text": text,

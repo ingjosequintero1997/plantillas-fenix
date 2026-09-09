@@ -456,18 +456,20 @@ export async function setupGestantes() {
 
 // Calcula los indicadores directamente desde un cargue guardado en la BD.
 // El backend lee y descomprime el cargue, evitando problemas de transferencia.
-export async function fetchIndicadoresDeCargue(cargueId) {
+export async function fetchIndicadoresDeCargue(cargueId, ipsName = '') {
   return apiFetch(`${API_BASE}/indicadores-de-cargue/${cargueId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ips_name: ipsName || '' }),
   })
 }
 
 // Descarga el Excel con los indicadores PARE MM de un cargue.
-export async function descargarIndicadoresExcel(cargueId, filename = 'indicadores_pare_mm.xlsx') {
+export async function descargarIndicadoresExcel(cargueId, filename = 'indicadores_pare_mm.xlsx', ipsName = '') {
   const resp = await fetch(`${API_BASE}/indicadores-excel/${cargueId}`, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ips_name: ipsName || '' }),
   })
   if (!resp.ok) {
     let msg = 'Error al descargar'
