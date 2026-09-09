@@ -452,22 +452,13 @@ def ensure_db_ready():
     # Crear tabla system_config si no existe
     try:
         with engine.begin() as conn:
-            from sqlalchemy import text as _t2
-            is_pg2 = str(engine.url).startswith("postgresql")
-            if is_pg2:
-                conn.execute(_t2("""
-                    CREATE TABLE IF NOT EXISTS system_config (
-                        key VARCHAR(100) PRIMARY KEY,
-                        value VARCHAR(500) NOT NULL DEFAULT 'true'
-                    )
-                """))
-            else:
-                conn.execute(_t2("""
-                    CREATE TABLE IF NOT EXISTS system_config (
-                        key VARCHAR(100) PRIMARY KEY,
-                        value VARCHAR(500) NOT NULL DEFAULT 'true'
-                    )
-                """))
+            from sqlalchemy import text as _t3
+            conn.execute(_t3("""
+                CREATE TABLE IF NOT EXISTS system_config (
+                    key VARCHAR(100) PRIMARY KEY,
+                    value VARCHAR(500) NOT NULL DEFAULT 'true'
+                )
+            """))
     except Exception:
         pass
     _db_ready = True
@@ -3886,26 +3877,24 @@ async def set_admin_config(payload: dict, current_user: User = Depends(get_curre
 	# Guardar como string lowercase para consistencia
 	value_str = "true" if value in (True, "true", "True", "1", "yes") else "false"
 	ensure_db_ready()
+	from sqlalchemy import text as sa_text
+	# Asegurar que la tabla existe
+	try:
+		with engine.begin() as conn:
+			conn.execute(sa_text("CREATE TABLE IF NOT EXISTS system_config (key VARCHAR(100) PRIMARY KEY, value VARCHAR(500) NOT NULL DEFAULT 'true')"))
+	except Exception:
+		pass
 	db = SessionLocal()
 	try:
-		from sqlalchemy import text as sa_text
 		db.execute(sa_text(
 			"INSERT INTO system_config (key, value) VALUES (:k, :v) "
 			"ON CONFLICT (key) DO UPDATE SET value = :v"
 		), {"k": key, "v": value_str})
 		db.commit()
-		return {"ok": True}
-	except Exception:
-		try:
-			db.execute(sa_text("CREATE TABLE IF NOT EXISTS system_config (key VARCHAR(100) PRIMARY KEY, value VARCHAR(500))"))
-			db.execute(sa_text(
-				"INSERT INTO system_config (key, value) VALUES (:k, :v) "
-				"ON CONFLICT (key) DO UPDATE SET value = :v"
-			), {"k": key, "v": value_str})
-			db.commit()
-			return {"ok": True}
-		except Exception as e:
-			raise HTTPException(status_code=500, detail=str(e)[:200])
+		return {"ok": True, "key": key, "value": value_str}
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(status_code=500, detail=str(e)[:200])
 	finally:
 		db.close()
 
