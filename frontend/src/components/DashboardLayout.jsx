@@ -26,6 +26,8 @@ const GESTION_ITEMS = [
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
     icon: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7' },
+  { key: 'configuracion', label: 'Configuracion', roles: ['admin'],
+    icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
 const IPS_MENU_ITEMS = [
@@ -50,6 +52,7 @@ const META = {
   prestadores: { title: 'Usuarios', sub: 'Prestadores y lideres de programa' },
   data: { title: 'Gestion de data', sub: 'Ver y editar registros de gestantes' },
   indicadores: { title: 'Indicadores', sub: 'Metricas y estadisticas' },
+  configuracion: { title: 'Configuracion', sub: 'Gestion de accesos y modulos' },
 }
 const ROLE_TITLE = { historial: { admin: 'Verificar data', lider: 'Verificar data', prestador: 'Mis cargues' } }
 

@@ -20,6 +20,7 @@ import Pagination from './components/Pagination'
 const HistorialView = lazy(() => import('./components/HistorialView'))
 const PrestadoresView = lazy(() => import('./components/PrestadoresView'))
 const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
+const ConfiguracionView = lazy(() => import('./components/ConfiguracionView'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
@@ -711,6 +712,13 @@ export default function App() {
             {section === 'indicadores' && (
               <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
                 <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} ipsName={user?.role === 'ips_user' ? user?.ips_name || '' : ''} />
+              </Suspense>
+            )}
+
+            {/* ─── CONFIGURACION ─── */}
+            {section === 'configuracion' && (
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <ConfiguracionView />
               </Suspense>
             )}
 

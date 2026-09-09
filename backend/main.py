@@ -3808,6 +3808,101 @@ async def listar_ips(current_user: User = Depends(get_current_user)):
 		db.close()
 
 
+@app.get("/admin/config")
+async def get_admin_config(current_user: User = Depends(get_current_user)):
+	"""Devuelve la configuracion global del sistema."""
+	if current_user.role != "admin":
+		raise HTTPException(status_code=403, detail="Solo admin")
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text as sa_text
+		row = db.execute(sa_text("SELECT key, value FROM system_config")).fetchall()
+		config = {r[0]: r[1] for r in row}
+		return config
+	except Exception:
+		return {"cargue_masivo": "true", "historias_pdf": "true"}
+	finally:
+		db.close()
+
+
+@app.post("/admin/config")
+async def set_admin_config(payload: dict, current_user: User = Depends(get_current_user)):
+	"""Guarda un valor de configuracion global."""
+	if current_user.role != "admin":
+		raise HTTPException(status_code=403, detail="Solo admin")
+	key = (payload or {}).get("key", "")
+	value = (payload or {}).get("value", "")
+	if not key:
+		raise HTTPException(status_code=400, detail="Falta key")
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text as sa_text
+		db.execute(sa_text(
+			"INSERT INTO system_config (key, value) VALUES (:k, :v) "
+			"ON CONFLICT (key) DO UPDATE SET value = :v"
+		), {"k": key, "v": str(value)})
+		db.commit()
+		return {"ok": True}
+	except Exception:
+		try:
+			db.execute(sa_text("CREATE TABLE IF NOT EXISTS system_config (key VARCHAR(100) PRIMARY KEY, value VARCHAR(500))"))
+			db.execute(sa_text(
+				"INSERT INTO system_config (key, value) VALUES (:k, :v) "
+				"ON CONFLICT (key) DO UPDATE SET value = :v"
+			), {"k": key, "v": str(value)})
+			db.commit()
+			return {"ok": True}
+		except Exception as e:
+			raise HTTPException(status_code=500, detail=str(e)[:200])
+	finally:
+		db.close()
+
+
+@app.get("/admin/ips-list")
+async def admin_list_ips(current_user: User = Depends(get_current_user)):
+	"""Lista todas las IPS registradas con su estado."""
+	if current_user.role != "admin":
+		raise HTTPException(status_code=403, detail="Solo admin")
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		rows = db.query(UsuarioIPS).order_by(UsuarioIPS.ips_name).all()
+		result = [{"id": r.id, "username": r.username, "ips_name": r.ips_name, "active": r.active} for r in rows]
+		return {"ips": result}
+	except Exception as e:
+		return {"ips": [], "error": str(e)[:200]}
+	finally:
+		db.close()
+
+
+@app.post("/admin/ips-toggle")
+async def admin_toggle_ips(payload: dict, current_user: User = Depends(get_current_user)):
+	"""Habilita o deshabilita una IPS."""
+	if current_user.role != "admin":
+		raise HTTPException(status_code=403, detail="Solo admin")
+	ips_id = (payload or {}).get("ips_id")
+	active = (payload or {}).get("active")
+	if ips_id is None or active is None:
+		raise HTTPException(status_code=400, detail="Falta ips_id o active")
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		ips = db.get(UsuarioIPS, int(ips_id))
+		if not ips:
+			raise HTTPException(status_code=404, detail="IPS no encontrada")
+		ips.active = bool(active)
+		db.commit()
+		return {"ok": True, "ips_id": ips.id, "active": ips.active}
+	except HTTPException:
+		raise
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=str(e)[:200])
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/diagnostico")
 async def diagnosticar_gestantes(current_user: User = Depends(get_current_user)):
 	"""Diagnostico: muestra valores unicos de NOMBRE_DE_LA_IPS_PRIMARIA y un sample de registros."""
