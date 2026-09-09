@@ -37,7 +37,8 @@ export function AuthProvider({ children }) {
       return
     }
     const base = getApiBase()
-    fetch(`${base}/templates`, {
+    fetch(`${base}/auth/verify-ips-active`, {
+      method: 'POST',
       headers: { Authorization: `Bearer ${stored.token}` },
     }).then((r) => {
       if (!r.ok) {

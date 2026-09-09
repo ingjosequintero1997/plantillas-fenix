@@ -119,6 +119,28 @@ async def auth_me(current_user: User = Depends(get_current_user)):
     }
 
 
+@app.post("/auth/verify-ips-active")
+async def verify_ips_active(current_user: User = Depends(get_current_user)):
+	"""Verifica si la IPS del token sigue activa en la BD."""
+	if current_user.role != "ips_user":
+		return {"active": True}
+	db = SessionLocal()
+	try:
+		ips = db.query(UsuarioIPS).filter(
+			UsuarioIPS.username == current_user.username,
+			UsuarioIPS.active == True,
+		).first()
+		if not ips:
+			raise HTTPException(status_code=401, detail="IPS deshabilitada")
+		return {"active": True}
+	except HTTPException:
+		raise
+	except Exception:
+		raise HTTPException(status_code=500, detail="Error verificando IPS")
+	finally:
+		db.close()
+
+
 # ─── Auth IPS ──────────────────────────────────────────────────────────────
 
 @app.post("/auth/ips-login")
