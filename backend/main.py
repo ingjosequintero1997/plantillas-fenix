@@ -57,7 +57,7 @@ try:
         verify_token,
         TOKEN_SECRET,
     )
-    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS
+    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
     from . import gcs_storage
     from . import corporate_db
 except ImportError:
@@ -70,7 +70,7 @@ except ImportError:
         verify_token,
         TOKEN_SECRET,
     )
-    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS
+    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
     import gcs_storage
     import corporate_db
 
@@ -424,9 +424,9 @@ def ensure_db_ready():
         pass
     # Crear tabla usuarios_ips si no existe
     try:
-        with engine.begin() as conn:
+        with db_engine.begin() as conn:
             from sqlalchemy import text as _t
-            is_pg = str(engine.url).startswith("postgresql")
+            is_pg = str(db_engine.url).startswith("postgresql")
             if is_pg:
                 conn.execute(_t("""
                     CREATE TABLE IF NOT EXISTS usuarios_ips (
@@ -451,7 +451,7 @@ def ensure_db_ready():
         pass
     # Crear tabla system_config si no existe
     try:
-        with engine.begin() as conn:
+        with db_engine.begin() as conn:
             from sqlalchemy import text as _t3
             conn.execute(_t3("""
                 CREATE TABLE IF NOT EXISTS system_config (
@@ -3880,7 +3880,7 @@ async def set_admin_config(payload: dict, current_user: User = Depends(get_curre
 	from sqlalchemy import text as sa_text
 	# Asegurar que la tabla existe
 	try:
-		with engine.begin() as conn:
+		with db_engine.begin() as conn:
 			conn.execute(sa_text("CREATE TABLE IF NOT EXISTS system_config (key VARCHAR(100) PRIMARY KEY, value VARCHAR(500) NOT NULL DEFAULT 'true')"))
 	except Exception:
 		pass
