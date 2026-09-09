@@ -89,6 +89,7 @@ export default function DataManagement({ correctedText }) {
       const data = await fetchMisGestantes()
       setIpsRows(data.rows || [])
       setIpsColumns(data.columns || [])
+      setIpsLoadAttempted(true)
     } catch (e) {
       setError(e.message || 'Error cargando gestantes')
       setIpsLoadAttempted(true)
@@ -98,10 +99,17 @@ export default function DataManagement({ correctedText }) {
   }, [isIpsUser])
 
   useEffect(() => {
-    if (isIpsUser && ipsRows.length === 0 && !ipsLoading && !ipsLoadAttempted) {
+    if (isIpsUser && !ipsLoadAttempted && !ipsLoading) {
       loadIpsData()
     }
-  }, [isIpsUser]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isIpsUser, ipsLoadAttempted, ipsLoading, loadIpsData])
+
+  useEffect(() => {
+    if (!isIpsUser) {
+      setIpsLoadAttempted(false)
+      setIpsRows([])
+    }
+  }, [isIpsUser])
 
   const downloadIpsExcel = async (ipsName) => {
     const usuarios = isIpsUser ? ipsRows : (filteredIpsGroups[ipsName] || [])
