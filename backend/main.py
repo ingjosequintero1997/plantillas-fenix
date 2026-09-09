@@ -574,7 +574,7 @@ async def get_template(template_key: str = Query(default="gestante")):
 @app.get("/templates")
 async def get_templates(current_user: User = Depends(get_current_user)):
 	all_templates = list_templates_meta()
-	if current_user.role == "admin":
+	if current_user.role in ("admin", "ips_user"):
 		return {"templates": all_templates}
 	# Prestador: solo las plantillas que tiene asignadas
 	db = SessionLocal()
@@ -2920,6 +2920,13 @@ async def indicadores_de_cargue(cargue_id: int, body: dict = Body(default={}), c
 			raise HTTPException(status_code=400, detail="El cargue no tiene datos validos")
 		ips_name = (body or {}).get("ips_name", "")
 		if ips_name and text.strip():
+			import unicodedata as _ud
+			def _norm(s):
+				s = str(s).strip()
+				s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+				s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+				s = '__'.join(filter(None, s.split('__')))
+				return s.strip('_')
 			lines = text.strip().split("\n")
 			header = lines[0] if lines else ""
 			data_lines = lines[1:] if len(lines) > 1 else []
@@ -2955,6 +2962,13 @@ async def indicadores_excel(cargue_id: int, body: dict = Body(default={}), curre
 			raise HTTPException(status_code=400, detail="El cargue no tiene datos validos")
 		ips_name = (body or {}).get("ips_name", "")
 		if ips_name and text.strip():
+			import unicodedata as _ud
+			def _norm(s):
+				s = str(s).strip()
+				s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+				s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+				s = '__'.join(filter(None, s.split('__')))
+				return s.strip('_')
 			lines = text.strip().split("\n")
 			header = lines[0] if lines else ""
 			data_lines = lines[1:] if len(lines) > 1 else []
