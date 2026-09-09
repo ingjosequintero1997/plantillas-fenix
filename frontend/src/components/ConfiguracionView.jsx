@@ -48,7 +48,11 @@ export default function ConfiguracionView() {
       const r = await fetch(`${API}/admin/config`, { headers: authHeaders() })
       if (r.ok) {
         const d = await r.json()
-        setConfig((prev) => ({ ...prev, ...d }))
+        const parsed = {}
+        for (const [k, v] of Object.entries(d)) {
+          parsed[k] = v === true || v === 'true' || v === '1' || v === 'yes'
+        }
+        setConfig((prev) => ({ ...prev, ...parsed }))
       }
     } catch {}
   }
