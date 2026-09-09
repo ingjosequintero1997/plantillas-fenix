@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 const AuthContext = createContext(null)
 
@@ -11,13 +10,32 @@ function getStored() {
   } catch { return null }
 }
 
+function getApiBase() {
+  return (import.meta.env.VITE_API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api')).trim().replace(/\/+$/, '')
+}
+
+async function fetchSystemConfig() {
+  try {
+    const r = await fetch(`${getApiBase()}/config/public`)
+    if (r.ok) return await r.json()
+  } catch {}
+  return { cargue_masivo: true, historias_pdf: true }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStored())
+  const [systemConfig, setSystemConfig] = useState({ cargue_masivo: true, historias_pdf: true })
 
   const isAuthenticated = !!user
 
+  useEffect(() => {
+    if (user?.role === 'ips_user') {
+      fetchSystemConfig().then(setSystemConfig)
+    }
+  }, [user?.role])
+
   const login = useCallback(async (username, password) => {
-    const base = (import.meta.env.VITE_API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api')).trim().replace(/\/+$/, '')
+    const base = getApiBase()
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 25000)
     try {
@@ -46,7 +64,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const loginIps = useCallback(async (username, password) => {
-    const base = (import.meta.env.VITE_API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api')).trim().replace(/\/+$/, '')
+    const base = getApiBase()
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 25000)
     try {
@@ -66,6 +84,8 @@ export function AuthProvider({ children }) {
       const userData = { ...data.user, token: data.token, role: 'ips_user' }
       sessionStorage.setItem('auth', JSON.stringify(userData))
       setUser(userData)
+      const cfg = await fetchSystemConfig()
+      setSystemConfig(cfg)
     } catch (e) {
       if (e.name === 'AbortError') throw new Error('La conexion tardo demasiado.')
       throw e
@@ -74,13 +94,19 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  const refreshConfig = useCallback(async () => {
+    const cfg = await fetchSystemConfig()
+    setSystemConfig(cfg)
+  }, [])
+
   const logout = useCallback(() => {
     sessionStorage.removeItem('auth')
     setUser(null)
+    setSystemConfig({ cargue_masivo: true, historias_pdf: true })
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, loginIps, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, loginIps, logout, systemConfig, refreshConfig }}>
       {children}
     </AuthContext.Provider>
   )

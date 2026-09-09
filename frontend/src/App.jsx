@@ -21,6 +21,7 @@ const HistorialView = lazy(() => import('./components/HistorialView'))
 const PrestadoresView = lazy(() => import('./components/PrestadoresView'))
 const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
 const ConfiguracionView = lazy(() => import('./components/ConfiguracionView'))
+const CargueMasivoIPS = lazy(() => import('./components/CargueMasivoIPS'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
@@ -76,7 +77,7 @@ function maybeDecompress(data) {
 }
 
 export default function App() {
-  const { user } = useAuth()
+  const { user, systemConfig } = useAuth()
 
   const [section, setSection] = useState(user?.role === 'ips_user' ? 'data' : 'inicio')
   const [activeTemplate, setActiveTemplate] = useState('')
@@ -109,11 +110,13 @@ export default function App() {
   const [lastCargueId, setLastCargueId] = useState('')
 
   useEffect(() => {
-    const ipsSections = ['data', 'verificar', 'historias', 'indicadores']
+    const ipsSections = ['data', 'verificar', 'indicadores']
+    if (systemConfig.cargue_masivo !== false) ipsSections.push('cargue_masivo')
+    if (systemConfig.historias_pdf !== false) ipsSections.push('historias')
     if (user?.role === 'ips_user' && !ipsSections.includes(section)) {
       setSection('data')
     }
-  }, [user, section])
+  }, [user, section, systemConfig])
 
   const isAdmin = user?.role === 'admin'
   // Los prestadores y lideres solo validan: forzar modo validador para ellos.
@@ -401,6 +404,7 @@ export default function App() {
             templates={templates}
             activeTemplate={activeTemplate}
             onSelectTemplate={(key) => { handleSelectTemplate(key); setSection('inicio') }}
+            systemConfig={systemConfig}
           >
 
             {/* ─── INICIO ─── */}
@@ -698,6 +702,13 @@ export default function App() {
             {section === 'prestadores' && (
               <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
                 <PrestadoresView />
+              </Suspense>
+            )}
+
+            {/* ─── CARGUE MASIVO IPS ─── */}
+            {section === 'cargue_masivo' && (
+              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <CargueMasivoIPS onCargueComplete={() => setSection('data')} />
               </Suspense>
             )}
 

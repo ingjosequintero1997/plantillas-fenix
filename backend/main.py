@@ -456,6 +456,23 @@ def ensure_db_ready():
     except Exception:
         pass
 
+
+def _get_system_config(key, default="true"):
+    """Lee un valor de system_config. Retorna string."""
+    try:
+        db = SessionLocal()
+        try:
+            from sqlalchemy import text as _t
+            row = db.execute(_t("SELECT value FROM system_config WHERE key = :k"), {"k": key}).fetchone()
+            return row[0] if row else default
+        except Exception:
+            return default
+        finally:
+            db.close()
+    except Exception:
+        return default
+
+
 @app.get("/health")
 async def health():
 	return {"status": "ok"}
@@ -1304,6 +1321,11 @@ def _current_month() -> str:
 @app.post("/cargues")
 async def create_cargue(payload: CarguePayload, current_user: User = Depends(get_current_user)):
 	ensure_db_ready()
+	# Verificar si el cargue masivo esta habilitado para IPS
+	if current_user.role == "ips_user":
+		cargue_masivo = _get_system_config("cargue_masivo", "true")
+		if cargue_masivo != "true":
+			raise HTTPException(status_code=403, detail="El cargue masivo no esta habilitado. Contacta al administrador.")
 	db = SessionLocal()
 	try:
 		prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
@@ -1993,6 +2015,11 @@ async def upload_historia(
     current_user: User = Depends(get_current_user),
 ):
     ensure_db_ready()
+    # Verificar si historias PDF esta habilitado para IPS
+    if current_user.role == "ips_user":
+        historias_pdf = _get_system_config("historias_pdf", "true")
+        if historias_pdf != "true":
+            raise HTTPException(status_code=403, detail="El modulo de historias clinicas PDF no esta habilitado. Contacta al administrador.")
     filename = (file.filename or "historia.pdf").strip()
     content = file.file.read()
     if len(content) == 0:
@@ -3899,6 +3926,28 @@ async def admin_toggle_ips(payload: dict, current_user: User = Depends(get_curre
 		raise
 	except Exception as e:
 		raise HTTPException(status_code=500, detail=str(e)[:200])
+	finally:
+		db.close()
+
+
+@app.get("/config/public")
+async def get_public_config():
+	"""Devuelve la config global del sistema (sin auth, para todos los roles)."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text as sa_text
+		try:
+			row = db.execute(sa_text("SELECT key, value FROM system_config")).fetchall()
+			config = {r[0]: r[1] for r in row}
+		except Exception:
+			config = {}
+		return {
+			"cargue_masivo": config.get("cargue_masivo", "true") == "true",
+			"historias_pdf": config.get("historias_pdf", "true") == "true",
+		}
+	except Exception:
+		return {"cargue_masivo": True, "historias_pdf": True}
 	finally:
 		db.close()
 
