@@ -29,10 +29,21 @@ export function AuthProvider({ children }) {
   const isAuthenticated = !!user
 
   useEffect(() => {
-    if (user?.role === 'ips_user') {
+    if (user?.role === 'ips_user' && user?.token) {
       fetchSystemConfig().then(setSystemConfig)
+      // Verificar si el IPS sigue activo consultando un endpoint autenticado
+      const base = getApiBase()
+      fetch(`${base}/data/gestantes/mis-gestantes`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      }).then((r) => {
+        if (r.status === 401 || r.status === 403) {
+          sessionStorage.removeItem('auth')
+          setUser(null)
+          window.location.href = '/'
+        }
+      }).catch(() => {})
     }
-  }, [user?.role])
+  }, [user?.role, user?.token])
 
   const login = useCallback(async (username, password) => {
     const base = getApiBase()
@@ -78,6 +89,8 @@ export function AuthProvider({ children }) {
       if (!resp.ok) {
         let detail = 'Credenciales incorrectas'
         try { detail = JSON.parse(text).detail || detail } catch { detail = text || detail }
+        sessionStorage.removeItem('auth')
+        setUser(null)
         throw new Error(detail)
       }
       const data = JSON.parse(text)
