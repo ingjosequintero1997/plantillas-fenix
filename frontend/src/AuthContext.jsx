@@ -25,25 +25,37 @@ async function fetchSystemConfig() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStored())
   const [systemConfig, setSystemConfig] = useState({ cargue_masivo: true, historias_pdf: true })
+  const [checked, setChecked] = useState(false)
 
   const isAuthenticated = !!user
 
+  // Al montar: verificar si el token del IPS sigue valido
   useEffect(() => {
-    if (user?.role === 'ips_user' && user?.token) {
-      fetchSystemConfig().then(setSystemConfig)
-      // Verificar si el IPS sigue activo consultando un endpoint autenticado
-      const base = getApiBase()
-      fetch(`${base}/data/gestantes/mis-gestantes`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-      }).then((r) => {
-        if (r.status === 401 || r.status === 403) {
-          sessionStorage.removeItem('auth')
-          setUser(null)
-          window.location.href = '/'
-        }
-      }).catch(() => {})
+    const stored = getStored()
+    if (!stored?.token || stored?.role !== 'ips_user') {
+      setChecked(true)
+      return
     }
-  }, [user?.role, user?.token])
+    const base = getApiBase()
+    fetch(`${base}/templates`, {
+      headers: { Authorization: `Bearer ${stored.token}` },
+    }).then((r) => {
+      if (!r.ok) {
+        sessionStorage.removeItem('auth')
+        setUser(null)
+      }
+      setChecked(true)
+    }).catch(() => {
+      setChecked(true)
+    })
+  }, [])
+
+  // Cargar config para IPS
+  useEffect(() => {
+    if (user?.role === 'ips_user') {
+      fetchSystemConfig().then(setSystemConfig)
+    }
+  }, [user?.role])
 
   const login = useCallback(async (username, password) => {
     const base = getApiBase()
@@ -117,6 +129,10 @@ export function AuthProvider({ children }) {
     setUser(null)
     setSystemConfig({ cargue_masivo: true, historias_pdf: true })
   }, [])
+
+  if (!checked && user?.role === 'ips_user') {
+    return null
+  }
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, login, loginIps, logout, systemConfig, refreshConfig }}>
