@@ -88,13 +88,25 @@ def get_current_user(
     payload = verify_token(credentials.credentials)
     if payload is None:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    # Si el token es de un IPS user, siempre usar fallback para tener ips_name
+    if payload.get("role") == "ips_user":
+        fallback = User(
+            id=payload.get("uid") or 1,
+            username=payload.get("sub") or "",
+            password_hash="",
+            name=payload.get("name") or payload.get("ips_name") or "IPS",
+            role="ips_user",
+            active=True,
+        )
+        fallback.ips_name = payload.get("ips_name", "")
+        if payload.get("ips_code"):
+            fallback.ips_code = payload.get("ips_code", "")
+        return fallback
     try:
         user = db.get(User, payload.get("uid"))
     except Exception:
         user = None
     if user is None or not user.active:
-        # Fallback: si no hay BD, acepta el token firmado como fuente de verdad
-        # Para IPS users, incluir ips_name e ips_code del token
         fallback = User(
             id=payload.get("uid") or 1,
             username=payload.get("sub") or ADMIN_FALLBACK_USERNAME,
@@ -103,9 +115,6 @@ def get_current_user(
             role=payload.get("role") or "admin",
             active=True,
         )
-        # Agregar atributos IPS al usuario fallback desde el token
-        if payload.get("role") == "ips_user":
-            fallback.ips_name = payload.get("ips_name", "")
         return fallback
     return user
 

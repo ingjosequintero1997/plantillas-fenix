@@ -77,7 +77,7 @@ function maybeDecompress(data) {
 }
 
 export default function App() {
-  const { user, systemConfig } = useAuth()
+  const { user, systemConfig, refreshConfig } = useAuth()
 
   const [section, setSection] = useState(user?.role === 'ips_user' ? 'data' : 'inicio')
   const [activeTemplate, setActiveTemplate] = useState('')
@@ -405,6 +405,7 @@ export default function App() {
             activeTemplate={activeTemplate}
             onSelectTemplate={(key) => { handleSelectTemplate(key); setSection('inicio') }}
             systemConfig={systemConfig}
+            onRefreshConfig={refreshConfig}
           >
 
             {/* ─── INICIO ─── */}

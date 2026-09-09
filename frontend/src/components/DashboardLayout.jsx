@@ -116,12 +116,18 @@ function NavSection({ label, items, role, section, onNavigate, onSidebarClose })
   )
 }
 
-export default function DashboardLayout({ section, onNavigate, children, templates = [], activeTemplate = null, onSelectTemplate, systemConfig = {} }) {
+export default function DashboardLayout({ section, onNavigate, children, templates = [], activeTemplate = null, onSelectTemplate, systemConfig = {}, onRefreshConfig }) {
   const { user, logout } = useAuth()
   const [dark, setDark] = useState(false)
   const [open, setOpen] = useState(false)
 
   useEffect(() => { document.documentElement.classList.toggle('dark', dark) }, [dark])
+
+  useEffect(() => {
+    if (user?.role !== 'ips_user' || !onRefreshConfig) return
+    const interval = setInterval(() => { onRefreshConfig() }, 30000)
+    return () => clearInterval(interval)
+  }, [user?.role, onRefreshConfig])
 
   const role = user?.role || 'prestador'
   const roleLabel = user?.role === 'admin' ? 'Administrador' : user?.role === 'lider' ? 'Lider de Programa' : user?.role === 'ips_user' ? 'IPS' : 'Prestador'

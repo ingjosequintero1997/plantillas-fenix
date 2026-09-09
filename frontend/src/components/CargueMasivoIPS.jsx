@@ -1,13 +1,9 @@
 import React, { useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
 
-const ACCEPTED = '.txt,.csv,.xlsx,.xls'
-const MAX_SIZE_MB = 50
-
 export default function CargueMasivoIPS({ onCargueComplete }) {
   const { user } = useAuth()
   const [file, setFile] = useState(null)
-  const [templateKey, setTemplateKey] = useState('gestante')
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -17,12 +13,8 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
   const handleFile = useCallback((e) => {
     const f = e.target.files?.[0]
     if (!f) return
-    setError('')
-    setResult(null)
-    if (f.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`El archivo excede ${MAX_SIZE_MB} MB`)
-      return
-    }
+    setError(''); setResult(null)
+    if (f.size > 50 * 1024 * 1024) { setError('El archivo excede 50 MB'); return }
     setFile(f)
   }, [])
 
@@ -30,43 +22,30 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
     e.preventDefault()
     const f = e.dataTransfer.files?.[0]
     if (!f) return
-    setError('')
-    setResult(null)
-    if (f.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`El archivo excede ${MAX_SIZE_MB} MB`)
-      return
-    }
+    setError(''); setResult(null)
+    if (f.size > 50 * 1024 * 1024) { setError('El archivo excede 50 MB'); return }
     setFile(f)
   }, [])
 
   const handleUpload = useCallback(async () => {
     if (!file) return
-    setUploading(true)
-    setError('')
-    setResult(null)
+    setUploading(true); setError(''); setResult(null)
     try {
       const text = await file.text()
-      const compressed = false
       const r = await fetch(`${API}/cargues`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
         body: JSON.stringify({
           corrected_text: text,
           raw_text: text,
-          template_key: templateKey,
+          template_key: 'gestante',
           original_filename: file.name,
-          compressed,
+          compressed: false,
         }),
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.detail || 'Error al cargar archivo')
-      setResult({
-        id: data.id,
-        filename: file.name,
-        rows: data.row_count,
-        quality: data.quality_percent,
-        errors: data.errors_count,
-      })
+      setResult({ id: data.id, filename: file.name, rows: data.row_count, quality: data.quality_percent, errors: data.errors_count })
       setFile(null)
       if (onCargueComplete) onCargueComplete(data)
     } catch (e) {
@@ -74,75 +53,58 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
     } finally {
       setUploading(false)
     }
-  }, [file, templateKey, user?.token, API, onCargueComplete])
+  }, [file, user?.token, API, onCargueComplete])
 
   return (
     <div className="space-y-6 fade-in">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl" style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, #2C4A6F 50%, #4A6FA5 100%)', boxShadow: '0 8px 32px rgba(44,74,111,0.30)' }}>
+      <div className="relative overflow-hidden rounded-2xl" style={{ background: 'linear-gradient(135deg, #1a4731 0%, #15803d 50%, #22c55e 100%)', boxShadow: '0 8px 32px rgba(21,128,61,0.30)' }}>
         <div className="absolute -bottom-16 -right-16 w-72 h-72 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
         <div className="relative p-7">
-          <h1 className="text-xl font-bold" style={{ fontFamily: 'var(--font-display)', color: '#fff', letterSpacing: '-0.02em' }}>Cargue Masivo de Data</h1>
-          <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>Sube archivos Excel, TXT o CSV con datos de gestantes</p>
+          <h1 className="text-xl font-bold" style={{ fontFamily: 'var(--font-display)', color: '#fff', letterSpacing: '-0.02em' }}>Cargue Masivo</h1>
+          <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>Sube archivos Excel (.xlsx) o TXT con data de gestantes de tu IPS</p>
         </div>
       </div>
 
-      {error && <div className="px-4 py-2 rounded-md text-sm" style={{ color: '#DC2626', backgroundColor: '#FEE2E2' }}>{error}</div>}
+      {error && <div className="px-4 py-2 rounded-lg text-sm font-medium" style={{ color: '#991B1B', backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>{error}</div>}
 
       {result && (
-        <div className="px-4 py-3 rounded-md text-sm" style={{ color: '#15803D', backgroundColor: '#DCFCE7' }}>
-          <div className="font-medium mb-1">Archivo cargado exitosamente</div>
-          <div className="text-xs" style={{ color: '#166534' }}>
-            Archivo: {result.filename} | Registros: {result.rows} | Calidad: {result.quality}% | Errores: {result.errors}
+        <div className="px-4 py-3 rounded-lg text-sm" style={{ color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0' }}>
+          <div className="font-semibold mb-1">Cargue exitoso</div>
+          <div className="text-xs" style={{ color: '#15803D' }}>
+            {result.filename} — {result.rows} registros — {result.quality}% calidad — {result.errors} errores
           </div>
         </div>
       )}
 
-      {/* Upload area */}
-      <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2C4A6F' }}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-          </div>
-          <div>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Subir archivo</h2>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Formatos aceptados: Excel (.xlsx, .xls), TXT, CSV</p>
-          </div>
-        </div>
+      <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
+        <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Selecciona el archivo a subir</h2>
 
         <div
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
-          className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors"
-          style={{ borderColor: file ? '#2C4A6F' : 'var(--border-subtle)', backgroundColor: file ? '#F0F5FA' : 'var(--bg-canvas)' }}
           onClick={() => document.getElementById('file-input-ips').click()}
+          className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors hover:border-green-400 hover:bg-green-50/30"
+          style={{ borderColor: file ? '#15803d' : '#D1D5DB', backgroundColor: file ? '#F0FDF4' : 'transparent' }}
         >
-          <input id="file-input-ips" type="file" accept={ACCEPTED} onChange={handleFile} className="hidden" />
+          <input id="file-input-ips" type="file" accept=".txt,.csv,.xlsx,.xls" onChange={handleFile} className="hidden" />
           {file ? (
-            <div>
-              <svg className="w-10 h-10 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="#2C4A6F" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{file.name}</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</div>
+            <div className="flex items-center justify-center gap-3">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="#15803d" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <div className="text-left">
+                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{file.name}</div>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</div>
+              </div>
             </div>
           ) : (
             <div>
-              <svg className="w-10 h-10 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="var(--text-muted)" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-              <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Arrastra un archivo aqui o haz clic para seleccionar</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Maximo {MAX_SIZE_MB} MB</div>
+              <svg className="w-10 h-10 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+              <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Arrastra el archivo aqui o haz clic para seleccionar</div>
+              <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Formatos: .xlsx, .xls, .txt, .csv — Maximo 50 MB</div>
             </div>
           )}
         </div>
 
-        <div className="flex flex-wrap items-end gap-4 mt-4">
-          <div>
-            <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>Plantilla</label>
-            <select value={templateKey} onChange={(e) => setTemplateKey(e.target.value)} className="input" style={{ minWidth: 160 }}>
-              <option value="gestante">Gestante</option>
-              <option value="citologia">Citologia</option>
-              <option value="mamografia">Mamografia</option>
-              <option value="penta">Penta</option>
-            </select>
-          </div>
+        <div className="mt-4 flex justify-end">
           <button onClick={handleUpload} disabled={!file || uploading} className="btn-primary" style={{ opacity: !file || uploading ? 0.5 : 1 }}>
             {uploading ? (
               <span className="flex items-center gap-2">
@@ -154,14 +116,13 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
         </div>
       </div>
 
-      {/* Instrucciones */}
-      <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
-        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Instrucciones</h3>
+      <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Recomendaciones</h3>
         <ul className="text-xs space-y-2" style={{ color: 'var(--text-secondary)' }}>
-          <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#2C4A6F' }} />El archivo debe contener 200 columnas separadas por pipe (|) o tabulacion</li>
-          <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#2C4A6F' }} />La primera fila debe ser el encabezado con los nombres de las variables</li>
-          <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#2C4A6F' }} />Los registros deben pertenecer a tu IPS</li>
-          <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#2C4A6F' }} />El sistema validara la calidad de los datos automaticamente</li>
+          <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />El archivo debe ser un Excel (.xlsx) o TXT con 200 columnas separadas por pipe (|)</li>
+          <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />La primera fila debe contener los encabezados de las variables</li>
+          <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />Todos los registros deben pertenecer a tu IPS</li>
+          <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />El sistema validara automaticamente la calidad de la data</li>
         </ul>
       </div>
     </div>

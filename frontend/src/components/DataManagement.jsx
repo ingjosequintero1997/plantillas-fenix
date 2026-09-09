@@ -80,6 +80,8 @@ export default function DataManagement({ correctedText }) {
   const [ipsColumns, setIpsColumns] = useState([])
   const [ipsLoading, setIpsLoading] = useState(false)
 
+  const [ipsLoadAttempted, setIpsLoadAttempted] = useState(false)
+
   const loadIpsData = useCallback(async () => {
     if (!isIpsUser) return
     setIpsLoading(true); setError('')
@@ -89,16 +91,17 @@ export default function DataManagement({ correctedText }) {
       setIpsColumns(data.columns || [])
     } catch (e) {
       setError(e.message || 'Error cargando gestantes')
+      setIpsLoadAttempted(true)
     } finally {
       setIpsLoading(false)
     }
   }, [isIpsUser])
 
   useEffect(() => {
-    if (isIpsUser && ipsRows.length === 0 && !ipsLoading) {
+    if (isIpsUser && ipsRows.length === 0 && !ipsLoading && !ipsLoadAttempted) {
       loadIpsData()
     }
-  }, [isIpsUser, ipsRows.length, ipsLoading, loadIpsData])
+  }, [isIpsUser, ipsRows.length, ipsLoading, ipsLoadAttempted, loadIpsData])
 
   const downloadIpsExcel = async (ipsName) => {
     const usuarios = isIpsUser ? ipsRows : (filteredIpsGroups[ipsName] || [])
