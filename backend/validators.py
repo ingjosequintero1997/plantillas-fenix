@@ -1422,6 +1422,8 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		elif tipo == "DATE":
 			# Fechas: solo marca error si hay un valor que NO es fecha valida.
 			# Vacios y "SIN DATO" son permitidos (se pueden llenar despues).
+			# NO se aceptan fechas con componente de hora (YYYY-MM-DD HH:MM:SS):
+			# el instructivo exige formato de fecha (Año/Mes/Dia) sin hora.
 			no_vacio = ~vacio_mask
 			tiene_patron = no_vacio & ser_raw.str.contains(r"\d{4}", regex=True) & ser_raw.str.contains(r"[0-9]", regex=True)
 			parsed = pd.to_datetime(ser_raw.where(tiene_patron, pd.NaT), errors="coerce", dayfirst=True, format="mixed")
@@ -1433,8 +1435,10 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				if to_date_iso(ser_raw.iloc[ridx]) is not None:
 					ok_lento.iloc[ridx] = True
 			es_fecha = ok_fast | ok_lento
-			# Solo error si hay un valor NO vacio que NO es fecha
-			error_mask = no_vacio & (~es_fecha)
+			# Detectar componente de hora (HH:MM o HH:MM:SS) tras la fecha
+			tiene_hora = no_vacio & ser_raw.str.contains(r"\d{1,2}:\d{2}", regex=True)
+			# Solo error si hay un valor NO vacio que NO es fecha, o si trae hora
+			error_mask = (no_vacio & (~es_fecha)) | tiene_hora
 
 		elif tipo == "TEXT":
 			# TEXT es campo libre: acepta cualquier cosa incluyendo vacios,
@@ -1446,9 +1450,11 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		elif tipo == "NUMERIC":
 			# NUMERIC: acepta SOLO numeros (enteros o decimales).
 			# NO acepta "Sin dato", texto, fechas, ni vacios.
+			# Estos campos son sumatorias (HISTORIA REPRODUCTIVA, EMBARAZO ACTUAL,
+			# RIESGO PSICOSOCIAL, PUNTAJE TOTAL): siempre deben tener un numero.
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
 			es_numero = s.str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
-			error_mask = (~es_numero) & (~vacio_mask)
+			error_mask = ~es_numero
 
 		else:
 			error_mask = pd.Series(False, index=ser_raw.index)
@@ -1467,6 +1473,38 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 					"status": "error",
 				})
 			stats["errors"] += 1
+
+	# Validacion cruzada: si "Remitida a especialista?" = Si, el campo de
+	# especialistas NO puede estar vacio o "Sin dato" (debe indicar quien la atendio).
+	try:
+		_remitida_col = None
+		_espec_col = None
+		for _t in template:
+			_nt = normalize_text(_t["name"])
+			if _nt == "REMITIDA A ESPECIALISTA?":
+				_remitida_col = _t["name"]
+			elif _nt.startswith("DESCRIBA CUAL") and "ESPECIALISTA" in _nt:
+				_espec_col = _t["name"]
+		if _remitida_col and _espec_col and _remitida_col in df.columns and _espec_col in df.columns:
+			for _ridx in range(n):
+				_val_rem = str(df[_remitida_col].iloc[_ridx]).strip()
+				_val_esp = str(df[_espec_col].iloc[_ridx]).strip()
+				_rem_norm = normalize_text(_val_rem)
+				_es_si = _rem_norm in ("SI", "S", "1", "YES", "Y")
+				_esp_vacio = (not _val_esp) or normalize_text(_val_esp) in ("SIN DATO", "NA", "N/A", "NINGUNO", "NINGUNA", "NO APLICA", "NO DEFINIDO")
+				if _es_si and _esp_vacio:
+					filas_error.add(_ridx + 1)
+					if len(logs) < MAX_LOGS:
+						logs.append({
+							"row": _ridx + 1,
+							"column": _espec_col,
+							"original": _val_esp,
+							"corrected": "Indique la especialidad que atendio a la usuaria (Remitida a especialista = Si)",
+							"status": "error",
+						})
+					stats["errors"] += 1
+	except Exception:
+		pass
 
 	stats["rows_with_errors"] = len(filas_error)
 	stats["rows_ok"] = max(0, stats["total"] - len(filas_error))
