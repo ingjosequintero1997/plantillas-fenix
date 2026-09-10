@@ -3515,19 +3515,13 @@ def _buscar_afiliado(documento: str):
 				SELECT a.*, i."razon_social" as ips_nombre
 				FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
 				LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."ips"
-				WHERE a."{doc_col}" = :doc
+				WHERE a."{doc_col}" = :doc::varchar
 				LIMIT 1
 			'''
-			row = conn.execute(text(query), {"doc": doc_limpio}).fetchone()
-			if row is None and doc_limpio.isdigit():
-				query = f'''
-					SELECT a.*, i."razon_social" as ips_nombre
-					FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
-					LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."ips"
-					WHERE a."{doc_col}" = :doc::varchar
-					LIMIT 1
-				'''
+			try:
 				row = conn.execute(text(query), {"doc": doc_limpio}).fetchone()
+			except Exception:
+				row = None
 			if row is None:
 				return None, None
 			columnas = list(row._mapping.keys())
