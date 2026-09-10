@@ -43,6 +43,8 @@ export default function ValidationLogTable({ logs }) {
     return logs.filter((l) => l.status === 'error')
   }, [logs])
 
+  const filasConError = useMemo(() => new Set(errors.map((l) => l.row)).size, [errors])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return errors
@@ -79,7 +81,10 @@ export default function ValidationLogTable({ logs }) {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
-              {errors.length} error{errors.length !== 1 ? 'es' : ''}
+              {filasConError} fila{filasConError !== 1 ? 's' : ''} con error
+            </span>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: '#92400E', backgroundColor: '#FEF3C7' }}>
+              {errors.length} celda{errors.length !== 1 ? 's' : ''}
             </span>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)' }}>
               {new Set(errors.map((l) => l.column)).size} variables
@@ -143,7 +148,7 @@ export default function ValidationLogTable({ logs }) {
       {/* Pie: paginación */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
         <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          Mostrando {pageItems.length} de {filtered.length} errores
+          Mostrando {pageItems.length} de {filtered.length} celdas con error
         </span>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">

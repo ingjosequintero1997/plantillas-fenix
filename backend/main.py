@@ -3111,7 +3111,7 @@ async def descargar_reporte_errores_excel(cargue_id: int, current_user: User = D
 				pass
 		if not text or not text.strip():
 			raise HTTPException(status_code=400, detail="El cargue no tiene datos validos")
-		errors_by_cell = _errores_rapidos(text, cargue.template_key or "gestante")
+		errors_by_cell = _errores_rapidos_con_crossfield(text, cargue.template_key or "gestante")
 		meta = get_template_by_key(cargue.template_key or "gestante")
 		tmpl = meta["template"]
 		try:
@@ -3137,7 +3137,7 @@ async def reporte_errores_excel_data(payload: dict):
 	corrected_text = payload.get("corrected_text", "")
 	if not corrected_text or not corrected_text.strip():
 		raise HTTPException(status_code=400, detail="No hay datos para validar")
-	errors_by_cell = _errores_rapidos(corrected_text, template_key)
+	errors_by_cell = _errores_rapidos_con_crossfield(corrected_text, template_key)
 	meta = get_template_by_key(template_key)
 	tmpl = meta["template"]
 	try:
@@ -3212,6 +3212,31 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 		else:
 			msg = f"El dato '{orig}' no es valido. {corr}"
 		errors[(row, col)] = msg
+	return errors
+
+
+def _errores_rapidos_con_crossfield(corrected_text: str, template_key: str) -> dict:
+	"""Igual que _errores_rapidos pero adiciona los errores cruzados
+	(validate_cross_fields) para que el Excel marque TODAS las celdas."""
+	errors = _errores_rapidos(corrected_text, template_key)
+	if template_key != "gestante":
+		return errors
+	try:
+		try:
+			from .validators import validate_cross_fields
+		except ImportError:
+			from validators import validate_cross_fields
+		import pandas as _pd2
+		df = _pd2.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+		df = df.fillna('').astype(str)
+		tmpl_names = [t['name'] for t in get_template_by_key(template_key)["template"]]
+		if len(df.columns) == len(tmpl_names):
+			df.columns = tmpl_names
+		for e in validate_cross_fields(df):
+			if e.get("severity") == "error":
+				errors[(int(e["row"]) - 1, e["column"])] = e["message"]
+	except Exception:
+		pass
 	return errors
 
 
