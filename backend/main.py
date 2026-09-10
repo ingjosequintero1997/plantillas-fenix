@@ -3510,23 +3510,23 @@ def _buscar_afiliado(documento: str):
 		from sqlalchemy import text
 		doc = str(documento).strip()
 		doc_limpio = doc.replace(" ", "").replace("-", "")
-		with engine.connect() as conn:
-			query = f'''
-				SELECT a.*, i."razon_social" as ips_nombre
-				FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
-				LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."ips"
-				WHERE a."{doc_col}" = :doc::varchar
-				LIMIT 1
-			'''
-			try:
+		query = f'''
+			SELECT a.*, i."razon_social" as ips_nombre
+			FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
+			LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."ips"
+			WHERE a."{doc_col}" = :doc::varchar
+			LIMIT 1
+		'''
+		try:
+			with engine.connect() as conn:
 				row = conn.execute(text(query), {"doc": doc_limpio}).fetchone()
-			except Exception:
-				row = None
-			if row is None:
-				return None, None
-			columnas = list(row._mapping.keys())
-			valores = list(row)
-			return dict(zip(columnas, valores)), None
+		except Exception:
+			row = None
+		if row is None:
+			return None, None
+		columnas = list(row._mapping.keys())
+		valores = list(row)
+		return dict(zip(columnas, valores)), None
 	except Exception:
 		return None, "No se pudo conectar con la base de datos de afiliados. Intenta de nuevo."
 
