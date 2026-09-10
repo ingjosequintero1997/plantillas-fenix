@@ -855,7 +855,7 @@ def _safe_date(val):
     if val is None or pd.isna(val):
         return None
     s = str(val).strip()
-    if not s or s.upper() in ("SIN DATO", "N/A", "NONE", "1900-01-01", "1845-01-01"):
+    if not s or s.upper() in ("SIN DATO", "N/A", "NONE", "1800-01-01", "1900-01-01", "1845-01-01"):
         return None
     iso = to_date_iso(s)
     if not iso:
@@ -870,14 +870,27 @@ def _get_col(row, *patterns):
     """Get value from row by column name patterns (case-insensitive)."""
     for pat in patterns:
         pn = re.sub(r"\s+", "", pat.upper())
+        pn = pn.translate(_ACENTOS)
         for col in row.index:
-            if re.sub(r"\s+", "", col.upper()) == pn:
+            cn = re.sub(r"\s+", "", col.upper()).translate(_ACENTOS)
+            if cn == pn:
                 v = row.get(col)
                 return str(v).strip() if pd.notna(v) else ""
-            if pn in re.sub(r"\s+", "", col.upper()):
+            if pn in cn:
                 v = row.get(col)
                 return str(v).strip() if pd.notna(v) else ""
     return ""
+
+
+def _col_exists(df, *patterns) -> bool:
+    """True si alguna columna del df coincide (insensible a acentos/case) con el patron."""
+    for pat in patterns:
+        pn = re.sub(r"\s+", "", pat.upper()).translate(_ACENTOS)
+        for col in df.columns:
+            cn = re.sub(r"\s+", "", col.upper()).translate(_ACENTOS)
+            if cn == pn or pn in cn:
+                return True
+    return False
 
 
 def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
@@ -1063,21 +1076,25 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                 })
 
         # ── 4. Required fields enforcement ──
+        # SOLO campos no-fecha: el validador de tipos (validate_only) ya marca
+        # los vacios de INT/SET. Las fechas admiten vacio y el comodin 1800-01-01
+        # segun el instructivo ("de no aplicar ingresar comodin 1800-01-01"),
+        # por eso NO se marcan aqui (evita falsos positivos).
         required_fields = [
             ("No. De Identificación", "INT"),
             ("Apellido_1,", "TEXT"),
             ("Nombre_1,", "TEXT"),
-            ("Fecha de Nacimiento", "DATE"),
             ("Sexo", "SET"),
             ("Regimen Afiliacion", "SET"),
-            ("FUM", "DATE"),
         ]
         for field_name, field_type in required_fields:
+            if not _col_exists(df, field_name):
+                continue
             val = _get_col(row, field_name)
-            if not val or val.upper() in ("SIN DATO", "N/A", "NONE", "1900-01-01", "1845-01-01"):
+            if not val or val.upper() in ("SIN DATO", "N/A", "NONE", "NO APLICA", "1800-01-01", "1900-01-01", "1845-01-01"):
                 errors.append({
                     "row": row_num, "column": field_name,
-                    "message": f"Campo requerido vacío o sin dato",
+                    "message": "Campo requerido vacío o sin dato",
                     "severity": "error",
                 })
 
