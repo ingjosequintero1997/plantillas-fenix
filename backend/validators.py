@@ -1318,8 +1318,10 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		if tipo == "SET":
 			norm_allowed_set = set(norm_allowed)
 			# Campos de causas de riesgo: el instructivo lista con guion inicial
-			# ("-primigestante adolescente"). NO se permite sin el guion.
-			# Solo se aceptan los valores exactos del instructivo.
+			# ("-primigestante adolescente") pero la data puede venir sin el guion.
+			# El guion es un marcador de lista, no parte del valor.
+			if "CAUSAS DE" in col_norm or "CAUSA DE" in col_norm:
+				norm_allowed_set |= {normalize_text(a).replace("-", " ").strip() for a in allowed}
 			field_aliases = field_aliases_for(col)
 			alias_map = {}
 			for canonical, synonyms in field_aliases.items():

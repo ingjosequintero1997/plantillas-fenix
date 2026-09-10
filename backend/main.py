@@ -3953,6 +3953,35 @@ async def admin_toggle_ips(payload: dict, current_user: User = Depends(get_curre
 		raise
 	except Exception as e:
 		raise HTTPException(status_code=500, detail="Error al cambiar el estado de la IPS. Intenta de nuevo.")
+
+
+@app.get("/admin/ips-list")
+async def admin_ips_list(current_user: User = Depends(get_current_user)):
+	"""Lista todas las IPS registradas con su estado (solo admin)."""
+	if current_user.role != "admin":
+		raise HTTPException(status_code=403, detail="Solo admin")
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		ips_list = db.query(UsuarioIPS).order_by(UsuarioIPS.ips_name).all()
+		return {
+			"ips": [
+				{
+					"id": i.id,
+					"ips_name": i.ips_name,
+					"username": i.username,
+					"active": bool(i.active),
+				}
+				for i in ips_list
+			]
+		}
+	except Exception:
+		return {"ips": [], "error": "No se pudieron listar las IPS."}
+	finally:
+		db.close()
+
+
+@app.get("/config/public")
 async def get_public_config():
 	"""Devuelve la config global del sistema (sin auth, para todos los roles)."""
 	ensure_db_ready()
