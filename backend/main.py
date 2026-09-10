@@ -541,17 +541,17 @@ async def debug_db():
 				rows = conn.execute(text("SELECT id, template_key, user_id, original_filename, status, created_at FROM cargues ORDER BY id DESC LIMIT 5")).fetchall()
 				info["cargues_recientes"] = [list(r) for r in rows]
 			except Exception as e:
-				info["cargues_recientes"] = f"error: {str(e)[:150]}"
+				info["cargues_recientes"] = "Error al consultar los cargues recientes"
 		except Exception as e:
-			info["cargues_count"] = f"error: {str(e)[:150]}"
+			info["cargues_count"] = "Error al contar los cargues"
 		try:
 			cols = [c['name'] for c in inspect(engine).get_columns('cargues')]
 			info["cargues_columnas"] = cols
 		except Exception as e:
-			info["cargues_columnas"] = f"error: {str(e)[:150]}"
+			info["cargues_columnas"] = "Error al leer las columnas de cargues"
 	except Exception as e:
 		info["conectado"] = False
-		info["error_conexion"] = str(e)[:300]
+		info["error_conexion"] = "No se pudo establecer conexion con la base de datos"
 	return info
 
 @app.get("/debug-corporate-db")
@@ -591,7 +591,7 @@ async def debug_corporate_db():
 	except Exception as e:
 		return {
 			"conectado": False,
-			"error": str(e)[:300]
+			"error": "No se pudo conectar con la base de datos corporativa"
 		}
 
 @app.post("/setup-gestantes")
@@ -601,7 +601,7 @@ async def setup_gestantes(current_user: User = Depends(require_admin)):
 		ncols = crear_tabla_gestantes()
 		return {"ok": True, "tabla": "public.gestantes", "columnas": ncols}
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=f"No se pudo crear la tabla: {e}")
+		raise HTTPException(status_code=500, detail="No se pudo crear la tabla de gestantes. Verifica la conexion a la base de datos.")
 
 @app.get("/debug-oidc")
 async def debug_oidc(request: Request):
@@ -1117,10 +1117,7 @@ async def upload_file(
 	except HTTPException:
 		raise
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=str(e))
-
-import tempfile
-import os as _os
+		raise HTTPException(status_code=500, detail="Error inesperado al procesar el archivo. Intenta de nuevo o contacta al administrador.")
 
 @app.post("/upload-chunk")
 async def upload_chunk(
@@ -1229,9 +1226,7 @@ async def upload_chunk(
 	except HTTPException:
 		raise
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/revalidate")
+		raise HTTPException(status_code=500, detail="Error inesperado al procesar el archivo. Intenta de nuevo o contacta al administrador.")
 async def revalidate(payload: RevalidatePayload):
 	try:
 		meta = get_template_by_key(payload.template_key)
@@ -1289,7 +1284,7 @@ async def revalidate(payload: RevalidatePayload):
 	except HTTPException:
 		raise
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=str(e))
+		raise HTTPException(status_code=500, detail="Error inesperado al revalidar los datos. Intenta de nuevo.")
 
 @app.post("/export")
 async def export_file(payload: dict):
@@ -1483,7 +1478,7 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 						raw_bytes = base64.b64decode(texto_cargue)
 						texto_cargue = gzip.decompress(raw_bytes).decode("utf-8", errors="replace")
 					except Exception as e_decomp:
-						gestantes_errores.append(f"Error descomprimiendo: {str(e_decomp)[:200]}")
+						gestantes_errores.append("No se pudo descomprimir el archivo enviado.")
 
 				lineas = [l for l in texto_cargue.strip().split("\n") if l.strip()]
 				gestantes_errores.append(f"DEBUG: {len(lineas)} lineas, compressed={payload.compressed}, texto_len={len(texto_cargue)}")
@@ -1496,7 +1491,7 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 						real_cols_row = db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description
 						real_cols = [c.name for c in real_cols_row]
 					except Exception as e_cols:
-						gestantes_errores.append(f"Error leyendo columnas de gestantes: {str(e_cols)[:200]}")
+						gestantes_errores.append("No se pudo acceder a la estructura de la tabla de gestantes.")
 						real_cols = []
 
 					for idx, linea in enumerate(lineas):
@@ -1532,11 +1527,11 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 							db.execute(text(insert_sql), params)
 							gestantes_insertadas += 1
 						except Exception as e_insert:
-							gestantes_errores.append(f"Fila {idx+1}: {str(e_insert)[:150]}")
+							gestantes_errores.append(f"Fila {idx+1}: Error al guardar en la base de datos.")
 
 					db.commit()
 			except Exception as e_parse:
-				gestantes_errores.append(f"Error general: {str(e_parse)[:300]}")
+				gestantes_errores.append("Error general al procesar los registros.")
 
 		return {
 			"id": cargue.id,
@@ -2270,7 +2265,7 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 	except HTTPException:
 		raise
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=f"Error al crear el usuario: {str(e)[:300]}")
+		raise HTTPException(status_code=500, detail="Error al crear el usuario. Verifica los datos e intenta de nuevo.")
 	finally:
 		db.close()
 
@@ -2447,7 +2442,7 @@ async def evaluate_endpoint(payload: dict, format: str = Query(default="json")):
 		df = pd.read_csv(StringIO(ct), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 		df = df.fillna('').astype(str)
 	except Exception as e:
-		raise HTTPException(status_code=400, detail=f"Error al parsear datos: {e}")
+		raise HTTPException(status_code=400, detail="Error al leer los datos. Verifica que el formato sea correcto.")
 
 	if df.empty:
 		raise HTTPException(status_code=400, detail="No hay datos para evaluar")
@@ -2635,7 +2630,7 @@ async def delete_cargue(cargue_id: int, current_user: User = Depends(get_current
 		raise
 	except Exception as exc:
 		db.rollback()
-		raise HTTPException(status_code=500, detail=f"Error al eliminar el cargue: {exc}")
+		raise HTTPException(status_code=500, detail="Error al eliminar el cargue. Intenta de nuevo.")
 	finally:
 		db.close()
 
@@ -2655,7 +2650,7 @@ async def validate_data(payload: dict):
 		df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 		df = df.fillna('').astype(str)
 	except Exception as e:
-		raise HTTPException(status_code=400, detail=f"Error al parsear datos: {e}")
+		raise HTTPException(status_code=400, detail="Error al leer los datos. Verifica que el formato sea correcto.")
 
 	if df.empty:
 		raise HTTPException(status_code=400, detail="No hay datos para validar")
@@ -2837,7 +2832,7 @@ async def indicadores_endpoint(payload: dict):
 		df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 		df = df.fillna('').astype(str)
 	except Exception as e:
-		raise HTTPException(status_code=400, detail=f"Error al parsear datos: {e}")
+		raise HTTPException(status_code=400, detail="Error al leer los datos. Verifica que el formato sea correcto.")
 
 	if df.empty:
 		raise HTTPException(status_code=400, detail="No hay datos")
@@ -3516,7 +3511,6 @@ def _buscar_afiliado(documento: str):
 		doc = str(documento).strip()
 		doc_limpio = doc.replace(" ", "").replace("-", "")
 		with engine.connect() as conn:
-			# Buscar afiliado y nombre de IPS en una sola consulta
 			query = f'''
 				SELECT a.*, i."razon_social" as ips_nombre
 				FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
@@ -3530,17 +3524,17 @@ def _buscar_afiliado(documento: str):
 					SELECT a.*, i."razon_social" as ips_nombre
 					FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
 					LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."ips"
-					WHERE a."{doc_col}" = :num
+					WHERE a."{doc_col}" = :doc::varchar
 					LIMIT 1
 				'''
-				row = conn.execute(text(query), {"num": int(doc_limpio)}).fetchone()
+				row = conn.execute(text(query), {"doc": doc_limpio}).fetchone()
 			if row is None:
 				return None, None
 			columnas = list(row._mapping.keys())
 			valores = list(row)
 			return dict(zip(columnas, valores)), None
-	except Exception as e:
-		return None, f"Error al consultar el afiliado: {str(e)[:200]}"
+	except Exception:
+		return None, "No se pudo conectar con la base de datos de afiliados. Intenta de nuevo."
 
 
 def _serializar_afiliado(data: dict, mapping: dict) -> dict:
@@ -3656,7 +3650,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 		df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
 		df = df.fillna('').astype(str)
 	except Exception as e:
-		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": f"Error parseando datos: {str(e)[:200]}"}
+		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Error al leer los datos. Verifica el formato."}
 	
 	if df.empty:
 		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Sin datos"}
@@ -3720,7 +3714,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 		lote_input = [{"tipo_id": u["tipo_id"], "numero_id": u["numero_id"]} for u in usuarios]
 		resultado_lote = validar_afiliados_lote(lote_input) if validar_afiliados_lote else {"error": "Modulo no disponible"}
 	except Exception as e:
-		resultado_lote = {"error": str(e)}
+		resultado_lote = {"error": "No se pudo validar contra la base de afiliados."}
 	
 	if resultado_lote.get("error"):
 		# Fallback: agrupar por NOMBRE_DE_LA_IPS_PRIMARIA del cargue
@@ -3870,7 +3864,7 @@ async def listar_ips(current_user: User = Depends(get_current_user)):
 		ips_list = [str(r[0]).strip() for r in rows if r[0]]
 		return {"ips": ips_list}
 	except Exception as e:
-		return {"ips": [], "error": str(e)[:200]}
+		return {"ips": [], "error": "No se pudieron cargar las IPS. Intenta de nuevo."}
 	finally:
 		db.close()
 
@@ -3922,12 +3916,7 @@ async def set_admin_config(payload: dict, current_user: User = Depends(get_curre
 		return {"ok": True, "key": key, "value": value_str}
 	except Exception as e:
 		db.rollback()
-		raise HTTPException(status_code=500, detail=str(e)[:200])
-	finally:
-		db.close()
-
-
-@app.get("/admin/ips-list")
+		raise HTTPException(status_code=500, detail="Error al guardar la configuracion. Intenta de nuevo.")
 async def admin_list_ips(current_user: User = Depends(get_current_user)):
 	"""Lista todas las IPS registradas con su estado."""
 	if current_user.role != "admin":
@@ -3939,7 +3928,7 @@ async def admin_list_ips(current_user: User = Depends(get_current_user)):
 		result = [{"id": r.id, "username": r.username, "ips_name": r.ips_name, "active": r.active} for r in rows]
 		return {"ips": result}
 	except Exception as e:
-		return {"ips": [], "error": str(e)[:200]}
+		return {"ips": [], "error": "No se pudieron listar las IPS."}
 	finally:
 		db.close()
 
@@ -3965,12 +3954,7 @@ async def admin_toggle_ips(payload: dict, current_user: User = Depends(get_curre
 	except HTTPException:
 		raise
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=str(e)[:200])
-	finally:
-		db.close()
-
-
-@app.get("/config/public")
+		raise HTTPException(status_code=500, detail="Error al cambiar el estado de la IPS. Intenta de nuevo.")
 async def get_public_config():
 	"""Devuelve la config global del sistema (sin auth, para todos los roles)."""
 	ensure_db_ready()
@@ -4020,7 +4004,7 @@ async def diagnosticar_gestantes(current_user: User = Depends(get_current_user))
 		# Columnas 20-35 del sample (rango donde cae IPS)
 		return {"ips_valores": ips_vals, "sample_columns": sample_cols[20:35], "sample_data": sample}
 	except Exception as e:
-		return {"error": str(e)[:300]}
+		return {"error": "Error al diagnosticar la tabla de gestantes."}
 	finally:
 		db.close()
 
@@ -4038,7 +4022,7 @@ async def clean_gestantes(current_user: User = Depends(get_current_user)):
 		return {"ok": True, "eliminados": int(count_result or 0)}
 	except Exception as e:
 		db.rollback()
-		return {"error": str(e)[:300]}
+		return {"error": "Error al limpiar la tabla de gestantes."}
 	finally:
 		db.close()
 
@@ -4099,7 +4083,7 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 		ips_list = [{"nombre": str(r[0]).strip(), "total": int(r[1])} for r in rows]
 		return {"ips": ips_list}
 	except Exception as e:
-		return {"error": str(e)[:300], "ips": []}
+		return {"error": "No se pudieron cargar los grupos de IPS.", "ips": []}
 	finally:
 		db.close()
 
@@ -4127,7 +4111,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 		try:
 			real_cols = [c.name for c in db.execute(sa_text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
 		except Exception as e:
-			return {"error": f"No se pudo leer columnas de gestantes: {str(e)[:200]}", "insertadas": 0}
+			return {"error": "No se pudo acceder a la estructura de la tabla de gestantes.", "insertadas": 0}
 
 		texto = cargue.corrected_text or cargue.raw_text or ""
 		if not texto:
@@ -4137,7 +4121,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 			try:
 				texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
 			except Exception as e:
-				return {"error": f"Cargue {cargue.id}: error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
+				return {"error": "El archivo del cargue esta corrupto o no se puede leer.", "insertadas": 0}
 
 		# ── Leer correctedText como DataFrame (sin headers, lines may vary in length) ──
 		try:
@@ -4239,7 +4223,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 				db.execute(sa_text(f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'), params_ins)
 				total_insertadas += 1
 			except Exception as e:
-				total_errores.append(f"Fila {idx+1}: {str(e)[:100]}")
+				total_errores.append(f"Fila {idx+1}: Error al insertar el registro.")
 				if len(total_errores) >= 10:
 					break
 
@@ -4262,7 +4246,7 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 		}
 	except Exception as e:
 		db.rollback()
-		return {"error": str(e)[:300], "insertadas": 0}
+		return {"error": "Error al poblar la tabla de gestantes.", "insertadas": 0}
 	finally:
 		db.close()
 
@@ -4293,7 +4277,7 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 			try:
 				texto = gzip.decompress(base64.b64decode(texto)).decode("utf-8", errors="replace")
 			except Exception as e:
-				return {"error": f"Error descomprimiendo: {str(e)[:200]}", "insertadas": 0}
+				return {"error": "El archivo del cargue esta corrupto o no se puede leer.", "insertadas": 0}
 
 		# Leer como DataFrame (sin headers)
 		try:
@@ -4392,7 +4376,7 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 				db.execute(sa_text(f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'), params_ins)
 				total_insertadas += 1
 			except Exception as e:
-				errores.append(f"Fila {idx+1}: {str(e)[:100]}")
+				errores.append(f"Fila {idx+1}: Error al insertar el registro.")
 				if len(errores) >= 10:
 					break
 
@@ -4408,7 +4392,7 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 		}
 	except Exception as e:
 		db.rollback()
-		return {"error": str(e)[:400], "insertadas": 0}
+		return {"error": "Error al repoblar la tabla de gestantes.", "insertadas": 0}
 	finally:
 		db.close()
 
@@ -4482,7 +4466,7 @@ async def listar_gestantes(
 
 		return {"registros": registros, "total": total, "page": page, "page_size": page_size}
 	except Exception as e:
-		return {"error": str(e)[:300], "registros": [], "total": 0}
+		return {"error": "Error al listar las gestantes.", "registros": [], "total": 0}
 	finally:
 		db.close()
 
@@ -4624,12 +4608,7 @@ async def mis_gestantes(request: Request, current_user: User = Depends(get_curre
 	except HTTPException:
 		raise
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=str(e)[:300])
-	finally:
-		db.close()
-
-
-@app.get("/data/gestantes/by-numid/{numero_id}")
+		raise HTTPException(status_code=500, detail="Error al cargar las gestantes. Intenta de nuevo.")
 async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depends(get_current_user)):
 	"""Obtiene todos los campos de una gestante por numero de identificacion."""
 	ensure_db_ready()
@@ -4722,12 +4701,7 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 	except HTTPException:
 		raise
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=str(e)[:300])
-	finally:
-		db.close()
-
-
-@app.get("/data/gestantes/{registro_id}")
+		raise HTTPException(status_code=500, detail="No se encontro la gestante. Verifica el numero de identificacion.")
 async def obtener_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene un registro de gestante por ID."""
 	ensure_db_ready()
@@ -4744,12 +4718,7 @@ async def obtener_gestante(registro_id: int, current_user: User = Depends(get_cu
 	except HTTPException:
 		raise
 	except Exception as e:
-		raise HTTPException(status_code=500, detail=str(e)[:300])
-	finally:
-		db.close()
-
-
-@app.put("/data/gestantes/{registro_id}")
+		raise HTTPException(status_code=500, detail="Error al obtener el registro. Intenta de nuevo.")
 async def actualizar_gestante(registro_id: int, payload: dict, current_user: User = Depends(get_current_user)):
 	"""Actualiza un registro de gestante. Valida contra el instructivo. Registra auditoria."""
 	ensure_db_ready()
@@ -4832,12 +4801,7 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 		raise
 	except Exception as e:
 		db.rollback()
-		raise HTTPException(status_code=500, detail=str(e)[:300])
-	finally:
-		db.close()
-
-
-@app.post("/data/gestantes")
+		raise HTTPException(status_code=500, detail="Error al actualizar el registro. Verifica los datos e intenta de nuevo.")
 async def crear_gestante(payload: dict, current_user: User = Depends(get_current_user)):
 	"""Crea un registro individual de gestante (cargue de uno en uno)."""
 	ensure_db_ready()
@@ -4895,12 +4859,7 @@ async def crear_gestante(payload: dict, current_user: User = Depends(get_current
 		raise
 	except Exception as e:
 		db.rollback()
-		raise HTTPException(status_code=500, detail=str(e)[:300])
-	finally:
-		db.close()
-
-
-@app.delete("/data/gestantes/{registro_id}")
+		raise HTTPException(status_code=500, detail="Error al crear el registro de gestante. Verifica los datos e intenta de nuevo.")
 async def eliminar_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Elimina un registro de gestante."""
 	if current_user.role != "admin":
@@ -4919,12 +4878,7 @@ async def eliminar_gestante(registro_id: int, current_user: User = Depends(get_c
 		raise
 	except Exception as e:
 		db.rollback()
-		raise HTTPException(status_code=500, detail=str(e)[:300])
-	finally:
-		db.close()
-
-
-@app.get("/data/gestantes/{registro_id}/audit")
+		raise HTTPException(status_code=500, detail="Error al eliminar el registro. Intenta de nuevo.")
 async def obtener_auditoria(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene el historial de auditoria de una gestante."""
 	ensure_db_ready()
@@ -4938,7 +4892,7 @@ async def obtener_auditoria(registro_id: int, current_user: User = Depends(get_c
 		logs = [dict(zip(columnas, [str(v) if v is not None else "" for v in row])) for row in rows]
 		return {"logs": logs}
 	except Exception as e:
-		return {"logs": [], "error": str(e)[:200]}
+		return {"logs": [], "error": "No se pudo cargar el historial de auditoria."}
 	finally:
 		db.close()
 
@@ -5018,12 +4972,7 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 		}
 	except Exception as e:
 		db.rollback()
-		raise HTTPException(status_code=500, detail=str(e)[:300])
-	finally:
-		db.close()
-
-
-@app.get("/data/gestantes/caso-cerrado")
+		raise HTTPException(status_code=500, detail="Error al ejecutar el autocompletado. Intenta de nuevo.")
 async def listar_caso_cerrado(
 	current_user: User = Depends(get_current_user),
 	page: int = 1,
@@ -5059,7 +5008,7 @@ async def listar_caso_cerrado(
 
 		return {"registros": registros, "total": total, "page": page, "page_size": page_size}
 	except Exception as e:
-		return {"error": str(e)[:300], "registros": [], "total": 0}
+		return {"error": "Error al listar gestantes con caso cerrado.", "registros": [], "total": 0}
 	finally:
 		db.close()
 
