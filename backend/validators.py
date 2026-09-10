@@ -1318,9 +1318,8 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		if tipo == "SET":
 			norm_allowed_set = set(norm_allowed)
 			# Campos de causas de riesgo: el instructivo lista con guion inicial
-			# ("-primigestante adolescente") pero la data puede venir sin el guion.
-			if "CAUSAS DE" in col_norm or "CAUSA DE" in col_norm:
-				norm_allowed_set |= {normalize_text(a).replace("-", " ").strip() for a in allowed}
+			# ("-primigestante adolescente"). NO se permite sin el guion.
+			# Solo se aceptan los valores exactos del instructivo.
 			field_aliases = field_aliases_for(col)
 			alias_map = {}
 			for canonical, synonyms in field_aliases.items():
@@ -1438,9 +1437,16 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 		elif tipo == "TEXT":
 			# TEXT es campo libre: acepta cualquier cosa incluyendo vacios,
 			# numeros, fechas, etc. Solo se rechaza si es estrictamente un
-			# numero puro o fecha pura Y el campo no es numericamente natural.
+			# numero puro o fecha pura Y el campo no es numericemente natural.
 			# NOTA: por defecto TEXT es flexible - no genera errores.
 			error_mask = pd.Series(False, index=ser_raw.index)
+
+		elif tipo == "NUMERIC":
+			# NUMERIC: acepta SOLO numeros (enteros o decimales).
+			# NO acepta "Sin dato", texto, fechas, ni vacios.
+			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
+			es_numero = s.str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
+			error_mask = (~es_numero) & (~vacio_mask)
 
 		else:
 			error_mask = pd.Series(False, index=ser_raw.index)
