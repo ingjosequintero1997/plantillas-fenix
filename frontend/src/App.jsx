@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, Suspense, lazy } from 'react'
+import React, { useMemo, useState, useEffect, Suspense, lazy, Component } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import Login from './Login'
@@ -16,7 +16,27 @@ import DragDrop from './components/DragDrop'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
 import Pagination from './components/Pagination'
-// Vistas pesadas con carga diferida (se cargan solo al navegar a ellas)
+
+class SectionErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  componentDidCatch(error, info) { console.error(`Error en modulo:`, error, info) }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="panel" style={{ padding: '2rem', textAlign: 'center' }}>
+          <div className="text-sm font-medium mb-2" style={{ color: 'var(--error)' }}>Ocurrió un error al cargar este módulo</div>
+          <div className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>{String(this.state.error?.message || this.state.error)}</div>
+          <button onClick={() => { this.setState({ error: null }); window.location.reload() }} className="btn-primary text-sm">
+            Reintentar
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 const HistorialView = lazy(() => import('./components/HistorialView'))
 const PrestadoresView = lazy(() => import('./components/PrestadoresView'))
 const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
@@ -718,58 +738,74 @@ export default function App() {
 
             {/* ─── HISTORIAL / VERIFICAR DATA ─── */}
             {section === 'historial' && (
-              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <HistorialView onNavigate={setSection} templateKey={activeTemplate} />
-              </Suspense>
+              <SectionErrorBoundary>
+                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                  <HistorialView onNavigate={setSection} templateKey={activeTemplate} />
+                </Suspense>
+              </SectionErrorBoundary>
             )}
 
             {/* ─── CONSOLIDAR ─── */}
             {section === 'consolidar' && (
-              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <ConsolidacionView templates={templates} templateKey={activeTemplate} />
-              </Suspense>
+              <SectionErrorBoundary>
+                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                  <ConsolidacionView templates={templates} templateKey={activeTemplate} />
+                </Suspense>
+              </SectionErrorBoundary>
             )}
 
             {/* ─── HISTORIAS CLÍNICAS ─── */}
             {section === 'historias' && (
-              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <HistoriasView templateKey={activeTemplate} />
-              </Suspense>
+              <SectionErrorBoundary>
+                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                  <HistoriasView templateKey={activeTemplate} />
+                </Suspense>
+              </SectionErrorBoundary>
             )}
 
             {/* ─── PRESTADORES (admin) ─── */}
             {section === 'prestadores' && (
-              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <PrestadoresView />
-              </Suspense>
+              <SectionErrorBoundary>
+                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                  <PrestadoresView />
+                </Suspense>
+              </SectionErrorBoundary>
             )}
 
             {/* ─── CARGUE MASIVO IPS ─── */}
             {section === 'cargue_masivo' && (
-              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <CargueMasivoIPS onCargueComplete={() => setSection('data')} />
-              </Suspense>
+              <SectionErrorBoundary>
+                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                  <CargueMasivoIPS onCargueComplete={() => setSection('data')} />
+                </Suspense>
+              </SectionErrorBoundary>
             )}
 
             {/* ─── GESTIÓN DE DATA ─── */}
             {section === 'data' && (
-              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <DataManagement correctedText={correctedText} />
-              </Suspense>
+              <SectionErrorBoundary>
+                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                  <DataManagement correctedText={correctedText} />
+                </Suspense>
+              </SectionErrorBoundary>
             )}
 
             {/* ─── INDICADORES ─── */}
             {section === 'indicadores' && (
-              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} ipsName={user?.role === 'ips_user' ? user?.ips_name || '' : ''} />
-              </Suspense>
+              <SectionErrorBoundary>
+                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                  <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} ipsName={user?.role === 'ips_user' ? user?.ips_name || '' : ''} />
+                </Suspense>
+              </SectionErrorBoundary>
             )}
 
             {/* ─── CONFIGURACION ─── */}
             {section === 'configuracion' && (
-              <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
-                <ConfiguracionView />
-              </Suspense>
+              <SectionErrorBoundary>
+                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                  <ConfiguracionView />
+                </Suspense>
+              </SectionErrorBoundary>
             )}
 
           </DashboardLayout>

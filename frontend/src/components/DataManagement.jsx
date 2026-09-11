@@ -248,9 +248,12 @@ export default function DataManagement({ correctedText }) {
       try {
         fullData = await fetchGestanteByNumId(numeroId)
         if (!fullData || Object.keys(fullData).length <= 2) fullData = null
-      } catch (e) { fullData = null }
+      } catch (e) {
+        console.warn('Error cargando gestante por numid:', e)
+        fullData = null
+      }
     }
-    if (!fullData) fullData = u
+    if (!fullData) fullData = { ...u }
     const editId = fullData.id || null
     if (editId) delete fullData.id
     setEditing({ ...fullData, id: editId, _from_gestantes: !!editId, _key: Date.now() })

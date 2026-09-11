@@ -1071,12 +1071,14 @@ async def upload_file(
 			]
 			n = len(df_safe)
 			n_errors = len(set(lr["row"] for lr in all_logs if lr["status"] == "error"))
+			n_ok = n - n_errors
 			stats = {
 				"total": n,
 				"rows_with_errors": n_errors,
-				"rows_ok": n - n_errors,
+				"rows_ok": n_ok,
 				"errors": len([lr for lr in all_logs if lr["status"] == "error"]),
 				"cross_field_errors": len(cross_field_errors),
+				"quality_percent": round(100 * n_ok / n, 1) if n > 0 else 100.0,
 			}
 			raw_text_compressed = _gz_compress(canonical_raw_text)
 			if stats["rows_with_errors"] == 0:
@@ -4766,6 +4768,8 @@ async def mis_gestantes(request: Request, current_user: User = Depends(get_curre
 		raise
 	except Exception as e:
 		raise HTTPException(status_code=500, detail="Error al cargar las gestantes. Intenta de nuevo.")
+
+@app.get("/data/gestantes/by-numid/{numero_id}")
 async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depends(get_current_user)):
 	"""Obtiene todos los campos de una gestante por numero de identificacion."""
 	ensure_db_ready()
