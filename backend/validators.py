@@ -949,16 +949,12 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                 "severity": "error",
             })
 
-        # FUM must be before FPP
-        if fum and fpp and fum >= fpp:
-            errors.append({
-                "row": row_num, "column": "FUM",
-                "message": f"FUM ({fum}) debe ser anterior a FPP ({fpp})",
-                "severity": "error",
-            })
+        # FPP se calcula automaticamente (FUM+280), NO se valida FUM < FPP.
+        # Solo se valida que FPP coincida con FUM+280 (si ambos son fechas reales).
+        _COMODIN = {datetime(1800,1,1).date(), datetime(1900,1,1).date(), datetime(1845,1,1).date()}
 
         # FPP should be ~FUM + 280 days (allow 7 days tolerance)
-        if fum and fpp:
+        if fum and fpp and fum not in _COMODIN and fpp not in _COMODIN and fpp.year >= 2000:
             expected_fpp = fum + timedelta(days=280)
             diff = abs((fpp - expected_fpp).days)
             if diff > 7:
@@ -966,6 +962,24 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                     "row": row_num, "column": "FPP",
                     "message": f"FPP ({fpp}) difiere de FUM+280 ({expected_fpp}) por {diff} días",
                     "severity": "warning",
+                })
+
+        # FUM debe ser ANTERIOR a fecha de diagnostico (instructivo)
+        if fum and diagnostico and fum not in _COMODIN and diagnostico not in _COMODIN:
+            if fum >= diagnostico:
+                errors.append({
+                    "row": row_num, "column": "FUM",
+                    "message": f"FUM ({fum}) debe ser anterior a Fecha de Diagnóstico ({diagnostico})",
+                    "severity": "error",
+                })
+
+        # FUM debe ser ANTERIOR a fecha de ingreso (instructivo)
+        if fum and ingreso and fum not in _COMODIN and ingreso not in _COMODIN:
+            if fum >= ingreso:
+                errors.append({
+                    "row": row_num, "column": "FUM",
+                    "message": f"FUM ({fum}) debe ser anterior a Fecha de Ingreso ({ingreso})",
+                    "severity": "error",
                 })
 
         # Fecha diagnostico should be after FUM (or close)
