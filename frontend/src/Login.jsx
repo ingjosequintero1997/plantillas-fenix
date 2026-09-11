@@ -27,97 +27,90 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg)' }}>
-      {/* Panel de marca (izquierda) */}
-      <div className="hidden lg:flex flex-col justify-between w-[45%] p-12 relative overflow-hidden"
-        style={{ background: 'linear-gradient(155deg, #3A863A 0%, #6BC06B 45%, #8AD998 100%)' }}>
-        {/* Watermark phoenix */}
-        <svg className="absolute -bottom-24 -right-24 w-[460px] h-[460px] opacity-[0.08]" viewBox="0 0 32 32" fill="none">
-          <path d="M16 2C14 8 9 11 5 14C1 17 0 22 3 26C6 30 12 31 17 28C21 26 24 22 24 18C24 14 21 11 18 8C17 6 17 4 16 2Z" fill="#fff" opacity="0.35" />
-          <path d="M16 6C15 10 12 12 9 14C6 16 6 19 8 21C10 23 13 24 16 23C19 22 21 20 21 17C21 14 19 12 17 10C16 9 16 8 16 6Z" fill="#fff" opacity="0.65" />
-          <path d="M16 12C15 14 13 15 12 16C11 17 11 18 12 19C13 20 14 20 16 19C17 18 18 17 18 16C18 15 17 14 16 12Z" fill="#fff" />
-        </svg>
-        {/* Resplandor decorativo */}
-        <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-[#F4E72B]/20 blur-3xl" />
+    <div className="min-h-screen flex" style={{ backgroundColor: '#f5f5f0' }}>
+      {/* Panel izquierdo - branding institucional */}
+      <div
+        className="hidden lg:flex flex-col items-center justify-between w-[48%] p-10 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(160deg, #2d6e2d 0%, #3a863a 40%, #4a9a4a 100%)',
+        }}
+      >
+        {/* Patron decorativo sutil */}
+        <div className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
 
-        <div className="flex items-center gap-3 relative">
-          <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1 shadow-lg shrink-0">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+        {/* Contenido central */}
+        <div className="flex-1 flex flex-col items-center justify-center relative z-10">
+          {/* Logo */}
+          <div className="mb-6">
+            <img
+              src="/logo.png"
+              alt="Logo Dusakawi"
+              className="w-44 h-44 object-contain drop-shadow-lg"
+              style={{ filter: 'brightness(0) invert(1)' }}
+            />
           </div>
-          <div>
-            <div className="text-white font-semibold text-lg leading-none">Fénix Data</div>
-            <div className="text-white/70 text-[0.62rem] font-medium tracking-[0.16em] mt-1">RECEPCIÓN DE DATOS</div>
-          </div>
-        </div>
 
-        <div className="relative">
-          <h2 className="text-[2rem] font-bold text-white leading-tight mb-4">
-            Recepción y validación de datos para el sector salud.
-          </h2>
-          <p className="text-white/75 text-sm max-w-sm leading-relaxed">
-            Plataforma empresarial para la recepción mensual de plantillas de datos de prestadores, su validación, consolidación y gestión de historias clínicas.
+          {/* Texto institucional */}
+          <h1 className="text-white text-3xl font-extrabold text-center leading-tight tracking-wide"
+            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+            DUSAKAWI EPSI
+          </h1>
+          <p className="text-white/85 text-sm text-center mt-3 max-w-xs leading-relaxed font-medium">
+            ASOCIACIÓN DE CABILDOS INDÍGENAS<br/>DEL CESAR Y LA GUAJIRA
           </p>
 
-          {/* Características */}
-          <div className="mt-8 space-y-3">
-            {[
-              { t: 'Validación automática', d: 'Detección de plantilla y corrección inteligente de datos.' },
-              { t: 'Consolidación', d: 'Unifica cargues mensuales en una sola data.' },
-              { t: 'Historias clínicas', d: 'Gestión centralizada de expedientes en PDF.' },
-            ].map((f, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0 mt-0.5">
-                  <svg className="w-4 h-4 text-[#F4E72B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <div>
-                  <div className="text-white font-semibold text-sm">{f.t}</div>
-                  <div className="text-white/60 text-xs mt-0.5">{f.d}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Linea decorativa */}
+          <div className="w-16 h-1 rounded-full bg-[#F4E72B] mt-6 opacity-80" />
         </div>
 
-        <div className="text-white/55 text-xs relative">
-          Asociación de Cabildos Indígenas del Cesar y La Guajira
+        {/* Pie */}
+        <div className="text-white/50 text-[0.65rem] text-center relative z-10">
+          Fénix Data &middot; Sistema de Recepción de Datos
         </div>
       </div>
 
-      {/* Panel de acceso (derecha) */}
-      <div className="flex-1 flex items-center justify-center p-6">
+      {/* Panel derecho - formulario de acceso */}
+      <div className="flex-1 flex items-center justify-center p-6" style={{ backgroundColor: '#fafaf7' }}>
         <div className="w-full max-w-sm">
           {/* Marca móvil */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1 ring-1 ring-black/5 shrink-0">
+            <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1 ring-1 ring-black/5 shadow shrink-0">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <div className="font-semibold text-lg leading-none" style={{ color: 'var(--text)' }}>Fénix Data</div>
-              <div className="text-[0.62rem] font-medium tracking-[0.16em] mt-1" style={{ color: 'var(--text-secondary)' }}>RECEPCIÓN DE DATOS</div>
+              <div className="font-bold text-lg leading-none" style={{ color: '#2d6e2d' }}>Fénix Data</div>
+              <div className="text-[0.62rem] font-medium tracking-[0.16em] mt-1" style={{ color: '#666' }}>RECEPCIÓN DE DATOS</div>
             </div>
           </div>
 
+          {/* Titulo */}
           <div className="mb-8">
-            <div className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>Iniciar sesión</div>
-            <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Ingresa con tus credenciales para continuar.</div>
+            <h2 className="text-2xl font-bold" style={{ color: '#1a1a1a' }}>Iniciar sesión</h2>
+            <p className="text-sm mt-1.5" style={{ color: '#666' }}>Ingresa con tus credenciales para continuar.</p>
           </div>
 
-          <div className="panel p-7" style={{ boxShadow: '0 8px 30px rgba(16,24,40,0.08)' }}>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Formulario */}
+          <div className="bg-white rounded-2xl p-7 shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-gray-100">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="form-label">Usuario</label>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#444' }}>Usuario</label>
                 <input
                   value={username}
                   onChange={(e) => { setUsername(e.target.value); setError('') }}
                   autoFocus
                   autoComplete="username"
-                  className="input py-2.5"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a863a]/30 focus:border-[#3a863a] transition-all"
                   placeholder="Tu usuario"
+                  style={{ backgroundColor: '#f8f9fa' }}
                 />
               </div>
 
               <div>
-                <label className="form-label">Contraseña</label>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#444' }}>Contraseña</label>
                 <div className="relative">
                   <input
                     ref={passRef}
@@ -125,38 +118,56 @@ export default function Login() {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError('') }}
                     autoComplete="current-password"
-                    className="input py-2.5 pr-10"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#3a863a]/30 focus:border-[#3a863a] transition-all"
                     placeholder="Tu contraseña"
+                    style={{ backgroundColor: '#f8f9fa' }}
                   />
-                  <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <button type="button" onClick={() => setShowPass((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
                     {showPass ? (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                      </svg>
                     ) : (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
                     )}
                   </button>
                 </div>
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 px-3 py-2.5 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>
-                  <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm bg-red-50 text-red-700 border border-red-100">
+                  <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   <span>{error}</span>
                 </div>
               )}
 
-              <button type="submit" disabled={submitting} className="btn-primary w-full py-2.5 mt-2">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2.5 rounded-lg text-white font-semibold text-sm transition-all disabled:opacity-60 shadow-[0_2px_8px_rgba(58,134,58,0.3)] hover:shadow-[0_4px_16px_rgba(58,134,58,0.4)] hover:translate-y-[-1px]"
+                style={{ backgroundColor: '#3a863a' }}
+              >
                 {submitting ? (
-                  <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
                     Ingresando...
-                  </>
+                  </span>
                 ) : 'Ingresar'}
               </button>
             </form>
           </div>
 
-          <p className="text-center text-[0.68rem] mt-6" style={{ color: 'var(--text-secondary)' }}>
+          {/* Pie */}
+          <p className="text-center text-[0.68rem] mt-6" style={{ color: '#999' }}>
             Acceso restringido. Sistema para uso autorizado.
           </p>
         </div>
