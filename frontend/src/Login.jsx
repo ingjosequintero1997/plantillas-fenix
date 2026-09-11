@@ -28,63 +28,24 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#f5f5f0' }}>
-      {/* Panel izquierdo - branding institucional */}
+      {/* Panel izquierdo - Logo DUSAKAWI */}
       <div
-        className="hidden lg:flex flex-col items-center justify-between w-[48%] p-10 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(160deg, #2d6e2d 0%, #3a863a 40%, #4a9a4a 100%)',
-        }}
+        className="hidden lg:flex items-center justify-center w-[50%] p-8 relative"
+        style={{ backgroundColor: '#3a863a' }}
       >
-        {/* Patron decorativo sutil */}
-        <div className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
+        <img
+          src="/logo.png"
+          alt="DUSAKAWI EPSI"
+          className="w-full h-full object-contain max-h-screen"
         />
-
-        {/* Contenido central */}
-        <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-          {/* Logo */}
-          <div className="mb-6">
-            <img
-              src="/logo.png"
-              alt="Logo Dusakawi"
-              className="w-44 h-44 object-contain drop-shadow-lg"
-              style={{ filter: 'brightness(0) invert(1)' }}
-            />
-          </div>
-
-          {/* Texto institucional */}
-          <h1 className="text-white text-3xl font-extrabold text-center leading-tight tracking-wide"
-            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-            DUSAKAWI EPSI
-          </h1>
-          <p className="text-white/85 text-sm text-center mt-3 max-w-xs leading-relaxed font-medium">
-            ASOCIACIÓN DE CABILDOS INDÍGENAS<br/>DEL CESAR Y LA GUAJIRA
-          </p>
-
-          {/* Linea decorativa */}
-          <div className="w-16 h-1 rounded-full bg-[#F4E72B] mt-6 opacity-80" />
-        </div>
-
-        {/* Pie */}
-        <div className="text-white/50 text-[0.65rem] text-center relative z-10">
-          Fénix Data &middot; Sistema de Recepción de Datos
-        </div>
       </div>
 
-      {/* Panel derecho - formulario de acceso */}
-      <div className="flex-1 flex items-center justify-center p-6" style={{ backgroundColor: '#fafaf7' }}>
+      {/* Panel derecho - Formulario */}
+      <div className="flex-1 flex items-center justify-center p-6" style={{ backgroundColor: '#f5f5f0' }}>
         <div className="w-full max-w-sm">
-          {/* Marca móvil */}
+          {/* Marca mobile */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1 ring-1 ring-black/5 shadow shrink-0">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <div className="font-bold text-lg leading-none" style={{ color: '#2d6e2d' }}>Fénix Data</div>
-              <div className="text-[0.62rem] font-medium tracking-[0.16em] mt-1" style={{ color: '#666' }}>RECEPCIÓN DE DATOS</div>
-            </div>
+            <img src="/logo.png" alt="Logo" className="w-20 h-20 object-contain" />
           </div>
 
           {/* Titulo */}
@@ -94,23 +55,22 @@ export default function Login() {
           </div>
 
           {/* Formulario */}
-          <div className="bg-white rounded-2xl p-7 shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-gray-100">
-            <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#444' }}>Usuario</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#333' }}>Usuario</label>
                 <input
                   value={username}
                   onChange={(e) => { setUsername(e.target.value); setError('') }}
                   autoFocus
                   autoComplete="username"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a863a]/30 focus:border-[#3a863a] transition-all"
-                  placeholder="Tu usuario"
-                  style={{ backgroundColor: '#f8f9fa' }}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a863a]/30 focus:border-[#3a863a] transition-all"
+                  placeholder="admin"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#444' }}>Contraseña</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#333' }}>Contraseña</label>
                 <div className="relative">
                   <input
                     ref={passRef}
@@ -118,9 +78,8 @@ export default function Login() {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError('') }}
                     autoComplete="current-password"
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#3a863a]/30 focus:border-[#3a863a] transition-all"
-                    placeholder="Tu contraseña"
-                    style={{ backgroundColor: '#f8f9fa' }}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#3a863a]/30 focus:border-[#3a863a] transition-all"
+                    placeholder="••••••••"
                   />
                   <button type="button" onClick={() => setShowPass((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -150,7 +109,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-2.5 rounded-lg text-white font-semibold text-sm transition-all disabled:opacity-60 shadow-[0_2px_8px_rgba(58,134,58,0.3)] hover:shadow-[0_4px_16px_rgba(58,134,58,0.4)] hover:translate-y-[-1px]"
+                className="w-full py-2.5 rounded-lg text-white font-semibold text-sm transition-all disabled:opacity-60 mt-2"
                 style={{ backgroundColor: '#3a863a' }}
               >
                 {submitting ? (
