@@ -609,12 +609,40 @@ export default function App() {
                     {/* Resumen visual de calidad (modo validador) */}
                     {processingMode === 'validador' && <QualityBanner summary={summary} mode="validador" />}
 
+                    {/* Resumen de errores por variable */}
+                    {(summary.rows_with_errors ?? summary.errors) > 0 && logs.length > 0 && (
+                      <div className="panel">
+                        <div className="flex items-center gap-2 mb-3">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="#B45309" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                          <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Errores por variable</div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {(() => {
+                            const byCol = {}
+                            logs.filter((l) => l.status === 'error').forEach((l) => {
+                              const col = l.column || 'Sin columna'
+                              byCol[col] = (byCol[col] || 0) + 1
+                            })
+                            return Object.entries(byCol)
+                              .sort((a, b) => b[1] - a[1])
+                              .slice(0, 15)
+                              .map(([col, count]) => (
+                                <span key={col} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg" style={{ color: '#92400E', backgroundColor: '#FEF3C7', border: '1px solid #FDE68A' }}>
+                                  {col}
+                                  <span className="font-bold px-1.5 py-0.5 rounded-md" style={{ backgroundColor: '#FDE68A', color: '#78350F' }}>{count}</span>
+                                </span>
+                              ))
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Log de validación: errores visibles para el prestador */}
                     {processingMode === 'validador' && logs.length > 0 && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="#B91C1C" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                          <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Errores de validación</div>
+                          <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Detalle de errores</div>
                         </div>
                         <ValidationLogTable logs={logs} />
                       </div>
@@ -629,10 +657,16 @@ export default function App() {
                             Descarga el Excel de errores, corrige los datos marcados en rojo y vuelve a subir el archivo.
                           </div>
                         </div>
-                        <button onClick={handleDownloadReport} disabled={!correctedText} className="btn-primary">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                          Descargar errores (Excel)
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handleReset()} className="btn-secondary">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                            Volver al cargue
+                          </button>
+                          <button onClick={handleDownloadReport} disabled={!correctedText} className="btn-primary">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            Descargar errores (Excel)
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -646,6 +680,10 @@ export default function App() {
                             : 'Tu data quedó al 100%. Descárgala desde Verificar data.'}
                         </div>
                       </div>
+                      <button onClick={() => handleReset()} className="btn-secondary">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        Subir otro archivo
+                      </button>
                     </div>
                   </div>
                 )}
