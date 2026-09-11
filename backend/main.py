@@ -2751,6 +2751,25 @@ async def validate_data(payload: dict):
 		except Exception:
 			pass
 
+		# Validar afiliacion: cada usuaria debe existir en af_afiliado con tipo correcto
+		try:
+			afiliado_lookup = _build_afiliado_lookup(df)
+			if afiliado_lookup:
+				try:
+					from .validators import validate_afiliado
+				except ImportError:
+					from validators import validate_afiliado
+				afiliado_errors = validate_afiliado(df, afiliado_lookup)
+				for e in afiliado_errors:
+					ridx = e["row"] - 1
+					if ridx not in row_errors:
+						row_errors[ridx] = []
+					row_errors[ridx].append(f"[{e['column']}] {e['message']}")
+					stats["total_error_cells"] += 1
+					cross_field_errors.append(e)
+		except Exception:
+			pass
+
 	stats["rows_with_errors"] = len(row_errors)
 
 	tipos_por_col = {t["name"]: t["type"] for t in tmpl}
@@ -3153,6 +3172,82 @@ async def reporte_errores_excel_data(payload: dict):
 	)
 
 
+def _build_afiliado_lookup(df) -> dict:
+	"""Consulta af_afiliado JOIN tb_tipo_identificacion para todos los documentos del df.
+	Retorna dict mapeando numero_documento_limpio → {"tipo_bd": str, "tipo_descripcion": str}.
+	Si la BD corporativa no esta disponible, retorna dict vacio."""
+	try:
+		try:
+			from .corporate_db import get_corporate_connection, TIPO_DOC_REVERSE
+		except ImportError:
+			from corporate_db import get_corporate_connection, TIPO_DOC_REVERSE
+		engine = get_corporate_connection()
+		if not engine:
+			return {}
+		# Extraer documentos del df
+		try:
+			from .validators import normalize_text
+		except ImportError:
+			from validators import normalize_text
+		# Buscar columnas por patron insensible a acentos
+		doc_col = None
+		tipo_col = None
+		for col in df.columns:
+			cn = str(col).upper().replace(" ", "").replace(".", "")
+			if "NO" in cn and ("IDENT" in cn or "DOC" in cn):
+				doc_col = col
+			if "TIPO" in cn and "DOC" in cn:
+				tipo_col = col
+		if not doc_col or not tipo_col:
+			return {}
+		# Recoger documentos unicos
+		docs_set = set()
+		for _, row in df.iterrows():
+			num = str(row.get(doc_col, "")).strip().replace(" ", "").replace("-", "")
+			if num and num.upper() not in ("", "SIN DATO", "N/A", "NONE", "NA"):
+				docs_set.add(num)
+		if not docs_set:
+			return {}
+		# Query batch con join
+		from sqlalchemy import text as sa_text
+		conn = engine.connect()
+		try:
+			lookup = {}
+			BATCH = 200
+			docs_list = list(docs_set)
+			for i in range(0, len(docs_list), BATCH):
+				batch = docs_list[i:i + BATCH]
+				params = {}
+				placeholders = []
+				for idx, d in enumerate(batch):
+					params[f"d{idx}"] = d
+					placeholders.append(f":d{idx}")
+				in_clause = ", ".join(placeholders)
+				q = sa_text(f'''
+					SELECT a."numero_identificacion", a."tipo_identificacion",
+						   t."abreviatura", t."descripcion"
+					FROM administrativo."af_afiliado" a
+					JOIN administrativo."tb_tipo_identificacion" t
+					  ON a."tipo_identificacion" = t."tipo_identificacion"
+					WHERE a."numero_identificacion" IN ({in_clause})
+				''')
+				for r in conn.execute(q, params).fetchall():
+					num_bd = str(r[0]).strip().replace(" ", "").replace("-", "")
+					tipo_int = 0
+					try:
+						tipo_int = int(float(str(r[1]).strip()))
+					except (ValueError, TypeError):
+						pass
+					tipo_bd = str(r[2]).strip() if r[2] else TIPO_DOC_REVERSE.get(tipo_int, str(tipo_int))
+					descripcion_bd = str(r[3]).strip() if r[3] else ""
+					lookup[num_bd] = {"tipo_bd": tipo_bd, "tipo_descripcion": descripcion_bd}
+			return lookup
+		finally:
+			conn.close()
+	except Exception:
+		return {}
+
+
 def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 	"""Calcula los errores por celda usando el validador VECTORIZADO (rapido).
 	Devuelve {(row_idx, col_name): mensaje_correccion}."""
@@ -3217,7 +3312,7 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 
 def _errores_rapidos_con_crossfield(corrected_text: str, template_key: str) -> dict:
 	"""Igual que _errores_rapidos pero adiciona los errores cruzados
-	(validate_cross_fields) para que el Excel marque TODAS las celdas."""
+	(validate_cross_fields) y validacion de afiliacion para que el Excel marque TODAS las celdas."""
 	errors = _errores_rapidos(corrected_text, template_key)
 	if template_key != "gestante":
 		return errors
@@ -3235,6 +3330,16 @@ def _errores_rapidos_con_crossfield(corrected_text: str, template_key: str) -> d
 		for e in validate_cross_fields(df):
 			if e.get("severity") == "error":
 				errors[(int(e["row"]) - 1, e["column"])] = e["message"]
+		# Validar afiliacion contra af_afiliado
+		afiliado_lookup = _build_afiliado_lookup(df)
+		if afiliado_lookup:
+			try:
+				from .validators import validate_afiliado
+			except ImportError:
+				from validators import validate_afiliado
+			for e in validate_afiliado(df, afiliado_lookup):
+				if e.get("severity") == "error":
+					errors[(int(e["row"]) - 1, e["column"])] = e["message"]
 	except Exception:
 		pass
 	return errors

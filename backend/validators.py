@@ -1774,3 +1774,66 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			out_df = pd.DataFrame(rows_calc, columns=template_cols)
 
 	return out_df, logs, stats
+
+
+def validate_afiliado(df: pd.DataFrame, afiliados_encontrados: dict) -> list[dict]:
+	"""Valida que cada usuaria este registrada en af_afiliado y que el tipo de documento coincida.
+
+	Args:
+		df: DataFrame con la data del template (columnas = nombres del template)
+		afiliados_encontrados: dict mapeando numero_documento → {"tipo_bd": str, "tipo_descripcion": str}
+			Este dict se construye con la query batch de af_afiliado JOIN tb_tipo_identificacion
+
+	Returns:
+		lista de errores [{"row": int, "column": str, "message": str, "severity": "error"}]
+	"""
+	errors = []
+	doc_col = _get_col_name(df, "No. De Identificación")
+	tipo_col = _get_col_name(df, "Tipo de documento de identidad")
+
+	if not doc_col or not tipo_col:
+		return errors
+
+	for idx in range(len(df)):
+		row_num = idx + 1
+		row = df.iloc[idx]
+		num_raw = str(row.get(doc_col, "")).strip()
+		tipo_raw = str(row.get(tipo_col, "")).strip().upper()
+
+		if not num_raw or num_raw.upper() in ("", "SIN DATO", "N/A", "NONE", "NA"):
+			continue
+		if not tipo_raw or tipo_raw in ("", "SIN DATO", "N/A", "NONE", "NA"):
+			continue
+
+		num_clean = num_raw.replace(" ", "").replace("-", "")
+		if num_clean not in afiliados_encontrados:
+			errors.append({
+				"row": row_num,
+				"column": "No. De Identificación",
+				"message": f"Usuaria con documento {tipo_raw} {num_raw} no encontrada en base de datos de afiliadas (no está activa o no es usuaria de la IPS)",
+				"severity": "error",
+			})
+			continue
+
+		info = afiliados_encontrados[num_clean]
+		tipo_bd = info.get("tipo_bd", "").upper()
+		if tipo_bd and tipo_raw != tipo_bd:
+			errors.append({
+				"row": row_num,
+				"column": "Tipo de documento de identidad",
+				"message": f"Tipo de documento {tipo_raw} no coincide con el registrado en base de datos ({tipo_bd} - {info.get('tipo_descripcion', '')})",
+				"severity": "error",
+			})
+
+	return errors
+
+
+def _get_col_name(df: pd.DataFrame, *patterns) -> str | None:
+	"""Busca el nombre exacto de columna en df que coincida con el patron (insensible a acentos/espacios)."""
+	for pat in patterns:
+		pn = re.sub(r"\s+", "", pat.upper()).translate(_ACENTOS)
+		for col in df.columns:
+			cn = re.sub(r"\s+", "", col.upper()).translate(_ACENTOS)
+			if cn == pn:
+				return col
+	return None
