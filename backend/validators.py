@@ -969,8 +969,8 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
             if fum >= diagnostico:
                 errors.append({
                     "row": row_num, "column": "FUM",
-                    "message": f"FUM ({fum}) debe ser anterior a Fecha de Diagnóstico ({diagnostico})",
-                    "severity": "error",
+                    "message": f"FUM ({fum}) debe ser anterior a Fecha de Diagnostico del embarazo ({diagnostico})",
+                    "severity": "warning",
                 })
 
         # FUM debe ser ANTERIOR a fecha de ingreso (instructivo)
@@ -978,25 +978,11 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
             if fum >= ingreso:
                 errors.append({
                     "row": row_num, "column": "FUM",
-                    "message": f"FUM ({fum}) debe ser anterior a Fecha de Ingreso ({ingreso})",
-                    "severity": "error",
+                    "message": f"FUM ({fum}) debe ser anterior a Fecha de Ingreso al Control Prenatal ({ingreso})",
+                    "severity": "warning",
                 })
 
-        # Fecha diagnostico should be after FUM (or close)
-        if diagnostico and fum and diagnostico < fum - timedelta(days=30):
-            errors.append({
-                "row": row_num, "column": "Fecha de Diagnostico del embarazo",
-                "message": f"Fecha de diagnóstico ({diagnostico}) es anterior a FUM ({fum}) por más de 30 días",
-                "severity": "warning",
-            })
-
-        # Ingreso should be after FUM (or close)
-        if ingreso and fum and ingreso < fum - timedelta(days=30):
-            errors.append({
-                "row": row_num, "column": "Fecha de Ingreso al Control Prenatal",
-                "message": f"Fecha de ingreso ({ingreso}) es anterior a FUM ({fum}) por más de 30 días",
-                "severity": "warning",
-            })
+        # FUM no puede ser futuro
 
         # Control dates should be after FUM and before today
         control_cols = [
