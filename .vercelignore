@@ -8,6 +8,7 @@ __pycache__/
 *.sqlite3
 .env
 .env.*
+dist/
 frontend/dist/
 frontend/node_modules/
 test_export.txt

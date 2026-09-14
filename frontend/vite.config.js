@@ -9,7 +9,8 @@ export default defineConfig({
     hmr: { host: 'localhost', protocol: 'ws' },
   },
   build: {
-    outDir: 'dist',
+    outDir: '../dist',
+    emptyOutDir: true,
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
