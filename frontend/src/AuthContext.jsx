@@ -182,10 +182,8 @@ export function AuthProvider({ children }) {
     setSystemConfig({ cargue_masivo: true, historias_pdf: true })
   }, [])
 
-  if (!ready) return null
-
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, loginIps, logout, systemConfig, refreshConfig }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, ready, login, loginIps, logout, systemConfig, refreshConfig }}>
       {children}
     </AuthContext.Provider>
   )
