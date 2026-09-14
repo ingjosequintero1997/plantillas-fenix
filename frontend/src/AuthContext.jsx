@@ -52,12 +52,20 @@ export function AuthProvider({ children }) {
     const base = getApiBase()
     const verifyWithRetry = async (attempt = 0) => {
       try {
-        const r = await fetch(`${base}/auth/verify-ips-active`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${stored.token}` },
-        })
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 25000)
+        let r
+        try {
+          r = await fetch(`${base}/auth/verify-ips-active`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${stored.token}` },
+            signal: controller.signal,
+          })
+        } finally {
+          clearTimeout(timer)
+        }
         if (r.status === 502 || r.status === 504) {
-          if (attempt < 3) {
+          if (attempt < 2) {
             await new Promise((res) => setTimeout(res, 2500 * (attempt + 1)))
             return verifyWithRetry(attempt + 1)
           }
@@ -72,7 +80,7 @@ export function AuthProvider({ children }) {
         setSystemConfig(cfg)
         setReady(true)
       } catch {
-        if (attempt < 3) {
+        if (attempt < 2) {
           await new Promise((res) => setTimeout(res, 2500 * (attempt + 1)))
           return verifyWithRetry(attempt + 1)
         }
