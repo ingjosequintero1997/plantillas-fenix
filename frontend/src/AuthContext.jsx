@@ -49,51 +49,35 @@ export function AuthProvider({ children }) {
       return
     }
 
-    const base = getApiBase()
-    const verifyWithRetry = async (attempt = 0) => {
-      try {
-        const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 25000)
-        let r
-        try {
-          r = await fetch(`${base}/auth/verify-ips-active`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${stored.token}` },
-            signal: controller.signal,
-          })
-        } finally {
-          clearTimeout(timer)
-        }
-        if (r.status === 502 || r.status === 504) {
-          if (attempt < 2) {
-            await new Promise((res) => setTimeout(res, 2500 * (attempt + 1)))
-            return verifyWithRetry(attempt + 1)
-          }
-        }
-        if (!r.ok) {
-          sessionStorage.removeItem('auth')
-          setUser(null)
-          setReady(true)
-          return
-        }
-        const cfg = await fetchSystemConfig()
-        setSystemConfig(cfg)
-        setReady(true)
-      } catch {
-        if (attempt < 2) {
-          await new Promise((res) => setTimeout(res, 2500 * (attempt + 1)))
-          return verifyWithRetry(attempt + 1)
-        }
-        const cfg = await fetchSystemConfig()
-        setSystemConfig(cfg)
-        setReady(true)
-      }
-    }
+    // NO bloquear la UI: entrar de inmediato con la sesion guardada.
+    setReady(true)
 
+    const base = getApiBase()
+
+    // Cargar config en segundo plano.
+    fetchSystemConfig().then((cfg) => setSystemConfig(cfg)).catch(() => {})
+
+    // Verificar sesion IPS en segundo plano. Solo cerrar sesion ante un
+    // rechazo definitivo (401/403), NO ante errores de red o cold start.
     if (stored.role === 'ips_user') {
-      verifyWithRetry()
-    } else {
-      setReady(true)
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 15000)
+      fetch(`${base}/auth/verify-ips-active`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${stored.token}` },
+        signal: controller.signal,
+      })
+        .then((r) => {
+          clearTimeout(timer)
+          if (r.status === 401 || r.status === 403) {
+            sessionStorage.removeItem('auth')
+            setUser(null)
+          }
+        })
+        .catch(() => {
+          clearTimeout(timer)
+          // Error de red o timeout: mantener la sesion, no cerrar.
+        })
     }
   }, [])
 
