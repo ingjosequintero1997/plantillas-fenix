@@ -52,6 +52,7 @@ test_glicemia.py
 
 .vercel
 .env*
+!.env.example
 *.xlsx
 *.xls
 ~$*.xlsx

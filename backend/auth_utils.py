@@ -22,7 +22,12 @@ ADMIN_FALLBACK_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_FALLBACK_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 ADMIN_FALLBACK_NAME = "Administrador"
 
-TOKEN_SECRET = os.environ.get("TOKEN_SECRET", "fenix-secret-change-in-production")
+TOKEN_SECRET = os.environ.get("TOKEN_SECRET")
+if not TOKEN_SECRET:
+    raise RuntimeError(
+        "TOKEN_SECRET no esta configurado. Definelo en el archivo .env "
+        "(ver deploy/.env.example)."
+    )
 TOKEN_HOURS = int(os.environ.get("TOKEN_HOURS", "8"))
 
 PBKDF2_ITERATIONS = 200_000

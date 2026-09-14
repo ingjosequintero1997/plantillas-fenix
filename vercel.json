@@ -1,18 +1,14 @@
 {
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "pip install --break-system-packages -r api/requirements.txt",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60
+    {
+      "source": "/api/:path*",
+      "destination": "http://IP_SERVIDOR:7000/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  },
-  "env": {
-    "API_ROOT_PATH": "/api",
-    "VITE_API_BASE": "/api"
-  }
+  ]
 }

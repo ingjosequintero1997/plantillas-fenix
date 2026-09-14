@@ -7,3 +7,5 @@ python-dateutil
 numpy
 openpyxl
 sqlalchemy
+psycopg2-binary
+python-dotenv
