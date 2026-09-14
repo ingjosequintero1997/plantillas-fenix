@@ -37,6 +37,32 @@ class SectionErrorBoundary extends Component {
   }
 }
 
+function ModuleSkeleton() {
+  return (
+    <div className="space-y-5 fade-in" style={{ padding: '24px 0' }}>
+      <div className="flex items-center justify-between">
+        <div>
+          <div style={{ height: 28, width: 200, borderRadius: 8, backgroundColor: 'var(--bg-subtle)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ height: 14, width: 320, borderRadius: 6, backgroundColor: 'var(--bg-subtle)', marginTop: 8, animation: 'pulse 1.5s ease-in-out infinite 0.2s' }} />
+        </div>
+      </div>
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} style={{ height: 80, borderRadius: 12, backgroundColor: 'var(--bg-subtle)', animation: `pulse 1.5s ease-in-out infinite ${i * 0.15}s` }} />
+        ))}
+      </div>
+      <div style={{ height: 48, borderRadius: 12, backgroundColor: 'var(--bg-subtle)', animation: 'pulse 1.5s ease-in-out infinite 0.3s' }} />
+      <div style={{ height: 200, borderRadius: 12, backgroundColor: 'var(--bg-subtle)', animation: 'pulse 1.5s ease-in-out infinite 0.4s' }} />
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 const HistorialView = lazy(() => import('./components/HistorialView'))
 const PrestadoresView = lazy(() => import('./components/PrestadoresView'))
 const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
@@ -739,7 +765,7 @@ export default function App() {
             {/* ─── HISTORIAL / VERIFICAR DATA ─── */}
             {section === 'historial' && (
               <SectionErrorBoundary>
-                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   <HistorialView onNavigate={setSection} templateKey={activeTemplate} />
                 </Suspense>
               </SectionErrorBoundary>
@@ -748,7 +774,7 @@ export default function App() {
             {/* ─── CONSOLIDAR ─── */}
             {section === 'consolidar' && (
               <SectionErrorBoundary>
-                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   <ConsolidacionView templates={templates} templateKey={activeTemplate} />
                 </Suspense>
               </SectionErrorBoundary>
@@ -757,7 +783,7 @@ export default function App() {
             {/* ─── HISTORIAS CLÍNICAS ─── */}
             {section === 'historias' && (
               <SectionErrorBoundary>
-                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   <HistoriasView templateKey={activeTemplate} />
                 </Suspense>
               </SectionErrorBoundary>
@@ -766,7 +792,7 @@ export default function App() {
             {/* ─── PRESTADORES (admin) ─── */}
             {section === 'prestadores' && (
               <SectionErrorBoundary>
-                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   <PrestadoresView />
                 </Suspense>
               </SectionErrorBoundary>
@@ -775,7 +801,7 @@ export default function App() {
             {/* ─── CARGUE MASIVO IPS ─── */}
             {section === 'cargue_masivo' && (
               <SectionErrorBoundary>
-                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   <CargueMasivoIPS onCargueComplete={() => setSection('data')} />
                 </Suspense>
               </SectionErrorBoundary>
@@ -784,7 +810,7 @@ export default function App() {
             {/* ─── GESTIÓN DE DATA ─── */}
             {section === 'data' && (
               <SectionErrorBoundary>
-                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   <DataManagement correctedText={correctedText} />
                 </Suspense>
               </SectionErrorBoundary>
@@ -793,7 +819,7 @@ export default function App() {
             {/* ─── INDICADORES ─── */}
             {section === 'indicadores' && (
               <SectionErrorBoundary>
-                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   <IndicadoresView templateKey={activeTemplate} dataValidada={correctedText || rawText} templateNames={templateNames} ipsName={user?.role === 'ips_user' ? user?.ips_name || '' : ''} />
                 </Suspense>
               </SectionErrorBoundary>
@@ -802,7 +828,7 @@ export default function App() {
             {/* ─── CONFIGURACION ─── */}
             {section === 'configuracion' && (
               <SectionErrorBoundary>
-                <Suspense fallback={<div className="skeleton h-40 w-full rounded-xl" />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   <ConfiguracionView />
                 </Suspense>
               </SectionErrorBoundary>

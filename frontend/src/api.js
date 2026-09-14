@@ -15,30 +15,45 @@ function authHeaders() {
   } catch { return {} }
 }
 
-const TIMEOUT_MS = 20000
+const TIMEOUT_MS = 30000
+const MAX_RETRIES = 2
 
 async function apiFetch(url, options = {}) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-  try {
-    const resp = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-      headers: { ...options.headers, ...authHeaders() },
-    })
-    const text = await resp.text()
-    if (!resp.ok) throw new Error(text)
-    try {
-      return JSON.parse(text)
-    } catch {
-      throw new Error(`Respuesta inválida desde ${url}`)
+  let lastError = null
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 1500 * attempt))
     }
-  } catch (e) {
-    if (e.name === 'AbortError') throw new Error('La petición tardó demasiado. Intenta de nuevo.')
-    throw e
-  } finally {
-    clearTimeout(timer)
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+    try {
+      const resp = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: { ...options.headers, ...authHeaders() },
+      })
+      if (resp.status === 502 || resp.status === 504) {
+        lastError = new Error('El servidor está despertando. Intentando de nuevo...')
+        clearTimeout(timer)
+        continue
+      }
+      const text = await resp.text()
+      if (!resp.ok) throw new Error(text)
+      try {
+        return JSON.parse(text)
+      } catch {
+        throw new Error(`Respuesta inválida desde ${url}`)
+      }
+    } catch (e) {
+      clearTimeout(timer)
+      if (e.name === 'AbortError') {
+        lastError = new Error('La petición tardó demasiado. Intenta de nuevo.')
+        continue
+      }
+      lastError = e
+    }
   }
+  throw lastError || new Error('Error de conexión con el servidor')
 }
 
 export async function fetchTemplates() {
