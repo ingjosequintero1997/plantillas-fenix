@@ -261,7 +261,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           </main>
           <footer className="shrink-0 px-6 py-3 border-t text-center" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
             <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-              Asociacion de Cabildos Indigenas del Cesar y La Guajira - Ing. Jose Quintero {new Date().getFullYear()}
+              Desarrollado por el Ing. Jose Quintero {new Date().getFullYear()}
             </p>
           </footer>
         </div>

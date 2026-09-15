@@ -483,29 +483,36 @@ export default function DataManagement({ correctedText }) {
 
     return (
       <div className="space-y-5 fade-in">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={handleBack} className="btn-ghost text-sm px-2 py-1">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <div>
-              <div className="page-title">{selectedIps}</div>
-              <div className="page-subtitle">{usuarias.length} afiliadas verificadas</div>
+        <div className="panel" style={{ borderLeft: '4px solid var(--primary)' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button onClick={handleBack} className="btn-ghost px-2 py-1">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--primary-light)' }}>
+                <svg className="w-6 h-6" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div>
+                <div className="page-title" style={{ fontSize: '1.1rem' }}>{selectedIps}</div>
+                <div className="page-subtitle">{usuarias.length} afiliadas verificadas</div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => downloadIpsExcel(selectedIps)} disabled={downloadingIps === selectedIps}
-              className="btn-secondary text-sm">
-              {downloadingIps === selectedIps ? (
-                <svg className="w-4 h-4 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-              ) : (
-                <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              )} Descargar Excel
-            </button>
-            <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Nueva usuaria
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => downloadIpsExcel(selectedIps)} disabled={downloadingIps === selectedIps}
+                className="btn-secondary text-sm">
+                {downloadingIps === selectedIps ? (
+                  <svg className="w-4 h-4 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                ) : (
+                  <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                )} Descargar Excel
+              </button>
+              <button onClick={() => setShowNewForm(true)} className="btn-primary text-sm">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                Nueva usuaria
+              </button>
+            </div>
           </div>
         </div>
         {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
@@ -531,23 +538,34 @@ export default function DataManagement({ correctedText }) {
                 <tr>
                   <th className="text-center">#</th>
                   {INST_COLS.map((col) => <th key={col.key}>{col.label}</th>)}
-                  <th className="text-right">Acciones</th>
+                  <th className="text-center" style={{ width: '80px' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paged.map((u, i) => (
                   <tr key={`${u.numero_id}-${i}`}>
-                    <td className="text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    <td className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>
                       {(page - 1) * PAGE_SIZE + i + 1}
                     </td>
                     {INST_COLS.map((col) => (
-                      <td key={col.key} className="text-sm max-w-[120px] truncate">
-                        {u[col.key] || '—'}
+                      <td key={col.key} className="text-sm max-w-[140px] truncate">
+                        {col.key === 'numero_id' || col.key === 'NO_DE_IDENTIFICACION' ? (
+                          <span className="badge-neutral" style={{ fontSize: '0.7rem' }}>{u[col.key] || '—'}</span>
+                        ) : (u[col.key] || '—')}
                       </td>
                     ))}
-                    <td className="text-right">
-                      <button onClick={() => startEdit(u)} className="btn-ghost text-xs px-2 py-1" title="Actualizar">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <td className="text-center">
+                      <button onClick={() => startEdit(u)}
+                        title="Editar registro"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--green-200)',
+                          backgroundColor: 'var(--green-50)', color: 'var(--green-600)', cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-500)'; e.currentTarget.style.color = '#fff' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-600)' }}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
                     </td>
                   </tr>
@@ -590,14 +608,21 @@ export default function DataManagement({ correctedText }) {
 
     return (
       <div className="space-y-5 fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="page-title">Gestion de data</div>
-            <div className="page-subtitle">
-              {ipsLoading ? 'Cargando gestantes...' : `${filtered.length} gestantes registradas`}
+        <div className="panel" style={{ borderLeft: '4px solid var(--primary)' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
+                <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div>
+                <div className="page-title" style={{ fontSize: '1.1rem' }}>Gestion de data</div>
+                <div className="page-subtitle">
+                  {ipsLoading ? 'Cargando gestantes...' : `${filtered.length} gestante${filtered.length !== 1 ? 's' : ''} registrada${filtered.length !== 1 ? 's' : ''}`}
+                </div>
+              </div>
             </div>
-          </div>
           <div className="flex items-center gap-2">
             <button onClick={() => downloadIpsExcel(ipsUserName)} disabled={downloadingIps === ipsUserName}
               className="btn-secondary text-sm">
@@ -611,6 +636,7 @@ export default function DataManagement({ correctedText }) {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
               Nueva
             </button>
+          </div>
           </div>
         </div>
 
@@ -642,89 +668,80 @@ export default function DataManagement({ correctedText }) {
             <div className="skeleton h-12 w-full rounded-xl" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="panel" style={{ padding: '3rem', textAlign: 'center' }}>
-            <svg className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sin resultados</div>
-            <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+          <div className="empty">
+            <div className="empty-icon">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <div className="empty-title">Sin resultados</div>
+            <div className="empty-desc">
               {search ? 'No se encontraron gestantes con ese criterio.' : 'No hay gestantes registradas para tu IPS.'}
             </div>
           </div>
         ) : (
-          <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-            {/* Tabla */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                <thead>
-                  <tr style={{ backgroundColor: 'var(--green-50)', borderBottom: '2px solid var(--green-200)' }}>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>#</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Documento</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Nombre</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Edad</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>FUM</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>FPP</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Municipio</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', color: 'var(--green-700)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', width: '60px' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paged.map((r, i) => {
-                    const rowNum = (page - 1) * PAGE_SIZE + i + 1
-                    const isEven = i % 2 === 0
-                    return (
-                      <tr key={`${r.NO_DE_IDENTIFICACION}-${i}`}
-                        style={{
-                          backgroundColor: isEven ? 'var(--bg-canvas)' : 'var(--bg-surface)',
-                          borderBottom: '1px solid var(--border-subtle)',
-                          transition: 'background-color 0.15s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--green-50)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isEven ? 'var(--bg-canvas)' : 'var(--bg-surface)'}>
-                        <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: '500' }}>
-                          {rowNum}
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: '500', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                          <span className="badge-neutral" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>{r.NO_DE_IDENTIFICACION || '—'}</span>
-                        </td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontWeight: '500' }}>{r.APELLIDO_1 || ''}</span>{' '}
-                          {r.APELLIDO_2 ? r.APELLIDO_2 + ' ' : ''}/ {' '}
-                          <span style={{ fontWeight: '500' }}>{r.NOMBRE_1 || ''}</span>{' '}
-                          {r.NOMBRE_2 || ''}
-                        </td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                          {r.EDAD_ANOS ? `${r.EDAD_ANOS} años` : '—'}
-                        </td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
-                          {fmtDate(r.FUM)}
-                        </td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
-                          {fmtDate(r.FPP)}
-                        </td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {r.MUNICIPIO_DE_RESIDENCIA || '—'}
-                        </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                          <button onClick={() => startEdit(r)}
-                            title="Editar registro"
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--green-200)',
-                              backgroundColor: 'var(--green-50)', color: 'var(--green-600)', cursor: 'pointer',
-                              transition: 'all 0.15s',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-500)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'var(--green-500)' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.borderColor = 'var(--green-200)' }}>
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="text-center">#</th>
+                  <th>Documento</th>
+                  <th>Nombre</th>
+                  <th>Edad</th>
+                  <th>FUM</th>
+                  <th>FPP</th>
+                  <th>Municipio</th>
+                  <th className="text-center" style={{ width: '60px' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map((r, i) => {
+                  const rowNum = (page - 1) * PAGE_SIZE + i + 1
+                  return (
+                    <tr key={`${r.NO_DE_IDENTIFICACION}-${i}`}>
+                      <td className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {rowNum}
+                      </td>
+                      <td>
+                        <span className="badge-neutral" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>{r.NO_DE_IDENTIFICACION || '—'}</span>
+                      </td>
+                      <td className="text-sm" style={{ whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: '500' }}>{r.APELLIDO_1 || ''}</span>{' '}
+                        {r.APELLIDO_2 ? r.APELLIDO_2 + ' ' : ''}/{' '}
+                        <span style={{ fontWeight: '500' }}>{r.NOMBRE_1 || ''}</span>{' '}
+                        {r.NOMBRE_2 || ''}
+                      </td>
+                      <td className="text-sm" style={{ whiteSpace: 'nowrap' }}>
+                        {r.EDAD_ANOS ? `${r.EDAD_ANOS} años` : '—'}
+                      </td>
+                      <td className="text-sm" style={{ whiteSpace: 'nowrap' }}>
+                        {fmtDate(r.FUM)}
+                      </td>
+                      <td className="text-sm" style={{ whiteSpace: 'nowrap' }}>
+                        {fmtDate(r.FPP)}
+                      </td>
+                      <td className="text-sm" style={{ whiteSpace: 'nowrap', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {r.MUNICIPIO_DE_RESIDENCIA || '—'}
+                      </td>
+                      <td className="text-center">
+                        <button onClick={() => startEdit(r)}
+                          title="Editar registro"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--green-200)',
+                            backgroundColor: 'var(--green-50)', color: 'var(--green-600)', cursor: 'pointer',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-500)'; e.currentTarget.style.color = '#fff' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-600)' }}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
 
             {/* Paginacion */}
             {pTotal > 1 && (
