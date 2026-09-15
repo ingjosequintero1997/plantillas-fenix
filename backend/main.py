@@ -9,7 +9,7 @@ import base64
 import json
 import hmac
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError
 try:

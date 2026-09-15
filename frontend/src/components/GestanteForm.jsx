@@ -771,7 +771,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
                     style={{
                       color: '#fff',
-                      backgroundColor: uploadingPdf ? 'var(--text-muted)' : 'var(--primary)',
+                      backgroundColor: uploadingPdf ? 'var(--text-muted)' : '#5aae5a',
                       border: 'none',
                       opacity: uploadingPdf ? 0.6 : 1,
                       cursor: uploadingPdf ? 'not-allowed' : 'pointer',
