@@ -766,28 +766,30 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
 
               {/* Botones de accion */}
               <div className="flex items-center gap-3 pt-1">
-                <button type="button" onClick={handlePdfUpload} disabled={uploadingPdf || !pdfFile}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
-                  style={{
-                    color: '#fff',
-                    backgroundColor: uploadingPdf || !pdfFile ? 'var(--text-muted)' : 'var(--primary)',
-                    border: 'none',
-                    opacity: uploadingPdf || !pdfFile ? 0.6 : 1,
-                    cursor: uploadingPdf || !pdfFile ? 'not-allowed' : 'pointer',
-                    boxShadow: uploadingPdf || !pdfFile ? 'none' : '0 2px 8px rgba(90,174,90,0.25)',
-                  }}>
-                  {uploadingPdf ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                      Subiendo...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                      Subir PDF
-                    </>
-                  )}
-                </button>
+                {pdfFile && (
+                  <button type="button" onClick={handlePdfUpload} disabled={uploadingPdf}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
+                    style={{
+                      color: '#fff',
+                      backgroundColor: uploadingPdf ? 'var(--text-muted)' : 'var(--primary)',
+                      border: 'none',
+                      opacity: uploadingPdf ? 0.6 : 1,
+                      cursor: uploadingPdf ? 'not-allowed' : 'pointer',
+                      boxShadow: uploadingPdf ? 'none' : '0 2px 8px rgba(90,174,90,0.25)',
+                    }}>
+                    {uploadingPdf ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                        Subiendo...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        Subir PDF
+                      </>
+                    )}
+                  </button>
+                )}
                 {pdfFile && (
                   <button type="button" onClick={() => setPdfFile(null)}
                     className="px-4 py-2.5 rounded-xl text-xs font-medium transition-all"

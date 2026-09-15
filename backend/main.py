@@ -554,6 +554,28 @@ async def debug_db():
 		info["error_conexion"] = "No se pudo establecer conexion con la base de datos"
 	return info
 
+@app.get("/debug-historias")
+async def debug_historias():
+	"""Diagnostica el estado de la tabla historias_clinicas y GCS."""
+	info = {"gcs_enabled": gcs_storage.gcs_enabled()}
+	try:
+		from sqlalchemy import inspect
+		insp = inspect(engine)
+		if "historias_clinicas" in insp.get_table_names():
+			info["table_exists"] = True
+			info["columns"] = [c['name'] for c in insp.get_columns('historias_clinicas')]
+			try:
+				with engine.connect() as conn:
+					info["count"] = conn.execute(text("SELECT COUNT(*) FROM historias_clinicas")).scalar()
+			except Exception as e:
+				info["count_error"] = str(e)
+		else:
+			info["table_exists"] = False
+			info["tables"] = insp.get_table_names()
+	except Exception as e:
+		info["error"] = str(e)
+	return info
+
 @app.get("/debug-corporate-db")
 async def debug_corporate_db():
 	"""Diagnostica la conexión con la BD corporativa Dusakawi."""
@@ -2077,14 +2099,17 @@ async def upload_historia(
             file_size=len(content),
         )
         db.add(historia)
-        db.flush()  # genera el id
-        if gcs_storage.gcs_enabled():
-            safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
-            blob_path = f"historias/{historia.id}/{safe_name}"
-            gcs_storage.upload_pdf(oidc_token, blob_path, content, historia.content_type)
-            historia.pdf_path = blob_path
-        else:
-            historia.pdf_data = content
+        db.flush()
+        try:
+            if gcs_storage.gcs_enabled():
+                safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
+                blob_path = f"historias/{historia.id}/{safe_name}"
+                gcs_storage.upload_pdf(oidc_token, blob_path, content, historia.content_type)
+                historia.pdf_path = blob_path
+            else:
+                historia.pdf_data = content
+        except Exception as storage_exc:
+            raise Exception(f"Error en almacenamiento: {storage_exc}")
         db.commit()
         db.refresh(historia)
         storage_used = "gcs" if historia.pdf_path else "db"
@@ -2098,9 +2123,12 @@ async def upload_historia(
         raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para guardar la historia clínica. Verifica la conexión al servidor PostgreSQL.")
     except Exception as exc:
         db.rollback()
-        detail = "No se pudo guardar el PDF en el almacenamiento. Verifica la configuración de Google Cloud Storage."
-        if os.environ.get("DEBUG_GCS", ""):
-            detail += f" Detalle: {exc} | oidc_len={len(oidc_token)}"
+        detail = "No se pudo guardar el PDF. "
+        if gcs_storage.gcs_enabled():
+            detail += "Verifica la configuración de Google Cloud Storage."
+        else:
+            detail += "Error al guardar en la base de datos."
+        detail += f" Detalle: {exc}"
         raise HTTPException(status_code=500, detail=detail)
     finally:
         db.close()
