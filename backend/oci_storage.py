@@ -39,19 +39,28 @@ def _get_client():
         raise RuntimeError("OCI no esta habilitado. Faltan variables de entorno.")
     try:
         import oci
+        # Escribir la private key a un archivo temporal para preservar saltos de linea
+        import tempfile
+        key_content = os.environ["OCI_PRIVATE_KEY"]
+        # Asegurar que los saltos de linea sean reales
+        if "\\n" in key_content and "\n" not in key_content:
+            key_content = key_content.replace("\\n", "\n")
+        key_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pem", mode="w")
+        key_file.write(key_content)
+        key_file.close()
+
         cfg = {
             "tenancy": os.environ["OCI_TENANCY"],
             "user": os.environ["OCI_USER"],
             "fingerprint": os.environ["OCI_FINGERPRINT"],
             "region": os.environ["OCI_REGION"],
-            "key_content": os.environ["OCI_PRIVATE_KEY"],
+            "key_file": key_file.name,
         }
         signer = oci.signer.Signer(
             tenancy=os.environ["OCI_TENANCY"],
             user=os.environ["OCI_USER"],
             fingerprint=os.environ["OCI_FINGERPRINT"],
-            private_key_file_location=None,
-            private_key_content=os.environ["OCI_PRIVATE_KEY"],
+            private_key_file_location=key_file.name,
         )
         client = oci.object_storage.ObjectStorageClient(
             config=cfg,
