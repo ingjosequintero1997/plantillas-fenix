@@ -46,9 +46,11 @@ def _get_client():
             "region": os.environ["OCI_REGION"],
             "key_content": os.environ["OCI_PRIVATE_KEY"],
         }
-        signer = oci.signer.PrivateKeySigner(
-            key_id=os.environ["OCI_USER"],
-            private_key_data=os.environ["OCI_PRIVATE_KEY"],
+        signer = oci.signer.Signer(
+            tenancy=os.environ["OCI_TENANCY"],
+            user=os.environ["OCI_USER"],
+            fingerprint=os.environ["OCI_FINGERPRINT"],
+            private_key_data=os.environ["OCI_PRIVATE_KEY"].encode(),
         )
         client = oci.object_storage.ObjectStorageClient(
             config=cfg,
