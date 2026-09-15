@@ -567,9 +567,22 @@ async def debug_oci():
 		client = oci_storage._get_client()
 		ns = os.environ.get("OCI_NAMESPACE", "")
 		bucket = os.environ.get("OCI_BUCKET", "")
-		# Probar listando buckets
-		resp = client.list_buckets(ns)
-		info["buckets"] = [b.name for b in resp.data]
+		tenancy = os.environ.get("OCI_TENANCY", "")
+		# Probar subiendo un archivo pequeno de prueba
+		test_content = b"test-connection-ok"
+		test_name = "test_connection.txt"
+		try:
+			import io
+			client.put_object(ns, bucket, test_name, io.BytesIO(test_content))
+			info["upload_ok"] = True
+			# Eliminar el archivo de prueba
+			client.delete_object(ns, bucket, test_name)
+			info["delete_ok"] = True
+		except Exception as e:
+			info["upload_ok"] = False
+			info["upload_error"] = str(e)
+		info["namespace"] = ns
+		info["bucket"] = bucket
 		info["ok"] = True
 	except Exception as e:
 		info["ok"] = False
