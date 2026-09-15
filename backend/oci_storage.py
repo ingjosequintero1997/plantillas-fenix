@@ -50,7 +50,7 @@ def _get_client():
             tenancy=os.environ["OCI_TENANCY"],
             user=os.environ["OCI_USER"],
             fingerprint=os.environ["OCI_FINGERPRINT"],
-            private_key=os.environ["OCI_PRIVATE_KEY"],
+            private_key_content=os.environ["OCI_PRIVATE_KEY"],
         )
         client = oci.object_storage.ObjectStorageClient(
             config=cfg,
@@ -71,15 +71,13 @@ def upload_pdf(object_name, content, content_type="application/pdf"):
     bucket = os.environ["OCI_BUCKET"]
 
     try:
-        # upload_stream requiere un stream con longitud conocida
         import io
         stream = io.BytesIO(content)
         resp = client.put_object(
-            namespace_name=namespace,
-            bucket_name=bucket,
-            object_name=object_name,
-            content_length=len(content),
-            put_object_body=stream,
+            namespace,
+            bucket,
+            object_name,
+            stream,
             content_type=content_type,
         )
         log.info(f"PDF subido a OCI: {object_name}")
@@ -97,11 +95,7 @@ def download_pdf(object_name):
     bucket = os.environ["OCI_BUCKET"]
 
     try:
-        resp = client.get_object(
-            namespace_name=namespace,
-            bucket_name=bucket,
-            object_name=object_name,
-        )
+        resp = client.get_object(namespace, bucket, object_name)
         return resp.data.content
     except Exception as e:
         log.error(f"Error descargando de OCI: {e}")
@@ -116,11 +110,7 @@ def delete_pdf(object_name):
     bucket = os.environ["OCI_BUCKET"]
 
     try:
-        client.delete_object(
-            namespace_name=namespace,
-            bucket_name=bucket,
-            object_name=object_name,
-        )
+        client.delete_object(namespace, bucket, object_name)
         log.info(f"PDF eliminado de OCI: {object_name}")
     except Exception as e:
         log.error(f"Error eliminando de OCI: {e}")
