@@ -146,7 +146,7 @@ class HistoriaClinica(Base):
 
     id = Column(Integer, primary_key=True)
     prestador_id = Column(Integer, ForeignKey("prestadores.id"), nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     template_key = Column(String(60), nullable=True, index=True)
     paciente_documento = Column(String(60), nullable=True, index=True)
     paciente_nombre = Column(String(255), nullable=True)
@@ -206,6 +206,17 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN template_key VARCHAR(60)"))
+    except Exception:
+        pass
+    # Migracion: hacer user_id nullable en historias_clinicas (IPS users no existen en users)
+    try:
+        with engine.begin() as conn:
+            is_pg = str(engine.url).startswith("postgresql")
+            if is_pg:
+                conn.execute(text("ALTER TABLE historias_clinicas DROP CONSTRAINT IF EXISTS historias_clinicas_user_id_fkey"))
+                conn.execute(text("ALTER TABLE historias_clinicas ALTER COLUMN user_id DROP NOT NULL"))
+            else:
+                conn.execute(text("PRAGMA foreign_key_list(historias_clinicas)"))
     except Exception:
         pass
     try:

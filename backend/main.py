@@ -59,6 +59,7 @@ try:
     )
     from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
     from . import gcs_storage
+    from . import oci_storage
     from . import corporate_db
 except ImportError:
     from auth_utils import (
@@ -72,6 +73,7 @@ except ImportError:
     )
     from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
     import gcs_storage
+    import oci_storage
     import corporate_db
 
 class LoginPayload(BaseModel):
@@ -2092,9 +2094,10 @@ async def upload_historia(
     db = SessionLocal()
     try:
         prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+        user_in_db = db.query(User).filter(User.id == current_user.id).first()
         historia = HistoriaClinica(
             prestador_id=prestador.id if prestador else None,
-            user_id=current_user.id,
+            user_id=current_user.id if user_in_db else None,
             template_key=template_key.strip() or "gestante",
             paciente_documento=paciente_documento.strip(),
             paciente_nombre=paciente_nombre.strip(),
@@ -2103,17 +2106,26 @@ async def upload_historia(
             file_size=len(content),
         )
         db.add(historia)
+        # Determinar donde almacenar: OCI > GCS > DB
+        storage_used = "db"
+        if oci_storage.oci_enabled():
+            db.flush()
+            now = datetime.now(timezone.utc)
+            doc = (paciente_documento or "sindoc").strip()
+            object_name = f"historias/{now.strftime('%Y-%m')}/{doc}/historia.pdf"
+            oci_storage.upload_pdf(object_name, content, historia.content_type)
+            historia.pdf_path = object_name
+            storage_used = "oci"
+        elif gcs_storage.gcs_enabled():
+            db.flush()
+            safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
+            blob_path = f"historias/{historia.id}/{safe_name}"
+            gcs_storage.upload_pdf(oidc_token, blob_path, content, historia.content_type)
+            historia.pdf_path = blob_path
+            storage_used = "gcs"
+        else:
+            historia.pdf_data = content
         db.flush()
-        try:
-            if gcs_storage.gcs_enabled():
-                safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
-                blob_path = f"historias/{historia.id}/{safe_name}"
-                gcs_storage.upload_pdf(oidc_token, blob_path, content, historia.content_type)
-                historia.pdf_path = blob_path
-            else:
-                historia.pdf_data = content
-        except Exception as storage_exc:
-            raise Exception(f"Error en almacenamiento: {storage_exc}")
         db.commit()
         db.refresh(historia)
         storage_used = "gcs" if historia.pdf_path else "db"
@@ -2202,9 +2214,16 @@ async def get_historia(request: Request, historia_id: int, current_user: User = 
         if h.pdf_path:
             oidc_token = request.headers.get("x-vercel-oidc-token", "")
             try:
-                data = gcs_storage.download_pdf(oidc_token, h.pdf_path)
+                if oci_storage.oci_enabled():
+                    data = oci_storage.download_pdf(h.pdf_path)
+                elif gcs_storage.gcs_enabled():
+                    data = gcs_storage.download_pdf(oidc_token, h.pdf_path)
+                else:
+                    raise HTTPException(status_code=404, detail="No hay almacenamiento configurado")
+            except HTTPException:
+                raise
             except Exception:
-                raise HTTPException(status_code=502, detail="No se pudo leer el PDF desde el almacenamiento. Verifica la configuración de Google Cloud Storage.")
+                raise HTTPException(status_code=502, detail="No se pudo leer el PDF desde el almacenamiento.")
         elif h.pdf_data:
             data = bytes(h.pdf_data)
         else:
@@ -2237,10 +2256,13 @@ async def delete_historia(request: Request, historia_id: int, current_user: User
                 raise HTTPException(status_code=403, detail="No autorizado")
         if h.pdf_path:
             try:
-                oidc_token = request.headers.get("x-vercel-oidc-token", "")
-                gcs_storage.delete_pdf(oidc_token, h.pdf_path)
+                if oci_storage.oci_enabled():
+                    oci_storage.delete_pdf(h.pdf_path)
+                elif gcs_storage.gcs_enabled():
+                    oidc_token = request.headers.get("x-vercel-oidc-token", "")
+                    gcs_storage.delete_pdf(oidc_token, h.pdf_path)
             except Exception:
-                pass  # no bloquear el borrado si el objeto no existe
+                pass
         db.delete(h)
         db.commit()
         return {"ok": True}
