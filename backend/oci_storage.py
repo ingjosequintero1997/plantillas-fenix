@@ -50,7 +50,7 @@ def _get_client():
             tenancy=os.environ["OCI_TENANCY"],
             user=os.environ["OCI_USER"],
             fingerprint=os.environ["OCI_FINGERPRINT"],
-            private_key_data=os.environ["OCI_PRIVATE_KEY"].encode(),
+            private_key=os.environ["OCI_PRIVATE_KEY"],
         )
         client = oci.object_storage.ObjectStorageClient(
             config=cfg,
