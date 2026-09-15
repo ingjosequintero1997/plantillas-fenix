@@ -75,6 +75,7 @@ export default function DataManagement({ correctedText }) {
   const [instResult, setInstResult] = useState(null)
   const [instValidating, setInstValidating] = useState(false)
   const [downloadingIps, setDownloadingIps] = useState(null)
+  const [ipsSearch, setIpsSearch] = useState('')
 
   const [ipsRows, setIpsRows] = useState([])
   const [ipsColumns, setIpsColumns] = useState([])
@@ -220,6 +221,9 @@ export default function DataManagement({ correctedText }) {
       )
     : ipsGroups
   const ipsNames = Object.keys(filteredIpsGroups)
+  const displayedIpsNames = ipsSearch
+    ? ipsNames.filter(n => n.toUpperCase().includes(ipsSearch.toUpperCase()))
+    : ipsNames
 
   useEffect(() => {
     if (isIpsUser && ipsRows.length === 1 && view === 'list' && !selectedIps) {
@@ -326,12 +330,19 @@ export default function DataManagement({ correctedText }) {
     return (
       <div className="space-y-5 fade-in">
         <div className="flex items-center justify-between">
-          <div>
-            <div className="page-title">Gestión de data</div>
-            <div className="page-subtitle">
-              {instValidating ? 'Validando afiliación con BD corporativa...' :
-               ipsNames.length > 0 ? `${ipsNames.length} IPS · ${encontrados} afiliadas verificadas` :
-               correctedText ? 'Cargando...' : 'Carga y valida datos primero'}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
+              <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+              </svg>
+            </div>
+            <div>
+              <div className="page-title">Gestión de data</div>
+              <div className="page-subtitle">
+                {instValidating ? 'Validando afiliación con BD corporativa...' :
+                 ipsNames.length > 0 ? `${displayedIpsNames.length}${ipsSearch ? ` de ${ipsNames.length}` : ''} IPS · ${encontrados} afiliadas verificadas` :
+                 correctedText ? 'Cargando...' : 'Carga y valida datos primero'}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -353,6 +364,20 @@ export default function DataManagement({ correctedText }) {
             {noEncontrados} usuaria(s) no encontradas en base de afiliados.
           </div>
         )}
+        {ipsNames.length > 0 && (
+          <div className="relative max-w-md">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input value={ipsSearch} onChange={(e) => setIpsSearch(e.target.value)}
+              placeholder="Buscar IPS por nombre..." className="input pl-9" style={{ fontSize: '0.85rem' }} />
+            {ipsSearch && (
+              <button onClick={() => setIpsSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 btn-ghost text-xs px-1" style={{ color: 'var(--text-secondary)' }}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+          </div>
+        )}
         {instValidating ? (
           <div className="space-y-3">
             <div className="skeleton h-10 w-full rounded-xl" />
@@ -363,30 +388,34 @@ export default function DataManagement({ correctedText }) {
           <div className="empty">
             <div className="empty-icon">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <div className="empty-title">Sin datos</div>
-            <div className="empty-desc">Sube un Excel y corrige errores en el validador para ver las IPS aquí.</div>
+            <div className="empty-title">Sin resultados</div>
+            <div className="empty-desc">
+              {ipsSearch ? `No se encontraron IPS con "${ipsSearch}"` : 'Sube un Excel y corrige errores en el validador para ver las IPS aquí.'}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {ipsNames.map((ipsName) => (
+            {displayedIpsNames.map((ipsName) => (
               <button key={ipsName} onClick={() => handleSelectIps(ipsName)}
-                className="panel text-left hover:shadow-md transition-shadow" style={{ cursor: 'pointer' }}>
+                className="panel text-left hover:shadow-md transition-all" style={{ cursor: 'pointer', borderLeft: '3px solid var(--primary)' }}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--primary-light)' }}>
                     <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{ipsName}</div>
-                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{filteredIpsGroups[ipsName].length} afiliadas</div>
+                    <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{ipsName}</div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                      {filteredIpsGroups[ipsName].length} afiliada{filteredIpsGroups[ipsName].length !== 1 ? 's' : ''}
+                    </div>
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); downloadIpsExcel(ipsName) }}
                     disabled={downloadingIps === ipsName}
-                    className="btn-ghost text-xs px-2 py-1" title="Descargar Excel">
+                    className="btn-ghost text-xs px-2 py-1 shrink-0" title="Descargar Excel">
                     {downloadingIps === ipsName ? (
                       <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                     ) : (
@@ -395,7 +424,7 @@ export default function DataManagement({ correctedText }) {
                       </svg>
                     )}
                   </button>
-                  <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
