@@ -559,50 +559,30 @@ async def debug_db():
 @app.get("/debug-oci")
 async def debug_oci():
 	"""Prueba la conexion a OCI Object Storage."""
+	import os
 	info = {"oci_enabled": oci_storage.oci_enabled()}
 	if not oci_storage.oci_enabled():
 		info["error"] = "OCI no habilitado"
 		return info
-	import os
 	key_raw = os.environ.get("OCI_PRIVATE_KEY", "")
 	info["key_length"] = len(key_raw)
-	info["key_starts_with"] = key_raw[:30] if key_raw else ""
-	info["key_ends_with"] = key_raw[-30:] if key_raw else ""
+	info["key_starts_with"] = repr(key_raw[:40]) if key_raw else ""
+	info["key_ends_with"] = repr(key_raw[-40:]) if key_raw else ""
 	info["key_has_newlines"] = "\n" in key_raw
+	info["key_backslash_n"] = "\\n" in key_raw
 	info["fingerprint"] = os.environ.get("OCI_FINGERPRINT", "")
 	info["user"] = os.environ.get("OCI_USER", "")
 	info["tenancy"] = os.environ.get("OCI_TENANCY", "")
-	# Intentar parsear la key
-	try:
-		import tempfile
-		key_content = key_raw
-		if "\\n" in key_content and "\n" not in key_content:
-			key_content = key_content.replace("\\n", "\n")
-		key_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pem", mode="w")
-		key_file.write(key_content)
-		key_file.close()
-		# Intentar cargar la key con cryptography
-		from cryptography.hazmat.primitives import serialization
-		from cryptography.hazmat.backends import default_backend
-		with open(key_file.name, "rb") as f:
-			key = serialization.load_pem_private_key(f.read(), password=None, backend=default_backend())
-			info["key_parsed"] = True
-			info["key_type"] = type(key).__name__
-	except Exception as e:
-		info["key_parsed"] = False
-		info["key_error"] = str(e)
-	# Intentar crear el cliente y hacer upload
+	info["region"] = os.environ.get("OCI_REGION", "")
+	# Intentar subir archivo de prueba
 	try:
 		client = oci_storage._get_client()
 		ns = os.environ.get("OCI_NAMESPACE", "")
 		bucket = os.environ.get("OCI_BUCKET", "")
-		test_content = b"test-connection-ok"
-		test_name = "test_connection.txt"
 		import io
-		client.put_object(ns, bucket, test_name, io.BytesIO(test_content))
+		client.put_object(ns, bucket, "test_connection.txt", io.BytesIO(b"test"))
 		info["upload_ok"] = True
-		client.delete_object(ns, bucket, test_name)
-		info["delete_ok"] = True
+		client.delete_object(ns, bucket, "test_connection.txt")
 	except Exception as e:
 		info["upload_ok"] = False
 		info["upload_error"] = str(e)
