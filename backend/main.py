@@ -559,7 +559,7 @@ async def debug_db():
 @app.get("/debug-historias")
 async def debug_historias():
 	"""Diagnostica el estado de la tabla historias_clinicas y GCS."""
-	info = {"gcs_enabled": gcs_storage.gcs_enabled()}
+	info = {"gcs_enabled": gcs_storage.gcs_enabled(), "oci_enabled": oci_storage.oci_enabled()}
 	try:
 		try:
 			from .database import engine as _eng
