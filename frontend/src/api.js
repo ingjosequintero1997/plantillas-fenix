@@ -664,6 +664,15 @@ export async function deleteHistoria(id) {
   return resp
 }
 
+export async function downloadHistoriaPdf(historiaId) {
+  const resp = await fetch(`${API_BASE}/historias/${historiaId}`, {
+    headers: authHeaders(),
+  })
+  if (!resp.ok) throw new Error('No se pudo descargar el PDF')
+  const blob = await resp.blob()
+  return URL.createObjectURL(blob)
+}
+
 export async function fetchHistorias(q = '', templateKey = '') {
   const params = new URLSearchParams()
   if (q) params.set('q', q)
