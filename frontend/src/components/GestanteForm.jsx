@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { fetchIps } from '../api'
+import { fetchIps, uploadHistoria, HISTORIA_URL } from '../api'
 
 const SECCIONES = [
   {
@@ -292,6 +292,11 @@ const SECCIONES = [
       { key: 'OBSERVACIONES_GENERALES', label: 'Observaciones Generales', type: 'textarea' },
     ],
   },
+  {
+    titulo: 'Historia clinica',
+    icono: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    fields: [],
+  },
 ]
 
 export default function GestanteForm({ mode = 'create', initialData = {}, onSave, onClose, ipsList = [] }) {
@@ -302,6 +307,10 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
   const [activeSection, setActiveSection] = useState(0)
+  const [pdfFile, setPdfFile] = useState(null)
+  const [uploadingPdf, setUploadingPdf] = useState(false)
+  const [pdfMsg, setPdfMsg] = useState('')
+  const [historiaId, setHistoriaId] = useState(null)
 
   useEffect(() => {
     if (mode === 'edit' && initialData && Object.keys(initialData).length > 0) {
@@ -367,6 +376,22 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         .finally(() => setLoadingIps(false))
     }
   }, [ipsList])
+
+  const handlePdfUpload = async () => {
+    const doc = form.NO_DE_IDENTIFICACION
+    if (!doc) { setPdfMsg('Guarda el registro primero para asociar la historia.'); return }
+    if (!pdfFile) { setPdfMsg('Selecciona un archivo PDF.'); return }
+    setUploadingPdf(true); setPdfMsg('')
+    try {
+      await uploadHistoria(pdfFile, { documento: doc, nombre: `${form.APELLIDO_1 || ''} ${form.NOMBRE_1 || ''}`.trim() }, 'gestante')
+      setPdfMsg('Historia clinica subida correctamente.')
+      setPdfFile(null)
+    } catch (e) {
+      setPdfMsg('Error: ' + (e.message || 'No se pudo subir'))
+    } finally {
+      setUploadingPdf(false)
+    }
+  }
 
   const handleChange = (key, val) => {
     setForm((f) => ({ ...f, [key]: val }))
@@ -587,9 +612,65 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
 
         {/* Campos */}
         <div className="px-5 py-4" style={{ maxHeight: '55vh', overflowY: 'auto' }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {SECCIONES[activeSection].fields.map((fieldDef) => renderField(fieldDef))}
-          </div>
+          {activeSection === SECCIONES.length - 1 ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-4 h-4" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Historia clinica de la usuaria</span>
+              </div>
+
+              {pdfMsg && (
+                <div className="px-3 py-2 rounded-lg text-xs flex items-center gap-2"
+                  style={{ color: pdfMsg.includes('Error') ? '#B91C1C' : '#166534', backgroundColor: pdfMsg.includes('Error') ? '#FEE2E2' : '#DCFCE7', border: `1px solid ${pdfMsg.includes('Error') ? '#FECACA' : '#BBF7D0'}` }}>
+                  {pdfMsg}
+                </div>
+              )}
+
+              {/* Zona de carga */}
+              <label className="flex items-center gap-4 px-4 py-4 rounded-xl cursor-pointer transition-all"
+                style={{
+                  border: `2px dashed ${pdfFile ? 'var(--green-300)' : 'var(--border-strong)'}`,
+                  backgroundColor: pdfFile ? 'var(--green-50)' : 'var(--bg-canvas)',
+                }}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: pdfFile ? 'var(--green-100)' : 'var(--bg-subtle)', color: pdfFile ? 'var(--green-600)' : 'var(--text-muted)' }}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium" style={{ color: pdfFile ? 'var(--green-700)' : 'var(--text-primary)' }}>
+                    {pdfFile ? pdfFile.name : 'Seleccionar PDF de la historia clinica'}
+                  </div>
+                  <div className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
+                    {pdfFile ? `${(pdfFile.size / 1024 / 1024).toFixed(2)} MB` : 'Solo archivos PDF, maximo ~4.5 MB'}
+                  </div>
+                </div>
+                <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} />
+              </label>
+
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={handlePdfUpload} disabled={uploadingPdf || !pdfFile}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ color: '#fff', backgroundColor: uploadingPdf ? 'var(--text-muted)' : 'var(--primary)', border: `1px solid var(--primary)` }}>
+                  {uploadingPdf ? 'Subiendo...' : 'Subir PDF'}
+                </button>
+                {form.NO_DE_IDENTIFICACION && (
+                  <a href={HISTORIA_URL(form.NO_DE_IDENTIFICACION)} target="_blank" rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                    style={{ color: 'var(--primary)', border: '1px solid var(--primary)', backgroundColor: 'var(--primary-light)' }}>
+                    Ver PDF subido
+                  </a>
+                )}
+              </div>
+
+              <div className="text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
+                Documento: {form.NO_DE_IDENTIFICACION || '—'} · La historia clinica se asocia al documento de la usuaria.
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {SECCIONES[activeSection].fields.map((fieldDef) => renderField(fieldDef))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}

@@ -687,74 +687,59 @@ export default function DataManagement({ correctedText }) {
             </div>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th className="text-center">#</th>
-                  <th>Documento</th>
-                  <th>Nombre</th>
-                  <th>Edad</th>
-                  <th>FUM</th>
-                  <th>FPP</th>
-                  <th>Municipio</th>
-                  <th className="text-center" style={{ width: '60px' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.map((r, i) => {
-                  const rowNum = (page - 1) * PAGE_SIZE + i + 1
-                  return (
-                    <tr key={`${r.NO_DE_IDENTIFICACION}-${i}`}>
-                      <td className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {rowNum}
-                      </td>
-                      <td>
-                        <span className="badge-neutral" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>{r.NO_DE_IDENTIFICACION || '—'}</span>
-                      </td>
-                      <td className="text-sm" style={{ whiteSpace: 'nowrap' }}>
-                        <span style={{ fontWeight: '500' }}>{r.APELLIDO_1 || ''}</span>{' '}
-                        {r.APELLIDO_2 ? r.APELLIDO_2 + ' ' : ''}/{' '}
-                        <span style={{ fontWeight: '500' }}>{r.NOMBRE_1 || ''}</span>{' '}
-                        {r.NOMBRE_2 || ''}
-                      </td>
-                      <td className="text-sm" style={{ whiteSpace: 'nowrap' }}>
-                        {r.EDAD_ANOS ? `${r.EDAD_ANOS} años` : '—'}
-                      </td>
-                      <td className="text-sm" style={{ whiteSpace: 'nowrap' }}>
-                        {fmtDate(r.FUM)}
-                      </td>
-                      <td className="text-sm" style={{ whiteSpace: 'nowrap' }}>
-                        {fmtDate(r.FPP)}
-                      </td>
-                      <td className="text-sm" style={{ whiteSpace: 'nowrap', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {r.MUNICIPIO_DE_RESIDENCIA || '—'}
-                      </td>
-                      <td className="text-center">
-                        <button onClick={() => startEdit(r)}
-                          title="Editar registro"
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--green-200)',
-                            backgroundColor: 'var(--green-50)', color: 'var(--green-600)', cursor: 'pointer',
-                            transition: 'all 0.15s',
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-500)'; e.currentTarget.style.color = '#fff' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-600)' }}>
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {paged.map((r, i) => {
+                const nombre = [r.NOMBRE_1, r.NOMBRE_2].filter(Boolean).join(' ')
+                const apellido = [r.APELLIDO_1, r.APELLIDO_2].filter(Boolean).join(' ')
+                const ini = (r.APELLIDO_1 || r.NOMBRE_1 || '?').slice(0, 1).toUpperCase()
+                return (
+                  <div key={`${r.NO_DE_IDENTIFICACION}-${i}`}
+                    className="panel cursor-pointer transition-all duration-200"
+                    style={{ borderLeft: '3px solid var(--primary)', padding: '1rem 1.25rem' }}
+                    onClick={() => startEdit(r)}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(90,174,90,0.12)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = '' }}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                        style={{ backgroundColor: 'var(--green-100)', color: 'var(--green-700)' }}>
+                        {ini}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                          {apellido} / {nombre}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <span className="text-[0.65rem] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
+                            {r.NO_DE_IDENTIFICACION || '—'}
+                          </span>
+                          {r.MUNICIPIO_DE_RESIDENCIA && (
+                            <span className="text-[0.65rem] px-2 py-0.5 rounded-full"
+                              style={{ backgroundColor: 'var(--green-50)', color: 'var(--green-700)' }}>
+                              {r.MUNICIPIO_DE_RESIDENCIA}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-2 text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
+                          {r.FUM && <span>FUM: {fmtDate(r.FUM)}</span>}
+                          {r.FPP && <span>FPP: {fmtDate(r.FPP)}</span>}
+                          {r.EDAD_ANOS && <span>{r.EDAD_ANOS} años</span>}
+                        </div>
+                      </div>
+                      <svg className="w-4 h-4 shrink-0 mt-1" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
             {/* Paginacion */}
             {pTotal > 1 && (
-              <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
+              <div className="flex items-center justify-between px-4 py-3 mt-4 rounded-xl" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Mostrando <strong style={{ color: 'var(--text-primary)' }}>{(page - 1) * PAGE_SIZE + 1}</strong> - <strong style={{ color: 'var(--text-primary)' }}>{Math.min(page * PAGE_SIZE, filtered.length)}</strong> de <strong style={{ color: 'var(--text-primary)' }}>{filtered.length}</strong>
+                  Pagina {page} de {pTotal} · {filtered.length} registros
                 </span>
                 <div className="flex items-center gap-1">
                   <button onClick={() => setPage(1)} disabled={page <= 1}
