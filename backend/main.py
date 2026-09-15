@@ -2134,26 +2134,32 @@ async def upload_historia(
             file_size=len(content),
         )
         db.add(historia)
-        # Determinar donde almacenar: OCI > GCS > DB
+        # Determinar donde almacenar: OCI > GCS > DB (con fallback)
         storage_used = "db"
         if oci_storage.oci_enabled():
             db.flush()
-            now = datetime.now(timezone.utc)
-            doc = (paciente_documento or "sindoc").strip()
-            object_name = f"historias/{now.strftime('%Y-%m')}/{doc}/historia.pdf"
-            oci_storage.upload_pdf(object_name, content, historia.content_type)
-            historia.pdf_path = object_name
-            storage_used = "oci"
+            try:
+                now = datetime.now(timezone.utc)
+                doc = (paciente_documento or "sindoc").strip()
+                object_name = f"historias/{now.strftime('%Y-%m')}/{doc}/historia.pdf"
+                oci_storage.upload_pdf(object_name, content, historia.content_type)
+                historia.pdf_path = object_name
+                storage_used = "oci"
+            except Exception:
+                storage_used = "db"
         elif gcs_storage.gcs_enabled():
             db.flush()
-            safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
-            blob_path = f"historias/{historia.id}/{safe_name}"
-            gcs_storage.upload_pdf(oidc_token, blob_path, content, historia.content_type)
-            historia.pdf_path = blob_path
-            storage_used = "gcs"
-        else:
+            try:
+                safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
+                blob_path = f"historias/{historia.id}/{safe_name}"
+                gcs_storage.upload_pdf(oidc_token, blob_path, content, historia.content_type)
+                historia.pdf_path = blob_path
+                storage_used = "gcs"
+            except Exception:
+                storage_used = "db"
+        if storage_used == "db":
             historia.pdf_data = content
-        db.flush()
+            db.flush()
         db.commit()
         db.refresh(historia)
         storage_used = "gcs" if historia.pdf_path else "db"
