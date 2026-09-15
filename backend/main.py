@@ -556,6 +556,26 @@ async def debug_db():
 		info["error_conexion"] = "No se pudo establecer conexion con la base de datos"
 	return info
 
+@app.get("/debug-oci")
+async def debug_oci():
+	"""Prueba la conexion a OCI Object Storage."""
+	info = {"oci_enabled": oci_storage.oci_enabled()}
+	if not oci_storage.oci_enabled():
+		info["error"] = "OCI no habilitado"
+		return info
+	try:
+		client = oci_storage._get_client()
+		ns = os.environ.get("OCI_NAMESPACE", "")
+		bucket = os.environ.get("OCI_BUCKET", "")
+		# Probar listando buckets
+		resp = client.list_buckets(ns)
+		info["buckets"] = [b.name for b in resp.data]
+		info["ok"] = True
+	except Exception as e:
+		info["ok"] = False
+		info["error"] = str(e)
+	return info
+
 @app.get("/debug-historias")
 async def debug_historias():
 	"""Diagnostica el estado de la tabla historias_clinicas y GCS."""
