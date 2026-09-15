@@ -559,13 +559,17 @@ async def debug_historias():
 	"""Diagnostica el estado de la tabla historias_clinicas y GCS."""
 	info = {"gcs_enabled": gcs_storage.gcs_enabled()}
 	try:
+		try:
+			from .database import engine as _eng
+		except ImportError:
+			from database import engine as _eng
 		from sqlalchemy import inspect
-		insp = inspect(engine)
+		insp = inspect(_eng)
 		if "historias_clinicas" in insp.get_table_names():
 			info["table_exists"] = True
 			info["columns"] = [c['name'] for c in insp.get_columns('historias_clinicas')]
 			try:
-				with engine.connect() as conn:
+				with _eng.connect() as conn:
 					info["count"] = conn.execute(text("SELECT COUNT(*) FROM historias_clinicas")).scalar()
 			except Exception as e:
 				info["count_error"] = str(e)
