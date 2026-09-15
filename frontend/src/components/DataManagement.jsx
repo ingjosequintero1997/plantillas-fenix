@@ -532,48 +532,55 @@ export default function DataManagement({ correctedText }) {
             <div className="empty-desc">No se encontraron afiliadas para esta IPS.</div>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th className="text-center">#</th>
-                  {INST_COLS.map((col) => <th key={col.key}>{col.label}</th>)}
-                  <th className="text-center" style={{ width: '80px' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.map((u, i) => (
-                  <tr key={`${u.numero_id}-${i}`}>
-                    <td className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {(page - 1) * PAGE_SIZE + i + 1}
-                    </td>
-                    {INST_COLS.map((col) => (
-                      <td key={col.key} className="text-sm max-w-[140px] truncate">
-                        {col.key === 'numero_id' || col.key === 'NO_DE_IDENTIFICACION' ? (
-                          <span className="badge-neutral" style={{ fontSize: '0.7rem' }}>{u[col.key] || '—'}</span>
-                        ) : (u[col.key] || '—')}
-                      </td>
-                    ))}
-                    <td className="text-center">
-                      <button onClick={() => startEdit(u)}
-                        title="Editar registro"
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--green-200)',
-                          backgroundColor: 'var(--green-50)', color: 'var(--green-600)', cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-500)'; e.currentTarget.style.color = '#fff' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-600)' }}>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {paged.map((u, i) => {
+                const nombre = [u.nombre1, u.nombre2].filter(Boolean).join(' ')
+                const apellido = [u.apellido1, u.apellido2].filter(Boolean).join(' ')
+                const ini = (u.apellido1 || u.nombre1 || '?').slice(0, 1).toUpperCase()
+                return (
+                  <div key={`${u.numero_id}-${i}`}
+                    className="panel cursor-pointer transition-all duration-200"
+                    style={{ borderLeft: '3px solid var(--primary)', padding: '1rem 1.25rem' }}
+                    onClick={() => startEdit(u)}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(90,174,90,0.12)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = '' }}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                        style={{ backgroundColor: 'var(--green-100)', color: 'var(--green-700)' }}>
+                        {ini}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                          {apellido} / {nombre}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <span className="text-[0.65rem] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
+                            {u.tipo_id} · {u.numero_id}
+                          </span>
+                          {u.municipio && (
+                            <span className="text-[0.65rem] px-2 py-0.5 rounded-full"
+                              style={{ backgroundColor: 'var(--green-50)', color: 'var(--green-700)' }}>
+                              {u.municipio}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-2 text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
+                          {u.fum && <span>FUM: {u.fum}</span>}
+                          {u.fpp && <span>FPP: {u.fpp}</span>}
+                        </div>
+                      </div>
+                      <svg className="w-4 h-4 shrink-0 mt-1" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
             {pTotal > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
+              <div className="flex items-center justify-between px-4 py-3 mt-4 rounded-xl" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Página {page} de {pTotal}</span>
                 <div className="flex gap-1">
                   <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn-secondary px-2.5 py-1 text-xs">← Anterior</button>

@@ -92,28 +92,38 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
   const openPdf = (id) => window.open(HISTORIA_URL(id), '_blank', 'noopener')
 
   return (
-    <div className="space-y-6 fade-in">
-      <div>
-        <h1 className="page-title">Historias clínicas</h1>
-        <p className="page-subtitle">{isAdmin ? 'Consulta de expedientes clínicos de las usuarias.' : 'Sube las historias clínicas de tus usuarias.'}</p>
+    <div className="space-y-5 fade-in">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
+          <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div>
+          <h1 className="page-title" style={{ fontSize: '1.1rem' }}>Historias clinicas</h1>
+          <p className="page-subtitle">{isAdmin ? 'Consulta de expedientes clinicos de las usuarias.' : 'Sube las historias clinicas de tus usuarias.'}</p>
+        </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid rgba(180,35,24,0.1)', boxShadow: '0 2px 8px rgba(180,35,24,0.06)' }}>
+        <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid rgba(180,35,24,0.1)' }}>
           <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
           {error}
         </div>
       )}
       {message && (
-        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid rgba(90,174,90,0.15)', boxShadow: '0 2px 8px rgba(90,174,90,0.06)' }}>
+        <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid rgba(90,174,90,0.15)' }}>
           <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           {message}
         </div>
       )}
 
       {/* Formulario de carga */}
-      <div className="card" style={{ boxShadow: '0 4px 16px rgba(28,28,26,0.06), 0 1px 4px rgba(90,174,90,0.04)' }}>
-        <div className="section-label" style={{ marginBottom: 'var(--space-4)' }}>Subir historia clínica</div>
+      <div className="panel" style={{ borderLeft: '4px solid var(--primary)' }}>
+        <div className="flex items-center gap-2 mb-4">
+          <svg className="w-4 h-4" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+          <div className="section-label" style={{ marginBottom: 0 }}>Subir historia clinica</div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 'var(--space-4)' }}>
           <div>
             <label className="form-label">
@@ -123,7 +133,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
           </div>
           <div>
             <label className="form-label">Nombre de la usuaria</label>
-            <input value={paciente} onChange={(e) => setPaciente(e.target.value)} placeholder="Ej: María Fernanda López" className="input" />
+            <input value={paciente} onChange={(e) => setPaciente(e.target.value)} placeholder="Ej: Maria Fernandez Lopez" className="input" />
           </div>
         </div>
 
@@ -140,7 +150,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
           onDrop={handleDrop}
         >
           {file ? (
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--green-100)', color: 'var(--green-600)', boxShadow: '0 2px 8px rgba(90,174,90,0.12)' }}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--green-100)', color: 'var(--green-600)' }}>
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             </div>
           ) : (
@@ -150,10 +160,10 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
           )}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium" style={{ color: file ? 'var(--green-700)' : 'var(--text-primary)' }}>
-              {file ? file.name : 'Arrastra un PDF aquí o haz clic para seleccionar'}
+              {file ? file.name : 'Arrastra un PDF aqui o haz clic para seleccionar'}
             </div>
             <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {file ? formatBytes(file.size) + ' · Haz clic para cambiar' : 'Solo archivos PDF · máximo ~4.5 MB'}
+              {file ? formatBytes(file.size) + ' · Haz clic para cambiar' : 'Solo archivos PDF · maximo ~4.5 MB'}
             </div>
           </div>
           <input ref={fileRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={handlePickFile} />
@@ -172,7 +182,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
       </div>
 
       {/* Búsqueda y listado */}
-      <div className="card" style={{ boxShadow: '0 4px 16px rgba(28,28,26,0.06), 0 1px 4px rgba(90,174,90,0.04)' }}>
+      <div className="panel">
         <div className="flex flex-wrap items-center gap-3 mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
           <div className="relative flex-1 max-w-sm">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -194,42 +204,44 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
             <div className="empty-icon">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             </div>
-            <div className="empty-title">Sin historias clínicas</div>
-            <div className="empty-desc">No se encontraron historias para la búsqueda o plantilla seleccionada. Prueba con otros filtros o sube un nuevo archivo.</div>
+            <div className="empty-title">Sin historias clinicas</div>
+            <div className="empty-desc">No se encontraron historias para la busqueda o plantilla seleccionada.</div>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  {isAdmin && <th>Prestador</th>}
-                  <th>Usuaria</th>
-                  <th>Documento</th>
-                  <th>Archivo</th>
-                  <th>Tamaño</th>
-                  <th className="text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((h) => (
-                  <tr key={h.id}>
-                    <td className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{new Date(h.created_at).toLocaleDateString('es-CO')}</td>
-                    {isAdmin && <td style={{ color: 'var(--text-secondary)' }}>{h.prestador || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}</td>}
-                    <td style={{ fontWeight: 'var(--weight-medium)' }}>{h.paciente_nombre || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin nombre</span>}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{h.paciente_documento || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}</td>
-                    <td className="max-w-[200px] truncate">{h.filename}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{formatBytes(h.file_size)}</td>
-                    <td className="text-right">
-                      <button onClick={() => openPdf(h.id)} className="btn-ghost" style={{ fontSize: 'var(--text-caption)', padding: '4px 10px' }}>
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filtered.map((h) => (
+              <div key={h.id} className="panel cursor-pointer transition-all duration-200"
+                style={{ padding: '1rem 1.25rem', borderLeft: '3px solid var(--primary)' }}
+                onClick={() => openPdf(h.id)}
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(90,174,90,0.12)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = '' }}>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{h.paciente_nombre || 'Sin nombre'}</div>
+                    <div className="text-[0.7rem] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {h.paciente_documento || '—'} · {h.filename}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[0.65rem] px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
+                        {formatBytes(h.file_size)}
+                      </span>
+                      {h.created_at && (
+                        <span className="text-[0.65rem]" style={{ color: 'var(--text-muted)' }}>
+                          {new Date(h.created_at).toLocaleDateString('es-CO')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <svg className="w-4 h-4 shrink-0 mt-1" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

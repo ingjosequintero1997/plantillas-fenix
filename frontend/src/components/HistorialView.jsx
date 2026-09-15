@@ -225,22 +225,62 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
     return records.filter((r) => !q || `${r.original_filename} ${r.prestador ?? ''} ${r.mes}`.toLowerCase().includes(q))
   }, [records, query])
 
+  const stats = useMemo(() => {
+    const total = records.length
+    const registros = records.reduce((s, r) => s + (r.row_count ?? 0), 0)
+    const errores = records.reduce((s, r) => s + (r.errors_count ?? 0), 0)
+    const avgCalidad = total > 0 ? Math.round(records.reduce((s, r) => s + (r.quality_percent ?? 0), 0) / total) : 0
+    return { total, registros, errores, avgCalidad }
+  }, [records])
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const safePage = Math.min(page, totalPages)
   const pageItems = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE)
 
   if (selected) return <CargueDetail cargue={selected} onBack={() => setSelected(null)} />
 
-  return (
-    <div className="space-y-6 fade-in">
+    return (
+    <div className="space-y-5 fade-in">
       <div className="flex items-center justify-between">
-        <div>
-          <div className="page-title">Verificar data</div>
-          <div className="page-subtitle">Cargues de los prestadores y su calidad de validacion.</div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
+            <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <div className="page-title" style={{ fontSize: '1.1rem' }}>Verificar data</div>
+            <div className="page-subtitle">Cargues de los prestadores y su calidad de validacion.</div>
+          </div>
         </div>
       </div>
 
-      {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
+      {error && <div className="px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid rgba(180,35,24,0.1)' }}>
+        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        {error}
+      </div>}
+
+      {/* Tarjetas de resumen */}
+      {records.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="panel" style={{ padding: '1rem 1.25rem', borderLeft: '3px solid var(--primary)' }}>
+            <div className="text-[0.65rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total cargues</div>
+            <div className="text-xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{stats.total}</div>
+          </div>
+          <div className="panel" style={{ padding: '1rem 1.25rem', borderLeft: '3px solid var(--green-500)' }}>
+            <div className="text-[0.65rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Registros</div>
+            <div className="text-xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{stats.registros.toLocaleString()}</div>
+          </div>
+          <div className="panel" style={{ padding: '1rem 1.25rem', borderLeft: `3px solid ${stats.errores > 0 ? '#EF4444' : 'var(--green-500)'}` }}>
+            <div className="text-[0.65rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Errores</div>
+            <div className="text-xl font-bold mt-1" style={{ color: stats.errores > 0 ? '#EF4444' : 'var(--success)' }}>{stats.errores}</div>
+          </div>
+          <div className="panel" style={{ padding: '1rem 1.25rem', borderLeft: `3px solid ${stats.avgCalidad >= 90 ? 'var(--green-500)' : stats.avgCalidad >= 60 ? '#F59E0B' : '#EF4444'}` }}>
+            <div className="text-[0.65rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Calidad promedio</div>
+            <div className="text-xl font-bold mt-1" style={{ color: stats.avgCalidad >= 90 ? 'var(--success)' : stats.avgCalidad >= 60 ? '#F59E0B' : '#EF4444' }}>{stats.avgCalidad}%</div>
+          </div>
+        </div>
+      )}
 
       {records.length === 0 && !loading ? (
         <div className="empty">
@@ -264,11 +304,9 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Fecha</th>
                   <th>Archivo</th>
                   <th>Prestador</th>
                   <th>Mes</th>
-                  <th>Plantilla</th>
                   <th className="text-center">Registros</th>
                   <th className="text-center">Errores</th>
                   <th className="text-center">Calidad</th>
@@ -279,35 +317,51 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
               <tbody>
                 {pageItems.map((r) => (
                   <tr key={r.id}>
-                    <td className="table-row-click whitespace-nowrap" onClick={() => setSelected(r)} style={{ color: 'var(--text-secondary)' }}>{new Date(r.created_at).toLocaleDateString('es-CO')}</td>
                     <td className="table-row-click" onClick={() => setSelected(r)}>
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center justify-center w-7 h-7 rounded-md shrink-0" style={{ color: 'var(--primary)', backgroundColor: 'var(--primary-light)' }}>
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        </span>
-                        <span className="font-medium">{r.original_filename}</span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{r.original_filename}</div>
+                          <div className="text-[0.65rem]" style={{ color: 'var(--text-muted)' }}>{new Date(r.created_at).toLocaleDateString('es-CO')}</div>
+                        </div>
                       </div>
                     </td>
-                    <td className="table-row-click" onClick={() => setSelected(r)} style={{ color: 'var(--text-secondary)' }}>{r.prestador || '\u2014'}</td>
+                    <td className="table-row-click text-sm" onClick={() => setSelected(r)} style={{ color: 'var(--text-secondary)' }}>{r.prestador || '—'}</td>
                     <td className="table-row-click" onClick={() => setSelected(r)}><span className="badge-neutral">{r.mes}</span></td>
-                    <td className="table-row-click uppercase text-xs" onClick={() => setSelected(r)} style={{ color: 'var(--text-secondary)' }}>{r.template_key || '\u2014'}</td>
-                    <td className="table-row-click text-center font-medium" onClick={() => setSelected(r)}>{r.row_count ?? 0}</td>
-                    <td className="table-row-click text-center" onClick={() => setSelected(r)} style={{ color: r.errors_count ? 'var(--error)' : 'var(--success)' }}>{r.errors_count ?? 0}</td>
+                    <td className="table-row-click text-center font-semibold text-sm" onClick={() => setSelected(r)}>{r.row_count ?? 0}</td>
+                    <td className="table-row-click text-center" onClick={() => setSelected(r)}>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                        style={{ color: r.errors_count ? '#B91C1C' : 'var(--success)', backgroundColor: r.errors_count ? '#FEE2E2' : '#DCFCE7' }}>
+                        {r.errors_count ?? 0}
+                      </span>
+                    </td>
                     <td className="table-row-click text-center" onClick={() => setSelected(r)}><CalidadBadge value={r.quality_percent ?? 0} /></td>
                     <td className="text-center">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: '#DCFCE7', color: '#15803D' }}>
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22C55E' }} />
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#22C55E' }} />
                         Validado
                       </span>
                     </td>
                     <td className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDownloadRow(r) }}
-                          title="Descargar data validada (Excel)"
+                          onClick={(e) => { e.stopPropagation(); setSelected(r) }}
+                          title="Ver detalle"
                           className="p-1.5 rounded-lg transition-all"
                           style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#E6F0FA' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#DCFCE7' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDownloadRow(r) }}
+                          title="Descargar Excel"
+                          className="p-1.5 rounded-lg transition-all"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#DCFCE7' }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         </button>
