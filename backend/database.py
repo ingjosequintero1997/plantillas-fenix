@@ -147,6 +147,7 @@ class HistoriaClinica(Base):
     id = Column(Integer, primary_key=True)
     prestador_id = Column(Integer, ForeignKey("prestadores.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    ips_name = Column(String(255), nullable=True, index=True)
     template_key = Column(String(60), nullable=True, index=True)
     paciente_documento = Column(String(60), nullable=True, index=True)
     paciente_nombre = Column(String(255), nullable=True)
@@ -219,11 +220,13 @@ def init_db():
                 conn.execute(text("PRAGMA foreign_key_list(historias_clinicas)"))
     except Exception:
         pass
+    # Migracion: agregar ips_name a historias_clinicas
     try:
         with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE prestadores ADD COLUMN ips VARCHAR(60)"))
+            conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN ips_name VARCHAR(255)"))
     except Exception:
         pass
+    try:
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE prestadores ADD COLUMN permissions JSON"))

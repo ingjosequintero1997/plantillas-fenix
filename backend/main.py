@@ -2123,9 +2123,11 @@ async def upload_historia(
     try:
         prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
         user_in_db = db.query(User).filter(User.id == current_user.id).first()
+        ips_name_attr = getattr(current_user, 'ips_name', None) or getattr(current_user, 'ips_code', None)
         historia = HistoriaClinica(
             prestador_id=prestador.id if prestador else None,
             user_id=current_user.id if user_in_db else None,
+            ips_name=ips_name_attr,
             template_key=template_key.strip() or "gestante",
             paciente_documento=paciente_documento.strip(),
             paciente_nombre=paciente_nombre.strip(),
@@ -2194,7 +2196,13 @@ async def list_historias(
     db = SessionLocal()
     try:
         query = db.query(HistoriaClinica)
-        if current_user.role == "prestador":
+        if current_user.role == "ips_user":
+            ips_name_val = getattr(current_user, 'ips_name', None) or getattr(current_user, 'ips_code', None)
+            if ips_name_val:
+                query = query.filter(HistoriaClinica.ips_name == ips_name_val)
+            else:
+                query = query.filter(HistoriaClinica.id == -1)
+        elif current_user.role == "prestador":
             query = query.filter(HistoriaClinica.user_id == current_user.id)
         elif current_user.role == "lider":
             prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
@@ -2216,6 +2224,7 @@ async def list_historias(
                 "id": h.id,
                 "template_key": h.template_key or "gestante",
                 "prestador": (h.prestador.nombre if h.prestador else None) or (h.user.name if h.user else None),
+                "ips_name": h.ips_name,
                 "paciente_nombre": h.paciente_nombre,
                 "paciente_documento": h.paciente_documento,
                 "filename": h.filename,

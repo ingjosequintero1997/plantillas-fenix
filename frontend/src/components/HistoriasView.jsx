@@ -46,7 +46,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
         if (hMes !== mes) return false
       }
       if (!q) return true
-      return `${h.filename} ${h.paciente_nombre ?? ''} ${h.paciente_documento ?? ''} ${h.prestador ?? ''}`.toLowerCase().includes(q)
+      return `${h.filename} ${h.paciente_nombre ?? ''} ${h.paciente_documento ?? ''} ${h.prestador ?? ''} ${h.ips_name ?? ''}`.toLowerCase().includes(q)
     })
   }, [historias, query, mes])
 
@@ -229,6 +229,11 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
                       <span className="text-[0.65rem] px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
                         {formatBytes(h.file_size)}
                       </span>
+                      {h.ips_name && (
+                        <span className="text-[0.65rem] px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--green-50)', color: 'var(--green-700)' }}>
+                          {h.ips_name}
+                        </span>
+                      )}
                       {h.created_at && (
                         <span className="text-[0.65rem]" style={{ color: 'var(--text-muted)' }}>
                           {new Date(h.created_at).toLocaleDateString('es-CO')}
