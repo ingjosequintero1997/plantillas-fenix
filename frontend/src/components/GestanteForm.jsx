@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { fetchIps, uploadHistoria, HISTORIA_URL } from '../api'
+import { fetchIps, uploadHistoria, deleteHistoria, fetchHistorias, HISTORIA_URL } from '../api'
 
 const SECCIONES = [
   {
@@ -311,6 +311,8 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   const [uploadingPdf, setUploadingPdf] = useState(false)
   const [pdfMsg, setPdfMsg] = useState('')
   const [historiaId, setHistoriaId] = useState(null)
+  const [existingPdfs, setExistingPdfs] = useState([])
+  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     if (mode === 'edit' && initialData && Object.keys(initialData).length > 0) {
@@ -386,12 +388,42 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       await uploadHistoria(pdfFile, { documento: doc, nombre: `${form.APELLIDO_1 || ''} ${form.NOMBRE_1 || ''}`.trim() }, 'gestante')
       setPdfMsg('Historia clinica subida correctamente.')
       setPdfFile(null)
+      loadExistingPdfs()
     } catch (e) {
       setPdfMsg('Error: ' + (e.message || 'No se pudo subir'))
     } finally {
       setUploadingPdf(false)
     }
   }
+
+  const loadExistingPdfs = async () => {
+    const doc = form.NO_DE_IDENTIFICACION
+    if (!doc) { setExistingPdfs([]); return }
+    try {
+      const historias = await fetchHistorias(doc, 'gestante')
+      setExistingPdfs(historias.filter(h => h.paciente_documento === doc))
+    } catch {
+      setExistingPdfs([])
+    }
+  }
+
+  const handleDeletePdf = async (historiaId, filename) => {
+    if (!window.confirm(`Eliminar "${filename}"? Esta accion no se puede deshacer.`)) return
+    setDeletingId(historiaId)
+    try {
+      await deleteHistoria(historiaId)
+      setPdfMsg('PDF eliminado correctamente.')
+      loadExistingPdfs()
+    } catch (e) {
+      setPdfMsg('Error al eliminar: ' + (e.message || 'No se pudo eliminar'))
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  useEffect(() => {
+    if (mode === 'edit' && form.NO_DE_IDENTIFICACION) loadExistingPdfs()
+  }, [form.NO_DE_IDENTIFICACION])
 
   const handleChange = (key, val) => {
     setForm((f) => ({ ...f, [key]: val }))
@@ -623,6 +655,38 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
                 <div className="px-3 py-2 rounded-lg text-xs flex items-center gap-2"
                   style={{ color: pdfMsg.includes('Error') ? '#B91C1C' : '#166534', backgroundColor: pdfMsg.includes('Error') ? '#FEE2E2' : '#DCFCE7', border: `1px solid ${pdfMsg.includes('Error') ? '#FECACA' : '#BBF7D0'}` }}>
                   {pdfMsg}
+                </div>
+              )}
+
+              {/* PDFs existentes */}
+              {existingPdfs.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    PDFs subidos ({existingPdfs.length})
+                  </div>
+                  {existingPdfs.map((pdf) => (
+                    <div key={pdf.id} className="flex items-center gap-3 px-3 py-2 rounded-lg"
+                      style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                      <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--red-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{pdf.filename}</div>
+                        <div className="text-[0.65rem]" style={{ color: 'var(--text-muted)' }}>
+                          {pdf.file_size ? `${(pdf.file_size / 1024 / 1024).toFixed(2)} MB` : ''}
+                          {pdf.created_at ? ` · ${new Date(pdf.created_at).toLocaleDateString('es-CO')}` : ''}
+                        </div>
+                      </div>
+                      <a href={HISTORIA_URL(pdf.paciente_documento || form.NO_DE_IDENTIFICACION)} target="_blank" rel="noopener noreferrer"
+                        className="px-2 py-1 rounded text-[0.65rem] font-medium shrink-0"
+                        style={{ color: 'var(--primary)', border: '1px solid var(--primary)', backgroundColor: 'var(--primary-light)' }}>
+                        Ver
+                      </a>
+                      <button type="button" onClick={() => handleDeletePdf(pdf.id, pdf.filename)} disabled={deletingId === pdf.id}
+                        className="px-2 py-1 rounded text-[0.65rem] font-medium shrink-0"
+                        style={{ color: '#B91C1C', border: '1px solid #FECACA', backgroundColor: '#FEE2E2' }}>
+                        {deletingId === pdf.id ? '...' : 'Eliminar'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 

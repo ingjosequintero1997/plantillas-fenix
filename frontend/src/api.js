@@ -659,6 +659,11 @@ export async function uploadHistoria(file, paciente, templateKey = 'gestante') {
   return JSON.parse(text)
 }
 
+export async function deleteHistoria(id) {
+  const resp = await apiFetch(`${API_BASE}/historias/${id}`, { method: 'DELETE' })
+  return resp
+}
+
 export async function fetchHistorias(q = '', templateKey = '') {
   const params = new URLSearchParams()
   if (q) params.set('q', q)
