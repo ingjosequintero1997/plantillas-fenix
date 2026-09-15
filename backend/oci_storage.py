@@ -21,17 +21,25 @@ def oci_enabled():
     return OCI_ENABLED
 
 
-def _get_config():
-    return {
-        "tenancy": os.environ["OCI_TENANCY"],
-        "user": os.environ["OCI_USER"],
-        "fingerprint": os.environ["OCI_FINGERPRINT"],
-        "key_file": None,
-        "region": os.environ["OCI_REGION"],
-        "namespace": os.environ["OCI_NAMESPACE"],
-        "bucket": os.environ["OCI_BUCKET"],
-        "private_key_pem": os.environ["OCI_PRIVATE_KEY"],
-    }
+def _fix_pem(raw):
+    """Arregla una key PEM que vino pegada en una sola linea."""
+    raw = raw.strip()
+    if "\\n" in raw:
+        raw = raw.replace("\\n", "\n")
+    has_begin = "-----BEGIN PRIVATE KEY-----" in raw
+    has_end = "-----END PRIVATE KEY-----" in raw
+    if has_begin and "\n" in raw.split("-----BEGIN PRIVATE KEY-----")[1][:5]:
+        return raw
+    header = "-----BEGIN PRIVATE KEY-----\n" if has_begin else ""
+    footer = "\n-----END PRIVATE KEY-----\n" if has_end else ""
+    body = raw
+    if has_begin:
+        body = raw.split("-----BEGIN PRIVATE KEY-----")[1]
+    if has_end:
+        body = body.split("-----END PRIVATE KEY-----")[0]
+    body = body.replace(" ", "").replace("\n", "").replace("\r", "").replace("\t", "")
+    lines = [body[i:i+64] for i in range(0, len(body), 64)]
+    return header + "\n".join(lines) + footer
 
 
 def _get_client():
@@ -39,16 +47,11 @@ def _get_client():
         raise RuntimeError("OCI no esta habilitado. Faltan variables de entorno.")
     try:
         import oci
-        # Escribir la private key a un archivo temporal para preservar saltos de linea
         import tempfile
-        key_content = os.environ["OCI_PRIVATE_KEY"]
-        # Asegurar que los saltos de linea sean reales
-        if "\\n" in key_content and "\n" not in key_content:
-            key_content = key_content.replace("\\n", "\n")
+        key_content = _fix_pem(os.environ["OCI_PRIVATE_KEY"])
         key_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pem", mode="w")
         key_file.write(key_content)
         key_file.close()
-
         cfg = {
             "tenancy": os.environ["OCI_TENANCY"],
             "user": os.environ["OCI_USER"],
@@ -79,17 +82,10 @@ def upload_pdf(object_name, content, content_type="application/pdf"):
     client = _get_client()
     namespace = os.environ["OCI_NAMESPACE"]
     bucket = os.environ["OCI_BUCKET"]
-
     try:
         import io
         stream = io.BytesIO(content)
-        resp = client.put_object(
-            namespace,
-            bucket,
-            object_name,
-            stream,
-            content_type=content_type,
-        )
+        client.put_object(namespace, bucket, object_name, stream, content_type=content_type)
         log.info(f"PDF subido a OCI: {object_name}")
         return object_name
     except Exception as e:
@@ -103,7 +99,6 @@ def download_pdf(object_name):
     client = _get_client()
     namespace = os.environ["OCI_NAMESPACE"]
     bucket = os.environ["OCI_BUCKET"]
-
     try:
         resp = client.get_object(namespace, bucket, object_name)
         return resp.data.content
@@ -118,7 +113,6 @@ def delete_pdf(object_name):
     client = _get_client()
     namespace = os.environ["OCI_NAMESPACE"]
     bucket = os.environ["OCI_BUCKET"]
-
     try:
         client.delete_object(namespace, bucket, object_name)
         log.info(f"PDF eliminado de OCI: {object_name}")
