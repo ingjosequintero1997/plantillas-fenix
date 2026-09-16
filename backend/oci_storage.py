@@ -115,7 +115,7 @@ def _base_url():
 
 
 def upload_pdf(object_name, content, content_type="application/pdf"):
-    import requests
+    from oci._vendor import requests
     base_url, host = _base_url()
     url = base_url + object_name
     path = urlsplit(url).path
@@ -140,7 +140,7 @@ def upload_pdf(object_name, content, content_type="application/pdf"):
 
 
 def download_pdf(object_name):
-    import requests
+    from oci._vendor import requests
     base_url, host = _base_url()
     url = base_url + object_name
     path = urlsplit(url).path
@@ -156,7 +156,7 @@ def download_pdf(object_name):
 
 
 def delete_pdf(object_name):
-    import requests
+    from oci._vendor import requests
     base_url, host = _base_url()
     url = base_url + object_name
     path = urlsplit(url).path
