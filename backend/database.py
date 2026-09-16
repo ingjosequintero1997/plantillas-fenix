@@ -148,6 +148,7 @@ class HistoriaClinica(Base):
     prestador_id = Column(Integer, ForeignKey("prestadores.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     ips_name = Column(String(255), nullable=True, index=True)
+    tipo_documento = Column(String(20), nullable=True)
     template_key = Column(String(60), nullable=True, index=True)
     paciente_documento = Column(String(60), nullable=True, index=True)
     paciente_nombre = Column(String(255), nullable=True)
@@ -224,6 +225,12 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN ips_name VARCHAR(255)"))
+    except Exception:
+        pass
+    # Migracion: agregar tipo_documento a historias_clinicas
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN tipo_documento VARCHAR(20)"))
     except Exception:
         pass
     try:

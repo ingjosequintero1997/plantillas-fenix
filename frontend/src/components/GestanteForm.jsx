@@ -385,7 +385,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     if (!pdfFile) { setPdfMsg('Selecciona un archivo PDF.'); return }
     setUploadingPdf(true); setPdfMsg('')
     try {
-      await uploadHistoria(pdfFile, { documento: doc, nombre: `${form.APELLIDO_1 || ''} ${form.NOMBRE_1 || ''}`.trim() }, 'gestante')
+      await uploadHistoria(pdfFile, { documento: doc, nombre: `${form.APELLIDO_1 || ''} ${form.NOMBRE_1 || ''}`.trim(), tipoDocumento: form.TIPO_DE_DOCUMENTO_DE_IDENTIDAD || '' }, 'gestante')
       setPdfMsg('Historia clinica subida correctamente.')
       setPdfFile(null)
       loadExistingPdfs()

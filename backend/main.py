@@ -2098,6 +2098,7 @@ async def upload_historia(
     file: UploadFile = File(...),
     paciente_documento: str = Form(""),
     paciente_nombre: str = Form(""),
+    tipo_documento: str = Form(""),
     template_key: str = Form("gestante"),
     current_user: User = Depends(get_current_user),
 ):
@@ -2128,6 +2129,7 @@ async def upload_historia(
             prestador_id=prestador.id if prestador else None,
             user_id=current_user.id if user_in_db else None,
             ips_name=ips_name_attr,
+            tipo_documento=tipo_documento.strip() or None,
             template_key=template_key.strip() or "gestante",
             paciente_documento=paciente_documento.strip(),
             paciente_nombre=paciente_nombre.strip(),
@@ -2225,6 +2227,7 @@ async def list_historias(
                 "template_key": h.template_key or "gestante",
                 "prestador": (h.prestador.nombre if h.prestador else None) or (h.user.name if h.user else None),
                 "ips_name": h.ips_name,
+                "tipo_documento": h.tipo_documento,
                 "paciente_nombre": h.paciente_nombre,
                 "paciente_documento": h.paciente_documento,
                 "filename": h.filename,

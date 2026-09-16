@@ -648,6 +648,7 @@ export async function uploadHistoria(file, paciente, templateKey = 'gestante') {
   form.append('file', file)
   if (paciente.documento) form.append('paciente_documento', paciente.documento)
   if (paciente.nombre) form.append('paciente_nombre', paciente.nombre)
+  if (paciente.tipoDocumento) form.append('tipo_documento', paciente.tipoDocumento)
   if (templateKey) form.append('template_key', templateKey)
   const resp = await fetch(`${API_BASE}/historias`, {
     method: 'POST',
