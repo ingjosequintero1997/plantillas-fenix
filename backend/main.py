@@ -563,9 +563,13 @@ async def debug_oci():
 	info = {"oci_enabled": oci_storage.oci_enabled()}
 	if not oci_storage.oci_enabled():
 		info["error"] = "OCI no habilitado - faltan variables"
-		info["missing"] = [k for k in oci_storage.REQUIRED_ENV if not os.environ.get(k)]
+		info["missing"] = [k for k in oci_storage.OCI_ENV_KEYS if not os.environ.get(k)]
+		info["has_key"] = oci_storage._has_key()
+		info["pk_direct"] = bool(os.environ.get("OCI_PRIVATE_KEY"))
+		info["pk_part1"] = bool(os.environ.get("OCI_PRIVATE_KEY_PART1"))
+		info["pk_part2"] = bool(os.environ.get("OCI_PRIVATE_KEY_PART2"))
 		return info
-	key_raw = os.environ.get("OCI_PRIVATE_KEY", "")
+	key_raw = oci_storage._get_raw_key()
 	fixed = oci_storage._fix_pem(key_raw)
 	info["raw_length"] = len(key_raw)
 	info["fixed_length"] = len(fixed)
@@ -574,10 +578,8 @@ async def debug_oci():
 	info["fixed_lines"] = fixed.count("\n")
 	info["key_sha256"] = hashlib.sha256(fixed.encode()).hexdigest()[:16]
 	info["raw_sha256"] = hashlib.sha256(key_raw.encode()).hexdigest()[:16]
-	info["raw_hex_start"] = key_raw[:60].encode().hex()
 	info["has_begin"] = "-----BEGIN PRIVATE KEY-----" in fixed
 	info["has_end"] = "-----END PRIVATE KEY-----" in fixed
-	info["non_ascii"] = [hex(ord(c)) for c in fixed if ord(c) > 127]
 	info["fingerprint"] = os.environ.get("OCI_FINGERPRINT", "")
 	info["tenancy"] = os.environ.get("OCI_TENANCY", "")[:20] + "..."
 	info["user_ocid"] = os.environ.get("OCI_USER", "")[:20] + "..."
