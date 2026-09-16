@@ -4729,6 +4729,12 @@ def _get_prestador_ips_name(db, current_user):
 	"""Obtiene el nombre de la IPS del prestador/usuario actual. Retorna None si es admin o no tiene IPS."""
 	if current_user.role == "admin":
 		return None
+	# 0) Del JWT (el token ya trae ips_name para usuarios IPS)
+	_jwt_ips = getattr(current_user, "ips_name", None)
+	if _jwt_ips:
+		val = str(_jwt_ips).strip()
+		if val:
+			return val.upper()
 	# 1) Por prestador → ct_ips
 	prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 	if prestador and prestador.ips:
