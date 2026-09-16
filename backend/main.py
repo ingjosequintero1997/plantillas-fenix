@@ -573,6 +573,8 @@ async def debug_oci():
 	info["fixed_ends"] = repr(fixed[-40:])
 	info["fixed_lines"] = fixed.count("\n")
 	info["key_sha256"] = hashlib.sha256(fixed.encode()).hexdigest()[:16]
+	info["raw_sha256"] = hashlib.sha256(key_raw.encode()).hexdigest()[:16]
+	info["raw_hex_start"] = key_raw[:60].encode().hex()
 	info["has_begin"] = "-----BEGIN PRIVATE KEY-----" in fixed
 	info["has_end"] = "-----END PRIVATE KEY-----" in fixed
 	info["non_ascii"] = [hex(ord(c)) for c in fixed if ord(c) > 127]

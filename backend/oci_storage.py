@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import tempfile
 from datetime import datetime, timezone
 
 REQUIRED_ENV = (
@@ -49,11 +50,11 @@ def _get_client():
         raise RuntimeError("OCI no esta habilitado. Faltan variables de entorno.")
     try:
         import oci
-        import tempfile
         key_content = _fix_pem(os.environ["OCI_PRIVATE_KEY"])
         key_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pem", mode="w", encoding="utf-8")
         key_file.write(key_content)
         key_file.flush()
+        os.fsync(key_file.fileno())
         key_file.close()
         cfg = {
             "tenancy": os.environ["OCI_TENANCY"],
@@ -62,16 +63,7 @@ def _get_client():
             "region": os.environ["OCI_REGION"],
             "key_file": key_file.name,
         }
-        signer = oci.signer.Signer(
-            tenancy=os.environ["OCI_TENANCY"],
-            user=os.environ["OCI_USER"],
-            fingerprint=os.environ["OCI_FINGERPRINT"],
-            private_key_file_location=key_file.name,
-        )
-        client = oci.object_storage.ObjectStorageClient(
-            config=cfg,
-            signer=signer,
-        )
+        client = oci.object_storage.ObjectStorageClient(config=cfg)
         return client
     except ImportError:
         raise RuntimeError("Modulo 'oci' no instalado. Ejecuta: pip install oci")
