@@ -111,62 +111,50 @@ def _base_url():
     region = os.environ["OCI_REGION"]
     namespace = os.environ["OCI_NAMESPACE"]
     bucket = os.environ["OCI_BUCKET"]
-    return f"https://objectstorage.{region}.oraclecloud.com/n/{namespace}/b/{bucket}/o/", f"objectstorage.{region}.oraclecloud.com"
+    host = f"objectstorage.{region}.oraclecloud.com"
+    return f"https://{host}/n/{namespace}/b/{bucket}/o/", host
 
 
-def upload_pdf(object_name, content, content_type="application/pdf"):
-    from oci._vendor import requests
+def _request(method, object_name, content=None, content_type=None):
+    """Ejecuta una peticion OCI firmada usando http.client (stdlib)."""
+    import http.client
     base_url, host = _base_url()
     url = base_url + object_name
     path = urlsplit(url).path
     date_str = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-    body_sha256 = hashlib.sha256(content).hexdigest()
-    headers = {
-        "host": host,
-        "date": date_str,
-        "content-type": content_type,
-        "content-length": str(len(content)),
-        "x-content-sha256": body_sha256,
-    }
-    auth = _build_auth("PUT", path, headers)
-    req_headers = dict(headers)
-    req_headers["authorization"] = auth
-    req_headers["opc-request-id"] = f"fenix-{hashlib.sha1(object_name.encode()).hexdigest()[:16]}"
-    resp = requests.put(url, data=content, headers=req_headers)
-    if resp.status_code >= 400:
-        raise RuntimeError(f"OCI upload failed ({resp.status_code}): {resp.text[:500]}")
+    headers = {"host": host, "date": date_str}
+    body = None
+    if content is not None:
+        body = content
+        headers["content-type"] = content_type or "application/pdf"
+        headers["content-length"] = str(len(content))
+        headers["x-content-sha256"] = hashlib.sha256(content).hexdigest()
+    auth = _build_auth(method, path, headers)
+    headers["authorization"] = auth
+    headers["opc-request-id"] = f"fenix-{hashlib.sha1(object_name.encode()).hexdigest()[:16]}"
+    conn = http.client.HTTPSConnection(host, timeout=60)
+    try:
+        conn.request(method, path, body=body, headers=headers)
+        resp = conn.getresponse()
+        resp_body = resp.read()
+        if resp.status >= 400:
+            raise RuntimeError(f"OCI {method} failed ({resp.status}): {resp_body[:500].decode('utf-8', errors='replace')}")
+        return resp_body
+    finally:
+        conn.close()
+
+
+def upload_pdf(object_name, content, content_type="application/pdf"):
+    _request("PUT", object_name, content=content, content_type=content_type)
     log.info(f"PDF subido a OCI: {object_name}")
     return object_name
 
 
 def download_pdf(object_name):
-    from oci._vendor import requests
-    base_url, host = _base_url()
-    url = base_url + object_name
-    path = urlsplit(url).path
-    date_str = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-    headers = {"host": host, "date": date_str}
-    auth = _build_auth("GET", path, headers)
-    req_headers = dict(headers)
-    req_headers["authorization"] = auth
-    resp = requests.get(url, headers=req_headers)
-    if resp.status_code >= 400:
-        raise RuntimeError(f"OCI download failed ({resp.status_code}): {resp.text[:500]}")
-    return resp.content
+    return _request("GET", object_name)
 
 
 def delete_pdf(object_name):
-    from oci._vendor import requests
-    base_url, host = _base_url()
-    url = base_url + object_name
-    path = urlsplit(url).path
-    date_str = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-    headers = {"host": host, "date": date_str}
-    auth = _build_auth("DELETE", path, headers)
-    req_headers = dict(headers)
-    req_headers["authorization"] = auth
-    resp = requests.delete(url, headers=req_headers)
-    if resp.status_code >= 400:
-        raise RuntimeError(f"OCI delete failed ({resp.status_code}): {resp.text[:500]}")
+    _request("DELETE", object_name)
     log.info(f"PDF eliminado de OCI: {object_name}")
     return True
