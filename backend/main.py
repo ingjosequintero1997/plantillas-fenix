@@ -587,6 +587,23 @@ async def debug_oci():
 	info["namespace"] = os.environ.get("OCI_NAMESPACE", "")
 	info["bucket"] = os.environ.get("OCI_BUCKET", "")
 	try:
+		# Calcular fingerprint real de la key
+		from cryptography.hazmat.primitives import serialization
+		from cryptography.hazmat.primitives.asymmetric import rsa
+		import hashlib
+		key_content = oci_storage._fix_pem(oci_storage._get_raw_key())
+		pk = serialization.load_pem_private_key(key_content.encode(), password=None)
+		pub = pk.public_key().public_bytes(
+			serialization.Encoding.DER,
+			serialization.PublicFormat.SubjectPublicKeyInfo,
+		)
+		fp = ":".join(f"{b:02x}" for b in hashlib.md5(pub).digest())
+		info["real_fingerprint"] = fp
+		info["fp_match"] = fp == os.environ.get("OCI_FINGERPRINT", "").strip()
+		info["python_version"] = __import__("sys").version
+	except Exception as e:
+		info["fingerprint_error"] = str(e)
+	try:
 		client = oci_storage._get_client()
 		ns = os.environ.get("OCI_NAMESPACE", "")
 		bucket = os.environ.get("OCI_BUCKET", "")
