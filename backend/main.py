@@ -559,7 +559,7 @@ async def debug_db():
 @app.get("/debug-oci")
 async def debug_oci():
 	"""Prueba la conexion a OCI Object Storage."""
-	import os
+	import os, hashlib
 	info = {"oci_enabled": oci_storage.oci_enabled()}
 	if not oci_storage.oci_enabled():
 		info["error"] = "OCI no habilitado - faltan variables"
@@ -572,8 +572,10 @@ async def debug_oci():
 	info["fixed_starts"] = repr(fixed[:120])
 	info["fixed_ends"] = repr(fixed[-40:])
 	info["fixed_lines"] = fixed.count("\n")
+	info["key_sha256"] = hashlib.sha256(fixed.encode()).hexdigest()[:16]
 	info["has_begin"] = "-----BEGIN PRIVATE KEY-----" in fixed
 	info["has_end"] = "-----END PRIVATE KEY-----" in fixed
+	info["non_ascii"] = [hex(ord(c)) for c in fixed if ord(c) > 127]
 	info["fingerprint"] = os.environ.get("OCI_FINGERPRINT", "")
 	info["tenancy"] = os.environ.get("OCI_TENANCY", "")[:20] + "..."
 	info["user_ocid"] = os.environ.get("OCI_USER", "")[:20] + "..."
@@ -591,6 +593,8 @@ async def debug_oci():
 	except Exception as e:
 		info["upload_ok"] = False
 		info["upload_error"] = str(e)
+	import datetime as _dt
+	info["server_utc"] = _dt.datetime.utcnow().isoformat()
 	return info
 
 @app.get("/debug-historias")
