@@ -604,13 +604,9 @@ async def debug_oci():
 	except Exception as e:
 		info["fingerprint_error"] = str(e)
 	try:
-		client = oci_storage._get_client()
-		ns = os.environ.get("OCI_NAMESPACE", "")
-		bucket = os.environ.get("OCI_BUCKET", "")
-		import io
-		client.put_object(ns, bucket, "test_connection.txt", io.BytesIO(b"test"))
+		oci_storage.upload_pdf("test_connection.txt", b"test", "text/plain")
 		info["upload_ok"] = True
-		client.delete_object(ns, bucket, "test_connection.txt")
+		oci_storage.delete_pdf("test_connection.txt")
 	except Exception as e:
 		info["upload_ok"] = False
 		info["upload_error"] = str(e)
