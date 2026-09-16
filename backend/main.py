@@ -4729,21 +4729,33 @@ def _get_prestador_ips_name(db, current_user):
 	"""Obtiene el nombre de la IPS del prestador/usuario actual. Retorna None si es admin o no tiene IPS."""
 	if current_user.role == "admin":
 		return None
-	# Primero intentar por prestador
+	# 1) Por prestador → ct_ips
 	prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
 	if prestador and prestador.ips:
 		ips_code = str(prestador.ips).strip()
-		try:
-			row = db.execute(text('SELECT razon_social FROM ct_ips WHERE ips = :code'), {"code": ips_code}).fetchone()
-			if row:
-				return str(row[0]).strip().upper()
-		except Exception:
-			pass
-	# Si no encontro por prestador, intentar por usuarios_ips (IPS users)
+		for tbl in ('"administrativo"."ct_ips"', 'ct_ips'):
+			try:
+				row = db.execute(text(f'SELECT razon_social FROM {tbl} WHERE ips = :code'), {"code": ips_code}).fetchone()
+				if row and row[0]:
+					return str(row[0]).strip().upper()
+			except Exception:
+				pass
+	# 2) Por usuarios_ips.id
 	try:
-		row = db.execute(text('SELECT ips_name FROM usuarios_ips WHERE username = :u AND active = TRUE'), {"u": current_user.username}).fetchone()
-		if row and row[0]:
-			return str(row[0]).strip().upper()
+		_uid = getattr(current_user, "id", None)
+		if _uid:
+			row = db.execute(text('SELECT ips_name FROM usuarios_ips WHERE id = :id AND active = TRUE'), {"id": int(_uid)}).fetchone()
+			if row and row[0]:
+				return str(row[0]).strip().upper()
+	except Exception:
+		pass
+	# 3) Por usuarios_ips.username
+	try:
+		_uname = getattr(current_user, "username", "")
+		if _uname:
+			row = db.execute(text('SELECT ips_name FROM usuarios_ips WHERE username = :u AND active = TRUE'), {"u": _uname}).fetchone()
+			if row and row[0]:
+				return str(row[0]).strip().upper()
 	except Exception:
 		pass
 	return None
