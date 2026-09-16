@@ -237,13 +237,12 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                UPDATE historias_clinicas h
+                UPDATE historias_clinicas
                 SET ips_name = UPPER(u.ips_name)
                 FROM usuarios_ips u
-                JOIN users usr ON usr.username = u.username
-                WHERE h.user_id = usr.id
+                WHERE historias_clinicas.user_id = u.id
                   AND u.active = TRUE
-                  AND (h.ips_name IS NULL OR h.ips_name = '')
+                  AND (historias_clinicas.ips_name IS NULL OR historias_clinicas.ips_name = '')
             """))
     except Exception:
         pass
