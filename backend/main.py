@@ -2127,7 +2127,7 @@ async def upload_historia(
         ips_name_attr = _get_prestador_ips_name(db, current_user)
         historia = HistoriaClinica(
             prestador_id=prestador.id if prestador else None,
-            user_id=current_user.id if user_in_db else None,
+            user_id=current_user.id,
             ips_name=ips_name_attr,
             tipo_documento=tipo_documento.strip() or None,
             template_key=template_key.strip() or "gestante",
