@@ -4963,6 +4963,8 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 		raise
 	except Exception as e:
 		raise HTTPException(status_code=500, detail="No se encontro la gestante. Verifica el numero de identificacion.")
+
+@app.get("/data/gestantes/{registro_id}")
 async def obtener_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene un registro de gestante por ID."""
 	ensure_db_ready()
@@ -4980,6 +4982,8 @@ async def obtener_gestante(registro_id: int, current_user: User = Depends(get_cu
 		raise
 	except Exception as e:
 		raise HTTPException(status_code=500, detail="Error al obtener el registro. Intenta de nuevo.")
+
+@app.put("/data/gestantes/{registro_id}")
 async def actualizar_gestante(registro_id: int, payload: dict, current_user: User = Depends(get_current_user)):
 	"""Actualiza un registro de gestante. Valida contra el instructivo. Registra auditoria."""
 	ensure_db_ready()
@@ -5063,6 +5067,8 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 	except Exception as e:
 		db.rollback()
 		raise HTTPException(status_code=500, detail="Error al actualizar el registro. Verifica los datos e intenta de nuevo.")
+
+@app.post("/data/gestantes")
 async def crear_gestante(payload: dict, current_user: User = Depends(get_current_user)):
 	"""Crea un registro individual de gestante (cargue de uno en uno)."""
 	ensure_db_ready()
@@ -5121,6 +5127,8 @@ async def crear_gestante(payload: dict, current_user: User = Depends(get_current
 	except Exception as e:
 		db.rollback()
 		raise HTTPException(status_code=500, detail="Error al crear el registro de gestante. Verifica los datos e intenta de nuevo.")
+
+@app.delete("/data/gestantes/{registro_id}")
 async def eliminar_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Elimina un registro de gestante."""
 	if current_user.role != "admin":
@@ -5140,6 +5148,8 @@ async def eliminar_gestante(registro_id: int, current_user: User = Depends(get_c
 	except Exception as e:
 		db.rollback()
 		raise HTTPException(status_code=500, detail="Error al eliminar el registro. Intenta de nuevo.")
+
+@app.get("/data/gestantes/{registro_id}/audit")
 async def obtener_auditoria(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene el historial de auditoria de una gestante."""
 	ensure_db_ready()

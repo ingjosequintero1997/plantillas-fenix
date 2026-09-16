@@ -178,6 +178,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     sessionStorage.removeItem('auth')
+    localStorage.removeItem('ultima_data_validada')
     setUser(null)
     setSystemConfig({ cargue_masivo: true, historias_pdf: true })
   }, [])

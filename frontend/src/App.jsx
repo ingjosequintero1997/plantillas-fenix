@@ -156,6 +156,10 @@ export default function App() {
   const [lastCargueId, setLastCargueId] = useState('')
 
   useEffect(() => {
+    setSection(user?.role === 'ips_user' ? 'data' : 'inicio')
+  }, [user])
+
+  useEffect(() => {
     const ipsSections = ['data', 'verificar', 'indicadores']
     if (systemConfig.cargue_masivo !== false) ipsSections.push('cargue_masivo')
     if (systemConfig.historias_pdf !== false) ipsSections.push('historias')
