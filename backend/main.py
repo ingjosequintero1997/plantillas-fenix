@@ -616,6 +616,15 @@ async def debug_oci():
 		info["upload_error"] = str(e)
 	import datetime as _dt
 	info["server_utc"] = _dt.datetime.utcnow().isoformat()
+	try:
+		import urllib.request
+		req = urllib.request.Request("https://worldtimeapi.org/api/timezone/UTC", method="GET")
+		with urllib.request.urlopen(req, timeout=10) as resp:
+			import json as _json
+			data = _json.loads(resp.read().decode())
+			info["internet_time"] = data.get("datetime", "")
+	except Exception as e:
+		info["internet_time_error"] = str(e)
 	return info
 
 @app.get("/debug-historias")
