@@ -233,7 +233,20 @@ def init_db():
             conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN tipo_documento VARCHAR(20)"))
     except Exception:
         pass
+    # Migracion: corregir ips_name en historias existentes
     try:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                UPDATE historias_clinicas h
+                SET ips_name = UPPER(u.ips_name)
+                FROM usuarios_ips u
+                JOIN users usr ON usr.username = u.username
+                WHERE h.user_id = usr.id
+                  AND u.active = TRUE
+                  AND (h.ips_name IS NULL OR h.ips_name = '')
+            """))
+    except Exception:
+        pass
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE prestadores ADD COLUMN permissions JSON"))
