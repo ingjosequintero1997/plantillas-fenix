@@ -76,19 +76,24 @@ def _get_client():
     try:
         import oci
         key_content = _fix_pem(_get_raw_key())
-        key_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pem", mode="w", encoding="utf-8")
-        key_file.write(key_content)
-        key_file.flush()
-        os.fsync(key_file.fileno())
-        key_file.close()
         cfg = {
             "tenancy": os.environ["OCI_TENANCY"],
             "user": os.environ["OCI_USER"],
             "fingerprint": os.environ["OCI_FINGERPRINT"],
             "region": os.environ["OCI_REGION"],
-            "key_file": key_file.name,
+            "key_file": "/nonexistent/key.pem",
         }
-        client = oci.object_storage.ObjectStorageClient(config=cfg)
+        signer = oci.signer.Signer(
+            tenancy=os.environ["OCI_TENANCY"],
+            user=os.environ["OCI_USER"],
+            fingerprint=os.environ["OCI_FINGERPRINT"],
+            private_key_file_location="",
+            private_key_content=key_content,
+        )
+        client = oci.object_storage.ObjectStorageClient(
+            config=cfg,
+            signer=signer,
+        )
         return client
     except ImportError:
         raise RuntimeError("Modulo 'oci' no instalado. Ejecuta: pip install oci")
