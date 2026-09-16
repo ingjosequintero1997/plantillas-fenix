@@ -26,9 +26,12 @@ def _fix_pem(raw):
     raw = raw.strip()
     if "\\n" in raw:
         raw = raw.replace("\\n", "\n")
+    if "\\r" in raw:
+        raw = raw.replace("\\r", "")
     has_begin = "-----BEGIN PRIVATE KEY-----" in raw
     has_end = "-----END PRIVATE KEY-----" in raw
     if has_begin and "\n" in raw.split("-----BEGIN PRIVATE KEY-----")[1][:5]:
+        raw = raw.replace("\r\n", "\n").replace("\r", "\n")
         return raw
     header = "-----BEGIN PRIVATE KEY-----\n" if has_begin else ""
     footer = "\n-----END PRIVATE KEY-----\n" if has_end else ""
@@ -37,7 +40,7 @@ def _fix_pem(raw):
         body = raw.split("-----BEGIN PRIVATE KEY-----")[1]
     if has_end:
         body = body.split("-----END PRIVATE KEY-----")[0]
-    body = body.replace(" ", "").replace("\n", "").replace("\r", "").replace("\t", "")
+    body = body.replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")
     lines = [body[i:i+64] for i in range(0, len(body), 64)]
     return header + "\n".join(lines) + footer
 

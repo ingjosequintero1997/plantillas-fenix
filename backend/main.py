@@ -562,15 +562,24 @@ async def debug_oci():
 	import os
 	info = {"oci_enabled": oci_storage.oci_enabled()}
 	if not oci_storage.oci_enabled():
-		info["error"] = "OCI no habilitado"
+		info["error"] = "OCI no habilitado - faltan variables"
+		info["missing"] = [k for k in oci_storage.REQUIRED_ENV if not os.environ.get(k)]
 		return info
 	key_raw = os.environ.get("OCI_PRIVATE_KEY", "")
 	fixed = oci_storage._fix_pem(key_raw)
 	info["raw_length"] = len(key_raw)
 	info["fixed_length"] = len(fixed)
-	info["fixed_starts"] = repr(fixed[:80])
+	info["fixed_starts"] = repr(fixed[:120])
+	info["fixed_ends"] = repr(fixed[-40:])
 	info["fixed_lines"] = fixed.count("\n")
+	info["has_begin"] = "-----BEGIN PRIVATE KEY-----" in fixed
+	info["has_end"] = "-----END PRIVATE KEY-----" in fixed
 	info["fingerprint"] = os.environ.get("OCI_FINGERPRINT", "")
+	info["tenancy"] = os.environ.get("OCI_TENANCY", "")[:20] + "..."
+	info["user_ocid"] = os.environ.get("OCI_USER", "")[:20] + "..."
+	info["region"] = os.environ.get("OCI_REGION", "")
+	info["namespace"] = os.environ.get("OCI_NAMESPACE", "")
+	info["bucket"] = os.environ.get("OCI_BUCKET", "")
 	try:
 		client = oci_storage._get_client()
 		ns = os.environ.get("OCI_NAMESPACE", "")
