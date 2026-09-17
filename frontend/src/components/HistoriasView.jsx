@@ -16,6 +16,30 @@ function formatDate(s) {
   catch { return s }
 }
 
+const NORMAS_HISTORIA_CLINICA = [
+  { norma: 'Resolución 1481 de 2014', desc: 'Reglamenta la Historia Clínica en Colombia.' },
+  { norma: 'Resolución 1712 de 2014', desc: 'Lineamientos para la gestión del conocimiento en salud.' },
+  { norma: 'Resolución 1078 de 2015', desc: 'Manual de Organización y Funciones del SISPRO.' },
+  { norma: 'CONPES 3920', desc: 'Estrategia para la implementación de la Historia Clínica Electrónica.' },
+  { norma: 'Resolución 1389 de 2022', desc: 'Reglamenta el uso de la Historia Clínica Electrónica.' },
+]
+
+function RegulatoryFooter() {
+  return (
+    <div style={{
+      flexShrink: 0, padding: '8px 16px', borderTop: '1px solid var(--border-subtle)',
+      backgroundColor: 'var(--bg-surface)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 12px'
+    }}>
+      <span className="text-[0.6rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)', marginRight: '4px' }}>Marco normativo:</span>
+      {NORMAS_HISTORIA_CLINICA.map((n, i) => (
+        <span key={i} className="text-[0.6rem]" style={{ color: 'var(--text-secondary)' }}>
+          {n.norma}{i < NORMAS_HISTORIA_CLINICA.length - 1 ? ' · ' : ''}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export default function HistoriasView({ templateKey = 'gestante' }) {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
@@ -286,6 +310,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
             </div>
           )}
         </div>
+        <RegulatoryFooter />
       </div>
     )
   }
@@ -570,6 +595,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
           </div>
         )}
       </div>
+      <RegulatoryFooter />
     </div>
   )
 }
