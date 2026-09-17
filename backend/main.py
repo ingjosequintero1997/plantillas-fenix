@@ -2213,6 +2213,19 @@ async def upload_historia(
         if storage_used == "db":
             historia.pdf_data = content
             db.flush()
+        audit = HistoriaClinicaAudit(
+            historia_id=historia.id,
+            ips_name=historia.ips_name,
+            paciente_documento=historia.paciente_documento,
+            paciente_nombre=historia.paciente_nombre,
+            filename=historia.filename,
+            hash_original=historia.hash_original,
+            hash_actual=historia.hash_actual,
+            action="CREATE",
+            detail=f"Archivo subido: {historia.filename} ({len(content)} bytes)",
+            performed_by=current_user.username,
+        )
+        db.add(audit)
         db.commit()
         db.refresh(historia)
         storage_used = "gcs" if historia.pdf_path else "db"

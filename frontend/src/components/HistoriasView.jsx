@@ -271,21 +271,20 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
             <p className="page-subtitle">Selecciona una IPS para ver las historias clinicas.</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {(alertasCount > 0 || cambiosCount > 0) && (
-              <button onClick={() => setShowAlertas(!showAlertas)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.7rem] font-semibold transition-all"
-                style={{
-                  color: showAlertas ? '#fff' : 'var(--danger)',
-                  backgroundColor: showAlertas ? 'var(--danger)' : 'var(--danger-bg)',
-                  border: '1px solid rgba(180,35,24,0.2)', cursor: 'pointer'
-                }}>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                {alertasCount} alerta{alertasCount !== 1 ? 's' : ''}
-                {cambiosCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded text-[0.6rem]" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>{cambiosCount} cambio{cambiosCount !== 1 ? 's' : ''}</span>}
-              </button>
-            )}
+            <button onClick={() => setShowAlertas(!showAlertas)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.7rem] font-semibold transition-all"
+              style={{
+                color: alertasCount > 0 ? (showAlertas ? '#fff' : 'var(--danger)') : 'var(--text-muted)',
+                backgroundColor: showAlertas && alertasCount > 0 ? 'var(--danger)' : alertasCount > 0 ? 'var(--danger-bg)' : 'var(--bg-subtle)',
+                border: `1px solid ${alertasCount > 0 ? 'rgba(180,35,24,0.2)' : 'var(--border-subtle)'}`,
+                cursor: 'pointer'
+              }}>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              {alertasCount} alerta{alertasCount !== 1 ? 's' : ''}
+              {cambiosCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded text-[0.6rem]" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>{cambiosCount} cambio{cambiosCount !== 1 ? 's' : ''}</span>}
+            </button>
           </div>
         </div>
 
