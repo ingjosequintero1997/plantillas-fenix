@@ -141,36 +141,19 @@ export default function DataManagement({ correctedText }) {
           sheet.addRow(rowData)
         }
       } else {
-        let allCols = []
-        let labels = {}
-        try {
-          const colMeta = await fetchGestanteColumns()
-          allCols = colMeta?.columns || []
-          labels = colMeta?.labels || {}
-        } catch {}
-        const allRows = []
-        for (const u of usuarios) {
-          let fullData = null
-          if (u.numero_id) {
-            try { fullData = await fetchGestanteByNumId(u.numero_id) } catch { fullData = null }
-          }
-          if (!fullData) fullData = mapInstToGestanteKeys(u)
-          allRows.push(fullData)
-        }
-        if (!allCols.length) {
-          allCols = Object.keys(allRows[0] || {})
-        }
+        const allCols = ['tipo_id', 'numero_id', 'apellido1', 'apellido2', 'nombre1', 'nombre2', 'municipio']
+        const labels = { tipo_id: 'Tipo Doc', numero_id: 'Documento', apellido1: 'Apellido 1', apellido2: 'Apellido 2', nombre1: 'Nombre 1', nombre2: 'Nombre 2', municipio: 'Municipio' }
         sheet.columns = allCols.map(k => ({
-          header: labels[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          header: labels[k] || k,
           key: k,
           width: Math.min(Math.max((labels[k] || k).length + 2, 12), 40),
         }))
         sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 }
         sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } }
-        for (const fullData of allRows) {
+        for (const u of usuarios) {
           const rowData = {}
           for (const k of allCols) {
-            let v = fullData[k] || ''
+            let v = u[k] || ''
             if (v && typeof v === 'string') { v = v.trim(); if (v === 'None' || v === 'null') v = '' }
             rowData[k] = v
           }
