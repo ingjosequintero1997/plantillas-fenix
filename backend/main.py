@@ -612,15 +612,21 @@ async def debug_oci():
 		info["upload_error"] = str(e)
 	import datetime as _dt
 	info["server_utc"] = _dt.datetime.utcnow().isoformat()
+	info["http_proxy"] = os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy") or ""
+	info["https_proxy"] = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or ""
+	info["no_proxy"] = os.environ.get("NO_PROXY") or os.environ.get("no_proxy") or ""
+	# Comparar reloj local vs reloj de OCI (via Date header de una peticion sin auth)
 	try:
-		import urllib.request
-		req = urllib.request.Request("https://worldtimeapi.org/api/timezone/UTC", method="GET")
-		with urllib.request.urlopen(req, timeout=10) as resp:
-			import json as _json
-			data = _json.loads(resp.read().decode())
-			info["internet_time"] = data.get("datetime", "")
+		import http.client as _hc
+		_region = os.environ.get("OCI_REGION", "us-ashburn-1")
+		_conn = _hc.HTTPSConnection(f"objectstorage.{_region}.oraclecloud.com", timeout=10)
+		_conn.request("GET", "/")
+		_resp = _conn.getresponse()
+		_resp.read()
+		info["oci_date_header"] = _resp.getheader("date", "")
+		_conn.close()
 	except Exception as e:
-		info["internet_time_error"] = str(e)
+		info["oci_time_error"] = str(e)
 	return info
 
 @app.get("/debug-historias")
