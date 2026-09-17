@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
 import { fetchHistorias, downloadHistoriaPdf, deleteHistoria } from '../api'
 import JSZip from 'jszip'
@@ -93,31 +93,42 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
     )
   }, [currentPatients, search])
 
-  // Preview PDF when historia changes
-  const previewPdf = useCallback(async (h) => {
-    if (!h) { setPdfUrl(null); setSelectedHistoria(null); return }
+  const pdfUrlRef = useRef(null)
+  const abortRef = useRef(null)
+
+  const cleanupPdf = useCallback(() => {
+    if (pdfUrlRef.current) { URL.revokeObjectURL(pdfUrlRef.current); pdfUrlRef.current = null }
+    setPdfUrl(null)
+  }, [])
+
+  const loadPdf = useCallback(async (h) => {
+    if (abortRef.current) abortRef.current.abort()
+    if (!h) { cleanupPdf(); setSelectedHistoria(null); return }
+    const controller = new AbortController()
+    abortRef.current = controller
     setPdfLoading(true); setError('')
     try {
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl)
+      cleanupPdf()
       const url = await downloadHistoriaPdf(h.id)
+      if (controller.signal.aborted) { URL.revokeObjectURL(url); return }
+      pdfUrlRef.current = url
       setPdfUrl(url)
       setSelectedHistoria(h)
-    } catch (e) { setError('Error al cargar vista previa: ' + e.message) }
-    finally { setPdfLoading(false) }
-  }, [pdfUrl])
+    } catch (e) {
+      if (!controller.signal.aborted) setError('Error al cargar vista previa: ' + e.message)
+    } finally {
+      if (!controller.signal.aborted) setPdfLoading(false)
+    }
+  }, [cleanupPdf])
 
-  useEffect(() => {
-    return () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl) }
-  }, [pdfUrl])
-
-  // Auto-select first historia when patient is selected
   useEffect(() => {
     if (selectedPatient && selectedPatient.historias.length > 0) {
-      previewPdf(selectedPatient.historias[0])
+      loadPdf(selectedPatient.historias[0])
     } else {
-      previewPdf(null)
+      loadPdf(null)
     }
-  }, [selectedPatient, previewPdf])
+    return () => { if (abortRef.current) abortRef.current.abort() }
+  }, [selectedPatient])
 
   const handleDownload = async (h) => {
     setDownloadingId(h.id)
@@ -137,7 +148,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
     setDeletingId(h.id); setError(''); setMessage(null)
     try {
       await deleteHistoria(h.id)
-      if (pdfUrl) { URL.revokeObjectURL(pdfUrl); setPdfUrl(null); setSelectedHistoria(null) }
+      cleanupPdf(); setSelectedHistoria(null)
       setMessage('Historia eliminada correctamente.')
       await load()
     } catch (e) { setError('No fue posible eliminar la historia.') }
@@ -178,7 +189,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
 
   const handleBack = () => {
     setSelectedIps(null); setSelectedPatient(null); setSearch('')
-    setError(''); setMessage(null); previewPdf(null)
+    setError(''); setMessage(null); loadPdf(null)
   }
 
   const handleBackToPatients = () => {
@@ -427,7 +438,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
                 <div className="flex items-center gap-1.5 mt-1">
                   {selectedPatient.historias.map((h) => (
                     <button key={h.id}
-                      onClick={() => previewPdf(h)}
+                      onClick={() => loadPdf(h)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '4px',
                         padding: '3px 8px', borderRadius: 'var(--radius-sm)',
