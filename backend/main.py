@@ -638,16 +638,18 @@ async def debug_historias():
 			from .database import engine as _eng
 		except ImportError:
 			from database import engine as _eng
-		from sqlalchemy import inspect
+		from sqlalchemy import inspect, text as sa_text
 		insp = inspect(_eng)
 		if "historias_clinicas" in insp.get_table_names():
 			info["table_exists"] = True
 			info["columns"] = [c['name'] for c in insp.get_columns('historias_clinicas')]
-			try:
-				with _eng.connect() as conn:
-					info["count"] = conn.execute(text("SELECT COUNT(*) FROM historias_clinicas")).scalar()
-			except Exception as e:
-				info["count_error"] = str(e)
+			with _eng.connect() as conn:
+				info["count"] = conn.execute(sa_text("SELECT COUNT(*) FROM historias_clinicas")).scalar()
+				info["en_oci"] = conn.execute(sa_text("SELECT COUNT(*) FROM historias_clinicas WHERE pdf_path IS NOT NULL AND pdf_path != ''")).scalar()
+				info["en_db"] = conn.execute(sa_text("SELECT COUNT(*) FROM historias_clinicas WHERE pdf_data IS NOT NULL")).scalar()
+				info["sin_ips"] = conn.execute(sa_text("SELECT COUNT(*) FROM historias_clinicas WHERE ips_name IS NULL OR ips_name = ''")).scalar()
+				rows = conn.execute(sa_text("SELECT id, ips_name, paciente_documento, pdf_path IS NOT NULL AS en_oci, created_at FROM historias_clinicas ORDER BY id DESC LIMIT 10")).fetchall()
+				info["ultimas"] = [{"id": r[0], "ips_name": r[1], "doc": r[2], "en_oci": bool(r[3]), "fecha": str(r[4])} for r in rows]
 		else:
 			info["table_exists"] = False
 			info["tables"] = insp.get_table_names()
