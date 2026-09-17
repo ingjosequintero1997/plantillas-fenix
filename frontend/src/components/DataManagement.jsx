@@ -114,8 +114,18 @@ export default function DataManagement({ correctedText }) {
   }, [isIpsUser])
 
   const downloadIpsExcel = async (ipsName) => {
-    const municipioKeyDl = ipsColumns.find(c => c.toUpperCase().includes('MUNICIPIO')) || 'MUNICIPIO_DE_RESIDENCIA'
-    const usuarios = isIpsUser ? ipsRows.filter(r => !municipioFilter || r[municipioKeyDl] === municipioFilter) : (filteredIpsGroups[ipsName] || [])
+    const allKeysDl = ipsRows.length > 0 ? Object.keys(ipsRows[0]) : []
+    const isIps = isIpsUser
+    let usuarios
+    if (isIps) {
+      const municipioKeyDl = allKeysDl.find(k => k.toUpperCase().includes('MUNICIPIO')) || 'MUNICIPIO_DE_RESIDENCIA'
+      usuarios = ipsRows.filter(r => !municipioFilter || r[municipioKeyDl] === municipioFilter)
+    } else {
+      const adminMunicipioKeyDl = (filteredIpsGroups[ipsName] || []).length > 0
+        ? Object.keys(filteredIpsGroups[ipsName][0]).find(k => k.toLowerCase().includes('municipio')) || 'municipio'
+        : 'municipio'
+      usuarios = (filteredIpsGroups[ipsName] || []).filter(u => !municipioFilter || u[adminMunicipioKeyDl] === municipioFilter)
+    }
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {
@@ -476,10 +486,17 @@ export default function DataManagement({ correctedText }) {
 
   if (view === 'ips_detail' && !isIpsUser && selectedIps) {
     const usuarias = filteredIpsGroups[selectedIps] || []
-    const filtered = search ? usuarias.filter(u => {
+    const allKeys = usuarias.length > 0 ? Object.keys(usuarias[0]) : []
+    const adminMunicipioKey = allKeys.find(k => k.toLowerCase() === 'municipio')
+      || allKeys.find(k => k.toLowerCase().includes('municipio'))
+      || 'municipio'
+    const adminMunicipios = [...new Set(usuarias.map(u => u[adminMunicipioKey]).filter(Boolean))].sort()
+    const filtered = usuarias.filter(u => {
+      if (municipioFilter && u[adminMunicipioKey] !== municipioFilter) return false
+      if (!search) return true
       const q = search.toLowerCase()
       return u.numero_id?.toLowerCase().includes(q) || u.apellido1?.toLowerCase().includes(q) || u.nombre1?.toLowerCase().includes(q)
-    }) : usuarias
+    })
     const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
     const pTotal = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
@@ -498,7 +515,9 @@ export default function DataManagement({ correctedText }) {
               </div>
               <div>
                 <div className="page-title" style={{ fontSize: '1.1rem' }}>{selectedIps}</div>
-                <div className="page-subtitle">{usuarias.length} afiliadas verificadas</div>
+                <div className="page-subtitle">
+                  {municipioFilter ? `${filtered.length} afiliada${filtered.length !== 1 ? 's' : ''} en ${municipioFilter}` : `${usuarias.length} afiliadas verificadas`}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -518,7 +537,7 @@ export default function DataManagement({ correctedText }) {
           </div>
         </div>
         {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -527,6 +546,30 @@ export default function DataManagement({ correctedText }) {
               onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
               placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
           </div>
+          {adminMunicipios.length > 0 && (
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <select value={municipioFilter} onChange={(e) => { setMunicipioFilter(e.target.value); setPage(1) }}
+                className="select" style={{ fontSize: '0.8rem', minWidth: '180px' }}>
+                <option value="">Todos los municipios</option>
+                {adminMunicipios.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              {municipioFilter && (
+                <button onClick={() => { setMunicipioFilter(''); setPage(1) }}
+                  className="btn-ghost text-xs px-1.5 py-1" style={{ color: 'var(--text-secondary)' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+          )}
+          {search && (
+            <button onClick={() => { setSearch(''); setPage(1) }} className="btn-ghost text-xs px-2 py-1" style={{ color: 'var(--text-secondary)' }}>
+              Limpiar
+            </button>
+          )}
         </div>
         {filtered.length === 0 ? (
           <div className="empty">
@@ -603,7 +646,6 @@ export default function DataManagement({ correctedText }) {
       || ipsColumns.find(c => c.toUpperCase().includes('MUNICIPIO'))
       || 'MUNICIPIO_DE_RESIDENCIA'
     const municipios = [...new Set(ipsRows.map(r => r[municipioKey]).filter(v => v && String(v).trim()))].sort()
-    console.log('[DataManagement] municipioKey:', municipioKey, '| allKeys:', allKeys.filter(k => k.includes('MUNICIPIO') || k.includes('municipio')), '| municipios:', municipios.length, '| sample:', ipsRows.slice(0, 3).map(r => r[municipioKey]))
     const filtered = ipsRows.filter(r => {
       if (municipioFilter && r[municipioKey] !== municipioFilter) return false
       if (!search) return true

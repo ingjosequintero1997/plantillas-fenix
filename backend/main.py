@@ -4065,6 +4065,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 		apellido1_col = tmpl_names[3]
 		nombre2_col = tmpl_names[6]
 		apellido2_col = tmpl_names[4]
+		municipio_col = tmpl_names[14] if len(tmpl_names) > 14 else None
 	else:
 		tipo_col = 1
 		num_col = 2
@@ -4072,6 +4073,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 		apellido1_col = 3
 		nombre2_col = 6
 		apellido2_col = 4
+		municipio_col = 14
 	
 	usuarios = []
 	for idx, row in df.iterrows():
@@ -4081,6 +4083,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 		apellido1 = str(row.get(apellido1_col, "")).strip()
 		nombre2 = str(row.get(nombre2_col, "")).strip()
 		apellido2 = str(row.get(apellido2_col, "")).strip()
+		municipio = str(row.get(municipio_col, "")).strip() if municipio_col is not None else ""
 		if tipo_id and num_id and tipo_id != "SIN DATO" and num_id != "0":
 			usuarios.append({
 				"row_idx": idx,
@@ -4090,6 +4093,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"nombre2": nombre2,
 				"apellido1": apellido1,
 				"apellido2": apellido2,
+				"municipio": municipio,
 			})
 	
 	if not usuarios:
@@ -4133,6 +4137,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"tipo_id": tipo, "numero_id": num,
 				"nombre1": n1, "nombre2": n2,
 				"apellido1": a1, "apellido2": a2,
+				"municipio": str(row.get(municipio_col, "")).strip() if municipio_col is not None else "",
 				"gestante_id": None, "ips_code": "",
 			})
 		return {
@@ -4210,6 +4215,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"nombre2": u["nombre2"],
 				"apellido1": u["apellido1"],
 				"apellido2": u["apellido2"],
+				"municipio": u.get("municipio", ""),
 				"gestante_id": gid,
 				"ips_code": str(ips_code).strip(),
 			})
