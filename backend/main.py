@@ -71,7 +71,7 @@ except ImportError:
         verify_token,
         TOKEN_SECRET,
     )
-    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
+    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, HistoriaClinicaAudit, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
     import gcs_storage
     import oci_storage
     import corporate_db
@@ -2183,6 +2183,8 @@ async def upload_historia(
             filename=filename,
             content_type=file.content_type or "application/pdf",
             file_size=len(content),
+            hash_original=hashlib.md5(content).hexdigest(),
+            hash_actual=hashlib.md5(content).hexdigest(),
         )
         db.add(historia)
         # Determinar donde almacenar: OCI > GCS > DB (con fallback)
@@ -2279,6 +2281,8 @@ async def list_historias(
                 "paciente_documento": h.paciente_documento,
                 "filename": h.filename,
                 "file_size": h.file_size,
+                "hash_original": h.hash_original,
+                "hash_actual": h.hash_actual,
                 "created_at": h.created_at.isoformat() if h.created_at else None,
             })
         return {"historias": result}
@@ -2356,11 +2360,112 @@ async def delete_historia(request: Request, historia_id: int, current_user: User
                     gcs_storage.delete_pdf(oidc_token, h.pdf_path)
             except Exception:
                 pass
+        audit = HistoriaClinicaAudit(
+            historia_id=h.id,
+            ips_name=h.ips_name,
+            paciente_documento=h.paciente_documento,
+            paciente_nombre=h.paciente_nombre,
+            filename=h.filename,
+            hash_original=h.hash_original,
+            hash_actual=h.hash_actual,
+            action="DELETE",
+            detail=f"Archivo eliminado: {h.filename}",
+            performed_by=current_user.username,
+        )
+        db.add(audit)
         db.delete(h)
         db.commit()
         return {"ok": True}
     except OperationalError:
         raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos. Verifica la conexión al servidor PostgreSQL.")
+    finally:
+        db.close()
+
+
+@app.get("/historias/alertas")
+async def historias_alertas(
+    current_user: User = Depends(get_current_user),
+):
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        query = db.query(HistoriaClinicaAudit).order_by(HistoriaClinicaAudit.created_at.desc())
+        if current_user.role == "ips_user":
+            ips_name_val = _get_prestador_ips_name(db, current_user)
+            if ips_name_val:
+                query = query.filter(HistoriaClinicaAudit.ips_name == ips_name_val)
+            else:
+                query = query.filter(HistoriaClinicaAudit.id == -1)
+        items = query.limit(100).all()
+        result = []
+        for a in items:
+            result.append({
+                "id": a.id,
+                "historia_id": a.historia_id,
+                "ips_name": a.ips_name,
+                "paciente_documento": a.paciente_documento,
+                "paciente_nombre": a.paciente_nombre,
+                "filename": a.filename,
+                "hash_original": a.hash_original,
+                "hash_actual": a.hash_actual,
+                "hash_cambiado": a.hash_original != a.hash_actual if a.hash_original and a.hash_actual else False,
+                "action": a.action,
+                "detail": a.detail,
+                "performed_by": a.performed_by,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            })
+        return {"alertas": result}
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos.")
+    finally:
+        db.close()
+
+
+@app.get("/historias/integridad")
+async def historias_integridad(
+    current_user: User = Depends(get_current_user),
+):
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        query = db.query(HistoriaClinica)
+        if current_user.role == "ips_user":
+            ips_name_val = _get_prestador_ips_name(db, current_user)
+            if ips_name_val:
+                query = query.filter(HistoriaClinica.ips_name == ips_name_val)
+            else:
+                query = query.filter(HistoriaClinica.id == -1)
+        items = query.all()
+        total = len(items)
+        verificadas = 0
+        con_cambios = 0
+        sin_hash = 0
+        detalles = []
+        for h in items:
+            if not h.hash_original:
+                sin_hash += 1
+                continue
+            verificadas += 1
+            coincide = h.hash_original == h.hash_actual
+            if not coincide:
+                con_cambios += 1
+                detalles.append({
+                    "historia_id": h.id,
+                    "filename": h.filename,
+                    "paciente_nombre": h.paciente_nombre,
+                    "ips_name": h.ips_name,
+                    "hash_original": h.hash_original,
+                    "hash_actual": h.hash_actual,
+                })
+        return {
+            "total": total,
+            "verificadas": verificadas,
+            "sin_hash": sin_hash,
+            "con_cambios": con_cambios,
+            "detalles": detalles,
+        }
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos.")
     finally:
         db.close()
 

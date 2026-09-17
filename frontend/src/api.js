@@ -682,3 +682,13 @@ export async function fetchHistorias(q = '', templateKey = '') {
   const data = await apiFetch(`${API_BASE}/historias${qs ? `?${qs}` : ''}`)
   return data.historias || []
 }
+
+export async function fetchHistoriasAlertas() {
+  const data = await apiFetch(`${API_BASE}/historias/alertas`)
+  return data.alertas || []
+}
+
+export async function fetchHistoriasIntegridad() {
+  const data = await apiFetch(`${API_BASE}/historias/integridad`)
+  return data
+}
