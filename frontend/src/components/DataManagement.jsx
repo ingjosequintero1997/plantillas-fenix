@@ -598,10 +598,12 @@ export default function DataManagement({ correctedText }) {
 
   if (isIpsUser && (view === 'list' || view === 'ips_detail')) {
     const allKeys = ipsRows.length > 0 ? Object.keys(ipsRows[0]) : []
-    const municipioKey = ipsColumns.find(c => c.toUpperCase().includes('MUNICIPIO'))
+    const municipioKey = allKeys.find(k => k.toUpperCase() === 'MUNICIPIO_DE_RESIDENCIA')
       || allKeys.find(k => k.toUpperCase().includes('MUNICIPIO'))
+      || ipsColumns.find(c => c.toUpperCase().includes('MUNICIPIO'))
       || 'MUNICIPIO_DE_RESIDENCIA'
-    const municipios = [...new Set(ipsRows.map(r => r[municipioKey]).filter(Boolean))].sort()
+    const municipios = [...new Set(ipsRows.map(r => r[municipioKey]).filter(v => v && String(v).trim()))].sort()
+    console.log('[DataManagement] municipioKey:', municipioKey, '| allKeys:', allKeys.filter(k => k.includes('MUNICIPIO') || k.includes('municipio')), '| municipios:', municipios.length, '| sample:', ipsRows.slice(0, 3).map(r => r[municipioKey]))
     const filtered = ipsRows.filter(r => {
       if (municipioFilter && r[municipioKey] !== municipioFilter) return false
       if (!search) return true
