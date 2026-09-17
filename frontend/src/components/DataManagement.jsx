@@ -114,7 +114,8 @@ export default function DataManagement({ correctedText }) {
   }, [isIpsUser])
 
   const downloadIpsExcel = async (ipsName) => {
-    const usuarios = isIpsUser ? ipsRows.filter(r => !municipioFilter || r.MUNICIPIO_DE_RESIDENCIA === municipioFilter) : (filteredIpsGroups[ipsName] || [])
+    const municipioKeyDl = ipsColumns.find(c => c.toUpperCase().includes('MUNICIPIO')) || 'MUNICIPIO_DE_RESIDENCIA'
+    const usuarios = isIpsUser ? ipsRows.filter(r => !municipioFilter || r[municipioKeyDl] === municipioFilter) : (filteredIpsGroups[ipsName] || [])
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {
@@ -596,9 +597,13 @@ export default function DataManagement({ correctedText }) {
   }
 
   if (isIpsUser && (view === 'list' || view === 'ips_detail')) {
-    const municipios = [...new Set(ipsRows.map(r => r.MUNICIPIO_DE_RESIDENCIA).filter(Boolean))].sort()
+    const allKeys = ipsRows.length > 0 ? Object.keys(ipsRows[0]) : []
+    const municipioKey = ipsColumns.find(c => c.toUpperCase().includes('MUNICIPIO'))
+      || allKeys.find(k => k.toUpperCase().includes('MUNICIPIO'))
+      || 'MUNICIPIO_DE_RESIDENCIA'
+    const municipios = [...new Set(ipsRows.map(r => r[municipioKey]).filter(Boolean))].sort()
     const filtered = ipsRows.filter(r => {
-      if (municipioFilter && r.MUNICIPIO_DE_RESIDENCIA !== municipioFilter) return false
+      if (municipioFilter && r[municipioKey] !== municipioFilter) return false
       if (!search) return true
       const q = search.toLowerCase()
       return (r.NO_DE_IDENTIFICACION || '').toLowerCase().includes(q) ||
@@ -665,7 +670,7 @@ export default function DataManagement({ correctedText }) {
               onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
               placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
           </div>
-          {municipios.length > 1 && (
+          {municipios.length > 0 && (
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -739,10 +744,10 @@ export default function DataManagement({ correctedText }) {
                             style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
                             {r.NO_DE_IDENTIFICACION || '—'}
                           </span>
-                          {r.MUNICIPIO_DE_RESIDENCIA && (
+                          {r[municipioKey] && (
                             <span className="text-[0.65rem] px-2 py-0.5 rounded-full"
                               style={{ backgroundColor: 'var(--green-50)', color: 'var(--green-700)' }}>
-                              {r.MUNICIPIO_DE_RESIDENCIA}
+                              {r[municipioKey]}
                             </span>
                           )}
                         </div>
