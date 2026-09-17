@@ -581,8 +581,8 @@ async def debug_oci():
 	info["has_begin"] = "-----BEGIN PRIVATE KEY-----" in fixed
 	info["has_end"] = "-----END PRIVATE KEY-----" in fixed
 	info["fingerprint"] = os.environ.get("OCI_FINGERPRINT", "")
-	info["tenancy"] = os.environ.get("OCI_TENANCY", "")[:20] + "..."
-	info["user_ocid"] = os.environ.get("OCI_USER", "")[:20] + "..."
+	info["tenancy"] = os.environ.get("OCI_TENANCY", "")
+	info["user_ocid"] = os.environ.get("OCI_USER", "")
 	info["region"] = os.environ.get("OCI_REGION", "")
 	info["namespace"] = os.environ.get("OCI_NAMESPACE", "")
 	info["bucket"] = os.environ.get("OCI_BUCKET", "")
