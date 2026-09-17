@@ -5144,6 +5144,27 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 	except Exception as e:
 		raise HTTPException(status_code=500, detail="No se encontro la gestante. Verifica el numero de identificacion.")
 
+
+@app.get("/data/gestantes/columnas-planilla")
+async def listar_columnas_gestantes_planilla(current_user: User = Depends(get_current_user)):
+	"""Devuelve la lista de 200 columnas del template con sus etiquetas legibles."""
+	import unicodedata as _ud
+	def _norm(s):
+		s = str(s).strip()
+		s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+		s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+		s = '__'.join(filter(None, s.split('__')))
+		return s.strip('_')
+	try:
+		from .gestante_config import build_gestante_template
+	except ImportError:
+		from gestante_config import build_gestante_template
+	tmpl = build_gestante_template()
+	columns = [_norm(t["name"]) for t in tmpl]
+	labels = {col: t["name"] for col, t in zip(columns, tmpl)}
+	return {"columns": columns, "labels": labels}
+
+
 @app.get("/data/gestantes/{registro_id}")
 async def obtener_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene un registro de gestante por ID."""
@@ -5462,26 +5483,6 @@ async def listar_caso_cerrado(
 		return {"error": "Error al listar gestantes con caso cerrado.", "registros": [], "total": 0}
 	finally:
 		db.close()
-
-
-@app.get("/data/gestantes/columnas-planilla")
-async def listar_columnas_gestantes_planilla(current_user: User = Depends(get_current_user)):
-	"""Devuelve la lista de 200 columnas del template con sus etiquetas legibles."""
-	import unicodedata as _ud
-	def _norm(s):
-		s = str(s).strip()
-		s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
-		s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
-		s = '__'.join(filter(None, s.split('__')))
-		return s.strip('_')
-	try:
-		from .gestante_config import build_gestante_template
-	except ImportError:
-		from gestante_config import build_gestante_template
-	tmpl = build_gestante_template()
-	columns = [_norm(t["name"]) for t in tmpl]
-	labels = {col: t["name"] for col, t in zip(columns, tmpl)}
-	return {"columns": columns, "labels": labels}
 
 
 if __name__ == "__main__":

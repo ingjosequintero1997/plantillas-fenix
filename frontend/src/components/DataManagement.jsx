@@ -113,19 +113,8 @@ export default function DataManagement({ correctedText }) {
     }
   }, [isIpsUser])
 
-  const downloadIpsExcel = async (ipsName) => {
-    const allKeysDl = ipsRows.length > 0 ? Object.keys(ipsRows[0]) : []
-    const isIps = isIpsUser
-    let usuarios
-    if (isIps) {
-      const municipioKeyDl = allKeysDl.find(k => k.toUpperCase().includes('MUNICIPIO')) || 'MUNICIPIO_DE_RESIDENCIA'
-      usuarios = ipsRows.filter(r => !municipioFilter || r[municipioKeyDl] === municipioFilter)
-    } else {
-      const adminMunicipioKeyDl = (filteredIpsGroups[ipsName] || []).length > 0
-        ? Object.keys(filteredIpsGroups[ipsName][0]).find(k => k.toLowerCase().includes('municipio')) || 'municipio'
-        : 'municipio'
-      usuarios = (filteredIpsGroups[ipsName] || []).filter(u => !municipioFilter || u[adminMunicipioKeyDl] === municipioFilter)
-    }
+  const downloadIpsExcel = async (ipsName, filteredData) => {
+    const usuarios = filteredData || (isIpsUser ? ipsRows : (filteredIpsGroups[ipsName] || []))
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {
@@ -521,7 +510,7 @@ export default function DataManagement({ correctedText }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => downloadIpsExcel(selectedIps)} disabled={downloadingIps === selectedIps}
+              <button onClick={() => downloadIpsExcel(selectedIps, filtered)} disabled={downloadingIps === selectedIps}
                 className="btn-secondary text-sm">
                 {downloadingIps === selectedIps ? (
                   <svg className="w-4 h-4 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
@@ -686,7 +675,7 @@ export default function DataManagement({ correctedText }) {
               </div>
             </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => downloadIpsExcel(ipsUserName)} disabled={downloadingIps === ipsUserName}
+            <button onClick={() => downloadIpsExcel(ipsUserName, filtered)} disabled={downloadingIps === ipsUserName}
               className="btn-secondary text-sm">
               {downloadingIps === ipsUserName ? (
                 <svg className="w-4 h-4 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
