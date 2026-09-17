@@ -76,6 +76,7 @@ export default function DataManagement({ correctedText }) {
   const [instValidating, setInstValidating] = useState(false)
   const [downloadingIps, setDownloadingIps] = useState(null)
   const [ipsSearch, setIpsSearch] = useState('')
+  const [municipioFilter, setMunicipioFilter] = useState('')
 
   const [ipsRows, setIpsRows] = useState([])
   const [ipsColumns, setIpsColumns] = useState([])
@@ -113,7 +114,7 @@ export default function DataManagement({ correctedText }) {
   }, [isIpsUser])
 
   const downloadIpsExcel = async (ipsName) => {
-    const usuarios = isIpsUser ? ipsRows : (filteredIpsGroups[ipsName] || [])
+    const usuarios = isIpsUser ? ipsRows.filter(r => !municipioFilter || r.MUNICIPIO_DE_RESIDENCIA === municipioFilter) : (filteredIpsGroups[ipsName] || [])
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {
@@ -595,14 +596,17 @@ export default function DataManagement({ correctedText }) {
   }
 
   if (isIpsUser && (view === 'list' || view === 'ips_detail')) {
-    const filtered = search ? ipsRows.filter(r => {
+    const municipios = [...new Set(ipsRows.map(r => r.MUNICIPIO_DE_RESIDENCIA).filter(Boolean))].sort()
+    const filtered = ipsRows.filter(r => {
+      if (municipioFilter && r.MUNICIPIO_DE_RESIDENCIA !== municipioFilter) return false
+      if (!search) return true
       const q = search.toLowerCase()
       return (r.NO_DE_IDENTIFICACION || '').toLowerCase().includes(q) ||
              (r.APELLIDO_1 || '').toLowerCase().includes(q) ||
              (r.NOMBRE_1 || '').toLowerCase().includes(q) ||
              (r.APELLIDO_2 || '').toLowerCase().includes(q) ||
              (r.NOMBRE_2 || '').toLowerCase().includes(q)
-    }) : ipsRows
+    })
     const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
     const pTotal = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
@@ -626,7 +630,9 @@ export default function DataManagement({ correctedText }) {
               <div>
                 <div className="page-title" style={{ fontSize: '1.1rem' }}>Gestion de data</div>
                 <div className="page-subtitle">
-                  {ipsLoading ? 'Cargando gestantes...' : `${filtered.length} gestante${filtered.length !== 1 ? 's' : ''} registrada${filtered.length !== 1 ? 's' : ''}`}
+                  {ipsLoading ? 'Cargando gestantes...' :
+                   municipioFilter ? `${filtered.length} gestante${filtered.length !== 1 ? 's' : ''} en ${municipioFilter}` :
+                   `${filtered.length} gestante${filtered.length !== 1 ? 's' : ''} registrada${filtered.length !== 1 ? 's' : ''}`}
                 </div>
               </div>
             </div>
@@ -649,8 +655,8 @@ export default function DataManagement({ correctedText }) {
 
         {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
 
-        {/* Barra de busqueda + info */}
-        <div className="flex items-center gap-3">
+        {/* Barra de busqueda + filtro municipio */}
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -659,6 +665,25 @@ export default function DataManagement({ correctedText }) {
               onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
               placeholder="Buscar por documento, apellido o nombre..." className="input pl-9" />
           </div>
+          {municipios.length > 1 && (
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <select value={municipioFilter} onChange={(e) => { setMunicipioFilter(e.target.value); setPage(1) }}
+                className="select" style={{ fontSize: '0.8rem', minWidth: '180px' }}>
+                <option value="">Todos los municipios</option>
+                {municipios.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              {municipioFilter && (
+                <button onClick={() => { setMunicipioFilter(''); setPage(1) }}
+                  className="btn-ghost text-xs px-1.5 py-1" style={{ color: 'var(--text-secondary)' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+          )}
           {search && (
             <button onClick={() => { setSearch(''); setPage(1) }} className="btn-ghost text-xs px-2 py-1" style={{ color: 'var(--text-secondary)' }}>
               Limpiar
