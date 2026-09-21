@@ -707,11 +707,11 @@ export async function fetchReporteConsulta(id) {
 }
 
 export async function crearReporteConsulta(body) {
-  return await apiFetch(`${API_BASE}/reportes/consultas`, { method: 'POST', body: JSON.stringify(body) })
+  return await apiFetch(`${API_BASE}/reportes/consultas`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } })
 }
 
 export async function actualizarReporteConsulta(id, body) {
-  return await apiFetch(`${API_BASE}/reportes/consultas/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  return await apiFetch(`${API_BASE}/reportes/consultas/${id}`, { method: 'PUT', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } })
 }
 
 export async function eliminarReporteConsulta(id) {
@@ -741,11 +741,11 @@ export async function fetchReporteMedicamento(id) {
 }
 
 export async function crearReporteMedicamento(body) {
-  return await apiFetch(`${API_BASE}/reportes/medicamentos`, { method: 'POST', body: JSON.stringify(body) })
+  return await apiFetch(`${API_BASE}/reportes/medicamentos`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } })
 }
 
 export async function actualizarReporteMedicamento(id, body) {
-  return await apiFetch(`${API_BASE}/reportes/medicamentos/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  return await apiFetch(`${API_BASE}/reportes/medicamentos/${id}`, { method: 'PUT', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } })
 }
 
 export async function eliminarReporteMedicamento(id) {
