@@ -5567,6 +5567,54 @@ async def listar_reportes_consultas(
 		db.close()
 
 
+@app.get("/reportes/consultas/exportar")
+async def exportar_reportes_consultas(
+	periodo: str = "", eps: str = "", tipo_doc: str = "", estado: str = "",
+	municipio: str = "", clase_pendiente: str = "", cups: str = "", search: str = "",
+	current_user: User = Depends(get_current_user),
+):
+	db = SessionLocal()
+	try:
+		q = db.query(ReporteConsulta).filter(ReporteConsulta.activo == True)
+		if current_user.role != "admin":
+			ipsn = _get_ips_name_pendientes(current_user)
+			if ipsn:
+				q = q.filter(ReporteConsulta.ips_name == ipsn)
+		if search:
+			s = f"%{search}%"
+			q = q.filter((ReporteConsulta.documento.ilike(s)) | (ReporteConsulta.consecutivo.ilike(s)))
+		if periodo:
+			q = q.filter(ReporteConsulta.periodo_reportado == periodo)
+		if eps:
+			q = q.filter(ReporteConsulta.cod_eps.ilike(f"%{eps}%"))
+		if tipo_doc:
+			q = q.filter(ReporteConsulta.tipo_documento == tipo_doc)
+		if estado:
+			q = q.filter(ReporteConsulta.estado == estado)
+		if municipio:
+			q = q.filter(ReporteConsulta.cod_municipio == municipio)
+		if clase_pendiente:
+			q = q.filter(ReporteConsulta.clase_pendiente == int(clase_pendiente))
+		if cups:
+			q = q.filter(ReporteConsulta.cups.ilike(f"%{cups}%"))
+		items = q.order_by(ReporteConsulta.id.desc()).all()
+		import openpyxl
+		wb = openpyxl.Workbook()
+		ws = wb.active
+		ws.title = "PX Consultas"
+		ws.append(PX_CONSULTAS_EXCEL_HEADERS)
+		for r in items:
+			ws.append([getattr(r, f["key"], "") or "" for f in PX_CONSULTAS_FIELDS])
+		from io import BytesIO
+		buf = BytesIO()
+		wb.save(buf)
+		buf.seek(0)
+		return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename=Matriz_PX_Consultas_{datetime.now().strftime('%Y-%m-%d')}.xlsx"})
+	finally:
+		db.close()
+
+
 @app.get("/reportes/consultas/{reporte_id}")
 async def obtener_reporte_consulta(reporte_id: int, current_user: User = Depends(get_current_user)):
 	db = SessionLocal()
@@ -5655,54 +5703,6 @@ async def eliminar_reporte_consulta(reporte_id: int, current_user: User = Depend
 		db.close()
 
 
-@app.get("/reportes/consultas/exportar")
-async def exportar_reportes_consultas(
-	periodo: str = "", eps: str = "", tipo_doc: str = "", estado: str = "",
-	municipio: str = "", clase_pendiente: str = "", cups: str = "", search: str = "",
-	current_user: User = Depends(get_current_user),
-):
-	db = SessionLocal()
-	try:
-		q = db.query(ReporteConsulta).filter(ReporteConsulta.activo == True)
-		if current_user.role != "admin":
-			ipsn = _get_ips_name_pendientes(current_user)
-			if ipsn:
-				q = q.filter(ReporteConsulta.ips_name == ipsn)
-		if search:
-			s = f"%{search}%"
-			q = q.filter((ReporteConsulta.documento.ilike(s)) | (ReporteConsulta.consecutivo.ilike(s)))
-		if periodo:
-			q = q.filter(ReporteConsulta.periodo_reportado == periodo)
-		if eps:
-			q = q.filter(ReporteConsulta.cod_eps.ilike(f"%{eps}%"))
-		if tipo_doc:
-			q = q.filter(ReporteConsulta.tipo_documento == tipo_doc)
-		if estado:
-			q = q.filter(ReporteConsulta.estado == estado)
-		if municipio:
-			q = q.filter(ReporteConsulta.cod_municipio == municipio)
-		if clase_pendiente:
-			q = q.filter(ReporteConsulta.clase_pendiente == int(clase_pendiente))
-		if cups:
-			q = q.filter(ReporteConsulta.cups.ilike(f"%{cups}%"))
-		items = q.order_by(ReporteConsulta.id.desc()).all()
-		import openpyxl
-		wb = openpyxl.Workbook()
-		ws = wb.active
-		ws.title = "PX Consultas"
-		ws.append(PX_CONSULTAS_EXCEL_HEADERS)
-		for r in items:
-			ws.append([getattr(r, f["key"], "") or "" for f in PX_CONSULTAS_FIELDS])
-		from io import BytesIO
-		buf = BytesIO()
-		wb.save(buf)
-		buf.seek(0)
-		return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			headers={"Content-Disposition": f"attachment; filename=Matriz_PX_Consultas_{datetime.now().strftime('%Y-%m-%d')}.xlsx"})
-	finally:
-		db.close()
-
-
 # ─── MEDICAMENTOS — CRUD ───────────────────────────────────────────────
 
 @app.get("/reportes/medicamentos")
@@ -5753,6 +5753,54 @@ async def listar_reportes_medicamentos(
 			"registros": [_row_to_dict(r) for r in items],
 			"total": total, "page": page, "page_size": page_size,
 		}
+	finally:
+		db.close()
+
+
+@app.get("/reportes/medicamentos/exportar")
+async def exportar_reportes_medicamentos(
+	periodo: str = "", eps: str = "", tipo_doc: str = "", estado: str = "",
+	municipio: str = "", atc: str = "", mecanismo: str = "", search: str = "",
+	current_user: User = Depends(get_current_user),
+):
+	db = SessionLocal()
+	try:
+		q = db.query(ReporteMedicamento).filter(ReporteMedicamento.activo == True)
+		if current_user.role != "admin":
+			ipsn = _get_ips_name_pendientes(current_user)
+			if ipsn:
+				q = q.filter(ReporteMedicamento.ips_name == ipsn)
+		if search:
+			s = f"%{search}%"
+			q = q.filter((ReporteMedicamento.documento.ilike(s)) | (ReporteMedicamento.consecutivo.ilike(s)))
+		if periodo:
+			q = q.filter(ReporteMedicamento.periodo_reportado == periodo)
+		if eps:
+			q = q.filter(ReporteMedicamento.cod_eps.ilike(f"%{eps}%"))
+		if tipo_doc:
+			q = q.filter(ReporteMedicamento.tipo_documento == tipo_doc)
+		if estado:
+			q = q.filter(ReporteMedicamento.estado == estado)
+		if municipio:
+			q = q.filter(ReporteMedicamento.cod_municipio == municipio)
+		if atc:
+			q = q.filter(ReporteMedicamento.medicamento_atc.ilike(f"%{atc}%"))
+		if mecanismo:
+			q = q.filter(ReporteMedicamento.mecanismo_financiacion == mecanismo)
+		items = q.order_by(ReporteMedicamento.id.desc()).all()
+		import openpyxl
+		wb = openpyxl.Workbook()
+		ws = wb.active
+		ws.title = "Medicamentos"
+		ws.append(MEDICAMENTOS_EXCEL_HEADERS)
+		for r in items:
+			ws.append([getattr(r, f["key"], "") or "" for f in MEDICAMENTOS_FIELDS])
+		from io import BytesIO
+		buf = BytesIO()
+		wb.save(buf)
+		buf.seek(0)
+		return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename=Matriz_Medicamentos_{datetime.now().strftime('%Y-%m-%d')}.xlsx"})
 	finally:
 		db.close()
 
@@ -5841,54 +5889,6 @@ async def eliminar_reporte_medicamento(reporte_id: int, current_user: User = Dep
 	except Exception as e:
 		db.rollback()
 		raise HTTPException(500, str(e))
-	finally:
-		db.close()
-
-
-@app.get("/reportes/medicamentos/exportar")
-async def exportar_reportes_medicamentos(
-	periodo: str = "", eps: str = "", tipo_doc: str = "", estado: str = "",
-	municipio: str = "", atc: str = "", mecanismo: str = "", search: str = "",
-	current_user: User = Depends(get_current_user),
-):
-	db = SessionLocal()
-	try:
-		q = db.query(ReporteMedicamento).filter(ReporteMedicamento.activo == True)
-		if current_user.role != "admin":
-			ipsn = _get_ips_name_pendientes(current_user)
-			if ipsn:
-				q = q.filter(ReporteMedicamento.ips_name == ipsn)
-		if search:
-			s = f"%{search}%"
-			q = q.filter((ReporteMedicamento.documento.ilike(s)) | (ReporteMedicamento.consecutivo.ilike(s)))
-		if periodo:
-			q = q.filter(ReporteMedicamento.periodo_reportado == periodo)
-		if eps:
-			q = q.filter(ReporteMedicamento.cod_eps.ilike(f"%{eps}%"))
-		if tipo_doc:
-			q = q.filter(ReporteMedicamento.tipo_documento == tipo_doc)
-		if estado:
-			q = q.filter(ReporteMedicamento.estado == estado)
-		if municipio:
-			q = q.filter(ReporteMedicamento.cod_municipio == municipio)
-		if atc:
-			q = q.filter(ReporteMedicamento.medicamento_atc.ilike(f"%{atc}%"))
-		if mecanismo:
-			q = q.filter(ReporteMedicamento.mecanismo_financiacion == mecanismo)
-		items = q.order_by(ReporteMedicamento.id.desc()).all()
-		import openpyxl
-		wb = openpyxl.Workbook()
-		ws = wb.active
-		ws.title = "Medicamentos"
-		ws.append(MEDICAMENTOS_EXCEL_HEADERS)
-		for r in items:
-			ws.append([getattr(r, f["key"], "") or "" for f in MEDICAMENTOS_FIELDS])
-		from io import BytesIO
-		buf = BytesIO()
-		wb.save(buf)
-		buf.seek(0)
-		return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			headers={"Content-Disposition": f"attachment; filename=Matriz_Medicamentos_{datetime.now().strftime('%Y-%m-%d')}.xlsx"})
 	finally:
 		db.close()
 
