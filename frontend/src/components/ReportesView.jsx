@@ -7,41 +7,44 @@ import {
 } from '../api'
 
 const PX_FIELDS = [
-  { key:'consecutivo', label:'Consecutivo del registro', type:'number', required:true, section:'general' },
-  { key:'periodo_reportado', label:'PERIODO REPORTADO', type:'number', required:true, section:'general' },
-  { key:'cod_eps', label:'Cod. EPS', type:'text', required:true, section:'general' },
+  { key:'consecutivo', label:'Consecutivo del registro', type:'number', required:true, section:'identificacion' },
+  { key:'periodo_reportado', label:'PERIODO REPORTADO', type:'select', required:true, section:'identificacion',
+    options:['Periodo 1','Periodo 2','Periodo 3','Periodo 4','Periodo 5','Periodo 6','Periodo 7','Periodo 8','Periodo 9','Periodo 10','Periodo 11','Periodo 12'] },
+  { key:'cod_eps', label:'Cod. EPS', type:'text', required:true, section:'identificacion' },
   { key:'tipo_documento', label:'Tipo documento', type:'select', required:true, section:'identificacion',
-    options:['MS','RC','TI','CC','CE','PA','CD','AS','CN','SC','PE','PT'] },
+    options:[{v:'CC',l:'Cédula de ciudadanía'},{v:'TI',l:'Tarjeta de identidad'},{v:'CE',l:'Cédula de extranjería'},{v:'RC',l:'Registro civil'},{v:'MS',l:'Menor sin documento'},{v:'PA',l:'Pasaporte'},{v:'CD',l:'Carné diplomático'},{v:'AS',l:'Adulto sin documento'},{v:'CN',l:'Certificado nacido vivo'},{v:'SC',l:'Salud cruzada'},{v:'PE',l:'Permiso especial'},{v:'PT',l:'Permiso por protección temporal'}] },
   { key:'documento', label:'Documento', type:'text', required:true, section:'identificacion' },
   { key:'identificador_orden', label:'Identificador de la orden de servicio', type:'text', required:true, section:'orden' },
   { key:'cod_municipio', label:'CÓDIGO MUNICIPIO', type:'text', required:true, section:'orden' },
   { key:'cod_diagnostico', label:'Código del Diagnóstico Principal', type:'text', required:true, section:'orden' },
-  { key:'cups', label:'CUPS', type:'number', required:true, section:'procedimiento' },
-  { key:'procedimiento_consulta', label:'Procedimiento o consulta', type:'text', required:true, section:'procedimiento' },
-  { key:'clase_pendiente', label:'Clase de pendiente', type:'select', required:true, section:'pendiente',
+  { key:'cups', label:'CUPS', type:'number', required:true, section:'orden' },
+  { key:'procedimiento_consulta', label:'Procedimiento o consulta', type:'text', required:true, section:'orden' },
+  { key:'clase_pendiente', label:'Clase de pendiente', type:'select', required:true, section:'orden',
     options:[{v:1,l:'1 - No direccionado y supera 3 días'},{v:2,l:'2 - Direccionado, no programado y supera 10 días'},{v:3,l:'3 - Programado pero no realizado'}] },
-  { key:'cantidad_ordenada', label:'Cantidad ordenada', type:'number', required:true, section:'pendiente' },
-  { key:'cantidad_prestacion_efectiva', label:'Cantidad con prestación efectiva', type:'number', required:true, section:'pendiente' },
-  { key:'cantidad_pendiente', label:'Cantidad pendiente', type:'number', required:true, section:'pendiente' },
-  { key:'causa_pendiente', label:'Causa del pendiente', type:'number', required:true, section:'pendiente' },
-  { key:'observacion_causa', label:'Observación causa del pendiente', type:'text', required:false, section:'pendiente' },
-  { key:'fecha_orden', label:'Fecha de orden', type:'date', required:true, section:'clinica' },
-  { key:'fecha_pendiente', label:'Fecha del pendiente', type:'date', required:true, section:'clinica' },
-  { key:'fecha_cierre', label:'Fecha de Cierre', type:'date', required:false, section:'clinica' },
-  { key:'patologia', label:'Patologia/Condición clínica', type:'select', required:true, section:'clinica',
+  { key:'cantidad_ordenada', label:'Cantidad ordenada', type:'number', required:true, section:'cantidades' },
+  { key:'cantidad_prestacion_efectiva', label:'Cantidad con prestación efectiva', type:'number', required:true, section:'cantidades' },
+  { key:'cantidad_pendiente', label:'Cantidad pendiente', type:'number', required:true, section:'cantidades' },
+  { key:'causa_pendiente', label:'Causa del pendiente', type:'select', required:true, section:'causa',
+    options:[{v:1,l:'1 - No programación'},{v:2,l:'2 - Restricción administrativa'},{v:3,l:'3 - Negación del usuario'},{v:4,l:'4 - Servicio no disponible en la IPS'},{v:5,l:'5 - Falta de talento humano'},{v:6,l:'6 - Falta de insumos'},{v:7,l:'7 - Afiliado no cobijado'},{v:8,l:'8 - Orden sin autorización'},{v:9,l:'9 - Incumplimiento de ruta'},{v:10,l:'10 - Traslado'},{v:11,l:'11 - Muerte'},{v:12,l:'12 - Mejoramiento y mantenimiento'},{v:13,l:'13 - Paro'},{v:14,l:'14 - Suspensión temporal'},{v:15,l:'15 - Otro'},{v:22,l:'22 - OTRA (requiere observación)'}] },
+  { key:'observacion_causa', label:'Observación causa del pendiente', type:'text', required:false, section:'causa' },
+  { key:'fecha_orden', label:'Fecha de orden', type:'date', required:true, section:'fechas' },
+  { key:'fecha_pendiente', label:'Fecha del pendiente', type:'date', required:true, section:'fechas' },
+  { key:'fecha_cierre', label:'Fecha de Cierre', type:'date', required:false, section:'fechas' },
+  { key:'patologia', label:'Patologia/Condición clínica', type:'select', required:true, section:'adicional',
     options:['Asma','Cáncer','Diabetes','EPOC','HTA','Hemofilia','HT pulmonar','Enf. huérfana','Salud mental','Trasplante','VIH','Gestación','OTRA'] },
-  { key:'mecanismo_financiacion', label:'MECANISMO DE FINANCIACIÓN', type:'select', required:true, section:'clinica',
+  { key:'mecanismo_financiacion', label:'MECANISMO DE FINANCIACIÓN', type:'select', required:true, section:'adicional',
     options:['UPC','Pmáx','Recobro'] },
-  { key:'tutela', label:'Tutela', type:'select', required:true, section:'clinica', options:['SI','NO'] },
-  { key:'identificacion_prestador', label:'Identificación del prestador de servicios de salud que genera el pendiente', type:'text', required:true, section:'prestador' },
+  { key:'tutela', label:'Tutela', type:'select', required:true, section:'adicional', options:['SI','NO'] },
+  { key:'identificacion_prestador', label:'Identificación del prestador de servicios de salud que genera el pendiente', type:'text', required:true, section:'adicional' },
 ]
 
 const MED_FIELDS = [
-  { key:'consecutivo', label:'Consecutivo del registro', type:'number', required:true, section:'general' },
-  { key:'periodo_reportado', label:'Periodo reportado', type:'number', required:true, section:'general' },
-  { key:'cod_eps', label:'Cod. EPS', type:'text', required:true, section:'general' },
+  { key:'consecutivo', label:'Consecutivo del registro', type:'number', required:true, section:'identificacion' },
+  { key:'periodo_reportado', label:'Periodo reportado', type:'select', required:true, section:'identificacion',
+    options:['Periodo 1','Periodo 2','Periodo 3','Periodo 4','Periodo 5','Periodo 6','Periodo 7','Periodo 8','Periodo 9','Periodo 10','Periodo 11','Periodo 12'] },
+  { key:'cod_eps', label:'Cod. EPS', type:'text', required:true, section:'identificacion' },
   { key:'tipo_documento', label:'Tipo documento', type:'select', required:true, section:'identificacion',
-    options:['MS','RC','TI','CC','CE','PA','CD','AS','CN','SC','PE','PT'] },
+    options:[{v:'CC',l:'Cédula de ciudadanía'},{v:'TI',l:'Tarjeta de identidad'},{v:'CE',l:'Cédula de extranjería'},{v:'RC',l:'Registro civil'},{v:'MS',l:'Menor sin documento'},{v:'PA',l:'Pasaporte'},{v:'CD',l:'Carné diplomático'},{v:'AS',l:'Adulto sin documento'},{v:'CN',l:'Certificado nacido vivo'},{v:'SC',l:'Salud cruzada'},{v:'PE',l:'Permiso especial'},{v:'PT',l:'Permiso por protección temporal'}] },
   { key:'documento', label:'Documento', type:'text', required:true, section:'identificacion' },
   { key:'identificador_prescripcion', label:'Identificador de la prescripción', type:'text', required:true, section:'prescripcion' },
   { key:'cod_municipio', label:'CÓDIGO MUNICIPIO', type:'text', required:true, section:'prescripcion' },
@@ -51,47 +54,56 @@ const MED_FIELDS = [
   { key:'medicamento_unidad', label:'MEDICAMENTO - UNIDAD DE CONCENTRACIÓN', type:'text', required:true, section:'medicamento' },
   { key:'forma_farmaceutica', label:'FORMA FARMACÉUTICA', type:'text', required:true, section:'medicamento' },
   { key:'medicamento_nombre', label:'MEDICAMENTO (Nombre comercial)', type:'text', required:true, section:'medicamento' },
-  { key:'mecanismo_financiacion', label:'MECANISMO DE FINANCIACIÓN', type:'select', required:true, section:'pendiente',
+  { key:'mecanismo_financiacion', label:'MECANISMO DE FINANCIACIÓN', type:'select', required:true, section:'cantidades',
     options:['UPC','Pmáx','Recobro'] },
-  { key:'cantidad_prescrita', label:'Cantidad prescrita', type:'number', required:true, section:'pendiente' },
-  { key:'dias_tratamiento', label:'Días de tratamiento', type:'number', required:true, section:'pendiente' },
-  { key:'cantidad_dispensada', label:'Cantidad dispensada', type:'number', required:true, section:'pendiente' },
-  { key:'cum_medicamento', label:'CUM del medicamento dispensado', type:'text', required:true, section:'pendiente' },
-  { key:'cantidad_pendiente', label:'Cantidad pendiente', type:'number', required:true, section:'pendiente' },
-  { key:'causa_pendiente', label:'Causa del pendiente', type:'number', required:true, section:'pendiente' },
-  { key:'observacion_causa', label:'Observación causa del pendiente', type:'text', required:false, section:'pendiente' },
+  { key:'cantidad_prescrita', label:'Cantidad prescrita', type:'number', required:true, section:'cantidades' },
+  { key:'dias_tratamiento', label:'Días de tratamiento', type:'number', required:true, section:'cantidades' },
+  { key:'cantidad_dispensada', label:'Cantidad dispensada', type:'number', required:true, section:'cantidades' },
+  { key:'cum_medicamento', label:'CUM del medicamento dispensado', type:'text', required:true, section:'cantidades' },
+  { key:'cantidad_pendiente', label:'Cantidad pendiente', type:'number', required:true, section:'cantidades' },
+  { key:'causa_pendiente', label:'Causa del pendiente', type:'select', required:true, section:'causa',
+    options:[{v:1,l:'1 - No programación'},{v:2,l:'2 - Restricción administrativa'},{v:3,l:'3 - Negación del usuario'},{v:23,l:'23 - OTRA (requiere observación)'}] },
+  { key:'observacion_causa', label:'Observación causa del pendiente', type:'text', required:false, section:'causa' },
   { key:'fecha_prescripcion', label:'Fecha prescripción', type:'date', required:true, section:'fechas' },
   { key:'fecha_pendiente', label:'Fecha pendiente', type:'date', required:true, section:'fechas' },
   { key:'fecha_cierre', label:'Fecha Cierre', type:'date', required:false, section:'fechas' },
   { key:'cantidad_dispensada_cierre', label:'Cantidad dispensada para el cierre del pendiente', type:'number', required:false, section:'fechas' },
-  { key:'patologia', label:'Patologia/Condición clínica', type:'select', required:true, section:'clinica',
+  { key:'patologia', label:'Patologia/Condición clínica', type:'select', required:true, section:'adicional',
     options:['Asma','Cáncer','Diabetes','EPOC','HTA','Hemofilia','HT pulmonar','Enf. huérfana','Salud mental','Trasplante','VIH','Gestación','OTRA'] },
-  { key:'identificacion_prestador', label:'Identificación del gestor farmacéutico o prestador de servicios de salud que genera el pendiente', type:'text', required:true, section:'prestador' },
-  { key:'tutela', label:'Tutela', type:'select', required:true, section:'prestador', options:['SI','NO'] },
+  { key:'identificacion_prestador', label:'Identificación del gestor farmacéutico o prestador de servicios de salud que genera el pendiente', type:'text', required:true, section:'adicional' },
+  { key:'tutela', label:'Tutela', type:'select', required:true, section:'adicional', options:['SI','NO'] },
 ]
 
 const PX_SECTIONS = [
-  { key:'general', title:'1. Información general' },
-  { key:'identificacion', title:'2. Identificación' },
-  { key:'orden', title:'3. Orden' },
-  { key:'procedimiento', title:'4. Procedimiento' },
-  { key:'pendiente', title:'5. Información del pendiente' },
-  { key:'clinica', title:'6. Información clínica' },
-  { key:'prestador', title:'7. Prestador' },
+  { key:'identificacion', title:'Identificación', icon:'person', count:5 },
+  { key:'orden', title:'Orden / consulta', icon:'clipboard', count:6 },
+  { key:'cantidades', title:'Cantidades', icon:'hashtag', count:3 },
+  { key:'causa', title:'Causa del pendiente', icon:'warning', count:2 },
+  { key:'fechas', title:'Fechas', icon:'calendar', count:3 },
+  { key:'adicional', title:'Información adicional', icon:'info', count:4 },
 ]
 
 const MED_SECTIONS = [
-  { key:'general', title:'1. Información general' },
-  { key:'identificacion', title:'2. Identificación' },
-  { key:'prescripcion', title:'3. Prescripción' },
-  { key:'medicamento', title:'4. Medicamento' },
-  { key:'pendiente', title:'5. Información del pendiente' },
-  { key:'fechas', title:'6. Fechas' },
-  { key:'clinica', title:'7. Información clínica' },
-  { key:'prestador', title:'8. Gestor / Prestador' },
+  { key:'identificacion', title:'Identificación', icon:'person', count:5 },
+  { key:'prescripcion', title:'Prescripción', icon:'clipboard', count:3 },
+  { key:'medicamento', title:'Medicamento', icon:'pill', count:5 },
+  { key:'cantidades', title:'Cantidades y mecanismo', icon:'hashtag', count:6 },
+  { key:'causa', title:'Causa del pendiente', icon:'warning', count:2 },
+  { key:'fechas', title:'Fechas', icon:'calendar', count:4 },
+  { key:'adicional', title:'Información adicional', icon:'info', count:3 },
 ]
 
-const ESTADO_COLORS = { borrador:'badge-neutral', con_errores:'badge-error', validado:'badge-success', modificado:'badge-warning' }
+const SECTION_ICONS = {
+  person: '👤',
+  clipboard: '📋',
+  hashtag: '#',
+  warning: '⚠️',
+  calendar: '📅',
+  info: 'ℹ️',
+  pill: '💊',
+}
+
+const ESTADO_COLORS = { borrador:'#6b7280', con_errores:'#dc2626', validado:'#16a34a', modificado:'#d97706' }
 const ESTADO_LABELS = { borrador:'Borrador', con_errores:'Con errores', validado:'Validado', modificado:'Modificado' }
 
 function buildErrorMap(errors) {
@@ -111,11 +123,10 @@ export default function ReportesView() {
   const [filters, setFilters] = useState({})
   const [showFilters, setShowFilters] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [formOpen, setFormOpen] = useState(false)
+  const [formView, setFormView] = useState(null)
   const [editing, setEditing] = useState(null)
   const [formErrors, setFormErrors] = useState([])
   const [formValid, setFormValid] = useState(false)
-  const [detailOpen, setDetailOpen] = useState(false)
   const [detailData, setDetailData] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -165,12 +176,12 @@ export default function ReportesView() {
     setDownloading(false)
   }
 
-  const openCreate = (tipo) => { setTab(tipo); setEditing(null); setFormErrors([]); setFormValid(false); setFormOpen(true); setSubView('gestion') }
+  const openCreate = (tipo) => { setTab(tipo); setEditing(null); setFormErrors([]); setFormValid(false); setFormView('create'); setSubView('gestion') }
   const openEdit = async (id) => {
-    try { const d = await fetchOne(id); setEditing(d); setFormErrors([]); setFormValid(d?.estado === 'validado'); setFormOpen(true) } catch {}
+    try { const d = await fetchOne(id); setEditing(d); setFormErrors([]); setFormValid(d?.estado === 'validado'); setFormView('edit') } catch {}
   }
   const openDetail = async (id) => {
-    try { const d = await fetchOne(id); setDetailData(d); setDetailOpen(true) } catch {}
+    try { const d = await fetchOne(id); setDetailData(d); setFormView('detail') } catch {}
   }
 
   const handleSave = async (formData, status) => {
@@ -178,7 +189,7 @@ export default function ReportesView() {
     try {
       const res = status === 'borrador' ? await crear(formData) : await crear(formData)
       if (res?.errors?.length && status !== 'borrador') { setFormErrors(res.errors); setFormValid(false); setSaving(false); return }
-      setFormOpen(false); setEditing(null); setFormErrors([]); loadData()
+      setFormView(null); setEditing(null); setFormErrors([]); loadData()
     } catch {}
     setSaving(false)
   }
@@ -188,7 +199,7 @@ export default function ReportesView() {
     try {
       const res = await actualizar(editing.id, formData)
       if (res?.errors?.length) { setFormErrors(res.errors); setFormValid(false); setSaving(false); return }
-      setFormOpen(false); setEditing(null); setFormErrors([]); loadData()
+      setFormView(null); setEditing(null); setFormErrors([]); loadData()
     } catch {}
     setSaving(false)
   }
@@ -201,6 +212,20 @@ export default function ReportesView() {
   const pxCols = ['#','Registro','Periodo','EPS','Tipo doc','Documento','Orden','Municipio','Estado','Fecha','Acciones']
   const medCols = ['#','Registro','Periodo','EPS','Tipo doc','Documento','Prescripción','ATC','Estado','Fecha','Acciones']
   const colHeaders = tab === 'consultas' ? pxCols : medCols
+
+  if (formView === 'create' || formView === 'edit') {
+    return <FormPage fields={fields} sections={sections} data={editing} errors={formErrors} valid={formValid}
+      saving={saving} isEdit={formView === 'edit'} tab={tab}
+      onSave={formView === 'edit' ? handleUpdate : handleSave}
+      onCancel={() => { setFormView(null); setEditing(null); setFormErrors([]) }}
+      onValidate={setFormValid} />
+  }
+
+  if (formView === 'detail' && detailData) {
+    return <DetailPage data={detailData} fields={fields} sections={sections} tab={tab}
+      onClose={() => { setFormView(null); setDetailData(null) }}
+      onEdit={() => { const d = detailData; setDetailData(null); openEdit(d.id) }} />
+  }
 
   if (subView === 'menu') {
     return (
@@ -235,15 +260,15 @@ export default function ReportesView() {
         </div>
         <div style={{ display:'flex', gap:8 }}>
           <button className="btn-secondary text-sm" onClick={() => setSubView('menu')}>Nuevo reporte</button>
-          <button className="btn-primary text-sm" onClick={() => { setEditing(null); setFormErrors([]); setFormValid(false); setFormOpen(true) }}>+ Crear registro</button>
+          <button className="btn-primary text-sm" onClick={() => { setEditing(null); setFormErrors([]); setFormValid(false); setFormView('create') }}>+ Crear registro</button>
         </div>
       </div>
 
       <div className="panel" style={{ padding:'4px', display:'inline-flex', gap:4, marginBottom:16 }}>
         {[{k:'consultas',l:'Consultas / Procedimientos'},{k:'medicamentos',l:'Medicamentos'}].map(t => (
           <button key={t.k} onClick={() => { setTab(t.k); setPage(1); setSearch(''); setFilters({}) }}
-            className={`text-sm font-medium px-4 py-2 rounded-lg transition-all ${tab===t.k ? 'bg-white shadow-sm' : ''}`}
-            style={{ color: tab===t.k ? 'var(--text-primary)' : 'var(--text-muted)', border:'none', cursor:'pointer', background: tab===t.k ? 'var(--bg-surface)' : 'transparent' }}>
+            className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
+            style={{ color: tab===t.k ? 'var(--text-primary)' : 'var(--text-muted)', border:'none', cursor:'pointer', background: tab===t.k ? 'var(--bg-surface)' : 'transparent', boxShadow: tab===t.k ? 'var(--shadow-xs)' : 'none' }}>
             {t.l}
           </button>
         ))}
@@ -320,7 +345,7 @@ export default function ReportesView() {
                 <td className="px-3 py-2.5 text-xs">{tab==='consultas' ? r.identificador_orden : r.identificador_prescripcion}</td>
                 {tab==='consultas' && <td className="px-3 py-2.5 text-xs">{r.cod_municipio}</td>}
                 {tab==='medicamentos' && <td className="px-3 py-2.5 text-xs">{r.medicamento_atc}</td>}
-                <td className="px-3 py-2.5"><span className={ESTADO_COLORS[r.estado]||'badge-neutral'}>{ESTADO_LABELS[r.estado]||r.estado}</span></td>
+                <td className="px-3 py-2.5"><span className={ESTADO_COLORS[r.estado]||'badge-neutral'} style={{ display:'inline-block', padding:'2px 8px', borderRadius:99, fontSize:'0.7rem', fontWeight:500, background:(ESTADO_COLORS[r.estado]||'#6b7280')+'18', color:ESTADO_COLORS[r.estado]||'#6b7280' }}>{ESTADO_LABELS[r.estado]||r.estado}</span></td>
                 <td className="px-3 py-2.5 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
                 <td className="px-3 py-2.5">
                   <div className="flex gap-1">
@@ -346,12 +371,6 @@ export default function ReportesView() {
         </div>
       )}
 
-      {formOpen && <FormModal fields={fields} sections={sections} data={editing} errors={formErrors} valid={formValid} saving={saving} isEdit={!!editing}
-        onSave={editing ? handleUpdate : handleSave} onClose={() => { setFormOpen(false); setEditing(null); setFormErrors([]) }} onValidate={setFormValid} />}
-
-      {detailOpen && detailData && <DetailModal data={detailData} fields={fields} sections={sections}
-        onClose={() => { setDetailOpen(false); setDetailData(null) }} onEdit={() => { setDetailOpen(false); openEdit(detailData.id) }} />}
-
       {confirmDelete && (
         <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
           <div className="modal" style={{ maxWidth:400 }} onClick={e => e.stopPropagation()}>
@@ -368,126 +387,174 @@ export default function ReportesView() {
   )
 }
 
-function FormModal({ fields, sections, data, errors, valid, saving, isEdit, onSave, onClose, onValidate }) {
+function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, onSave, onCancel, onValidate }) {
   const [formData, setFormData] = useState(() => {
     const d = {}; fields.forEach(f => { d[f.key] = data?.[f.key] || '' }); return d
   })
-  const [openSections, setOpenSections] = useState(() => { const s = {}; sections.forEach((sec,i) => { s[sec.key] = i === 0 }); return s })
   const errMap = useMemo(() => buildErrorMap(errors), [errors])
 
   const handleChange = (key, val) => setFormData(prev => ({ ...prev, [key]: val }))
-  const toggleSection = key => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+
+  const requiredFields = useMemo(() => fields.filter(f => f.required), [fields])
+  const filledCount = useMemo(() => requiredFields.filter(f => {
+    const v = formData[f.key]
+    return v !== '' && v !== null && v !== undefined && String(v).trim() !== '' && String(v).trim().toUpperCase() !== 'SIN DATO'
+  }).length, [formData, requiredFields])
+  const progress = requiredFields.length > 0 ? Math.round((filledCount / requiredFields.length) * 100) : 0
 
   const handleValidate = () => {
     const fieldErrors = []
-    fields.forEach(f => {
-      if (f.required && (!formData[f.key] || String(formData[f.key]).trim() === '' || String(formData[f.key]).trim().toUpperCase() === 'SIN DATO')) {
-        fieldErrors.push({ variable: f.label, dato: formData[f.key]||'vacío', error:'Campo obligatorio', debe_ser:'Valor válido', correccion:`Ingrese ${f.label.toLowerCase()}` })
+    requiredFields.forEach(f => {
+      const v = formData[f.key]
+      if (!v || String(v).trim() === '' || String(v).trim().toUpperCase() === 'SIN DATO') {
+        fieldErrors.push({ variable: f.label, dato: v||'vacío', error:'Campo obligatorio', debe_ser:'Valor válido', correccion:`Ingrese ${f.label.toLowerCase()}` })
       }
     })
     onValidate(fieldErrors.length === 0)
     return fieldErrors
   }
 
-  const handleSaveDraft = () => onSave(formData, 'borrador')
-  const handleSaveValidated = () => { if (handleValidate().length) return; onSave(formData, 'validado') }
+  const handleSubmit = () => {
+    const errs = handleValidate()
+    if (errs.length) return
+    onSave(formData)
+  }
+
+  const totalRequired = requiredFields.length
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth:720 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-title" style={{ marginBottom:16 }}>{isEdit ? 'Editar registro' : 'Nuevo registro'}</div>
+    <div className="fade-in" style={{ maxWidth:1200, margin:'0 auto' }}>
+      <div style={{ marginBottom:16 }}>
+        <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:4 }}>
+          {isEdit ? `Registro #${data?.id}` : 'Nuevo registro'} · {tab === 'consultas' ? 'MATRIZ PX Y CONSULTAS' : 'MATRIZ MEDICAMENTOS'}
+        </div>
+      </div>
 
-        {errors.length > 0 && (
-          <div className="px-4 py-3 rounded-lg text-sm flex items-start gap-3 mb-4"
-            style={{ color:'#B91C1C', backgroundColor:'#FEE2E2', border:'1px solid #FECACA' }}>
-            <div>
-              <div className="font-semibold mb-1">Errores de validación:</div>
-              {errors.map((e,i) => (
-                <div key={i} className="text-xs" style={{ marginTop:2 }}>
-                  <strong>{e.variable}:</strong> {e.error}. {e.correccion}
+      <div className="panel" style={{ marginBottom:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'var(--text-primary)' }}>Campos obligatorios</div>
+          <div style={{ fontSize:'0.8rem', color:'var(--text-secondary)' }}>{filledCount} de {totalRequired} completados</div>
+        </div>
+        <div style={{ width:'100%', height:8, borderRadius:4, background:'var(--bg-subtle)', overflow:'hidden' }}>
+          <div style={{ width:`${progress}%`, height:'100%', borderRadius:4, background: progress === 100 ? 'var(--green-500)' : 'var(--green-400)', transition:'width 300ms ease' }} />
+        </div>
+      </div>
+
+      {errors.length > 0 && (
+        <div className="panel" style={{ marginBottom:16, borderColor:'var(--danger)', background:'var(--danger-bg)' }}>
+          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'var(--danger)', marginBottom:4 }}>Errores de validación</div>
+          {errors.map((e,i) => (
+            <div key={i} style={{ fontSize:'0.8rem', color:'var(--danger)', marginTop:2 }}>
+              <strong>{e.variable}:</strong> {e.error}. {e.correccion}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {sections.map(sec => {
+        const sectionFields = fields.filter(f => f.section === sec.key)
+        const sectionFilled = sectionFields.filter(f => {
+          if (!f.required) return true
+          const v = formData[f.key]
+          return v !== '' && v !== null && v !== undefined && String(v).trim() !== ''
+        }).length
+        return (
+          <div key={sec.key} className="panel" style={{ marginBottom:16 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, paddingBottom:12, borderBottom:'1px solid var(--border-subtle)' }}>
+              <div style={{ width:36, height:36, borderRadius:10, background:'var(--green-50)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'var(--green-600)' }}>
+                {SECTION_ICONS[sec.icon]}
+              </div>
+              <div>
+                <div style={{ fontWeight:600, fontSize:'0.9rem', color:'var(--text-primary)' }}>{sec.title}</div>
+                <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>{sectionFields.length} campos</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sectionFields.map(f => (
+                <div key={f.key} className={f.key === 'observacion_causa' || f.key === 'identificacion_prestador' || f.key === 'medicamento_nombre' ? 'sm:col-span-2 lg:col-span-3' : ''}>
+                  <label className="form-label text-xs">
+                    {f.label} {f.required && <span style={{ color:'var(--danger)' }}>*</span>}
+                  </label>
+                  {f.type === 'select' ? (
+                    <select className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)}>
+                      <option value="">Seleccionar...</option>
+                      {(f.options||[]).map(o => {
+                        const v = typeof o === 'object' ? o.v : o
+                        const l = typeof o === 'object' ? o.l : o
+                        return <option key={v} value={v}>{l}</option>
+                      })}
+                    </select>
+                  ) : (
+                    <input type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'}
+                      className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)} />
+                  )}
+                  {errMap[f.label] && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>{errMap[f.label].error}</p>}
                 </div>
               ))}
             </div>
           </div>
-        )}
+        )
+      })}
 
-        <div style={{ maxHeight:'60vh', overflowY:'auto', paddingRight:4 }}>
-          {sections.map(sec => (
-            <div key={sec.key} className="panel" style={{ marginBottom:8, padding:0, overflow:'hidden' }}>
-              <button className="w-full flex items-center justify-between px-4 py-3 text-left"
-                style={{ background:'var(--bg-subtle)', border:'none', cursor:'pointer', fontWeight:600, fontSize:'0.8rem', color:'var(--text-primary)' }}
-                onClick={() => toggleSection(sec.key)}>
-                <span>{sec.title}</span>
-                <span style={{ color:'var(--text-muted)', fontSize:16 }}>{openSections[sec.key] ? '−' : '+'}</span>
-              </button>
-              {openSections[sec.key] && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-                  {fields.filter(f => f.section === sec.key).map(f => (
-                    <div key={f.key} className={f.key === 'observacion_causa' || f.key === 'procedimiento_consulta' || f.key === 'medicamento_nombre' ? 'sm:col-span-2' : ''}>
-                      <label className="form-label text-xs">{f.label} {f.required && <span style={{ color:'var(--danger)' }}>*</span>}</label>
-                      {f.type === 'select' ? (
-                        <select className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)}>
-                          <option value="">Seleccionar...</option>
-                          {(f.options||[]).map(o => {
-                            const v = typeof o === 'object' ? o.v : o
-                            const l = typeof o === 'object' ? o.l : o
-                            return <option key={v} value={v}>{l}</option>
-                          })}
-                        </select>
-                      ) : (
-                        <input type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'}
-                          className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)} />
-                      )}
-                      {errMap[f.label] && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>{errMap[f.label].error}</p>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="flex gap-2 justify-end" style={{ marginTop:16, paddingTop:12, borderTop:'1px solid var(--border-subtle)' }}>
-          <button className="btn-secondary text-sm" onClick={onClose}>Cancelar</button>
-          <button className="btn-secondary text-sm" onClick={handleSaveDraft} disabled={saving}>Guardar borrador</button>
-          <button className="btn-primary text-sm" onClick={handleValidate} style={{ border:'1px solid var(--green-500)' }}>Validar registro</button>
-          <button className={`btn text-sm ${valid ? 'btn-primary' : 'btn-secondary'}`} onClick={handleSaveValidated} disabled={saving || !valid}
-            style={!valid ? { opacity:0.5, cursor:'not-allowed' } : {}}>
-            {saving ? 'Guardando...' : 'Guardar registro'}
-          </button>
-        </div>
+      <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'16px 0', borderTop:'1px solid var(--border-subtle)', marginTop:8, position:'sticky', bottom:0, background:'var(--bg-canvas)', zIndex:10 }}>
+        <button className="btn-secondary text-sm" onClick={onCancel}>Cancelar</button>
+        <button className="btn-primary text-sm" onClick={() => { handleValidate() }} style={{ border:'1px solid var(--green-500)' }}>Validar registro</button>
+        <button className={`btn text-sm ${valid ? 'btn-primary' : 'btn-secondary'}`} onClick={handleSubmit} disabled={saving || !valid}
+          style={!valid ? { opacity:0.5, cursor:'not-allowed' } : { background:'var(--green-600)', color:'#fff', border:'1px solid var(--green-600)' }}>
+          {saving ? 'Guardando...' : isEdit ? 'Actualizar registro' : 'Guardar registro'}
+        </button>
       </div>
     </div>
   )
 }
 
-function DetailModal({ data, fields, sections, onClose, onEdit }) {
+function DetailPage({ data, fields, sections, tab, onClose, onEdit }) {
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth:720 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-title" style={{ marginBottom:4 }}>Registro #{data.id}</div>
-        <span className={ESTADO_COLORS[data.estado]||'badge-neutral'} style={{ marginBottom:12, display:'inline-block' }}>{ESTADO_LABELS[data.estado]||data.estado}</span>
-
-        <div style={{ maxHeight:'60vh', overflowY:'auto', paddingRight:4 }}>
-          {sections.map(sec => (
-            <div key={sec.key} style={{ marginBottom:12 }}>
-              <div className="section-label" style={{ marginBottom:8, paddingBottom:6, borderBottom:'1px solid var(--border-subtle)' }}>{sec.title}</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {fields.filter(f => f.section === sec.key).map(f => (
-                  <div key={f.key} className={f.key === 'observacion_causa' || f.key === 'procedimiento_consulta' || f.key === 'medicamento_nombre' ? 'sm:col-span-2' : ''}>
-                    <div className="text-xs" style={{ color:'var(--text-muted)' }}>{f.label}</div>
-                    <div className="text-sm font-medium" style={{ color:'var(--text-primary)' }}>{data[f.key] || '—'}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+    <div className="fade-in" style={{ maxWidth:1200, margin:'0 auto' }}>
+      <div style={{ marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+          <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:4 }}>
+            Registro #{data.id} · {tab === 'consultas' ? 'MATRIZ PX Y CONSULTAS' : 'MATRIZ MEDICAMENTOS'}
+          </div>
+          <span style={{ display:'inline-block', padding:'2px 8px', borderRadius:99, fontSize:'0.7rem', fontWeight:500,
+            background:(ESTADO_COLORS[data.estado]||'#6b7280')+'18', color:ESTADO_COLORS[data.estado]||'#6b7280' }}>
+            {ESTADO_LABELS[data.estado]||data.estado}
+          </span>
         </div>
-
-        <div className="flex gap-2 justify-end" style={{ marginTop:16, paddingTop:12, borderTop:'1px solid var(--border-subtle)' }}>
-          <button className="btn-secondary text-sm" onClick={onClose}>Cerrar</button>
+        <div className="flex gap-2">
+          <button className="btn-secondary text-sm" onClick={onClose}>Volver</button>
           <button className="btn-primary text-sm" onClick={onEdit}>Editar</button>
         </div>
+      </div>
+
+      {sections.map(sec => {
+        const sectionFields = fields.filter(f => f.section === sec.key)
+        return (
+          <div key={sec.key} className="panel" style={{ marginBottom:16 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, paddingBottom:12, borderBottom:'1px solid var(--border-subtle)' }}>
+              <div style={{ width:36, height:36, borderRadius:10, background:'var(--green-50)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'var(--green-600)' }}>
+                {SECTION_ICONS[sec.icon]}
+              </div>
+              <div>
+                <div style={{ fontWeight:600, fontSize:'0.9rem', color:'var(--text-primary)' }}>{sec.title}</div>
+                <div style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>{sectionFields.length} campos</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sectionFields.map(f => (
+                <div key={f.key} className={f.key === 'observacion_causa' || f.key === 'identificacion_prestador' || f.key === 'medicamento_nombre' ? 'sm:col-span-2 lg:col-span-3' : ''}>
+                  <div className="text-xs" style={{ color:'var(--text-muted)' }}>{f.label}</div>
+                  <div className="text-sm font-medium" style={{ color:'var(--text-primary)', marginTop:2 }}>{data[f.key] || '—'}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+
+      <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'16px 0' }}>
+        <button className="btn-secondary text-sm" onClick={onClose}>Volver</button>
+        <button className="btn-primary text-sm" onClick={onEdit}>Editar</button>
       </div>
     </div>
   )
