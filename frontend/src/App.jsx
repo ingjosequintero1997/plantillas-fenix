@@ -161,7 +161,7 @@ export default function App() {
   }, [user])
 
   useEffect(() => {
-    const ipsSections = ['data', 'verificar', 'indicadores']
+    const ipsSections = ['data', 'verificar', 'indicadores', 'reportes']
     if (systemConfig.cargue_masivo !== false) ipsSections.push('cargue_masivo')
     if (systemConfig.historias_pdf !== false) ipsSections.push('historias')
     if (user?.role === 'ips_user' && !ipsSections.includes(section)) {
