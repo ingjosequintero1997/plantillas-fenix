@@ -14,7 +14,7 @@ const PX_FIELDS = [
     options:['MS','RC','TI','CC','CE','PA','CD','AS','CN','SC','PE','PT'] },
   { key:'documento', label:'Documento', type:'text', required:true, section:'identificacion' },
   { key:'identificador_orden', label:'Identificador de la orden de servicio', type:'text', required:true, section:'orden' },
-  { key:'cod_municipio', label:'CÓDIGO MUNICIPIO', type:'text', required:true, section:'orden', pattern:'^\d{5}$' },
+  { key:'cod_municipio', label:'CÓDIGO MUNICIPIO', type:'text', required:true, section:'orden' },
   { key:'cod_diagnostico', label:'Código del Diagnóstico Principal', type:'text', required:true, section:'orden' },
   { key:'cups', label:'CUPS', type:'number', required:true, section:'procedimiento' },
   { key:'procedimiento_consulta', label:'Procedimiento o consulta', type:'text', required:true, section:'procedimiento' },
@@ -44,7 +44,7 @@ const MED_FIELDS = [
     options:['MS','RC','TI','CC','CE','PA','CD','AS','CN','SC','PE','PT'] },
   { key:'documento', label:'Documento', type:'text', required:true, section:'identificacion' },
   { key:'identificador_prescripcion', label:'Identificador de la prescripción', type:'text', required:true, section:'prescripcion' },
-  { key:'cod_municipio', label:'CÓDIGO MUNICIPIO', type:'text', required:true, section:'prescripcion', pattern:'^\d{5}$' },
+  { key:'cod_municipio', label:'CÓDIGO MUNICIPIO', type:'text', required:true, section:'prescripcion' },
   { key:'cod_diagnostico', label:'Código del Diagnóstico Principal', type:'text', required:true, section:'prescripcion' },
   { key:'medicamento_atc', label:'MEDICAMENTO - ATC', type:'text', required:true, section:'medicamento' },
   { key:'medicamento_concentracion', label:'MEDICAMENTO - CONCENTRACIÓN', type:'text', required:true, section:'medicamento' },
@@ -91,62 +91,8 @@ const MED_SECTIONS = [
   { key:'prestador', title:'8. Gestor / Prestador' },
 ]
 
-const ESTADO_COLORS = { borrador:'#6b7280', con_errores:'#dc2626', validado:'#16a34a', modificado:'#d97706' }
+const ESTADO_COLORS = { borrador:'badge-neutral', con_errores:'badge-error', validado:'badge-success', modificado:'badge-warning' }
 const ESTADO_LABELS = { borrador:'Borrador', con_errores:'Con errores', validado:'Validado', modificado:'Modificado' }
-
-const CSS = {
-  page: { display:'flex', flexDirection:'column', gap:16, padding:'16px 24px', fontFamily:'var(--font-body)' },
-  title: { fontSize:'1.125rem', fontWeight:700, color:'var(--text-primary)', fontFamily:'var(--font-display)', margin:0 },
-  subtitle: { fontSize:'0.75rem', color:'var(--text-muted)', marginTop:2 },
-  card: { background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:12, padding:24, cursor:'pointer', transition:'all 150ms' },
-  cardTitle: { fontSize:'0.95rem', fontWeight:600, color:'var(--text-primary)', marginBottom:4 },
-  cardDesc: { fontSize:'0.8rem', color:'var(--text-secondary)', marginBottom:12 },
-  btn: { padding:'8px 20px', borderRadius:8, fontSize:'0.8rem', fontWeight:500, border:'none', cursor:'pointer', transition:'all 150ms' },
-  input: { width:'100%', padding:'8px 12px', borderRadius:8, fontSize:'0.8rem', border:'1px solid var(--border-subtle)', background:'var(--bg-surface)', color:'var(--text-primary)', outline:'none', transition:'border-color 150ms' },
-  label: { fontSize:'0.75rem', fontWeight:500, color:'var(--text-secondary)', marginBottom:4, display:'block' },
-  table: { width:'100%', borderCollapse:'collapse', fontSize:'0.8rem' },
-  th: { padding:'10px 12px', textAlign:'left', fontSize:'0.7rem', fontWeight:600, color:'var(--text-secondary)', borderBottom:'1px solid var(--border-subtle)', background:'var(--bg-subtle)' },
-  td: { padding:'10px 12px', borderBottom:'1px solid var(--border-subtle)', color:'var(--text-primary)' },
-  badge: (color) => ({ display:'inline-block', padding:'2px 8px', borderRadius:99, fontSize:'0.7rem', fontWeight:500, background:color+'18', color }),
-  sectionAccordion: { border:'1px solid var(--border-subtle)', borderRadius:8, overflow:'hidden', marginBottom:8 },
-  sectionHeader: { padding:'12px 16px', background:'var(--bg-subtle)', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:'0.8rem', fontWeight:600, color:'var(--text-primary)', userSelect:'none' },
-  sectionBody: { padding:'16px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 },
-  modalOverlay: { position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:32, overflowY:'auto', background:'rgba(0,0,0,0.45)' },
-  modal: { background:'var(--bg-surface)', borderRadius:14, width:'100%', maxWidth:800, marginBottom:32, boxShadow:'0 20px 60px rgba(0,0,0,0.2)' },
-  modalHeader: { padding:'16px 20px', borderBottom:'1px solid var(--border-subtle)', display:'flex', justifyContent:'space-between', alignItems:'center' },
-  modalBody: { padding:20, maxHeight:'65vh', overflowY:'auto' },
-  modalFooter: { padding:'12px 20px', borderTop:'1px solid var(--border-subtle)', display:'flex', justifyContent:'flex-end', gap:8 },
-}
-
-function StatBadge({ label, value, color }) {
-  return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-secondary)' }}>
-      <span style={{ width:7, height:7, borderRadius:'50%', background:color }} />
-      {label}: <strong style={{ color:'var(--text-primary)' }}>{value}</strong>
-    </span>
-  )
-}
-
-function FieldInput({ field, value, onChange, error }) {
-  const style = { ...CSS.input, borderColor: error ? 'var(--danger)' : 'var(--border-subtle)' }
-  if (field.type === 'select') {
-    return (
-      <select value={value || ''} onChange={e => onChange(field.key, e.target.value)} style={style}>
-        <option value="">Seleccionar...</option>
-        {(field.options || []).map(o => {
-          const v = typeof o === 'object' ? o.v : o
-          const l = typeof o === 'object' ? o.l : o
-          return <option key={v} value={v}>{l}</option>
-        })}
-      </select>
-    )
-  }
-  return (
-    <input type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
-      value={value || ''} onChange={e => onChange(field.key, e.target.value)}
-      placeholder="" style={style} />
-  )
-}
 
 function buildErrorMap(errors) {
   const m = {}
@@ -182,7 +128,7 @@ export default function ReportesView() {
   const crear = tab === 'consultas' ? crearReporteConsulta : crearReporteMedicamento
   const actualizar = tab === 'consultas' ? actualizarReporteConsulta : actualizarReporteMedicamento
   const eliminar = tab === 'consultas' ? eliminarReporteConsulta : eliminarReporteMedicamento
-  const exportar = tab === 'consultas' ? exportarReportesConsultas : exportarReportesMedicamentos
+  const exportarFn = tab === 'consultas' ? exportarReportesConsultas : exportarReportesMedicamentos
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -208,12 +154,11 @@ export default function ReportesView() {
   const handleExport = async () => {
     setDownloading(true)
     try {
-      const blob = await exportar(filters)
+      const blob = await exportarFn(filters)
       if (blob) {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a'); a.href = url
-        const tipo = tab === 'consultas' ? 'PX_Consultas' : 'Medicamentos'
-        a.download = `Matriz_${tipo}_${new Date().toISOString().slice(0,10)}.xlsx`
+        a.download = `Matriz_${tab==='consultas'?'PX_Consultas':'Medicamentos'}_${new Date().toISOString().slice(0,10)}.xlsx`
         a.click(); URL.revokeObjectURL(url)
       }
     } catch {}
@@ -259,135 +204,129 @@ export default function ReportesView() {
 
   if (subView === 'menu') {
     return (
-      <div style={CSS.page}>
-        <div>
-          <h1 style={CSS.title}>Reporte de procedimientos o consultas pendientes</h1>
-          <p style={CSS.subtitle}>Captura, validación, almacenamiento, gestión y exportación de reportes pendientes</p>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, maxWidth:700 }}>
-          <div style={CSS.card} onClick={() => setTab('consultas')} onMouseEnter={e => e.currentTarget.style.borderColor='var(--green-400)'} onMouseLeave={e => e.currentTarget.style.borderColor='var(--border-subtle)'}>
-            <div style={{ fontSize:28, marginBottom:8 }}>&#128203;</div>
-            <div style={CSS.cardTitle}>Consultas y procedimientos</div>
-            <div style={CSS.cardDesc}>Reporte de procedimientos o consultas pendientes. 23 variables.</div>
-            <button style={{ ...CSS.btn, background:'var(--action-primary)', color:'#fff' }} onClick={(e) => { e.stopPropagation(); openCreate('consultas') }}>
-              Diligenciar reporte
-            </button>
+      <div className="fade-in" style={{ padding:'24px 32px', maxWidth:800 }}>
+        <div className="page-title">Reporte de procedimientos o consultas pendientes</div>
+        <div className="page-subtitle" style={{ marginBottom:24 }}>Captura, validación, almacenamiento, gestión y exportación de reportes pendientes</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ marginBottom:20 }}>
+          <div className="card-hover" style={{ cursor:'pointer' }} onClick={() => openCreate('consultas')}>
+            <div style={{ fontSize:32, marginBottom:8 }}>&#128203;</div>
+            <div style={{ fontWeight:600, fontSize:'0.95rem', color:'var(--text-primary)', marginBottom:4 }}>Consultas y procedimientos</div>
+            <div style={{ fontSize:'0.8rem', color:'var(--text-secondary)', marginBottom:12 }}>Reporte de procedimientos o consultas pendientes. 23 variables.</div>
+            <span className="btn-primary text-sm">Diligenciar reporte</span>
           </div>
-          <div style={CSS.card} onClick={() => setTab('medicamentos')} onMouseEnter={e => e.currentTarget.style.borderColor='var(--green-400)'} onMouseLeave={e => e.currentTarget.style.borderColor='var(--border-subtle)'}>
-            <div style={{ fontSize:28, marginBottom:8 }}>&#128138;</div>
-            <div style={CSS.cardTitle}>Medicamentos</div>
-            <div style={CSS.cardDesc}>Reporte de medicamentos pendientes. 28 variables.</div>
-            <button style={{ ...CSS.btn, background:'var(--action-primary)', color:'#fff' }} onClick={(e) => { e.stopPropagation(); openCreate('medicamentos') }}>
-              Diligenciar reporte
-            </button>
+          <div className="card-hover" style={{ cursor:'pointer' }} onClick={() => openCreate('medicamentos')}>
+            <div style={{ fontSize:32, marginBottom:8 }}>&#128138;</div>
+            <div style={{ fontWeight:600, fontSize:'0.95rem', color:'var(--text-primary)', marginBottom:4 }}>Medicamentos</div>
+            <div style={{ fontSize:'0.8rem', color:'var(--text-secondary)', marginBottom:12 }}>Reporte de medicamentos pendientes. 28 variables.</div>
+            <span className="btn-primary text-sm">Diligenciar reporte</span>
           </div>
         </div>
-        <button onClick={() => setSubView('gestion')} style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', color:'var(--text-secondary)', alignSelf:'flex-start', marginTop:8 }}>
-          Ir a Gestión de datos
-        </button>
+        <button className="btn-secondary text-sm" onClick={() => setSubView('gestion')}>Ir a Gestión de datos</button>
       </div>
     )
   }
 
   return (
-    <div style={CSS.page}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+    <div className="fade-in" style={{ padding:'24px 32px' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8, marginBottom:16 }}>
         <div>
-          <h1 style={CSS.title}>Reporte de procedimientos o consultas pendientes</h1>
-          <p style={CSS.subtitle}>Gestión de datos</p>
+          <div className="page-title">Reporte de procedimientos o consultas pendientes</div>
+          <div className="page-subtitle">Gestión de datos</div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={() => setSubView('menu')} style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', color:'var(--text-secondary)' }}>Nuevo reporte</button>
-          <button onClick={() => openCreate(tab)} style={{ ...CSS.btn, background:'var(--action-primary)', color:'#fff' }}>+ Crear registro</button>
+          <button className="btn-secondary text-sm" onClick={() => setSubView('menu')}>Nuevo reporte</button>
+          <button className="btn-primary text-sm" onClick={() => { setEditing(null); setFormErrors([]); setFormValid(false); setFormOpen(true) }}>+ Crear registro</button>
         </div>
       </div>
 
-      <div style={{ display:'flex', gap:4, padding:4, background:'var(--bg-subtle)', borderRadius:8 }}>
+      <div className="panel" style={{ padding:'4px', display:'inline-flex', gap:4, marginBottom:16 }}>
         {[{k:'consultas',l:'Consultas / Procedimientos'},{k:'medicamentos',l:'Medicamentos'}].map(t => (
           <button key={t.k} onClick={() => { setTab(t.k); setPage(1); setSearch(''); setFilters({}) }}
-            style={{ flex:1, padding:'8px 12px', borderRadius:6, fontSize:'0.8rem', fontWeight:500, border:'none', cursor:'pointer',
-              background: tab===t.k ? 'var(--bg-surface)' : 'transparent', color: tab===t.k ? 'var(--text-primary)' : 'var(--text-muted)',
-              boxShadow: tab===t.k ? 'var(--shadow-xs)' : 'none', transition:'all 150ms' }}>
+            className={`text-sm font-medium px-4 py-2 rounded-lg transition-all ${tab===t.k ? 'bg-white shadow-sm' : ''}`}
+            style={{ color: tab===t.k ? 'var(--text-primary)' : 'var(--text-muted)', border:'none', cursor:'pointer', background: tab===t.k ? 'var(--bg-surface)' : 'transparent' }}>
             {t.l}
           </button>
         ))}
       </div>
 
-      <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
-        <StatBadge label="Validados" value={stats.validados} color="#16a34a" />
-        <StatBadge label="Borradores" value={stats.borradores} color="#6b7280" />
-        <StatBadge label="Con errores" value={stats.con_errores} color="#dc2626" />
-        <StatBadge label="Modificados" value={stats.modificados} color="#d97706" />
-        <StatBadge label="Total" value={total} color="var(--brand-strong)" />
+      <div style={{ display:'flex', gap:16, flexWrap:'wrap', marginBottom:12 }}>
+        <span className="badge-success">Validados: {stats.validados}</span>
+        <span className="badge-neutral">Borradores: {stats.borradores}</span>
+        <span className="badge-error">Con errores: {stats.con_errores}</span>
+        <span className="badge-warning">Modificados: {stats.modificados}</span>
+        <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', alignSelf:'center' }}>Total: {total}</span>
       </div>
 
-      <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-        <input type="text" placeholder="Buscar por documento, consecutivo, orden, EPS..."
+      <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:12, flexWrap:'wrap' }}>
+        <input type="text" className="input text-sm" placeholder="Buscar por documento, consecutivo, orden, EPS..."
           value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-          style={{ ...CSS.input, flex:1, minWidth:200 }} />
-        <button onClick={() => setShowFilters(!showFilters)}
-          style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', color:'var(--text-secondary)' }}>
+          style={{ flex:1, minWidth:200 }} />
+        <button className="btn-secondary text-sm" onClick={() => setShowFilters(!showFilters)}>
           {showFilters ? 'Ocultar filtros' : 'Filtros'}
         </button>
-        <button onClick={handleExport} disabled={downloading}
-          style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', color:'var(--text-secondary)' }}>
+        <button className="btn-secondary text-sm" onClick={handleExport} disabled={downloading}>
           {downloading ? 'Descargando...' : 'Descargar Excel'}
         </button>
       </div>
 
       {showFilters && (
-        <div style={{ padding:16, borderRadius:8, border:'1px solid var(--border-subtle)', background:'var(--bg-subtle)', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:10 }}>
-          <div><label style={CSS.label}>Periodo</label><input value={filters.periodo||''} onChange={e => { setFilters({...filters,periodo:e.target.value}); setPage(1) }} style={CSS.input} /></div>
-          <div><label style={CSS.label}>EPS</label><input value={filters.eps||''} onChange={e => { setFilters({...filters,eps:e.target.value}); setPage(1) }} style={CSS.input} /></div>
-          <div><label style={CSS.label}>Tipo documento</label>
-            <select value={filters.tipo_doc||''} onChange={e => { setFilters({...filters,tipo_doc:e.target.value}); setPage(1) }} style={CSS.input}>
-              <option value="">Todos</option>
-              {['MS','RC','TI','CC','CE','PA','CD','AS','CN','SC','PE','PT'].map(o=><option key={o} value={o}>{o}</option>)}
-            </select>
-          </div>
-          <div><label style={CSS.label}>Estado</label>
-            <select value={filters.estado||''} onChange={e => { setFilters({...filters,estado:e.target.value}); setPage(1) }} style={CSS.input}>
-              <option value="">Todos</option>
-              {Object.entries(ESTADO_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-          <div><label style={CSS.label}>Municipio</label><input value={filters.municipio||''} onChange={e => { setFilters({...filters,municipio:e.target.value}); setPage(1) }} style={CSS.input} /></div>
-          {tab==='consultas' && <div><label style={CSS.label}>CUPS</label><input value={filters.cups||''} onChange={e => { setFilters({...filters,cups:e.target.value}); setPage(1) }} style={CSS.input} /></div>}
-          {tab==='medicamentos' && <div><label style={CSS.label}>ATC</label><input value={filters.atc||''} onChange={e => { setFilters({...filters,atc:e.target.value}); setPage(1) }} style={CSS.input} /></div>}
-          <div style={{ display:'flex', alignItems:'flex-end' }}>
-            <button onClick={() => { setFilters({}); setPage(1) }} style={{ ...CSS.btn, color:'var(--danger)', background:'transparent' }}>Limpiar</button>
+        <div className="panel" style={{ marginBottom:12, padding:16 }}>
+          <div className="section-label" style={{ marginBottom:10 }}>Filtros avanzados</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div><label className="form-label text-xs">Periodo</label><input className="input text-sm" value={filters.periodo||''} onChange={e => { setFilters({...filters,periodo:e.target.value}); setPage(1) }} /></div>
+            <div><label className="form-label text-xs">EPS</label><input className="input text-sm" value={filters.eps||''} onChange={e => { setFilters({...filters,eps:e.target.value}); setPage(1) }} /></div>
+            <div><label className="form-label text-xs">Tipo documento</label>
+              <select className="input text-sm" value={filters.tipo_doc||''} onChange={e => { setFilters({...filters,tipo_doc:e.target.value}); setPage(1) }}>
+                <option value="">Todos</option>
+                {['MS','RC','TI','CC','CE','PA','CD','AS','CN','SC','PE','PT'].map(o=><option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div><label className="form-label text-xs">Estado</label>
+              <select className="input text-sm" value={filters.estado||''} onChange={e => { setFilters({...filters,estado:e.target.value}); setPage(1) }}>
+                <option value="">Todos</option>
+                {Object.entries(ESTADO_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            <div><label className="form-label text-xs">Municipio</label><input className="input text-sm" value={filters.municipio||''} onChange={e => { setFilters({...filters,municipio:e.target.value}); setPage(1) }} /></div>
+            {tab==='consultas' && <div><label className="form-label text-xs">CUPS</label><input className="input text-sm" value={filters.cups||''} onChange={e => { setFilters({...filters,cups:e.target.value}); setPage(1) }} /></div>}
+            {tab==='medicamentos' && <div><label className="form-label text-xs">ATC</label><input className="input text-sm" value={filters.atc||''} onChange={e => { setFilters({...filters,atc:e.target.value}); setPage(1) }} /></div>}
+            <div style={{ display:'flex', alignItems:'flex-end' }}>
+              <button className="btn-ghost text-sm" style={{ color:'var(--danger)' }} onClick={() => { setFilters({}); setPage(1) }}>Limpiar filtros</button>
+            </div>
           </div>
         </div>
       )}
 
-      <div style={{ borderRadius:8, border:'1px solid var(--border-subtle)', overflow:'hidden' }}>
-        <table style={CSS.table}>
+      <div className="panel" style={{ padding:0, overflow:'hidden' }}>
+        <table className="w-full text-sm">
           <thead>
-            <tr>{colHeaders.map(h => <th key={h} style={CSS.th}>{h}</th>)}</tr>
+            <tr style={{ borderBottom:'1px solid var(--border-subtle)' }}>
+              {colHeaders.map(h => <th key={h} className="section-label text-left px-3 py-3" style={{ background:'var(--bg-subtle)' }}>{h}</th>)}
+            </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={colHeaders.length} style={{ ...CSS.td, textAlign:'center', padding:32, color:'var(--text-muted)' }}>Cargando...</td></tr>
+              <tr><td colSpan={colHeaders.length} className="px-3 py-8 text-center text-sm" style={{ color:'var(--text-muted)' }}>Cargando...</td></tr>
             ) : data.length === 0 ? (
-              <tr><td colSpan={colHeaders.length} style={{ ...CSS.td, textAlign:'center', padding:32, color:'var(--text-muted)' }}>No hay registros</td></tr>
+              <tr><td colSpan={colHeaders.length} className="px-3 py-8 text-center text-sm" style={{ color:'var(--text-muted)' }}>No hay registros</td></tr>
             ) : data.map((r, i) => (
-              <tr key={r.id} style={{ transition:'background 100ms' }} onMouseEnter={e => e.currentTarget.style.background='var(--bg-surface-hover)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                <td style={CSS.td}>{(page-1)*pageSize + i + 1}</td>
-                <td style={CSS.td}>{r.id}</td>
-                <td style={CSS.td}>{r.periodo_reportado}</td>
-                <td style={CSS.td}>{r.cod_eps}</td>
-                <td style={CSS.td}>{r.tipo_documento}</td>
-                <td style={CSS.td}>{r.documento}</td>
-                <td style={CSS.td}>{tab==='consultas' ? r.identificador_orden : r.identificador_prescripcion}</td>
-                {tab==='consultas' && <td style={CSS.td}>{r.cod_municipio}</td>}
-                {tab==='medicamentos' && <td style={CSS.td}>{r.medicamento_atc}</td>}
-                <td style={CSS.td}><span style={CSS.badge(ESTADO_COLORS[r.estado]||'#6b7280')}>{ESTADO_LABELS[r.estado]||r.estado}</span></td>
-                <td style={CSS.td}>{r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
-                <td style={CSS.td}>
-                  <div style={{ display:'flex', gap:4 }}>
-                    <button onClick={() => openDetail(r.id)} style={{ ...CSS.btn, background:'transparent', color:'var(--brand-strong)', padding:'4px 8px', fontSize:'0.7rem' }}>Ver</button>
-                    <button onClick={() => openEdit(r.id)} style={{ ...CSS.btn, background:'transparent', color:'var(--action-primary)', padding:'4px 8px', fontSize:'0.7rem' }}>Editar</button>
-                    <button onClick={() => setConfirmDelete(r)} style={{ ...CSS.btn, background:'transparent', color:'var(--danger)', padding:'4px 8px', fontSize:'0.7rem' }}>Eliminar</button>
+              <tr key={r.id} className="transition-colors hover:bg-[var(--bg-surface-hover)]" style={{ borderBottom:'1px solid var(--border-subtle)' }}>
+                <td className="px-3 py-2.5 text-xs">{(page-1)*pageSize + i + 1}</td>
+                <td className="px-3 py-2.5 text-xs">{r.id}</td>
+                <td className="px-3 py-2.5 text-xs">{r.periodo_reportado}</td>
+                <td className="px-3 py-2.5 text-xs">{r.cod_eps}</td>
+                <td className="px-3 py-2.5 text-xs">{r.tipo_documento}</td>
+                <td className="px-3 py-2.5 text-xs font-medium">{r.documento}</td>
+                <td className="px-3 py-2.5 text-xs">{tab==='consultas' ? r.identificador_orden : r.identificador_prescripcion}</td>
+                {tab==='consultas' && <td className="px-3 py-2.5 text-xs">{r.cod_municipio}</td>}
+                {tab==='medicamentos' && <td className="px-3 py-2.5 text-xs">{r.medicamento_atc}</td>}
+                <td className="px-3 py-2.5"><span className={ESTADO_COLORS[r.estado]||'badge-neutral'}>{ESTADO_LABELS[r.estado]||r.estado}</span></td>
+                <td className="px-3 py-2.5 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
+                <td className="px-3 py-2.5">
+                  <div className="flex gap-1">
+                    <button className="btn-ghost text-xs" style={{ padding:'4px 8px' }} onClick={() => openDetail(r.id)}>Ver</button>
+                    <button className="btn-ghost text-xs" style={{ padding:'4px 8px' }} onClick={() => openEdit(r.id)}>Editar</button>
+                    <button className="btn-ghost text-xs" style={{ padding:'4px 8px', color:'var(--danger)' }} onClick={() => setConfirmDelete(r)}>Eliminar</button>
                   </div>
                 </td>
               </tr>
@@ -397,12 +336,12 @@ export default function ReportesView() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:'0.8rem', color:'var(--text-secondary)' }}>
+        <div className="flex items-center justify-between text-xs" style={{ color:'var(--text-secondary)', marginTop:12 }}>
           <span>Mostrando {(page-1)*pageSize+1}–{Math.min(page*pageSize,total)} de {total}</span>
-          <div style={{ display:'flex', gap:4 }}>
-            <button onClick={() => setPage(Math.max(1,page-1))} disabled={page<=1} style={{ ...CSS.btn, border:'1px solid var(--border-subtle)', background:'var(--bg-surface)' }}>Anterior</button>
-            {Array.from({length:Math.min(5,totalPages)},(_,i)=>{const p=Math.max(1,Math.min(page-2,totalPages-4))+i; if(p>totalPages)return null; return <button key={p} onClick={()=>setPage(p)} style={{ ...CSS.btn, border:p===page?'2px solid var(--brand-strong)':'1px solid var(--border-subtle)', background:p===page?'var(--surface-brand-weak)':'var(--bg-surface)' }}>{p}</button>})}
-            <button onClick={() => setPage(Math.min(totalPages,page+1))} disabled={page>=totalPages} style={{ ...CSS.btn, border:'1px solid var(--border-subtle)', background:'var(--bg-surface)' }}>Siguiente</button>
+          <div className="flex gap-1">
+            <button className="btn-secondary text-xs" onClick={() => setPage(Math.max(1,page-1))} disabled={page<=1}>Anterior</button>
+            {Array.from({length:Math.min(5,totalPages)},(_,i)=>{const p=Math.max(1,Math.min(page-2,totalPages-4))+i; if(p>totalPages)return null; return <button key={p} onClick={()=>setPage(p)} className={`text-xs px-3 py-1 rounded-lg ${p===page?'btn-primary':'btn-secondary'}`}>{p}</button>})}
+            <button className="btn-secondary text-xs" onClick={() => setPage(Math.min(totalPages,page+1))} disabled={page>=totalPages}>Siguiente</button>
           </div>
         </div>
       )}
@@ -414,17 +353,13 @@ export default function ReportesView() {
         onClose={() => { setDetailOpen(false); setDetailData(null) }} onEdit={() => { setDetailOpen(false); openEdit(detailData.id) }} />}
 
       {confirmDelete && (
-        <div style={CSS.modalOverlay}>
-          <div style={{ ...CSS.modal, maxWidth:400 }}>
-            <div style={{ padding:20 }}>
-              <h3 style={{ ...CSS.title, marginBottom:8 }}>Confirmar eliminación</h3>
-              <p style={{ fontSize:'0.8rem', color:'var(--text-secondary)', marginBottom:16 }}>
-                ¿Eliminar registro #{confirmDelete.id}? Esta acción realizará eliminación lógica.
-              </p>
-              <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-                <button onClick={() => setConfirmDelete(null)} style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', color:'var(--text-secondary)' }}>Cancelar</button>
-                <button onClick={handleDelete} style={{ ...CSS.btn, background:'var(--danger)', color:'#fff' }}>Eliminar</button>
-              </div>
+        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="modal" style={{ maxWidth:400 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Confirmar eliminación</div>
+            <p className="modal-desc">¿Eliminar registro #{confirmDelete.id}? Esta acción realizará eliminación lógica.</p>
+            <div className="flex gap-2 justify-end">
+              <button className="btn-secondary text-sm" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+              <button className="btn-danger text-sm" onClick={handleDelete}>Eliminar</button>
             </div>
           </div>
         </div>
@@ -438,13 +373,9 @@ function FormModal({ fields, sections, data, errors, valid, saving, isEdit, onSa
     const d = {}; fields.forEach(f => { d[f.key] = data?.[f.key] || '' }); return d
   })
   const [openSections, setOpenSections] = useState(() => { const s = {}; sections.forEach((sec,i) => { s[sec.key] = i === 0 }); return s })
-  const [touched, setTouched] = useState({})
   const errMap = useMemo(() => buildErrorMap(errors), [errors])
 
-  const handleChange = (key, val) => {
-    setFormData(prev => ({ ...prev, [key]: val }))
-    setTouched(prev => ({ ...prev, [key]: true }))
-  }
+  const handleChange = (key, val) => setFormData(prev => ({ ...prev, [key]: val }))
   const toggleSection = key => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
 
   const handleValidate = () => {
@@ -454,50 +385,60 @@ function FormModal({ fields, sections, data, errors, valid, saving, isEdit, onSa
         fieldErrors.push({ variable: f.label, dato: formData[f.key]||'vacío', error:'Campo obligatorio', debe_ser:'Valor válido', correccion:`Ingrese ${f.label.toLowerCase()}` })
       }
     })
-    const hasErrors = fieldErrors.length > 0
-    onValidate(!hasErrors)
+    onValidate(fieldErrors.length === 0)
     return fieldErrors
   }
 
   const handleSaveDraft = () => onSave(formData, 'borrador')
-
-  const handleSaveValidated = () => {
-    const errs = handleValidate()
-    if (errs.length) return
-    onSave(formData, 'validado')
-  }
+  const handleSaveValidated = () => { if (handleValidate().length) return; onSave(formData, 'validado') }
 
   return (
-    <div style={CSS.modalOverlay} onClick={onClose}>
-      <div style={CSS.modal} onClick={e => e.stopPropagation()}>
-        <div style={CSS.modalHeader}>
-          <h2 style={CSS.title}>{isEdit ? 'Editar registro' : 'Nuevo registro'}</h2>
-          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-muted)' }}>&#10005;</button>
-        </div>
-        <div style={CSS.modalBody}>
-          {errors.length > 0 && (
-            <div style={{ padding:12, borderRadius:8, border:'1px solid var(--danger)', background:'var(--danger-bg)', marginBottom:12 }}>
-              <p style={{ fontSize:'0.8rem', fontWeight:600, color:'var(--danger)', marginBottom:4 }}>Errores de validación:</p>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth:720 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-title" style={{ marginBottom:16 }}>{isEdit ? 'Editar registro' : 'Nuevo registro'}</div>
+
+        {errors.length > 0 && (
+          <div className="px-4 py-3 rounded-lg text-sm flex items-start gap-3 mb-4"
+            style={{ color:'#B91C1C', backgroundColor:'#FEE2E2', border:'1px solid #FECACA' }}>
+            <div>
+              <div className="font-semibold mb-1">Errores de validación:</div>
               {errors.map((e,i) => (
-                <p key={i} style={{ fontSize:'0.75rem', color:'var(--danger)', margin:'2px 0' }}>
+                <div key={i} className="text-xs" style={{ marginTop:2 }}>
                   <strong>{e.variable}:</strong> {e.error}. {e.correccion}
-                </p>
+                </div>
               ))}
             </div>
-          )}
+          </div>
+        )}
+
+        <div style={{ maxHeight:'60vh', overflowY:'auto', paddingRight:4 }}>
           {sections.map(sec => (
-            <div key={sec.key} style={CSS.sectionAccordion}>
-              <div style={CSS.sectionHeader} onClick={() => toggleSection(sec.key)}>
+            <div key={sec.key} className="panel" style={{ marginBottom:8, padding:0, overflow:'hidden' }}>
+              <button className="w-full flex items-center justify-between px-4 py-3 text-left"
+                style={{ background:'var(--bg-subtle)', border:'none', cursor:'pointer', fontWeight:600, fontSize:'0.8rem', color:'var(--text-primary)' }}
+                onClick={() => toggleSection(sec.key)}>
                 <span>{sec.title}</span>
-                <span style={{ color:'var(--text-muted)' }}>{openSections[sec.key] ? '−' : '+'}</span>
-              </div>
+                <span style={{ color:'var(--text-muted)', fontSize:16 }}>{openSections[sec.key] ? '−' : '+'}</span>
+              </button>
               {openSections[sec.key] && (
-                <div style={CSS.sectionBody}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
                   {fields.filter(f => f.section === sec.key).map(f => (
-                    <div key={f.key} style={{ gridColumn: (f.type === 'text' && f.key.includes('observacion')) || f.key.includes('procedimiento') || f.key.includes('nombre') ? 'span 2' : 'span 1' }}>
-                      <label style={CSS.label}>{f.label} {f.required && <span style={{ color:'var(--danger)' }}>*</span>}</label>
-                      <FieldInput field={f} value={formData[f.key]} onChange={handleChange} error={errMap[f.label]} />
-                      {errMap[f.label] && <p style={{ fontSize:'0.7rem', color:'var(--danger)', marginTop:2 }}>{errMap[f.label].error}</p>}
+                    <div key={f.key} className={f.key === 'observacion_causa' || f.key === 'procedimiento_consulta' || f.key === 'medicamento_nombre' ? 'sm:col-span-2' : ''}>
+                      <label className="form-label text-xs">{f.label} {f.required && <span style={{ color:'var(--danger)' }}>*</span>}</label>
+                      {f.type === 'select' ? (
+                        <select className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)}>
+                          <option value="">Seleccionar...</option>
+                          {(f.options||[]).map(o => {
+                            const v = typeof o === 'object' ? o.v : o
+                            const l = typeof o === 'object' ? o.l : o
+                            return <option key={v} value={v}>{l}</option>
+                          })}
+                        </select>
+                      ) : (
+                        <input type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'}
+                          className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)} />
+                      )}
+                      {errMap[f.label] && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>{errMap[f.label].error}</p>}
                     </div>
                   ))}
                 </div>
@@ -505,11 +446,13 @@ function FormModal({ fields, sections, data, errors, valid, saving, isEdit, onSa
             </div>
           ))}
         </div>
-        <div style={CSS.modalFooter}>
-          <button onClick={onClose} style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', color:'var(--text-secondary)' }}>Cancelar</button>
-          <button onClick={handleSaveDraft} disabled={saving} style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', color:'var(--text-secondary)' }}>Guardar borrador</button>
-          <button onClick={handleValidate} style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--brand-strong)', color:'var(--brand-strong)' }}>Validar registro</button>
-          <button onClick={handleSaveValidated} disabled={saving || !valid} style={{ ...CSS.btn, background: valid ? 'var(--action-primary)' : 'var(--bg-subtle)', color: valid ? '#fff' : 'var(--text-muted)', cursor: valid ? 'pointer' : 'not-allowed' }}>
+
+        <div className="flex gap-2 justify-end" style={{ marginTop:16, paddingTop:12, borderTop:'1px solid var(--border-subtle)' }}>
+          <button className="btn-secondary text-sm" onClick={onClose}>Cancelar</button>
+          <button className="btn-secondary text-sm" onClick={handleSaveDraft} disabled={saving}>Guardar borrador</button>
+          <button className="btn-primary text-sm" onClick={handleValidate} style={{ border:'1px solid var(--green-500)' }}>Validar registro</button>
+          <button className={`btn text-sm ${valid ? 'btn-primary' : 'btn-secondary'}`} onClick={handleSaveValidated} disabled={saving || !valid}
+            style={!valid ? { opacity:0.5, cursor:'not-allowed' } : {}}>
             {saving ? 'Guardando...' : 'Guardar registro'}
           </button>
         </div>
@@ -520,33 +463,30 @@ function FormModal({ fields, sections, data, errors, valid, saving, isEdit, onSa
 
 function DetailModal({ data, fields, sections, onClose, onEdit }) {
   return (
-    <div style={CSS.modalOverlay} onClick={onClose}>
-      <div style={CSS.modal} onClick={e => e.stopPropagation()}>
-        <div style={CSS.modalHeader}>
-          <h2 style={CSS.title}>Registro #{data.id}</h2>
-          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-muted)' }}>&#10005;</button>
-        </div>
-        <div style={CSS.modalBody}>
-          <div style={{ marginBottom:12 }}>
-            <span style={CSS.badge(ESTADO_COLORS[data.estado]||'#6b7280')}>{ESTADO_LABELS[data.estado]||data.estado}</span>
-          </div>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth:720 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-title" style={{ marginBottom:4 }}>Registro #{data.id}</div>
+        <span className={ESTADO_COLORS[data.estado]||'badge-neutral'} style={{ marginBottom:12, display:'inline-block' }}>{ESTADO_LABELS[data.estado]||data.estado}</span>
+
+        <div style={{ maxHeight:'60vh', overflowY:'auto', paddingRight:4 }}>
           {sections.map(sec => (
             <div key={sec.key} style={{ marginBottom:12 }}>
-              <div style={{ fontSize:'0.8rem', fontWeight:600, color:'var(--text-primary)', padding:'8px 0', borderBottom:'1px solid var(--border-subtle)', marginBottom:8 }}>{sec.title}</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <div className="section-label" style={{ marginBottom:8, paddingBottom:6, borderBottom:'1px solid var(--border-subtle)' }}>{sec.title}</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {fields.filter(f => f.section === sec.key).map(f => (
-                  <div key={f.key} style={{ gridColumn: (f.type === 'text' && f.key.includes('observacion')) || f.key.includes('procedimiento') || f.key.includes('nombre') ? 'span 2' : 'span 1' }}>
-                    <div style={{ fontSize:'0.7rem', color:'var(--text-muted)' }}>{f.label}</div>
-                    <div style={{ fontSize:'0.8rem', fontWeight:500, color:'var(--text-primary)' }}>{data[f.key] || '—'}</div>
+                  <div key={f.key} className={f.key === 'observacion_causa' || f.key === 'procedimiento_consulta' || f.key === 'medicamento_nombre' ? 'sm:col-span-2' : ''}>
+                    <div className="text-xs" style={{ color:'var(--text-muted)' }}>{f.label}</div>
+                    <div className="text-sm font-medium" style={{ color:'var(--text-primary)' }}>{data[f.key] || '—'}</div>
                   </div>
                 ))}
               </div>
             </div>
           ))}
         </div>
-        <div style={CSS.modalFooter}>
-          <button onClick={onClose} style={{ ...CSS.btn, background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', color:'var(--text-secondary)' }}>Cerrar</button>
-          <button onClick={onEdit} style={{ ...CSS.btn, background:'var(--action-primary)', color:'#fff' }}>Editar</button>
+
+        <div className="flex gap-2 justify-end" style={{ marginTop:16, paddingTop:12, borderTop:'1px solid var(--border-subtle)' }}>
+          <button className="btn-secondary text-sm" onClick={onClose}>Cerrar</button>
+          <button className="btn-primary text-sm" onClick={onEdit}>Editar</button>
         </div>
       </div>
     </div>
