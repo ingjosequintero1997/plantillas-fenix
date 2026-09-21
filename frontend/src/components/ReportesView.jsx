@@ -9,7 +9,7 @@ import {
 const PX_FIELDS = [
   { key:'consecutivo', label:'Consecutivo del registro', type:'number', required:true, section:'identificacion' },
   { key:'periodo_reportado', label:'PERIODO REPORTADO', type:'select', required:true, section:'identificacion',
-    options:['Periodo 1','Periodo 2','Periodo 3','Periodo 4','Periodo 5','Periodo 6','Periodo 7','Periodo 8','Periodo 9','Periodo 10','Periodo 11','Periodo 12'] },
+    options:[{v:'1',l:'Periodo 1'},{v:'2',l:'Periodo 2'},{v:'3',l:'Periodo 3'},{v:'4',l:'Periodo 4'},{v:'5',l:'Periodo 5'},{v:'6',l:'Periodo 6'},{v:'7',l:'Periodo 7'},{v:'8',l:'Periodo 8'},{v:'9',l:'Periodo 9'},{v:'10',l:'Periodo 10'},{v:'11',l:'Periodo 11'},{v:'12',l:'Periodo 12'}] },
   { key:'cod_eps', label:'Cod. EPS', type:'text', required:true, section:'identificacion' },
   { key:'tipo_documento', label:'Tipo documento', type:'select', required:true, section:'identificacion',
     options:[{v:'CC',l:'Cédula de ciudadanía'},{v:'TI',l:'Tarjeta de identidad'},{v:'CE',l:'Cédula de extranjería'},{v:'RC',l:'Registro civil'},{v:'MS',l:'Menor sin documento'},{v:'PA',l:'Pasaporte'},{v:'CD',l:'Carné diplomático'},{v:'AS',l:'Adulto sin documento'},{v:'CN',l:'Certificado nacido vivo'},{v:'SC',l:'Salud cruzada'},{v:'PE',l:'Permiso especial'},{v:'PT',l:'Permiso por protección temporal'}] },
@@ -41,7 +41,7 @@ const PX_FIELDS = [
 const MED_FIELDS = [
   { key:'consecutivo', label:'Consecutivo del registro', type:'number', required:true, section:'identificacion' },
   { key:'periodo_reportado', label:'Periodo reportado', type:'select', required:true, section:'identificacion',
-    options:['Periodo 1','Periodo 2','Periodo 3','Periodo 4','Periodo 5','Periodo 6','Periodo 7','Periodo 8','Periodo 9','Periodo 10','Periodo 11','Periodo 12'] },
+    options:[{v:'1',l:'Periodo 1'},{v:'2',l:'Periodo 2'},{v:'3',l:'Periodo 3'},{v:'4',l:'Periodo 4'},{v:'5',l:'Periodo 5'},{v:'6',l:'Periodo 6'},{v:'7',l:'Periodo 7'},{v:'8',l:'Periodo 8'},{v:'9',l:'Periodo 9'},{v:'10',l:'Periodo 10'},{v:'11',l:'Periodo 11'},{v:'12',l:'Periodo 12'}] },
   { key:'cod_eps', label:'Cod. EPS', type:'text', required:true, section:'identificacion' },
   { key:'tipo_documento', label:'Tipo documento', type:'select', required:true, section:'identificacion',
     options:[{v:'CC',l:'Cédula de ciudadanía'},{v:'TI',l:'Tarjeta de identidad'},{v:'CE',l:'Cédula de extranjería'},{v:'RC',l:'Registro civil'},{v:'MS',l:'Menor sin documento'},{v:'PA',l:'Pasaporte'},{v:'CD',l:'Carné diplomático'},{v:'AS',l:'Adulto sin documento'},{v:'CN',l:'Certificado nacido vivo'},{v:'SC',l:'Salud cruzada'},{v:'PE',l:'Permiso especial'},{v:'PT',l:'Permiso por protección temporal'}] },
@@ -188,8 +188,15 @@ export default function ReportesView() {
     setSaving(true)
     try {
       const res = await crear(formData)
-      if (res?.errors?.length) { setFormErrors(res.errors); setFormValid(false); setSaving(false); if (showToast) showToast('Registro con errores de validación', 'error'); return }
-      if (showToast) showToast('Registro guardado exitosamente', 'success')
+      if (showToast) {
+        if (res?.errors?.length) {
+          setFormErrors(res.errors)
+          showToast(`Registro guardado con ${res.errors.length} error(es) de validación`, 'warning')
+        } else {
+          showToast('Registro guardado exitosamente', 'success')
+        }
+      }
+      setFormErrors(res?.errors || [])
       setTimeout(() => { setFormView(null); setEditing(null); setFormErrors([]); loadData() }, 800)
     } catch (e) { if (showToast) showToast('Error al guardar: ' + (e.message || 'Intente de nuevo'), 'error') }
     setSaving(false)
@@ -199,8 +206,15 @@ export default function ReportesView() {
     setSaving(true)
     try {
       const res = await actualizar(editing.id, formData)
-      if (res?.errors?.length) { setFormErrors(res.errors); setFormValid(false); setSaving(false); if (showToast) showToast('Registro con errores de validación', 'error'); return }
-      if (showToast) showToast('Registro actualizado exitosamente', 'success')
+      if (showToast) {
+        if (res?.errors?.length) {
+          setFormErrors(res.errors)
+          showToast(`Registro actualizado con ${res.errors.length} error(es) de validación`, 'warning')
+        } else {
+          showToast('Registro actualizado exitosamente', 'success')
+        }
+      }
+      setFormErrors(res?.errors || [])
       setTimeout(() => { setFormView(null); setEditing(null); setFormErrors([]); loadData() }, 800)
     } catch (e) { if (showToast) showToast('Error al actualizar: ' + (e.message || 'Intente de nuevo'), 'error') }
     setSaving(false)
@@ -436,9 +450,9 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
     <div className="fade-in" style={{ maxWidth:1200, margin:'0 auto' }}>
       {toast && (
         <div style={{ position:'fixed', top:20, right:20, zIndex:9999, padding:'12px 20px', borderRadius:8,
-          background: toast.type === 'success' ? 'var(--green-50)' : '#fef2f2',
-          color: toast.type === 'success' ? 'var(--green-700)' : 'var(--danger)',
-          border: `1px solid ${toast.type === 'success' ? 'var(--green-300)' : 'var(--danger)'}`,
+          background: toast.type === 'success' ? 'var(--green-50)' : toast.type === 'warning' ? '#fffbeb' : '#fef2f2',
+          color: toast.type === 'success' ? 'var(--green-700)' : toast.type === 'warning' ? '#b45309' : 'var(--danger)',
+          border: `1px solid ${toast.type === 'success' ? 'var(--green-300)' : toast.type === 'warning' ? '#f59e0b' : 'var(--danger)'}`,
           boxShadow:'0 4px 12px rgba(0,0,0,0.15)', fontSize:'0.85rem', fontWeight:500 }}>
           {toast.type === 'success' ? '\u2713 ' : '\u2717 '}{toast.msg}
         </div>
