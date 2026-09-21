@@ -403,16 +403,53 @@ export default function ReportesView() {
   )
 }
 
+function validateField(f, val) {
+  const v = val === undefined || val === null ? '' : String(val).trim()
+  if (f.required && (v === '' || v.toUpperCase() === 'SIN DATO')) {
+    return { variable: f.label, error: 'Campo obligatorio', correccion: `Ingrese ${f.label.toLowerCase()}` }
+  }
+  if (v === '') return null
+  const lower = f.label.toLowerCase()
+  if (f.type === 'number') {
+    if (isNaN(Number(v))) return { variable: f.label, error: 'debe ser numérico', correccion: `Ingrese solo números para ${lower}` }
+  } else if (f.type === 'date') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return { variable: f.label, error: 'formato de fecha inválido', correccion: `Use formato AAAA-MM-DD para ${lower}` }
+  } else if (f.type === 'select' && Array.isArray(f.options)) {
+    const allowed = f.options.map(o => (typeof o === 'object' ? String(o.v) : String(o)).toUpperCase())
+    if (!allowed.includes(v.toUpperCase())) {
+      const list = f.options.map(o => (typeof o === 'object' ? o.l : o)).join(', ')
+      return { variable: f.label, error: 'valor no está en las opciones permitidas', correccion: `Seleccione una opción válida de: ${list}` }
+    }
+  }
+  if (f.length && String(v).length !== f.length) {
+    return { variable: f.label, error: `longitud ${String(v).length} no coincide`, correccion: `Debe tener exactamente ${f.length} caracteres` }
+  }
+  return null
+}
+
 function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, onSave, onCancel, onValidate }) {
   const [formData, setFormData] = useState(() => {
     const d = {}; fields.forEach(f => { d[f.key] = data?.[f.key] || '' }); return d
   })
+  const [liveErrors, setLiveErrors] = useState({})
+  const [touched, setTouched] = useState({})
   const errMap = useMemo(() => buildErrorMap(errors), [errors])
   const [toast, setToast] = useState(null)
 
   const showToast = (msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500) }
 
-  const handleChange = (key, val) => setFormData(prev => ({ ...prev, [key]: val }))
+  const handleChange = (key, val) => {
+    setFormData(prev => {
+      const next = { ...prev, [key]: val }
+      const f = fields.find(x => x.key === key)
+      if (f) {
+        const err = validateField(f, val)
+        setLiveErrors(prevE => ({ ...prevE, [key]: err }))
+      }
+      setTouched(t => ({ ...t, [key]: true }))
+      return next
+    })
+  }
 
   const requiredFields = useMemo(() => fields.filter(f => f.required), [fields])
   const filledCount = useMemo(() => requiredFields.filter(f => {
@@ -421,19 +458,29 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
   }).length, [formData, requiredFields])
   const progress = requiredFields.length > 0 ? Math.round((filledCount / requiredFields.length) * 100) : 0
 
+  const liveErrorList = useMemo(() => Object.values(liveErrors).filter(Boolean), [liveErrors])
+
   const handleValidate = () => {
     const fieldErrors = []
-    requiredFields.forEach(f => {
-      const v = formData[f.key]
-      if (!v || String(v).trim() === '' || String(v).trim().toUpperCase() === 'SIN DATO') {
-        fieldErrors.push({ variable: f.label, dato: v||'vacío', error:'Campo obligatorio', debe_ser:'Valor válido', correccion:`Ingrese ${f.label.toLowerCase()}` })
+    fields.forEach(f => {
+      if (f.required) {
+        const err = validateField(f, formData[f.key])
+        if (err) fieldErrors.push(err)
       }
+    })
+    setLiveErrors(prev => {
+      const next = { ...prev }
+      fields.forEach(f => {
+        const err = validateField(f, formData[f.key])
+        next[f.key] = err
+      })
+      return next
     })
     onValidate(fieldErrors.length === 0)
     if (fieldErrors.length === 0) {
       showToast('Validación exitosa — todos los campos obligatorios completados', 'success')
     } else {
-      showToast(`${fieldErrors.length} campo(s) obligatorio(s) sin completar`, 'error')
+      showToast(`${fieldErrors.length} campo(s) con errores`, 'error')
     }
     return fieldErrors
   }
@@ -476,12 +523,24 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
 
       {errors.length > 0 && (
         <div className="panel" style={{ marginBottom:16, borderColor:'var(--danger)', background:'var(--danger-bg)' }}>
-          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'var(--danger)', marginBottom:4 }}>Errores de validación</div>
+          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'var(--danger)', marginBottom:4 }}>Errores de validación (servidor)</div>
           {errors.map((e,i) => (
             <div key={i} style={{ fontSize:'0.8rem', color:'var(--danger)', marginTop:2 }}>
               <strong>{e.variable}:</strong> {e.error}. {e.correccion}
             </div>
           ))}
+        </div>
+      )}
+
+      {liveErrorList.length > 0 && (
+        <div className="panel" style={{ marginBottom:16, borderColor:'#f59e0b', background:'#fffbeb' }}>
+          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'#b45309', marginBottom:4 }}>Errores en el formulario ({liveErrorList.length})</div>
+          {liveErrorList.slice(0, 8).map((e,i) => (
+            <div key={i} style={{ fontSize:'0.8rem', color:'#b45309', marginTop:2 }}>
+              <strong>{e.variable}:</strong> {e.error}. {e.correccion}
+            </div>
+          ))}
+          {liveErrorList.length > 8 && <div style={{ fontSize:'0.8rem', color:'#b45309', marginTop:2 }}>Y {liveErrorList.length - 8} más...</div>}
         </div>
       )}
 
@@ -504,13 +563,17 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sectionFields.map(f => (
+              {sectionFields.map(f => {
+                const liveErr = liveErrors[f.key]
+                const showErr = touched[f.key] && liveErr
+                return (
                 <div key={f.key} className={f.key === 'observacion_causa' || f.key === 'identificacion_prestador' || f.key === 'medicamento_nombre' ? 'sm:col-span-2 lg:col-span-3' : ''}>
                   <label className="form-label text-xs">
                     {f.label} {f.required && <span style={{ color:'var(--danger)' }}>*</span>}
                   </label>
                   {f.type === 'select' ? (
-                    <select className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)}>
+                    <select className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)}
+                      style={showErr ? { borderColor:'var(--danger)', borderWidth:2 } : undefined}>
                       <option value="">Seleccionar...</option>
                       {(f.options||[]).map(o => {
                         const v = typeof o === 'object' ? o.v : o
@@ -520,11 +583,14 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
                     </select>
                   ) : (
                     <input type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'}
-                      className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)} />
+                      className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)}
+                      style={showErr ? { borderColor:'var(--danger)', borderWidth:2 } : undefined} />
                   )}
-                  {errMap[f.label] && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>{errMap[f.label].error}</p>}
+                  {showErr && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>{liveErr.error}. {liveErr.correccion}</p>}
+                  {!showErr && errMap[f.label] && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>{errMap[f.label].error}</p>}
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )
