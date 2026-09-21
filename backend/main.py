@@ -5645,7 +5645,7 @@ async def crear_reporte_consulta(body: dict, current_user: User = Depends(get_cu
 		estado = "validado" if not errors else "con_errores"
 		ips_name = _require_ips_name(current_user)
 		r = ReporteConsulta(
-			user_id=current_user.id,
+			user_id=current_user.id if current_user.role != "ips_user" else None,
 			ips_name=ips_name,
 			estado=estado,
 			**{k: body.get(k) for k in [f["key"] for f in PX_CONSULTAS_FIELDS] if k in body},
@@ -5836,7 +5836,7 @@ async def crear_reporte_medicamento(body: dict, current_user: User = Depends(get
 		estado = "validado" if not errors else "con_errores"
 		ips_name = _require_ips_name(current_user)
 		r = ReporteMedicamento(
-			user_id=current_user.id,
+			user_id=current_user.id if current_user.role != "ips_user" else None,
 			ips_name=ips_name,
 			estado=estado,
 			**{k: body.get(k) for k in [f["key"] for f in MEDICAMENTOS_FIELDS] if k in body},

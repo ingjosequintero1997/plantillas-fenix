@@ -127,6 +127,17 @@ def migrate():
     print(f"Conectando a: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else DATABASE_URL}")
     engine = create_engine(DATABASE_URL)
     with engine.begin() as conn:
+        # Drop FK constraints si existen (IPS users no tienen ID en users)
+        try:
+            conn.execute(text("ALTER TABLE reporte_consultas DROP CONSTRAINT IF EXISTS reporte_consultas_user_id_fkey"))
+            print("  ✓ FK constraint eliminado de reporte_consultas")
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE reporte_medicamentos DROP CONSTRAINT IF EXISTS reporte_medicamentos_user_id_fkey"))
+            print("  ✓ FK constraint eliminado de reporte_medicamentos")
+        except Exception:
+            pass
         for i, ddl in enumerate(DDL):
             table_name = ["reporte_consultas", "reporte_medicamentos", "reportes_audit"][i]
             try:
