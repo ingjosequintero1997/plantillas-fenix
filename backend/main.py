@@ -5504,6 +5504,16 @@ def _get_ips_name_pendientes(current_user):
 	return None
 
 
+def _require_ips_name(current_user):
+	"""Para endpoints de creación/edición, exigir ips_name en usuarios IPS."""
+	if current_user.role == "ips_user":
+		name = _get_ips_name_pendientes(current_user)
+		if not name:
+			raise HTTPException(400, "Usuario IPS sin nombre de IPS asociado. Contacte al administrador.")
+		return name
+	return None
+
+
 def _audit_pendientes(db, tabla, reporte_id, action, user_id, username, field=None, old_val=None, new_val=None, detail=None):
 	db.add(ReporteAudit(
 		reporte_id=reporte_id, tabla=tabla, user_id=user_id, username=username,
@@ -5633,9 +5643,10 @@ async def crear_reporte_consulta(body: dict, current_user: User = Depends(get_cu
 	try:
 		errors = validate_px_consultas(body)
 		estado = "validado" if not errors else "con_errores"
+		ips_name = _require_ips_name(current_user)
 		r = ReporteConsulta(
 			user_id=current_user.id,
-			ips_name=_get_ips_name_pendientes(current_user),
+			ips_name=ips_name,
 			estado=estado,
 			**{k: body.get(k) for k in [f["key"] for f in PX_CONSULTAS_FIELDS] if k in body},
 		)
@@ -5823,9 +5834,10 @@ async def crear_reporte_medicamento(body: dict, current_user: User = Depends(get
 	try:
 		errors = validate_medicamentos(body)
 		estado = "validado" if not errors else "con_errores"
+		ips_name = _require_ips_name(current_user)
 		r = ReporteMedicamento(
 			user_id=current_user.id,
-			ips_name=_get_ips_name_pendientes(current_user),
+			ips_name=ips_name,
 			estado=estado,
 			**{k: body.get(k) for k in [f["key"] for f in MEDICAMENTOS_FIELDS] if k in body},
 		)
