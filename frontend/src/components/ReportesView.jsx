@@ -184,23 +184,25 @@ export default function ReportesView() {
     try { const d = await fetchOne(id); setDetailData(d); setFormView('detail') } catch {}
   }
 
-  const handleSave = async (formData, status) => {
+  const handleSave = async (formData, showToast) => {
     setSaving(true)
     try {
-      const res = status === 'borrador' ? await crear(formData) : await crear(formData)
-      if (res?.errors?.length && status !== 'borrador') { setFormErrors(res.errors); setFormValid(false); setSaving(false); return }
-      setFormView(null); setEditing(null); setFormErrors([]); loadData()
-    } catch {}
+      const res = await crear(formData)
+      if (res?.errors?.length) { setFormErrors(res.errors); setFormValid(false); setSaving(false); if (showToast) showToast('Registro con errores de validación', 'error'); return }
+      if (showToast) showToast('Registro guardado exitosamente', 'success')
+      setTimeout(() => { setFormView(null); setEditing(null); setFormErrors([]); loadData() }, 800)
+    } catch (e) { if (showToast) showToast('Error al guardar: ' + (e.message || 'Intente de nuevo'), 'error') }
     setSaving(false)
   }
 
-  const handleUpdate = async (formData) => {
+  const handleUpdate = async (formData, showToast) => {
     setSaving(true)
     try {
       const res = await actualizar(editing.id, formData)
-      if (res?.errors?.length) { setFormErrors(res.errors); setFormValid(false); setSaving(false); return }
-      setFormView(null); setEditing(null); setFormErrors([]); loadData()
-    } catch {}
+      if (res?.errors?.length) { setFormErrors(res.errors); setFormValid(false); setSaving(false); if (showToast) showToast('Registro con errores de validación', 'error'); return }
+      if (showToast) showToast('Registro actualizado exitosamente', 'success')
+      setTimeout(() => { setFormView(null); setEditing(null); setFormErrors([]); loadData() }, 800)
+    } catch (e) { if (showToast) showToast('Error al actualizar: ' + (e.message || 'Intente de nuevo'), 'error') }
     setSaving(false)
   }
 
@@ -392,6 +394,9 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
     const d = {}; fields.forEach(f => { d[f.key] = data?.[f.key] || '' }); return d
   })
   const errMap = useMemo(() => buildErrorMap(errors), [errors])
+  const [toast, setToast] = useState(null)
+
+  const showToast = (msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500) }
 
   const handleChange = (key, val) => setFormData(prev => ({ ...prev, [key]: val }))
 
@@ -411,19 +416,34 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
       }
     })
     onValidate(fieldErrors.length === 0)
+    if (fieldErrors.length === 0) {
+      showToast('Validación exitosa — todos los campos obligatorios completados', 'success')
+    } else {
+      showToast(`${fieldErrors.length} campo(s) obligatorio(s) sin completar`, 'error')
+    }
     return fieldErrors
   }
 
   const handleSubmit = () => {
     const errs = handleValidate()
     if (errs.length) return
-    onSave(formData)
+    onSave(formData, showToast)
   }
 
   const totalRequired = requiredFields.length
 
   return (
     <div className="fade-in" style={{ maxWidth:1200, margin:'0 auto' }}>
+      {toast && (
+        <div style={{ position:'fixed', top:20, right:20, zIndex:9999, padding:'12px 20px', borderRadius:8,
+          background: toast.type === 'success' ? 'var(--green-50)' : '#fef2f2',
+          color: toast.type === 'success' ? 'var(--green-700)' : 'var(--danger)',
+          border: `1px solid ${toast.type === 'success' ? 'var(--green-300)' : 'var(--danger)'}`,
+          boxShadow:'0 4px 12px rgba(0,0,0,0.15)', fontSize:'0.85rem', fontWeight:500 }}>
+          {toast.type === 'success' ? '\u2713 ' : '\u2717 '}{toast.msg}
+        </div>
+      )}
+
       <div style={{ marginBottom:16 }}>
         <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:4 }}>
           {isEdit ? `Registro #${data?.id}` : 'Nuevo registro'} · {tab === 'consultas' ? 'MATRIZ PX Y CONSULTAS' : 'MATRIZ MEDICAMENTOS'}
@@ -498,9 +518,9 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
 
       <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'16px 0', borderTop:'1px solid var(--border-subtle)', marginTop:8, position:'sticky', bottom:0, background:'var(--bg-canvas)', zIndex:10 }}>
         <button className="btn-secondary text-sm" onClick={onCancel}>Cancelar</button>
-        <button className="btn-primary text-sm" onClick={() => { handleValidate() }} style={{ border:'1px solid var(--green-500)' }}>Validar registro</button>
-        <button className={`btn text-sm ${valid ? 'btn-primary' : 'btn-secondary'}`} onClick={handleSubmit} disabled={saving || !valid}
-          style={!valid ? { opacity:0.5, cursor:'not-allowed' } : { background:'var(--green-600)', color:'#fff', border:'1px solid var(--green-600)' }}>
+        <button className="btn-primary text-sm" onClick={handleValidate} style={{ border:'1px solid var(--green-500)' }}>Validar registro</button>
+        <button className="btn text-sm" onClick={handleSubmit} disabled={saving}
+          style={{ background:'var(--green-600)', color:'#fff', border:'1px solid var(--green-600)' }}>
           {saving ? 'Guardando...' : isEdit ? 'Actualizar registro' : 'Guardar registro'}
         </button>
       </div>
