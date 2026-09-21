@@ -692,3 +692,73 @@ export async function fetchHistoriasIntegridad() {
   const data = await apiFetch(`${API_BASE}/historias/integridad`)
   return data
 }
+
+// ─── Reportes de pendientes ────────────────────────────────────────────
+
+export async function fetchReportesConsultas(params = {}) {
+  const qs = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => { if (v) qs.set(k, v) })
+  const s = qs.toString()
+  return await apiFetch(`${API_BASE}/reportes/consultas${s ? `?${s}` : ''}`)
+}
+
+export async function fetchReporteConsulta(id) {
+  return await apiFetch(`${API_BASE}/reportes/consultas/${id}`)
+}
+
+export async function crearReporteConsulta(body) {
+  return await apiFetch(`${API_BASE}/reportes/consultas`, { method: 'POST', body: JSON.stringify(body) })
+}
+
+export async function actualizarReporteConsulta(id, body) {
+  return await apiFetch(`${API_BASE}/reportes/consultas/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+}
+
+export async function eliminarReporteConsulta(id) {
+  return await apiFetch(`${API_BASE}/reportes/consultas/${id}`, { method: 'DELETE' })
+}
+
+export async function exportarReportesConsultas(filters = {}) {
+  const qs = new URLSearchParams()
+  Object.entries(filters).forEach(([k, v]) => { if (v) qs.set(k, v) })
+  const s = qs.toString()
+  const resp = await fetch(`${API_BASE}/reportes/consultas/exportar${s ? `?${s}` : ''}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!resp.ok) return null
+  return resp.blob()
+}
+
+export async function fetchReportesMedicamentos(params = {}) {
+  const qs = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => { if (v) qs.set(k, v) })
+  const s = qs.toString()
+  return await apiFetch(`${API_BASE}/reportes/medicamentos${s ? `?${s}` : ''}`)
+}
+
+export async function fetchReporteMedicamento(id) {
+  return await apiFetch(`${API_BASE}/reportes/medicamentos/${id}`)
+}
+
+export async function crearReporteMedicamento(body) {
+  return await apiFetch(`${API_BASE}/reportes/medicamentos`, { method: 'POST', body: JSON.stringify(body) })
+}
+
+export async function actualizarReporteMedicamento(id, body) {
+  return await apiFetch(`${API_BASE}/reportes/medicamentos/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+}
+
+export async function eliminarReporteMedicamento(id) {
+  return await apiFetch(`${API_BASE}/reportes/medicamentos/${id}`, { method: 'DELETE' })
+}
+
+export async function exportarReportesMedicamentos(filters = {}) {
+  const qs = new URLSearchParams()
+  Object.entries(filters).forEach(([k, v]) => { if (v) qs.set(k, v) })
+  const s = qs.toString()
+  const resp = await fetch(`${API_BASE}/reportes/medicamentos/exportar${s ? `?${s}` : ''}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!resp.ok) return null
+  return resp.blob()
+}

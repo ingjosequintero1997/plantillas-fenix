@@ -72,6 +72,7 @@ const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
 const DataManagement = lazy(() => import('./components/DataManagement'))
+const ReportesView = lazy(() => import('./components/ReportesView'))
 import { fetchTemplates, uploadFile, saveCargue, descargarReporteErroresExcelData, descargarReporteErroresExcel } from './api'
 import { guardarUltimaData } from './dataStore'
 import * as pako from 'pako'
@@ -834,6 +835,15 @@ export default function App() {
               <SectionErrorBoundary>
                 <Suspense fallback={<ModuleSkeleton />}>
                   <ConfiguracionView />
+                </Suspense>
+              </SectionErrorBoundary>
+            )}
+
+            {/* ─── REPORTES DE PENDIENTES ─── */}
+            {section === 'reportes' && (
+              <SectionErrorBoundary>
+                <Suspense fallback={<ModuleSkeleton />}>
+                  <ReportesView />
                 </Suspense>
               </SectionErrorBoundary>
             )}

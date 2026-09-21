@@ -5485,6 +5485,424 @@ async def listar_caso_cerrado(
 		db.close()
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# REPORTE DE PENDIENTES — APIs
+# ═══════════════════════════════════════════════════════════════════════
+
+from .reportes_config import (
+	PX_CONSULTAS_FIELDS, MEDICAMENTOS_FIELDS,
+	PX_CONSULTAS_EXCEL_HEADERS, MEDICAMENTOS_EXCEL_HEADERS,
+	validate_px_consultas, validate_medicamentos, ESTADOS_REGISTRO,
+)
+from .database import ReporteConsulta, ReporteMedicamento, ReporteAudit
+
+
+def _get_ips_name_pendientes(current_user):
+	name = getattr(current_user, "ips_name", None)
+	if name:
+		return str(name).upper()
+	return None
+
+
+def _audit_pendientes(db, tabla, reporte_id, action, user_id, username, field=None, old_val=None, new_val=None, detail=None):
+	db.add(ReporteAudit(
+		reporte_id=reporte_id, tabla=tabla, user_id=user_id, username=username,
+		action=action, field_name=field, old_value=str(old_val) if old_val is not None else None,
+		new_value=str(new_val) if new_val is not None else None, detail=detail,
+	))
+	db.flush()
+
+
+# ─── CONSULTAS — CRUD ──────────────────────────────────────────────────
+
+@app.get("/reportes/consultas")
+async def listar_reportes_consultas(
+	page: int = 1, page_size: int = 50,
+	search: str = "", periodo: str = "", eps: str = "", tipo_doc: str = "",
+	estado: str = "", municipio: str = "", clase_pendiente: str = "",
+	cups: str = "", sort_by: str = "id", sort_dir: str = "desc",
+	current_user: User = Depends(get_current_user),
+):
+	db = SessionLocal()
+	try:
+		q = db.query(ReporteConsulta).filter(ReporteConsulta.activo == True)
+		if current_user.role != "admin":
+			ipsn = _get_ips_name_pendientes(current_user)
+			if ipsn:
+				q = q.filter(ReporteConsulta.ips_name == ipsn)
+		if search:
+			s = f"%{search}%"
+			q = q.filter(
+				(ReporteConsulta.documento.ilike(s)) |
+				(ReporteConsulta.consecutivo.ilike(s)) |
+				(ReporteConsulta.identificador_orden.ilike(s)) |
+				(ReporteConsulta.cod_eps.ilike(s))
+			)
+		if periodo:
+			q = q.filter(ReporteConsulta.periodo_reportado == periodo)
+		if eps:
+			q = q.filter(ReporteConsulta.cod_eps.ilike(f"%{eps}%"))
+		if tipo_doc:
+			q = q.filter(ReporteConsulta.tipo_documento == tipo_doc)
+		if estado:
+			q = q.filter(ReporteConsulta.estado == estado)
+		if municipio:
+			q = q.filter(ReporteConsulta.cod_municipio == municipio)
+		if clase_pendiente:
+			q = q.filter(ReporteConsulta.clase_pendiente == int(clase_pendiente))
+		if cups:
+			q = q.filter(ReporteConsulta.cups.ilike(f"%{cups}%"))
+		total = q.count()
+		col = getattr(ReporteConsulta, sort_by, ReporteConsulta.id)
+		if sort_dir == "asc":
+			q = q.order_by(col.asc())
+		else:
+			q = q.order_by(col.desc())
+		items = q.offset((page - 1) * page_size).limit(page_size).all()
+		return {
+			"registros": [_row_to_dict(r) for r in items],
+			"total": total, "page": page, "page_size": page_size,
+		}
+	finally:
+		db.close()
+
+
+@app.get("/reportes/consultas/{reporte_id}")
+async def obtener_reporte_consulta(reporte_id: int, current_user: User = Depends(get_current_user)):
+	db = SessionLocal()
+	try:
+		r = db.query(ReporteConsulta).filter(ReporteConsulta.id == reporte_id, ReporteConsulta.activo == True).first()
+		if not r:
+			raise HTTPException(404, "Registro no encontrado")
+		return _row_to_dict(r)
+	finally:
+		db.close()
+
+
+@app.post("/reportes/consultas")
+async def crear_reporte_consulta(body: dict, current_user: User = Depends(get_current_user)):
+	db = SessionLocal()
+	try:
+		errors = validate_px_consultas(body)
+		estado = "validado" if not errors else "con_errores"
+		r = ReporteConsulta(
+			user_id=current_user.id,
+			ips_name=_get_ips_name_pendientes(current_user),
+			estado=estado,
+			**{k: body.get(k) for k in [f["key"] for f in PX_CONSULTAS_FIELDS] if k in body},
+		)
+		db.add(r)
+		db.flush()
+		_audit_pendientes(db, "reporte_consultas", r.id, "CREATE", current_user.id, current_user.username, detail=f"Estado: {estado}")
+		db.commit()
+		return {"ok": True, "id": r.id, "estado": estado, "errors": errors}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(500, str(e))
+	finally:
+		db.close()
+
+
+@app.put("/reportes/consultas/{reporte_id}")
+async def actualizar_reporte_consulta(reporte_id: int, body: dict, current_user: User = Depends(get_current_user)):
+	db = SessionLocal()
+	try:
+		r = db.query(ReporteConsulta).filter(ReporteConsulta.id == reporte_id, ReporteConsulta.activo == True).first()
+		if not r:
+			raise HTTPException(404, "Registro no encontrado")
+		errors = validate_px_consultas(body)
+		estado = "validado" if not errors else "con_errores"
+		field_keys = [f["key"] for f in PX_CONSULTAS_FIELDS]
+		for k in field_keys:
+			if k in body:
+				old = getattr(r, k, None)
+				new = body[k]
+				if str(old) != str(new):
+					_audit_pendientes(db, "reporte_consultas", r.id, "UPDATE", current_user.id, current_user.username, field=k, old_val=old, new_val=new)
+				setattr(r, k, new)
+		r.estado = estado
+		r.updated_at = datetime.now(timezone.utc)
+		db.commit()
+		return {"ok": True, "id": r.id, "estado": estado, "errors": errors}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(500, str(e))
+	finally:
+		db.close()
+
+
+@app.delete("/reportes/consultas/{reporte_id}")
+async def eliminar_reporte_consulta(reporte_id: int, current_user: User = Depends(get_current_user)):
+	db = SessionLocal()
+	try:
+		r = db.query(ReporteConsulta).filter(ReporteConsulta.id == reporte_id, ReporteConsulta.activo == True).first()
+		if not r:
+			raise HTTPException(404, "Registro no encontrado")
+		r.activo = False
+		_audit_pendientes(db, "reporte_consultas", r.id, "DELETE", current_user.id, current_user.username, detail="Eliminación lógica")
+		db.commit()
+		return {"ok": True}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(500, str(e))
+	finally:
+		db.close()
+
+
+@app.get("/reportes/consultas/exportar")
+async def exportar_reportes_consultas(
+	periodo: str = "", eps: str = "", tipo_doc: str = "", estado: str = "",
+	municipio: str = "", clase_pendiente: str = "", cups: str = "", search: str = "",
+	current_user: User = Depends(get_current_user),
+):
+	db = SessionLocal()
+	try:
+		q = db.query(ReporteConsulta).filter(ReporteConsulta.activo == True)
+		if current_user.role != "admin":
+			ipsn = _get_ips_name_pendientes(current_user)
+			if ipsn:
+				q = q.filter(ReporteConsulta.ips_name == ipsn)
+		if search:
+			s = f"%{search}%"
+			q = q.filter((ReporteConsulta.documento.ilike(s)) | (ReporteConsulta.consecutivo.ilike(s)))
+		if periodo:
+			q = q.filter(ReporteConsulta.periodo_reportado == periodo)
+		if eps:
+			q = q.filter(ReporteConsulta.cod_eps.ilike(f"%{eps}%"))
+		if tipo_doc:
+			q = q.filter(ReporteConsulta.tipo_documento == tipo_doc)
+		if estado:
+			q = q.filter(ReporteConsulta.estado == estado)
+		if municipio:
+			q = q.filter(ReporteConsulta.cod_municipio == municipio)
+		if clase_pendiente:
+			q = q.filter(ReporteConsulta.clase_pendiente == int(clase_pendiente))
+		if cups:
+			q = q.filter(ReporteConsulta.cups.ilike(f"%{cups}%"))
+		items = q.order_by(ReporteConsulta.id.desc()).all()
+		import openpyxl
+		wb = openpyxl.Workbook()
+		ws = wb.active
+		ws.title = "PX Consultas"
+		ws.append(PX_CONSULTAS_EXCEL_HEADERS)
+		for r in items:
+			ws.append([getattr(r, f["key"], "") or "" for f in PX_CONSULTAS_FIELDS])
+		from io import BytesIO
+		buf = BytesIO()
+		wb.save(buf)
+		buf.seek(0)
+		return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename=Matriz_PX_Consultas_{datetime.now().strftime('%Y-%m-%d')}.xlsx"})
+	finally:
+		db.close()
+
+
+# ─── MEDICAMENTOS — CRUD ───────────────────────────────────────────────
+
+@app.get("/reportes/medicamentos")
+async def listar_reportes_medicamentos(
+	page: int = 1, page_size: int = 50,
+	search: str = "", periodo: str = "", eps: str = "", tipo_doc: str = "",
+	estado: str = "", municipio: str = "", atc: str = "", mecanismo: str = "",
+	sort_by: str = "id", sort_dir: str = "desc",
+	current_user: User = Depends(get_current_user),
+):
+	db = SessionLocal()
+	try:
+		q = db.query(ReporteMedicamento).filter(ReporteMedicamento.activo == True)
+		if current_user.role != "admin":
+			ipsn = _get_ips_name_pendientes(current_user)
+			if ipsn:
+				q = q.filter(ReporteMedicamento.ips_name == ipsn)
+		if search:
+			s = f"%{search}%"
+			q = q.filter(
+				(ReporteMedicamento.documento.ilike(s)) |
+				(ReporteMedicamento.consecutivo.ilike(s)) |
+				(ReporteMedicamento.identificador_prescripcion.ilike(s)) |
+				(ReporteMedicamento.cod_eps.ilike(s))
+			)
+		if periodo:
+			q = q.filter(ReporteMedicamento.periodo_reportado == periodo)
+		if eps:
+			q = q.filter(ReporteMedicamento.cod_eps.ilike(f"%{eps}%"))
+		if tipo_doc:
+			q = q.filter(ReporteMedicamento.tipo_documento == tipo_doc)
+		if estado:
+			q = q.filter(ReporteMedicamento.estado == estado)
+		if municipio:
+			q = q.filter(ReporteMedicamento.cod_municipio == municipio)
+		if atc:
+			q = q.filter(ReporteMedicamento.medicamento_atc.ilike(f"%{atc}%"))
+		if mecanismo:
+			q = q.filter(ReporteMedicamento.mecanismo_financiacion == mecanismo)
+		total = q.count()
+		col = getattr(ReporteMedicamento, sort_by, ReporteMedicamento.id)
+		if sort_dir == "asc":
+			q = q.order_by(col.asc())
+		else:
+			q = q.order_by(col.desc())
+		items = q.offset((page - 1) * page_size).limit(page_size).all()
+		return {
+			"registros": [_row_to_dict(r) for r in items],
+			"total": total, "page": page, "page_size": page_size,
+		}
+	finally:
+		db.close()
+
+
+@app.get("/reportes/medicamentos/{reporte_id}")
+async def obtener_reporte_medicamento(reporte_id: int, current_user: User = Depends(get_current_user)):
+	db = SessionLocal()
+	try:
+		r = db.query(ReporteMedicamento).filter(ReporteMedicamento.id == reporte_id, ReporteMedicamento.activo == True).first()
+		if not r:
+			raise HTTPException(404, "Registro no encontrado")
+		return _row_to_dict(r)
+	finally:
+		db.close()
+
+
+@app.post("/reportes/medicamentos")
+async def crear_reporte_medicamento(body: dict, current_user: User = Depends(get_current_user)):
+	db = SessionLocal()
+	try:
+		errors = validate_medicamentos(body)
+		estado = "validado" if not errors else "con_errores"
+		r = ReporteMedicamento(
+			user_id=current_user.id,
+			ips_name=_get_ips_name_pendientes(current_user),
+			estado=estado,
+			**{k: body.get(k) for k in [f["key"] for f in MEDICAMENTOS_FIELDS] if k in body},
+		)
+		db.add(r)
+		db.flush()
+		_audit_pendientes(db, "reporte_medicamentos", r.id, "CREATE", current_user.id, current_user.username, detail=f"Estado: {estado}")
+		db.commit()
+		return {"ok": True, "id": r.id, "estado": estado, "errors": errors}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(500, str(e))
+	finally:
+		db.close()
+
+
+@app.put("/reportes/medicamentos/{reporte_id}")
+async def actualizar_reporte_medicamento(reporte_id: int, body: dict, current_user: User = Depends(get_current_user)):
+	db = SessionLocal()
+	try:
+		r = db.query(ReporteMedicamento).filter(ReporteMedicamento.id == reporte_id, ReporteMedicamento.activo == True).first()
+		if not r:
+			raise HTTPException(404, "Registro no encontrado")
+		errors = validate_medicamentos(body)
+		estado = "validado" if not errors else "con_errores"
+		field_keys = [f["key"] for f in MEDICAMENTOS_FIELDS]
+		for k in field_keys:
+			if k in body:
+				old = getattr(r, k, None)
+				new = body[k]
+				if str(old) != str(new):
+					_audit_pendientes(db, "reporte_medicamentos", r.id, "UPDATE", current_user.id, current_user.username, field=k, old_val=old, new_val=new)
+				setattr(r, k, new)
+		r.estado = estado
+		r.updated_at = datetime.now(timezone.utc)
+		db.commit()
+		return {"ok": True, "id": r.id, "estado": estado, "errors": errors}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(500, str(e))
+	finally:
+		db.close()
+
+
+@app.delete("/reportes/medicamentos/{reporte_id}")
+async def eliminar_reporte_medicamento(reporte_id: int, current_user: User = Depends(get_current_user)):
+	db = SessionLocal()
+	try:
+		r = db.query(ReporteMedicamento).filter(ReporteMedicamento.id == reporte_id, ReporteMedicamento.activo == True).first()
+		if not r:
+			raise HTTPException(404, "Registro no encontrado")
+		r.activo = False
+		_audit_pendientes(db, "reporte_medicamentos", r.id, "DELETE", current_user.id, current_user.username, detail="Eliminación lógica")
+		db.commit()
+		return {"ok": True}
+	except HTTPException:
+		raise
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(500, str(e))
+	finally:
+		db.close()
+
+
+@app.get("/reportes/medicamentos/exportar")
+async def exportar_reportes_medicamentos(
+	periodo: str = "", eps: str = "", tipo_doc: str = "", estado: str = "",
+	municipio: str = "", atc: str = "", mecanismo: str = "", search: str = "",
+	current_user: User = Depends(get_current_user),
+):
+	db = SessionLocal()
+	try:
+		q = db.query(ReporteMedicamento).filter(ReporteMedicamento.activo == True)
+		if current_user.role != "admin":
+			ipsn = _get_ips_name_pendientes(current_user)
+			if ipsn:
+				q = q.filter(ReporteMedicamento.ips_name == ipsn)
+		if search:
+			s = f"%{search}%"
+			q = q.filter((ReporteMedicamento.documento.ilike(s)) | (ReporteMedicamento.consecutivo.ilike(s)))
+		if periodo:
+			q = q.filter(ReporteMedicamento.periodo_reportado == periodo)
+		if eps:
+			q = q.filter(ReporteMedicamento.cod_eps.ilike(f"%{eps}%"))
+		if tipo_doc:
+			q = q.filter(ReporteMedicamento.tipo_documento == tipo_doc)
+		if estado:
+			q = q.filter(ReporteMedicamento.estado == estado)
+		if municipio:
+			q = q.filter(ReporteMedicamento.cod_municipio == municipio)
+		if atc:
+			q = q.filter(ReporteMedicamento.medicamento_atc.ilike(f"%{atc}%"))
+		if mecanismo:
+			q = q.filter(ReporteMedicamento.mecanismo_financiacion == mecanismo)
+		items = q.order_by(ReporteMedicamento.id.desc()).all()
+		import openpyxl
+		wb = openpyxl.Workbook()
+		ws = wb.active
+		ws.title = "Medicamentos"
+		ws.append(MEDICAMENTOS_EXCEL_HEADERS)
+		for r in items:
+			ws.append([getattr(r, f["key"], "") or "" for f in MEDICAMENTOS_FIELDS])
+		from io import BytesIO
+		buf = BytesIO()
+		wb.save(buf)
+		buf.seek(0)
+		return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename=Matriz_Medicamentos_{datetime.now().strftime('%Y-%m-%d')}.xlsx"})
+	finally:
+		db.close()
+
+
+def _row_to_dict(row):
+	d = {}
+	for c in row.__table__.columns:
+		v = getattr(row, c.name, None)
+		if isinstance(v, datetime):
+			v = v.isoformat()
+		d[c.name] = v
+	return d
+
+
 if __name__ == "__main__":
 	import uvicorn
 	uvicorn.run(app, host="0.0.0.0", port=8000)
