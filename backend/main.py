@@ -5489,12 +5489,12 @@ async def listar_caso_cerrado(
 # REPORTE DE PENDIENTES — APIs
 # ═══════════════════════════════════════════════════════════════════════
 
-from .reportes_config import (
+from reportes_config import (
 	PX_CONSULTAS_FIELDS, MEDICAMENTOS_FIELDS,
 	PX_CONSULTAS_EXCEL_HEADERS, MEDICAMENTOS_EXCEL_HEADERS,
 	validate_px_consultas, validate_medicamentos, ESTADOS_REGISTRO,
 )
-from .database import ReporteConsulta, ReporteMedicamento, ReporteAudit
+from database import ReporteConsulta, ReporteMedicamento, ReporteAudit
 
 
 def _get_ips_name_pendientes(current_user):
