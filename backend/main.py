@@ -5431,12 +5431,11 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 
 		# Criterios:
 		# 1. Al menos 10 meses entre el mes de la gestante y el mes de reporte
-		# 2. ULTIMO_CONTROL_PRENATAL < mes de reporte
-		# 3. FECHA (aborto) no es comodín AND ULTIMO_CONTROL_PRENATAL < FECHA
-		#    O FECHA_DE_PARTO no es comodín AND ULTIMO_CONTROL_PRENATAL < FECHA_DE_PARTO
+		# 2. El último control prenatal debe ser anterior al mes de reporte
+		# 3. La fecha de aborto o de parto debe ser posterior al último control prenatal
 
-		# Calcular fecha límite (10 meses antes del reporte)
 		from datetime import timedelta
+		import re
 		fecha_limite = fecha_reporte - timedelta(days=300)  # ~10 meses
 		mes_limite = fecha_limite.strftime("%Y-%m")
 
@@ -5445,23 +5444,55 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 		mes_expr = "TO_CHAR(created_at, 'YYYY-MM')" if is_pg else "STRFTIME('%Y-%m', created_at)"
 
 		# CASO_CERRADO puede ser BOOLEAN o TEXT según cómo se creó la tabla.
-		# Se normaliza con CAST a texto para que funcione en ambos casos.
 		no_cerrado = "(CASO_CERRADO IS NULL OR LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('false', '0', ''))"
 
-		where_sql = f'''
-			{no_cerrado}
+		# Columnas reales de control prenatal (la tabla no tiene ULTIMO_CONTROL_PRENATAL)
+		control_cols = [
+			"FECHA_1ER_CONTROL", "FECHA_2DO_CONTROL", "FECHA_3ER_CONTROL",
+			"FECHA_4TO_CONTROL", "FECHA_5TO_CONTROL", "FECHA_6TO_CONTROL",
+			"FECHA_7MO_CONTROL", "FECHA_8VO_CONTROL", "FECHA_9NO_CONTROL",
+			"FECHA_OTROS_CONTROLES_PRENATALES",
+		]
+		select_cols = ", ".join(f'"{c}"' for c in control_cols)
+		candidatos = db.execute(text(f'''
+			SELECT id, {select_cols}, "FECHA_DE_ABORTO", "FECHA_DE_PARTO"
+			FROM gestantes
+			WHERE {no_cerrado}
 			AND ({mes_expr} <= :mes_limite OR mes <= :mes_limite)
-			AND ULTIMO_CONTROL_PRENATAL IS NOT NULL AND ULTIMO_CONTROL_PRENATAL != ''
-			AND (
-				(FECHA != '0' AND FECHA != '' AND ULTIMO_CONTROL_PRENATAL < FECHA)
-				OR (FECHA_DE_PARTO != '0' AND FECHA_DE_PARTO != '' AND ULTIMO_CONTROL_PRENATAL < FECHA_DE_PARTO)
-			)
-		'''
-		params = {"mes_limite": mes_limite}
+		'''), {"mes_limite": mes_limite}).fetchall()
 
-		rows = db.execute(text(f'SELECT COUNT(*) FROM gestantes WHERE {where_sql}'), params).scalar() or 0
-		db.execute(text(f"UPDATE gestantes SET CASO_CERRADO = 'TRUE' WHERE {where_sql}"), params)
-		db.commit()
+		_fecha_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+		def _ultimo_control(m):
+			valores = [str(m[c]).strip() for c in control_cols if m[c] is not None and _fecha_re.match(str(m[c]).strip())]
+			return max(valores) if valores else None
+
+		ids_cerrar = []
+		for row in candidatos:
+			m = row._mapping
+			ultimo = _ultimo_control(m)
+			if not ultimo:
+				continue
+			# 2. El último control debe ser anterior al mes de reporte
+			if ultimo[:7] >= mes_reporte:
+				continue
+			aborto = str(m["FECHA_DE_ABORTO"]).strip() if m["FECHA_DE_ABORTO"] is not None else ""
+			parto = str(m["FECHA_DE_PARTO"]).strip() if m["FECHA_DE_PARTO"] is not None else ""
+			aborto_ok = bool(_fecha_re.match(aborto)) and ultimo < aborto
+			parto_ok = bool(_fecha_re.match(parto)) and ultimo < parto
+			if aborto_ok or parto_ok:
+				ids_cerrar.append(m["id"])
+
+		# Actualizar en lotes para evitar límites de parámetros
+		for i in range(0, len(ids_cerrar), 500):
+			lote = ids_cerrar[i:i + 500]
+			placeholders = ", ".join(f":id{j}" for j in range(len(lote)))
+			params = {f"id{j}": v for j, v in enumerate(lote)}
+			db.execute(text(f"UPDATE gestantes SET CASO_CERRADO = 'TRUE' WHERE id IN ({placeholders})"), params)
+		if ids_cerrar:
+			db.commit()
+
+		rows = len(ids_cerrar)
 
 		return {
 			"success": True,
