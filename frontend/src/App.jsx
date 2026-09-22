@@ -13,6 +13,7 @@ import FormularioRegistro from './components/FormularioRegistro'
 import GestanteForm from './components/GestanteForm'
 import VerificarAfiliado from './components/VerificarAfiliado'
 import DragDrop from './components/DragDrop'
+import PeriodoPicker from './components/PeriodoPicker'
 import MappingEditor from './components/MappingEditor'
 import DataGridTable from './components/DataGridTable'
 import Pagination from './components/Pagination'
@@ -153,6 +154,7 @@ export default function App() {
   const [evaluating, setEvaluating] = useState(false)
   const [showEvaluation, setShowEvaluation] = useState(false)
   const [tipoCargue, setTipoCargue] = useState('mensual')
+  const [periodoCargue, setPeriodoCargue] = useState('')
   const [processingMode, setProcessingMode] = useState('validador')
   const [lastCargueId, setLastCargueId] = useState('')
 
@@ -328,6 +330,7 @@ export default function App() {
           compressed: true,
           template_key: data.template_key || selectedTemplate,
           filename: file.name,
+          mes: periodoCargue,
           summary,
           logs: data.logs_sample || [],
           row_count: summary.total || 0,
@@ -361,6 +364,10 @@ export default function App() {
 
   const handleFile = async (input) => {
     if (!input) return
+    if (!periodoCargue) {
+      setError('Selecciona el periodo (mes y año) antes de adjuntar el archivo.')
+      return
+    }
     const files = Array.isArray(input) ? input : [input]
     setLoading(true); setProgress(0); setError('')
     try {
@@ -410,6 +417,7 @@ export default function App() {
     setTemplateNames([]); setLoading(false); setReprocessing(false)
     setProgress(0); setError(''); setAuditQuery(''); setAuditStatus('all')
     setMappingStats(null); setStructureValidation(null); setShowEvaluation(false)
+    setPeriodoCargue('')
     setSection('subir')
   }
 
@@ -508,8 +516,11 @@ export default function App() {
                       </div>
                     </div>
 
+                    {/* Calendario: parametrizar periodo antes de adjuntar */}
+                    <PeriodoPicker value={periodoCargue} onChange={setPeriodoCargue} />
+
                     {/* Cargue masivo: subida de archivo */}
-                    <DragDrop onFile={handleFile} />
+                    <DragDrop onFile={handleFile} disabled={!periodoCargue} />
 
                     {/* Modo de procesamiento */}
                     <div className="panel">
