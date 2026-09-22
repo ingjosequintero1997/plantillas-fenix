@@ -162,7 +162,7 @@ export default function ReportesView() {
   const totalPages = Math.ceil(total / pageSize)
 
   const stats = useMemo(() => {
-    const s = { validados:0, borradores:0, con_errores:0, modificados:0 }
+    const s = { validado:0, borrador:0, con_errores:0, modificado:0 }
     data.forEach(r => { if (s[r.estado] !== undefined) s[r.estado]++ })
     return s
   }, [data])
@@ -345,47 +345,80 @@ export default function ReportesView() {
     )
   }
 
+  const estadoBadge = { borrador:'badge-neutral', con_errores:'badge-error', validado:'badge-success', modificado:'badge-warning' }
+  const statCards = [
+    { key:'validado', label:'Validados', value:stats.validado, color:'var(--success)', bg:'var(--success-bg)', icon:'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { key:'borrador', label:'Borradores', value:stats.borrador, color:'var(--text-muted)', bg:'var(--bg-subtle)', icon:'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
+    { key:'con_errores', label:'Con errores', value:stats.con_errores, color:'var(--danger)', bg:'var(--danger-bg)', icon:'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
+    { key:'modificado', label:'Modificados', value:stats.modificado, color:'var(--accent-600)', bg:'var(--accent-50)', icon:'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
+  ]
+
   return (
     <div className="fade-in" style={{ padding:'24px 32px' }}>
       <GlobalToast toast={globalToast} />
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8, marginBottom:16 }}>
+
+      {/* ── Encabezado ─────────────────────────────────── */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12, marginBottom:20 }}>
         <div>
           <div className="page-title">Reporte de procedimientos o consultas pendientes</div>
-          <div className="page-subtitle">Gestión de datos</div>
+          <div className="page-subtitle">Captura, validación, almacenamiento, gestión y exportación de reportes pendientes</div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="btn-secondary text-sm" onClick={() => setSubView('menu')}>Nuevo reporte</button>
-          <button className="btn-primary text-sm" onClick={() => { setEditing(null); setFormErrors([]); setFormValid(false); setFormView('create') }}>+ Crear registro</button>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          <button className="btn-secondary text-sm" onClick={() => setSubView('menu')}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Nuevo reporte
+          </button>
+          <button className="btn-primary text-sm" onClick={() => { setEditing(null); setFormErrors([]); setFormValid(false); setFormView('create') }}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            Crear registro
+          </button>
         </div>
       </div>
 
-      <div className="panel" style={{ padding:'4px', display:'inline-flex', gap:4, marginBottom:16 }}>
-        {[{k:'consultas',l:'Consultas / Procedimientos'},{k:'medicamentos',l:'Medicamentos'}].map(t => (
+      {/* ── Pestañas ───────────────────────────────────── */}
+      <div className="panel" style={{ padding:4, display:'inline-flex', gap:4, marginBottom:20 }}>
+        {[
+          { k:'consultas', l:'Consultas / Procedimientos', icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+          { k:'medicamentos', l:'Medicamentos', icon:'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+        ].map(t => (
           <button key={t.k} onClick={() => { setTab(t.k); setPage(1); setSearch(''); setFilters({}) }}
-            className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
-            style={{ color: tab===t.k ? 'var(--text-primary)' : 'var(--text-muted)', border:'none', cursor:'pointer', background: tab===t.k ? 'var(--bg-surface)' : 'transparent', boxShadow: tab===t.k ? 'var(--shadow-xs)' : 'none' }}>
+            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all"
+            style={{ color: tab===t.k ? 'var(--green-700)' : 'var(--text-muted)', border:'none', cursor:'pointer', background: tab===t.k ? 'var(--green-50)' : 'transparent' }}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d={t.icon} /></svg>
             {t.l}
           </button>
         ))}
       </div>
 
-      <div style={{ display:'flex', gap:16, flexWrap:'wrap', marginBottom:12 }}>
-        <span className="badge-success">Validados: {stats.validados}</span>
-        <span className="badge-neutral">Borradores: {stats.borradores}</span>
-        <span className="badge-error">Con errores: {stats.con_errores}</span>
-        <span className="badge-warning">Modificados: {stats.modificados}</span>
-        <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', alignSelf:'center' }}>Total: {total}</span>
+      {/* ── Estadísticas ───────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" style={{ marginBottom:20 }}>
+        {statCards.map(s => (
+          <div key={s.key} style={{ backgroundColor:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:'var(--radius-lg)', padding:'14px 16px', boxShadow:'0 1px 3px rgba(28,28,26,0.05)', display:'flex', alignItems:'center', gap:12 }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ color:s.color, backgroundColor:s.bg }}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d={s.icon} /></svg>
+            </div>
+            <div className="min-w-0">
+              <div style={{ fontFamily:'var(--font-display)', fontSize:'1.5rem', fontWeight:'700', color:'var(--text-primary)', lineHeight:1, letterSpacing:'-0.02em' }}>{s.value}</div>
+              <div style={{ fontSize:'0.7rem', fontWeight:600, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginTop:4 }}>{s.label}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:12, flexWrap:'wrap' }}>
-        <input type="text" className="input text-sm" placeholder="Buscar por documento, consecutivo, orden, EPS..."
-          value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-          style={{ flex:1, minWidth:200 }} />
+      {/* ── Barra de herramientas ──────────────────────── */}
+      <div className="panel" style={{ padding:'12px 16px', marginBottom: showFilters ? 12 : 20, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+        <div style={{ position:'relative', flex:1, minWidth:220 }}>
+          <svg className="w-4 h-4" style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" /></svg>
+          <input type="text" className="input text-sm" placeholder="Buscar por documento, consecutivo, orden, EPS..."
+            value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} style={{ paddingLeft:36 }} />
+        </div>
         <button className="btn-secondary text-sm" onClick={() => setShowFilters(!showFilters)}>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
           {showFilters ? 'Ocultar filtros' : 'Filtros'}
         </button>
         <button className="btn-secondary text-sm" onClick={handleExport} disabled={downloading}>
-          {downloading ? 'Descargando...' : 'Descargar Excel'}
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+          {downloading ? 'Descargando...' : 'Excel'}
         </button>
       </div>
 
@@ -417,50 +450,74 @@ export default function ReportesView() {
         </div>
       )}
 
-      <div className="panel" style={{ padding:0, overflow:'hidden' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom:'1px solid var(--border-subtle)' }}>
-              {colHeaders.map(h => <th key={h} className="section-label text-left px-3 py-3" style={{ background:'var(--bg-subtle)' }}>{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={colHeaders.length} className="px-3 py-8 text-center text-sm" style={{ color:'var(--text-muted)' }}>Cargando...</td></tr>
-            ) : data.length === 0 ? (
-              <tr><td colSpan={colHeaders.length} className="px-3 py-8 text-center text-sm" style={{ color:'var(--text-muted)' }}>No hay registros</td></tr>
-            ) : data.map((r, i) => (
-              <tr key={r.id} className="transition-colors hover:bg-[var(--bg-surface-hover)]" style={{ borderBottom:'1px solid var(--border-subtle)' }}>
-                <td className="px-3 py-2.5 text-xs">{(page-1)*pageSize + i + 1}</td>
-                <td className="px-3 py-2.5 text-xs">{r.id}</td>
-                <td className="px-3 py-2.5 text-xs">{r.periodo_reportado}</td>
-                <td className="px-3 py-2.5 text-xs">{r.cod_eps}</td>
-                <td className="px-3 py-2.5 text-xs">{r.tipo_documento}</td>
-                <td className="px-3 py-2.5 text-xs font-medium">{r.documento}</td>
-                <td className="px-3 py-2.5 text-xs">{tab==='consultas' ? r.identificador_orden : r.identificador_prescripcion}</td>
-                {tab==='consultas' && <td className="px-3 py-2.5 text-xs">{r.cod_municipio}</td>}
-                {tab==='medicamentos' && <td className="px-3 py-2.5 text-xs">{r.medicamento_atc}</td>}
-                <td className="px-3 py-2.5"><span className={ESTADO_COLORS[r.estado]||'badge-neutral'} style={{ display:'inline-block', padding:'2px 8px', borderRadius:99, fontSize:'0.7rem', fontWeight:500, background:(ESTADO_COLORS[r.estado]||'#6b7280')+'18', color:ESTADO_COLORS[r.estado]||'#6b7280' }}>{ESTADO_LABELS[r.estado]||r.estado}</span></td>
-                <td className="px-3 py-2.5 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
-                <td className="px-3 py-2.5">
-                  <div className="flex gap-1">
-                    <button className="btn-ghost text-xs" style={{ padding:'4px 8px' }} onClick={() => openDetail(r.id)}>Ver</button>
-                    <button className="btn-ghost text-xs" style={{ padding:'4px 8px' }} onClick={() => openEdit(r.id)}>Editar</button>
-                    <button className="btn-ghost text-xs" style={{ padding:'4px 8px', color:'var(--danger)' }} onClick={() => setConfirmDelete(r)}>Eliminar</button>
-                  </div>
-                </td>
+      <div className="table-wrap">
+        <div style={{ overflowX:'auto' }}>
+          <table className="table">
+            <thead>
+              <tr>
+                {colHeaders.map(h => <th key={h} className={h==='Acciones' ? 'text-right' : ''}>{h}</th>)}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={colHeaders.length}>
+                  <div className="empty" style={{ padding:'var(--space-10)' }}>
+                    <div className="empty-title">Cargando registros…</div>
+                  </div>
+                </td></tr>
+              ) : data.length === 0 ? (
+                <tr><td colSpan={colHeaders.length}>
+                  <div className="empty">
+                    <div className="empty-icon">
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    </div>
+                    <div className="empty-title">Aún no hay registros</div>
+                    <div className="empty-desc">Crea tu primer reporte de {tab==='consultas' ? 'consultas / procedimientos' : 'medicamentos'} para verlo listado aquí.</div>
+                    <button className="btn-primary text-sm" onClick={() => { setEditing(null); setFormErrors([]); setFormValid(false); setFormView('create') }}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      Crear registro
+                    </button>
+                  </div>
+                </td></tr>
+              ) : data.map((r, i) => (
+                <tr key={r.id}>
+                  <td style={{ color:'var(--text-muted)' }}>{(page-1)*pageSize + i + 1}</td>
+                  <td style={{ color:'var(--text-muted)' }}>#{r.id}</td>
+                  <td>{r.periodo_reportado}</td>
+                  <td>{r.cod_eps}</td>
+                  <td>{r.tipo_documento}</td>
+                  <td style={{ fontWeight:'var(--weight-medium)' }}>{r.documento}</td>
+                  <td>{tab==='consultas' ? r.identificador_orden : r.identificador_prescripcion}</td>
+                  {tab==='consultas' && <td>{r.cod_municipio}</td>}
+                  {tab==='medicamentos' && <td>{r.medicamento_atc}</td>}
+                  <td><span className={estadoBadge[r.estado]||'badge-neutral'}>{ESTADO_LABELS[r.estado]||r.estado}</span></td>
+                  <td style={{ color:'var(--text-muted)', whiteSpace:'nowrap' }}>{r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
+                  <td>
+                    <div className="flex gap-1 justify-end">
+                      <button className="btn-ghost" title="Ver detalle" aria-label="Ver detalle" style={{ padding:6 }} onClick={() => openDetail(r.id)}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      </button>
+                      <button className="btn-ghost" title="Editar" aria-label="Editar" style={{ padding:6 }} onClick={() => openEdit(r.id)}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      </button>
+                      <button className="btn-ghost" title="Eliminar" aria-label="Eliminar" style={{ padding:6, color:'var(--danger)' }} onClick={() => setConfirmDelete(r)}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs" style={{ color:'var(--text-secondary)', marginTop:12 }}>
-          <span>Mostrando {(page-1)*pageSize+1}–{Math.min(page*pageSize,total)} de {total}</span>
-          <div className="flex gap-1">
+        <div className="flex items-center justify-between" style={{ marginTop:16, flexWrap:'wrap', gap:8 }}>
+          <span className="text-xs" style={{ color:'var(--text-secondary)' }}>Mostrando {(page-1)*pageSize+1}–{Math.min(page*pageSize,total)} de {total} registros</span>
+          <div className="flex gap-1 items-center">
             <button className="btn-secondary text-xs" onClick={() => setPage(Math.max(1,page-1))} disabled={page<=1}>Anterior</button>
-            {Array.from({length:Math.min(5,totalPages)},(_,i)=>{const p=Math.max(1,Math.min(page-2,totalPages-4))+i; if(p>totalPages)return null; return <button key={p} onClick={()=>setPage(p)} className={`text-xs px-3 py-1 rounded-lg ${p===page?'btn-primary':'btn-secondary'}`}>{p}</button>})}
+            {Array.from({length:Math.min(5,totalPages)},(_,i)=>{const p=Math.max(1,Math.min(page-2,totalPages-4))+i; if(p>totalPages)return null; return <button key={p} onClick={()=>setPage(p)} className={`text-xs px-3 py-1.5 rounded-lg ${p===page?'btn-primary':'btn-secondary'}`}>{p}</button>})}
             <button className="btn-secondary text-xs" onClick={() => setPage(Math.min(totalPages,page+1))} disabled={page>=totalPages}>Siguiente</button>
           </div>
         </div>
