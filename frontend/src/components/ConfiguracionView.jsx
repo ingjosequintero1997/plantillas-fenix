@@ -27,7 +27,7 @@ export default function ConfiguracionView() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [config, setConfig] = useState({
-    cargue_masivo: true,
+    cargue_masivo: false,
     historias_pdf: true,
   })
 

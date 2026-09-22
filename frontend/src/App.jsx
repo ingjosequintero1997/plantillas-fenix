@@ -10,7 +10,6 @@ import TemplateSelector from './components/TemplateSelector'
 import QualityBanner from './components/QualityBanner'
 import ValidationLogTable from './components/ValidationLogTable'
 import FormularioRegistro from './components/FormularioRegistro'
-import GestanteForm from './components/GestanteForm'
 import VerificarAfiliado from './components/VerificarAfiliado'
 import DragDrop from './components/DragDrop'
 import PeriodoPicker from './components/PeriodoPicker'
@@ -153,7 +152,6 @@ export default function App() {
   const [minTemplateCoverage] = useState(95)
   const [evaluating, setEvaluating] = useState(false)
   const [showEvaluation, setShowEvaluation] = useState(false)
-  const [tipoCargue, setTipoCargue] = useState('mensual')
   const [periodoCargue, setPeriodoCargue] = useState('')
   const [processingMode, setProcessingMode] = useState('validador')
   const [lastCargueId, setLastCargueId] = useState('')
@@ -164,7 +162,7 @@ export default function App() {
 
   useEffect(() => {
     const ipsSections = ['data', 'verificar', 'indicadores', 'reportes']
-    if (systemConfig.cargue_masivo !== false) ipsSections.push('cargue_masivo')
+    if (systemConfig.cargue_masivo === true) ipsSections.push('cargue_masivo')
     if (systemConfig.historias_pdf !== false) ipsSections.push('historias')
     if (user?.role === 'ips_user' && !ipsSections.includes(section)) {
       setSection('data')
@@ -483,37 +481,8 @@ export default function App() {
                 {!summary ? (
                   <>
                     <div>
-                      <div className="page-title">Cargues de data</div>
-                      <div className="page-subtitle">Selecciona el tipo de cargue y sube tu data para validarla contra el instructivo.</div>
-                    </div>
-
-                    {/* Selección de tipo de cargue */}
-                    <div className="panel">
-                      <div className="section-label mb-3">Tipo de cargue</div>
-                      <div className="grid grid-cols-2 gap-3 max-w-md">
-                        <button
-                          onClick={() => setSection('formulario')}
-                          className="text-left px-4 py-3 rounded-lg border transition-colors"
-                          style={{
-                            borderColor: 'var(--accent)',
-                            backgroundColor: '#EEF3F7',
-                          }}
-                        >
-                          <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Cargue mensual</div>
-                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Registra gestante por formulario</div>
-                        </button>
-                        <button
-                          onClick={() => setTipoCargue('masivo')}
-                          className="text-left px-4 py-3 rounded-lg border transition-colors"
-                          style={{
-                            borderColor: tipoCargue === 'masivo' ? 'var(--accent)' : 'var(--border)',
-                            backgroundColor: tipoCargue === 'masivo' ? '#EEF3F7' : 'transparent',
-                          }}
-                        >
-                          <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Cargue masivo</div>
-                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Sube un archivo con toda la data</div>
-                        </button>
-                      </div>
+                      <div className="page-title">Cargue masivo de data</div>
+                      <div className="page-subtitle">Selecciona el periodo y sube tu archivo para validarlo contra el instructivo.</div>
                     </div>
 
                     {/* Calendario: parametrizar periodo antes de adjuntar */}
@@ -751,30 +720,6 @@ export default function App() {
                 )}
               </div>
             )}
-            {/* ─── FORMULARIO / CARGUE MENSUAL ─── */}
-            {section === 'formulario' && (
-              <div className="space-y-6 fade-in">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="page-title">Cargue mensual — Registro de gestante</div>
-                    <div className="page-subtitle">Completa el formulario y guarda el registro directamente en la base de datos.</div>
-                  </div>
-                  <button onClick={() => setSection('subir')} className="btn-secondary text-sm">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-                    Volver a cargues
-                  </button>
-                </div>
-                <GestanteForm
-                  mode="create"
-                  onSave={async (data) => {
-                    const { createGestante } = await import('./api')
-                    await createGestante(data)
-                  }}
-                  onClose={() => setSection('subir')}
-                />
-              </div>
-            )}
-
             {/* ─── VERIFICAR AFILIADO ─── */}
             {section === 'verificar' && <VerificarAfiliado />}
 

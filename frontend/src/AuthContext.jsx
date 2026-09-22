@@ -32,12 +32,12 @@ async function fetchSystemConfig(retries = 2) {
       if (i < retries) await new Promise((res) => setTimeout(res, 2000 * (i + 1)))
     }
   }
-  return { cargue_masivo: true, historias_pdf: true }
+  return { cargue_masivo: false, historias_pdf: true }
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStored())
-  const [systemConfig, setSystemConfig] = useState({ cargue_masivo: true, historias_pdf: true })
+  const [systemConfig, setSystemConfig] = useState({ cargue_masivo: false, historias_pdf: true })
   const [ready, setReady] = useState(false)
 
   const isAuthenticated = !!user
@@ -180,7 +180,7 @@ export function AuthProvider({ children }) {
     sessionStorage.removeItem('auth')
     localStorage.removeItem('ultima_data_validada')
     setUser(null)
-    setSystemConfig({ cargue_masivo: true, historias_pdf: true })
+    setSystemConfig({ cargue_masivo: false, historias_pdf: true })
   }, [])
 
   return (

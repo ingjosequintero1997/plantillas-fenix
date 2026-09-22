@@ -1457,7 +1457,7 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 	ensure_db_ready()
 	# Verificar si el cargue masivo esta habilitado para IPS
 	if current_user.role == "ips_user":
-		cargue_masivo = _get_system_config("cargue_masivo", "true")
+		cargue_masivo = _get_system_config("cargue_masivo", "false")
 		if cargue_masivo != "true":
 			raise HTTPException(status_code=403, detail="El cargue masivo no esta habilitado. Contacta al administrador.")
 	db = SessionLocal()
@@ -4283,7 +4283,7 @@ async def get_admin_config(current_user: User = Depends(get_current_user)):
 		config = {r[0]: r[1] for r in row}
 		return config
 	except Exception:
-		return {"cargue_masivo": "true", "historias_pdf": "true"}
+		return {"cargue_masivo": "false", "historias_pdf": "true"}
 	finally:
 		db.close()
 
@@ -4397,11 +4397,11 @@ async def get_public_config():
 		except Exception:
 			config = {}
 		return {
-			"cargue_masivo": config.get("cargue_masivo", "true").lower() in ("true", "1", "yes"),
+			"cargue_masivo": config.get("cargue_masivo", "false").lower() in ("true", "1", "yes"),
 			"historias_pdf": config.get("historias_pdf", "true").lower() in ("true", "1", "yes"),
 		}
 	except Exception:
-		return {"cargue_masivo": True, "historias_pdf": True}
+		return {"cargue_masivo": False, "historias_pdf": True}
 	finally:
 		db.close()
 

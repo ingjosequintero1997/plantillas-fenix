@@ -33,7 +33,7 @@ const GESTION_ITEMS = [
 ]
 
 const IPS_MENU_ITEMS_BASE = [
-  { key: 'cargue_masivo', label: 'Cargue masivo', roles: ['ips_user'], configKey: 'cargue_masivo',
+  { key: 'cargue_masivo', label: 'Cargue masivo', roles: ['ips_user'], configKey: 'cargue_masivo', defaultOff: true,
     icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
   { key: 'data', label: 'Gestion de data', roles: ['ips_user'],
     icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
@@ -49,8 +49,9 @@ const IPS_MENU_ITEMS_BASE = [
 
 function getIpsMenuItems(systemConfig) {
   return IPS_MENU_ITEMS_BASE.filter((item) => {
-    if (item.configKey) return systemConfig[item.configKey] !== false
-    return true
+    if (!item.configKey) return true
+    if (item.defaultOff) return systemConfig[item.configKey] === true
+    return systemConfig[item.configKey] !== false
   })
 }
 
