@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import ReactDOM from 'react-dom'
 import {
   fetchReportesConsultas, fetchReporteConsulta, crearReporteConsulta, actualizarReporteConsulta,
   eliminarReporteConsulta, exportarReportesConsultas,
@@ -129,6 +130,7 @@ export default function ReportesView() {
   const [formValid, setFormValid] = useState(false)
   const [detailData, setDetailData] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [globalToast, setGlobalToast] = useState(null)
@@ -220,8 +222,18 @@ export default function ReportesView() {
   }
 
   const handleDelete = async () => {
-    if (!confirmDelete) return
-    try { await eliminar(confirmDelete.id); setConfirmDelete(null); showGlobalToast('Registro eliminado', 'success'); loadData() } catch { showGlobalToast('Error al eliminar', 'error') }
+    if (!confirmDelete || deleting) return
+    setDeleting(true)
+    try {
+      await eliminar(confirmDelete.id)
+      setConfirmDelete(null)
+      showGlobalToast('Registro eliminado', 'success')
+      loadData()
+    } catch {
+      showGlobalToast('Error al eliminar', 'error')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const pxCols = ['#','Registro','Periodo','EPS','Tipo doc','Documento','Orden','Municipio','Estado','Fecha','Acciones']
@@ -454,17 +466,30 @@ export default function ReportesView() {
         </div>
       )}
 
-      {confirmDelete && (
-        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Confirmar eliminación</div>
-            <p className="modal-desc">¿Eliminar registro #{confirmDelete.id}? Esta acción realizará eliminación lógica.</p>
-            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-              <button className="btn-secondary text-sm" onClick={() => setConfirmDelete(null)}>Cancelar</button>
-              <button className="btn-danger text-sm" onClick={handleDelete}>Eliminar</button>
+      {confirmDelete && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={() => !deleting && setConfirmDelete(null)}>
+          <div className="modal" onMouseDown={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3" style={{ marginBottom:'var(--space-3)' }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor:'var(--danger-bg)' }}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="var(--danger)" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <div className="modal-title" style={{ marginBottom:'var(--space-1)' }}>Eliminar registro</div>
+                <p className="modal-desc" style={{ marginBottom:0 }}>Esta acción no se puede deshacer desde la interfaz.</p>
+              </div>
+            </div>
+            <p className="text-sm" style={{ color:'var(--text-secondary)', marginBottom:'var(--space-5)' }}>
+              Se realizará la eliminación lógica del registro <strong className="font-medium" style={{ color:'var(--text-primary)' }}>#{confirmDelete.id}</strong> del reporte de {tab==='consultas' ? 'consultas / procedimientos' : 'medicamentos'}.
+            </p>
+            <div className="flex justify-end gap-2.5">
+              <button className="btn-secondary text-sm" onClick={() => setConfirmDelete(null)} disabled={deleting}>Cancelar</button>
+              <button className="btn-danger text-sm" onClick={handleDelete} disabled={deleting}>{deleting ? 'Eliminando...' : 'Eliminar'}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
