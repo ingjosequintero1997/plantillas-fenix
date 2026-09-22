@@ -5165,6 +5165,53 @@ async def listar_columnas_gestantes_planilla(current_user: User = Depends(get_cu
 	return {"columns": columns, "labels": labels}
 
 
+@app.get("/data/gestantes/caso-cerrado")
+async def listar_caso_cerrado(
+	current_user: User = Depends(get_current_user),
+	page: int = 1,
+	page_size: int = 50,
+	search: str = "",
+):
+	"""Lista gestantes marcadas como Caso Cerrado."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+
+		offset = (max(1, page) - 1) * page_size
+		params = {"limit": page_size, "offset": offset}
+
+		# CASO_CERRADO puede ser BOOLEAN o TEXT: se normaliza con CAST a texto.
+		cerrado = "(CASO_CERRADO IS NOT NULL AND LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('true', '1'))"
+		count_sql = f'SELECT COUNT(*) FROM gestantes WHERE {cerrado} AND 1=1'
+		query_sql = f'SELECT * FROM gestantes WHERE {cerrado} AND 1=1'
+
+		if search:
+			search_cond = (' AND (LOWER("NO_DE_IDENTIFICACION") LIKE LOWER(:q) '
+						   'OR LOWER("APELLIDO_1") LIKE LOWER(:q) '
+						   'OR LOWER("NOMBRE_1") LIKE LOWER(:q))')
+			count_sql += search_cond
+			query_sql += search_cond
+			params["q"] = f"%{search}%"
+
+		count_sql += ' LIMIT 1'
+		total = db.execute(text(count_sql), params).scalar() or 0
+
+		query_sql += f' ORDER BY id DESC LIMIT :limit OFFSET :offset'
+		rows = db.execute(text(query_sql), params).fetchall()
+		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		registros = []
+		for row in rows:
+			registros.append(dict(zip(columnas, [str(v) if v is not None else "" for v in row])))
+
+		return {"registros": registros, "total": total, "page": page, "page_size": page_size}
+	except Exception as e:
+		print(f"ERROR listar_caso_cerrado: {e}")
+		return {"error": "Error al listar gestantes con caso cerrado.", "registros": [], "total": 0}
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/{registro_id}")
 async def obtener_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene un registro de gestante por ID."""
@@ -5429,6 +5476,7 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 		}
 	except Exception as e:
 		db.rollback()
+		print(f"ERROR auto_fill_caso_cerrado: {type(e).__name__}: {e}")
 		raise HTTPException(status_code=500, detail="Error al ejecutar el autocompletado. Intenta de nuevo.")
 
 
