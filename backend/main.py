@@ -5523,6 +5523,38 @@ def _audit_pendientes(db, tabla, reporte_id, action, user_id, username, field=No
 	db.flush()
 
 
+_INT_FIELDS_PX = {"consecutivo", "clase_pendiente", "cantidad_ordenada", "cantidad_prestacion_efectiva", "cantidad_pendiente", "causa_pendiente", "cups"}
+_INT_FIELDS_MED = {"consecutivo", "cantidad_prescrita", "dias_tratamiento", "cantidad_dispensada", "cantidad_pendiente", "causa_pendiente", "cantidad_dispensada_cierre"}
+_DATE_FIELDS = {"fecha_orden", "fecha_pendiente", "fecha_cierre", "fecha_prescripcion"}
+
+
+def _sanitize_report_fields(body: dict, field_keys: list, int_fields: set) -> dict:
+	"""Convert empty strings to None; coerce numeric strings to int for Integer columns."""
+	clean = {}
+	for k in field_keys:
+		if k not in body:
+			continue
+		v = body[k]
+		if v is None:
+			clean[k] = None
+			continue
+		if isinstance(v, str):
+			v = v.strip()
+			if v == "":
+				clean[k] = None
+				continue
+		if k in int_fields:
+			try:
+				clean[k] = int(float(v))
+			except (ValueError, TypeError):
+				clean[k] = None
+		elif k in _DATE_FIELDS:
+			clean[k] = str(v)[:20] if v else None
+		else:
+			clean[k] = v
+	return clean
+
+
 # ─── CONSULTAS — CRUD ──────────────────────────────────────────────────
 
 @app.get("/reportes/consultas")
@@ -5644,11 +5676,13 @@ async def crear_reporte_consulta(body: dict, current_user: User = Depends(get_cu
 		errors = validate_px_consultas(body)
 		estado = "validado" if not errors else "con_errores"
 		ips_name = _require_ips_name(current_user)
+		field_keys = [f["key"] for f in PX_CONSULTAS_FIELDS]
+		clean = _sanitize_report_fields(body, field_keys, _INT_FIELDS_PX)
 		r = ReporteConsulta(
 			user_id=current_user.id if current_user.role != "ips_user" else None,
 			ips_name=ips_name,
 			estado=estado,
-			**{k: body.get(k) for k in [f["key"] for f in PX_CONSULTAS_FIELDS] if k in body},
+			**clean,
 		)
 		db.add(r)
 		db.flush()
@@ -5674,11 +5708,12 @@ async def actualizar_reporte_consulta(reporte_id: int, body: dict, current_user:
 		errors = validate_px_consultas(body)
 		estado = "validado" if not errors else "con_errores"
 		field_keys = [f["key"] for f in PX_CONSULTAS_FIELDS]
+		clean = _sanitize_report_fields(body, field_keys, _INT_FIELDS_PX)
 		for k in field_keys:
-			if k in body:
+			if k in clean:
 				old = getattr(r, k, None)
-				new = body[k]
-				if str(old) != str(new):
+				new = clean[k]
+				if (str(old) if old is not None else None) != (str(new) if new is not None else None):
 					_audit_pendientes(db, "reporte_consultas", r.id, "UPDATE", current_user.id, current_user.username, field=k, old_val=old, new_val=new)
 				setattr(r, k, new)
 		r.estado = estado
@@ -5835,11 +5870,13 @@ async def crear_reporte_medicamento(body: dict, current_user: User = Depends(get
 		errors = validate_medicamentos(body)
 		estado = "validado" if not errors else "con_errores"
 		ips_name = _require_ips_name(current_user)
+		field_keys = [f["key"] for f in MEDICAMENTOS_FIELDS]
+		clean = _sanitize_report_fields(body, field_keys, _INT_FIELDS_MED)
 		r = ReporteMedicamento(
 			user_id=current_user.id if current_user.role != "ips_user" else None,
 			ips_name=ips_name,
 			estado=estado,
-			**{k: body.get(k) for k in [f["key"] for f in MEDICAMENTOS_FIELDS] if k in body},
+			**clean,
 		)
 		db.add(r)
 		db.flush()
@@ -5865,11 +5902,12 @@ async def actualizar_reporte_medicamento(reporte_id: int, body: dict, current_us
 		errors = validate_medicamentos(body)
 		estado = "validado" if not errors else "con_errores"
 		field_keys = [f["key"] for f in MEDICAMENTOS_FIELDS]
+		clean = _sanitize_report_fields(body, field_keys, _INT_FIELDS_MED)
 		for k in field_keys:
-			if k in body:
+			if k in clean:
 				old = getattr(r, k, None)
-				new = body[k]
-				if str(old) != str(new):
+				new = clean[k]
+				if (str(old) if old is not None else None) != (str(new) if new is not None else None):
 					_audit_pendientes(db, "reporte_medicamentos", r.id, "UPDATE", current_user.id, current_user.username, field=k, old_val=old, new_val=new)
 				setattr(r, k, new)
 		r.estado = estado

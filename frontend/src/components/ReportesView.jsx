@@ -549,14 +549,12 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
         if (err) fieldErrors.push(err)
       }
     })
-    setLiveErrors(prev => {
-      const next = { ...prev }
-      fields.forEach(f => {
-        const err = validateField(f, formData[f.key])
-        next[f.key] = err
-      })
-      return next
+    const nextErrors = {}
+    fields.forEach(f => {
+      nextErrors[f.key] = validateField(f, formData[f.key])
     })
+    setLiveErrors(nextErrors)
+    setTouched(Object.fromEntries(fields.map(f => [f.key, true])))
     onValidate(fieldErrors.length === 0)
     if (fieldErrors.length === 0) {
       showToast('Validación exitosa — todos los campos obligatorios completados', 'success')
@@ -567,8 +565,6 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
   }
 
   const handleSubmit = () => {
-    const errs = handleValidate()
-    if (errs.length) return
     onSave(formData)
   }
 
@@ -677,12 +673,38 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
         )
       })}
 
-      <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'16px 0', borderTop:'1px solid var(--border-subtle)', marginTop:8, position:'sticky', bottom:0, background:'var(--bg-canvas)', zIndex:10 }}>
-        <button className="btn-secondary text-sm" onClick={onCancel}>Cancelar</button>
-        <button className="btn-primary text-sm" onClick={handleValidate} style={{ border:'1px solid var(--green-500)' }}>Validar registro</button>
-        <button className="btn text-sm" onClick={handleSubmit} disabled={saving}
-          style={{ background:'var(--green-600)', color:'#fff', border:'1px solid var(--green-600)' }}>
-          {saving ? 'Guardando...' : isEdit ? 'Actualizar registro' : 'Guardar registro'}
+      <div style={{
+        display:'flex', justifyContent:'flex-end', gap:10, padding:'20px 0 8px',
+        borderTop:'2px solid var(--border-subtle)', marginTop:12,
+        position:'sticky', bottom:0, background:'var(--bg-canvas)', zIndex:10,
+        boxShadow:'0 -4px 12px rgba(0,0,0,0.05)'
+      }}>
+        <button className="btn-secondary" onClick={onCancel}>
+          Cancelar
+        </button>
+        <button className="btn-secondary" onClick={handleValidate}>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Validar
+        </button>
+        <button className="btn-primary" onClick={handleSubmit} disabled={saving}>
+          {saving ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Guardando...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              {isEdit ? 'Actualizar' : 'Guardar'}
+            </>
+          )}
         </button>
       </div>
     </div>
