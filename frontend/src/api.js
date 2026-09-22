@@ -723,7 +723,7 @@ export async function exportarReportesConsultas(filters = {}) {
   Object.entries(filters).forEach(([k, v]) => { if (v) qs.set(k, v) })
   const s = qs.toString()
   const resp = await fetch(`${API_BASE}/reportes/consultas/exportar${s ? `?${s}` : ''}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: { ...authHeaders() },
   })
   if (!resp.ok) return null
   return resp.blob()
@@ -757,7 +757,7 @@ export async function exportarReportesMedicamentos(filters = {}) {
   Object.entries(filters).forEach(([k, v]) => { if (v) qs.set(k, v) })
   const s = qs.toString()
   const resp = await fetch(`${API_BASE}/reportes/medicamentos/exportar${s ? `?${s}` : ''}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: { ...authHeaders() },
   })
   if (!resp.ok) return null
   return resp.blob()

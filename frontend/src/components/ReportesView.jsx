@@ -131,6 +131,9 @@ export default function ReportesView() {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [saving, setSaving] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [globalToast, setGlobalToast] = useState(null)
+
+  const showGlobalToast = (msg, type) => { setGlobalToast({ msg, type }); setTimeout(() => setGlobalToast(null), 3500) }
 
   const fields = tab === 'consultas' ? PX_FIELDS : MED_FIELDS
   const sections = tab === 'consultas' ? PX_SECTIONS : MED_SECTIONS
@@ -184,45 +187,41 @@ export default function ReportesView() {
     try { const d = await fetchOne(id); setDetailData(d); setFormView('detail') } catch {}
   }
 
-  const handleSave = async (formData, showToast) => {
+  const handleSave = async (formData) => {
     setSaving(true)
     try {
       const res = await crear(formData)
-      if (showToast) {
-        if (res?.errors?.length) {
-          setFormErrors(res.errors)
-          showToast(`Registro guardado con ${res.errors.length} error(es) de validación`, 'warning')
-        } else {
-          showToast('Registro guardado exitosamente', 'success')
-        }
+      if (res?.errors?.length) {
+        setFormErrors(res.errors)
+        showGlobalToast(`Registro guardado con ${res.errors.length} error(es) de validación`, 'warning')
+      } else {
+        showGlobalToast('Registro guardado exitosamente', 'success')
       }
       setFormErrors(res?.errors || [])
       setTimeout(() => { setFormView(null); setEditing(null); setFormErrors([]); loadData() }, 800)
-    } catch (e) { if (showToast) showToast('Error al guardar: ' + (e.message || 'Intente de nuevo'), 'error') }
+    } catch (e) { showGlobalToast('Error al guardar: ' + (e.message || 'Intente de nuevo'), 'error'); setSaving(false) }
     setSaving(false)
   }
 
-  const handleUpdate = async (formData, showToast) => {
+  const handleUpdate = async (formData) => {
     setSaving(true)
     try {
       const res = await actualizar(editing.id, formData)
-      if (showToast) {
-        if (res?.errors?.length) {
-          setFormErrors(res.errors)
-          showToast(`Registro actualizado con ${res.errors.length} error(es) de validación`, 'warning')
-        } else {
-          showToast('Registro actualizado exitosamente', 'success')
-        }
+      if (res?.errors?.length) {
+        setFormErrors(res.errors)
+        showGlobalToast(`Registro actualizado con ${res.errors.length} error(es) de validación`, 'warning')
+      } else {
+        showGlobalToast('Registro actualizado exitosamente', 'success')
       }
       setFormErrors(res?.errors || [])
       setTimeout(() => { setFormView(null); setEditing(null); setFormErrors([]); loadData() }, 800)
-    } catch (e) { if (showToast) showToast('Error al actualizar: ' + (e.message || 'Intente de nuevo'), 'error') }
+    } catch (e) { showGlobalToast('Error al actualizar: ' + (e.message || 'Intente de nuevo'), 'error'); setSaving(false) }
     setSaving(false)
   }
 
   const handleDelete = async () => {
     if (!confirmDelete) return
-    try { await eliminar(confirmDelete.id); setConfirmDelete(null); loadData() } catch {}
+    try { await eliminar(confirmDelete.id); setConfirmDelete(null); showGlobalToast('Registro eliminado', 'success'); loadData() } catch { showGlobalToast('Error al eliminar', 'error') }
   }
 
   const pxCols = ['#','Registro','Periodo','EPS','Tipo doc','Documento','Orden','Municipio','Estado','Fecha','Acciones']
@@ -244,31 +243,96 @@ export default function ReportesView() {
   }
 
   if (subView === 'menu') {
+    const menuCards = [
+      {
+        key: 'consultas',
+        title: 'Consultas y procedimientos',
+        desc: 'Reporte de procedimientos o consultas pendientes',
+        vars: '23 variables',
+        icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+        onClick: () => openCreate('consultas'),
+      },
+      {
+        key: 'medicamentos',
+        title: 'Medicamentos',
+        desc: 'Reporte de medicamentos pendientes',
+        vars: '28 variables',
+        icon: <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />,
+        onClick: () => openCreate('medicamentos'),
+      },
+    ]
+
     return (
-      <div className="fade-in" style={{ padding:'24px 32px', maxWidth:800 }}>
-        <div className="page-title">Reporte de procedimientos o consultas pendientes</div>
-        <div className="page-subtitle" style={{ marginBottom:24 }}>Captura, validación, almacenamiento, gestión y exportación de reportes pendientes</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ marginBottom:20 }}>
-          <div className="card-hover" style={{ cursor:'pointer' }} onClick={() => openCreate('consultas')}>
-            <div style={{ fontSize:32, marginBottom:8 }}>&#128203;</div>
-            <div style={{ fontWeight:600, fontSize:'0.95rem', color:'var(--text-primary)', marginBottom:4 }}>Consultas y procedimientos</div>
-            <div style={{ fontSize:'0.8rem', color:'var(--text-secondary)', marginBottom:12 }}>Reporte de procedimientos o consultas pendientes. 23 variables.</div>
-            <span className="btn-primary text-sm">Diligenciar reporte</span>
-          </div>
-          <div className="card-hover" style={{ cursor:'pointer' }} onClick={() => openCreate('medicamentos')}>
-            <div style={{ fontSize:32, marginBottom:8 }}>&#128138;</div>
-            <div style={{ fontWeight:600, fontSize:'0.95rem', color:'var(--text-primary)', marginBottom:4 }}>Medicamentos</div>
-            <div style={{ fontSize:'0.8rem', color:'var(--text-secondary)', marginBottom:12 }}>Reporte de medicamentos pendientes. 28 variables.</div>
-            <span className="btn-primary text-sm">Diligenciar reporte</span>
-          </div>
+      <div className="fade-in" style={{ padding:'24px 32px' }}>
+        <GlobalToast toast={globalToast} />
+
+        <div style={{ marginBottom:24 }}>
+          <div className="page-title">Reporte de procedimientos o consultas pendientes</div>
+          <div className="page-subtitle">Captura, validación, almacenamiento, gestión y exportación de reportes pendientes</div>
         </div>
-        <button className="btn-secondary text-sm" onClick={() => setSubView('gestion')}>Ir a Gestión de datos</button>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ marginBottom:24 }}>
+          {menuCards.map((c) => (
+            <button
+              key={c.key}
+              onClick={c.onClick}
+              className="text-left"
+              style={{
+                backgroundColor:'var(--bg-surface)',
+                border:'1px solid var(--border-subtle)',
+                borderRadius:'var(--radius-lg)',
+                padding:'24px',
+                boxShadow:'0 1px 3px rgba(28,28,26,0.06)',
+                cursor:'pointer',
+                transition:'all var(--dur-base) var(--ease-out)',
+                fontFamily:'var(--font-body)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--green-300)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(28,28,26,0.12), 0 2px 4px rgba(107,192,107,0.08)'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-subtle)'
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(28,28,26,0.06)'
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor:'var(--green-50)', color:'var(--green-600)' }}>
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">{c.icon}</svg>
+                </div>
+                <span className="badge-neutral">{c.vars}</span>
+              </div>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:'var(--text-title)', fontWeight:'600', color:'var(--text-primary)', marginBottom:'6px', letterSpacing:'-0.02em' }}>
+                {c.title}
+              </div>
+              <div style={{ fontSize:'var(--text-body-sm)', color:'var(--text-secondary)', lineHeight:'var(--leading-normal)' }}>
+                {c.desc}
+              </div>
+              <div className="flex items-center gap-1.5 mt-4" style={{ color:'var(--green-600)', fontSize:'var(--text-body-sm)', fontWeight:'500' }}>
+                Diligenciar reporte
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <button className="btn-secondary text-sm" onClick={() => setSubView('gestion')}>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+          Ir a Gestión de datos
+        </button>
       </div>
     )
   }
 
   return (
     <div className="fade-in" style={{ padding:'24px 32px' }}>
+      <GlobalToast toast={globalToast} />
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8, marginBottom:16 }}>
         <div>
           <div className="page-title">Reporte de procedimientos o consultas pendientes</div>
@@ -388,11 +452,11 @@ export default function ReportesView() {
       )}
 
       {confirmDelete && (
-        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
-          <div className="modal" style={{ maxWidth:400 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Confirmar eliminación</div>
-            <p className="modal-desc">¿Eliminar registro #{confirmDelete.id}? Esta acción realizará eliminación lógica.</p>
-            <div className="flex gap-2 justify-end">
+        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={() => setConfirmDelete(null)}>
+          <div style={{ background:'#fff', borderRadius:14, padding:24, maxWidth:420, width:'100%', boxShadow:'0 10px 40px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight:600, fontSize:'1.05rem', color:'#111827', marginBottom:4 }}>Confirmar eliminación</div>
+            <p style={{ fontSize:'0.85rem', color:'#4b5563', marginBottom:20 }}>¿Eliminar registro #{confirmDelete.id}? Esta acción realizará eliminación lógica.</p>
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
               <button className="btn-secondary text-sm" onClick={() => setConfirmDelete(null)}>Cancelar</button>
               <button className="btn-danger text-sm" onClick={handleDelete}>Eliminar</button>
             </div>
@@ -425,6 +489,23 @@ function validateField(f, val) {
     return { variable: f.label, error: `longitud ${String(v).length} no coincide`, correccion: `Debe tener exactamente ${f.length} caracteres` }
   }
   return null
+}
+
+function GlobalToast({ toast }) {
+  if (!toast) return null
+  const colors = {
+    success: { bg:'#f0fdf4', fg:'#15803d', border:'#86efac' },
+    warning: { bg:'#fffbeb', fg:'#b45309', border:'#fcd34d' },
+    error: { bg:'#fef2f2', fg:'#b91c1c', border:'#fca5a5' },
+  }
+  const c = colors[toast.type] || colors.success
+  return (
+    <div style={{ position:'fixed', top:20, right:20, zIndex:10000, padding:'12px 20px', borderRadius:8,
+      background:c.bg, color:c.fg, border:`1px solid ${c.border}`, boxShadow:'0 4px 16px rgba(0,0,0,0.15)',
+      fontSize:'0.85rem', fontWeight:600, maxWidth:360 }}>
+      {toast.type === 'success' ? '\u2713 ' : '\u2717 '}{toast.msg}
+    </div>
+  )
 }
 
 function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, onSave, onCancel, onValidate }) {
@@ -488,7 +569,7 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
   const handleSubmit = () => {
     const errs = handleValidate()
     if (errs.length) return
-    onSave(formData, showToast)
+    onSave(formData)
   }
 
   const totalRequired = requiredFields.length
