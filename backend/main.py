@@ -5423,64 +5423,39 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text
-		from datetime import datetime, date
-
-		# Obtener el mes de reporte actual
-		fecha_reporte = datetime.now()
-		mes_reporte = fecha_reporte.strftime("%Y-%m")
-
-		# Criterios:
-		# 1. Al menos 10 meses entre el mes de la gestante y el mes de reporte
-		# 2. El último control prenatal debe ser anterior al mes de reporte
-		# 3. La fecha de aborto o de parto debe ser posterior al último control prenatal
-
-		from datetime import timedelta
 		import re
-		fecha_limite = fecha_reporte - timedelta(days=300)  # ~10 meses
-		mes_limite = fecha_limite.strftime("%Y-%m")
 
-		# Expresión de fecha portable (PostgreSQL vs SQLite)
-		is_pg = str(db_engine.url).startswith("postgresql")
-		mes_expr = "TO_CHAR(created_at, 'YYYY-MM')" if is_pg else "STRFTIME('%Y-%m', created_at)"
-
-		# CASO_CERRADO puede ser BOOLEAN o TEXT según cómo se creó la tabla.
+		# CASO_CERRADO puede ser BOOLEAN o TEXT: se normaliza para funcionar en ambos casos.
 		no_cerrado = "(CASO_CERRADO IS NULL OR LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('false', '0', ''))"
 
-		# Columnas reales de control prenatal (la tabla no tiene ULTIMO_CONTROL_PRENATAL)
-		control_cols = [
-			"FECHA_1ER_CONTROL", "FECHA_2DO_CONTROL", "FECHA_3ER_CONTROL",
-			"FECHA_4TO_CONTROL", "FECHA_5TO_CONTROL", "FECHA_6TO_CONTROL",
-			"FECHA_7MO_CONTROL", "FECHA_8VO_CONTROL", "FECHA_9NO_CONTROL",
-			"FECHA_OTROS_CONTROLES_PRENATALES",
-		]
-		select_cols = ", ".join(f'"{c}"' for c in control_cols)
+		# Usar solo las columnas de fecha que existan en la tabla real.
+		all_cols = {c.name.upper() for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description}
+		fecha_cols = [c for c in ["FECHA_DE_PARTO", "FECHA_DE_ABORTO", "FECHA"] if c in all_cols]
+		if not fecha_cols:
+			return {"success": True, "total_caso_cerrado": 0, "criterios": {"regla": "No se encontraron columnas de fecha de parto/aborto"}}
+
+		select_cols = ", ".join(f'"{c}"' for c in fecha_cols)
 		candidatos = db.execute(text(f'''
-			SELECT id, {select_cols}, "FECHA_DE_ABORTO", "FECHA_DE_PARTO"
+			SELECT id, {select_cols}
 			FROM gestantes
 			WHERE {no_cerrado}
-			AND ({mes_expr} <= :mes_limite OR mes <= :mes_limite)
-		'''), {"mes_limite": mes_limite}).fetchall()
+		''')).fetchall()
 
-		_fecha_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+		# Fecha real = tiene formato AAAA-MM-DD y no es el comodín (año < 1900, ej. 1845-01-01).
+		_fecha_re = re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
 
-		def _ultimo_control(m):
-			valores = [str(m[c]).strip() for c in control_cols if m[c] is not None and _fecha_re.match(str(m[c]).strip())]
-			return max(valores) if valores else None
+		def _fecha_real(valor):
+			if valor is None:
+				return None
+			m = _fecha_re.match(str(valor).strip())
+			if not m or int(m.group(1)) < 1900:
+				return None
+			return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
 
 		ids_cerrar = []
 		for row in candidatos:
 			m = row._mapping
-			ultimo = _ultimo_control(m)
-			if not ultimo:
-				continue
-			# 2. El último control debe ser anterior al mes de reporte
-			if ultimo[:7] >= mes_reporte:
-				continue
-			aborto = str(m["FECHA_DE_ABORTO"]).strip() if m["FECHA_DE_ABORTO"] is not None else ""
-			parto = str(m["FECHA_DE_PARTO"]).strip() if m["FECHA_DE_PARTO"] is not None else ""
-			aborto_ok = bool(_fecha_re.match(aborto)) and ultimo < aborto
-			parto_ok = bool(_fecha_re.match(parto)) and ultimo < parto
-			if aborto_ok or parto_ok:
+			if any(_fecha_real(m[c]) for c in fecha_cols):
 				ids_cerrar.append(m["id"])
 
 		# Actualizar en lotes para evitar límites de parámetros
@@ -5488,7 +5463,7 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 			lote = ids_cerrar[i:i + 500]
 			placeholders = ", ".join(f":id{j}" for j in range(len(lote)))
 			params = {f"id{j}": v for j, v in enumerate(lote)}
-			db.execute(text(f"UPDATE gestantes SET CASO_CERRADO = 'TRUE' WHERE id IN ({placeholders})"), params)
+			db.execute(text(f"UPDATE gestantes SET CASO_CERRADO = TRUE WHERE id IN ({placeholders})"), params)
 		if ids_cerrar:
 			db.commit()
 
@@ -5497,18 +5472,15 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 		return {
 			"success": True,
 			"total_caso_cerrado": rows,
-			"mes_reporte": mes_reporte,
 			"criterios": {
-				"mes_limite": mes_limite,
-				"ultimo_control_prenatal": "debe ser anterior al mes de reporte",
-				"fecha_aborto": "no puede ser comodín (0) y debe ser posterior al último control prenatal",
-				"fecha_parto": "no puede ser comodín (0) y debe ser posterior al último control prenatal",
+				"regla": "Se marca Caso Cerrado cuando existe fecha real de parto o aborto (el comodín es 1845-01-01)",
+				"columnas_evaluadas": fecha_cols,
 			}
 		}
 	except Exception as e:
 		db.rollback()
 		print(f"ERROR auto_fill_caso_cerrado: {type(e).__name__}: {e}")
-		raise HTTPException(status_code=500, detail="Error al ejecutar el autocompletado. Intenta de nuevo.")
+		raise HTTPException(status_code=500, detail=f"Error al ejecutar el autocompletado: {type(e).__name__}: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════════
