@@ -193,11 +193,11 @@ export default function ReportesView() {
       const res = await crear(formData)
       if (res?.errors?.length) {
         setFormErrors(res.errors)
-        showGlobalToast(`Registro guardado con ${res.errors.length} error(es) de validación`, 'warning')
-      } else {
-        showGlobalToast('Registro guardado exitosamente', 'success')
+        showGlobalToast(`Guardado con ${res.errors.length} error(es). Corrija los campos marcados.`, 'warning')
+        setSaving(false)
+        return
       }
-      setFormErrors(res?.errors || [])
+      showGlobalToast('Registro guardado exitosamente', 'success')
       setTimeout(() => { setFormView(null); setEditing(null); setFormErrors([]); loadData() }, 800)
     } catch (e) { showGlobalToast('Error al guardar: ' + (e.message || 'Intente de nuevo'), 'error'); setSaving(false) }
     setSaving(false)
@@ -209,11 +209,11 @@ export default function ReportesView() {
       const res = await actualizar(editing.id, formData)
       if (res?.errors?.length) {
         setFormErrors(res.errors)
-        showGlobalToast(`Registro actualizado con ${res.errors.length} error(es) de validación`, 'warning')
-      } else {
-        showGlobalToast('Registro actualizado exitosamente', 'success')
+        showGlobalToast(`Actualizado con ${res.errors.length} error(es). Corrija los campos marcados.`, 'warning')
+        setSaving(false)
+        return
       }
-      setFormErrors(res?.errors || [])
+      showGlobalToast('Registro actualizado exitosamente', 'success')
       setTimeout(() => { setFormView(null); setEditing(null); setFormErrors([]); loadData() }, 800)
     } catch (e) { showGlobalToast('Error al actualizar: ' + (e.message || 'Intente de nuevo'), 'error'); setSaving(false) }
     setSaving(false)
@@ -229,11 +229,14 @@ export default function ReportesView() {
   const colHeaders = tab === 'consultas' ? pxCols : medCols
 
   if (formView === 'create' || formView === 'edit') {
-    return <FormPage fields={fields} sections={sections} data={editing} errors={formErrors} valid={formValid}
-      saving={saving} isEdit={formView === 'edit'} tab={tab}
-      onSave={formView === 'edit' ? handleUpdate : handleSave}
-      onCancel={() => { setFormView(null); setEditing(null); setFormErrors([]) }}
-      onValidate={setFormValid} />
+    return <div className="fade-in" style={{ padding:'24px 32px' }}>
+      <GlobalToast toast={globalToast} />
+      <FormPage fields={fields} sections={sections} data={editing} errors={formErrors} valid={formValid}
+        saving={saving} isEdit={formView === 'edit'} tab={tab}
+        onSave={formView === 'edit' ? handleUpdate : handleSave}
+        onCancel={() => { setFormView(null); setEditing(null); setFormErrors([]) }}
+        onValidate={setFormValid} />
+    </div>
   }
 
   if (formView === 'detail' && detailData) {
@@ -452,10 +455,10 @@ export default function ReportesView() {
       )}
 
       {confirmDelete && (
-        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={() => setConfirmDelete(null)}>
-          <div style={{ background:'#fff', borderRadius:14, padding:24, maxWidth:420, width:'100%', boxShadow:'0 10px 40px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight:600, fontSize:'1.05rem', color:'#111827', marginBottom:4 }}>Confirmar eliminación</div>
-            <p style={{ fontSize:'0.85rem', color:'#4b5563', marginBottom:20 }}>¿Eliminar registro #{confirmDelete.id}? Esta acción realizará eliminación lógica.</p>
+        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Confirmar eliminación</div>
+            <p className="modal-desc">¿Eliminar registro #{confirmDelete.id}? Esta acción realizará eliminación lógica.</p>
             <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
               <button className="btn-secondary text-sm" onClick={() => setConfirmDelete(null)}>Cancelar</button>
               <button className="btn-danger text-sm" onClick={handleDelete}>Eliminar</button>
@@ -491,6 +494,42 @@ function validateField(f, val) {
   return null
 }
 
+function validateCrossFields(formData, tab) {
+  const errs = {}
+  const toInt = (x) => { try { return x === '' || x == null ? null : parseInt(String(x), 10) } catch { return null } }
+
+  const cantPres = toInt(formData.cantidad_prescrita)
+  const cantDisp = toInt(formData.cantidad_dispensada)
+  const cantPend = toInt(formData.cantidad_pendiente)
+  const cantOrd = toInt(formData.cantidad_ordenada)
+  const cantEfec = toInt(formData.cantidad_prestacion_efectiva)
+
+  if (tab === 'medicamentos') {
+    if (cantPres != null && cantDisp != null && cantPend != null && cantPend !== cantPres - cantDisp) {
+      errs.cantidad_pendiente = { variable: 'Cantidad pendiente', error: `no coincide (prescrita - dispensada = ${cantPres - cantDisp})`, correccion: `Debe ser ${cantPres - cantDisp}` }
+    }
+    const causa = toInt(formData.causa_pendiente)
+    const obs = String(formData.observacion_causa || '').trim()
+    if (causa === 23 && !obs) {
+      errs.observacion_causa = { variable: 'Observación causa', error: 'causa 23 (OTRA) requiere observación', correccion: 'Ingrese una observación descriptiva' }
+    }
+    const cierre = toInt(formData.cantidad_dispensada_cierre)
+    if (cierre != null && cantPend != null && cierre > cantPend) {
+      errs.cantidad_dispensada_cierre = { variable: 'Cantidad dispensada cierre', error: `supera la cantidad pendiente (${cantPend})`, correccion: `Debe ser ≤ ${cantPend}` }
+    }
+  } else {
+    if (cantOrd != null && cantEfec != null && cantPend != null && cantPend !== cantOrd - cantEfec) {
+      errs.cantidad_pendiente = { variable: 'Cantidad pendiente', error: `no coincide (ordenada - efectiva = ${cantOrd - cantEfec})`, correccion: `Debe ser ${cantOrd - cantEfec}` }
+    }
+    const causa = toInt(formData.causa_pendiente)
+    const obs = String(formData.observacion_causa || '').trim()
+    if (causa === 22 && !obs) {
+      errs.observacion_causa = { variable: 'Observación causa', error: 'causa 22 (OTRA) requiere observación', correccion: 'Ingrese una observación descriptiva' }
+    }
+  }
+  return errs
+}
+
 function GlobalToast({ toast }) {
   if (!toast) return null
   const colors = {
@@ -520,16 +559,20 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
   const showToast = (msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500) }
 
   const handleChange = (key, val) => {
-    setFormData(prev => {
-      const next = { ...prev, [key]: val }
-      const f = fields.find(x => x.key === key)
-      if (f) {
-        const err = validateField(f, val)
-        setLiveErrors(prevE => ({ ...prevE, [key]: err }))
-      }
-      setTouched(t => ({ ...t, [key]: true }))
-      return next
+    const next = { ...formData, [key]: val }
+    setFormData(next)
+    setTouched(t => ({ ...t, [key]: true }))
+    const f = fields.find(x => x.key === key)
+    const fieldErr = f ? validateField(f, val) : null
+    const crossErrs = validateCrossFields(next, tab)
+    const nextErrors = {}
+    fields.forEach(fl => {
+      if (fl.key === key) nextErrors[fl.key] = fieldErr
+      else if (touched[fl.key] || crossErrs[fl.key]) nextErrors[fl.key] = crossErrs[fl.key] || validateField(fl, next[fl.key])
+      else nextErrors[fl.key] = liveErrors[fl.key]
     })
+    Object.keys(crossErrs).forEach(k => { nextErrors[k] = crossErrs[k] })
+    setLiveErrors(nextErrors)
   }
 
   const requiredFields = useMemo(() => fields.filter(f => f.required), [fields])
@@ -542,26 +585,20 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
   const liveErrorList = useMemo(() => Object.values(liveErrors).filter(Boolean), [liveErrors])
 
   const handleValidate = () => {
-    const fieldErrors = []
-    fields.forEach(f => {
-      if (f.required) {
-        const err = validateField(f, formData[f.key])
-        if (err) fieldErrors.push(err)
-      }
-    })
     const nextErrors = {}
-    fields.forEach(f => {
-      nextErrors[f.key] = validateField(f, formData[f.key])
-    })
+    fields.forEach(f => { nextErrors[f.key] = validateField(f, formData[f.key]) })
+    const crossErrs = validateCrossFields(formData, tab)
+    Object.keys(crossErrs).forEach(k => { nextErrors[k] = crossErrs[k] })
     setLiveErrors(nextErrors)
     setTouched(Object.fromEntries(fields.map(f => [f.key, true])))
-    onValidate(fieldErrors.length === 0)
-    if (fieldErrors.length === 0) {
-      showToast('Validación exitosa — todos los campos obligatorios completados', 'success')
+    const allErrors = Object.values(nextErrors).filter(Boolean)
+    onValidate(allErrors.length === 0)
+    if (allErrors.length === 0) {
+      showToast('Validación exitosa — todos los campos completados', 'success')
     } else {
-      showToast(`${fieldErrors.length} campo(s) con errores`, 'error')
+      showToast(`${allErrors.length} campo(s) con errores`, 'error')
     }
-    return fieldErrors
+    return allErrors
   }
 
   const handleSubmit = () => {
@@ -600,9 +637,9 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
 
       {errors.length > 0 && (
         <div className="panel" style={{ marginBottom:16, borderColor:'var(--danger)', background:'var(--danger-bg)' }}>
-          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'var(--danger)', marginBottom:4 }}>Errores de validación (servidor)</div>
+          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'var(--danger)', marginBottom:8 }}>Errores de validación ({errors.length})</div>
           {errors.map((e,i) => (
-            <div key={i} style={{ fontSize:'0.8rem', color:'var(--danger)', marginTop:2 }}>
+            <div key={i} style={{ fontSize:'0.8rem', color:'var(--danger)', marginTop:4, padding:'6px 10px', background:'rgba(180,35,24,0.06)', borderRadius:6, borderLeft:'3px solid var(--danger)' }}>
               <strong>{e.variable}:</strong> {e.error}. {e.correccion}
             </div>
           ))}
@@ -611,13 +648,12 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
 
       {liveErrorList.length > 0 && (
         <div className="panel" style={{ marginBottom:16, borderColor:'#f59e0b', background:'#fffbeb' }}>
-          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'#b45309', marginBottom:4 }}>Errores en el formulario ({liveErrorList.length})</div>
-          {liveErrorList.slice(0, 8).map((e,i) => (
-            <div key={i} style={{ fontSize:'0.8rem', color:'#b45309', marginTop:2 }}>
+          <div style={{ fontWeight:600, fontSize:'0.85rem', color:'#b45309', marginBottom:8 }}>Errores en el formulario ({liveErrorList.length})</div>
+          {liveErrorList.map((e,i) => (
+            <div key={i} style={{ fontSize:'0.8rem', color:'#b45309', marginTop:4, padding:'6px 10px', background:'rgba(181,71,8,0.06)', borderRadius:6, borderLeft:'3px solid #f59e0b' }}>
               <strong>{e.variable}:</strong> {e.error}. {e.correccion}
             </div>
           ))}
-          {liveErrorList.length > 8 && <div style={{ fontSize:'0.8rem', color:'#b45309', marginTop:2 }}>Y {liveErrorList.length - 8} más...</div>}
         </div>
       )}
 
@@ -642,7 +678,8 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {sectionFields.map(f => {
                 const liveErr = liveErrors[f.key]
-                const showErr = touched[f.key] && liveErr
+                const srvErr = errMap[f.label]
+                const showErr = (touched[f.key] && liveErr) || srvErr
                 return (
                 <div key={f.key} className={f.key === 'observacion_causa' || f.key === 'identificacion_prestador' || f.key === 'medicamento_nombre' ? 'sm:col-span-2 lg:col-span-3' : ''}>
                   <label className="form-label text-xs">
@@ -663,8 +700,9 @@ function FormPage({ fields, sections, data, errors, valid, saving, isEdit, tab, 
                       className="input text-sm" value={formData[f.key]||''} onChange={e => handleChange(f.key, e.target.value)}
                       style={showErr ? { borderColor:'var(--danger)', borderWidth:2 } : undefined} />
                   )}
-                  {showErr && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>{liveErr.error}. {liveErr.correccion}</p>}
-                  {!showErr && errMap[f.label] && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>{errMap[f.label].error}</p>}
+                  {showErr && <p className="text-xs mt-1" style={{ color:'var(--danger)' }}>
+                    {(touched[f.key] && liveErr) ? <>{liveErr.error}. {liveErr.correccion}</> : <>{srvErr.error}. {srvErr.correccion}</>}
+                  </p>}
                 </div>
                 )
               })}
