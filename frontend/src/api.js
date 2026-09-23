@@ -177,8 +177,11 @@ export async function saveCargue(payload) {
   })
 }
 
-export async function fetchCargues(templateKey = '') {
-  const q = templateKey ? `?template_key=${encodeURIComponent(templateKey)}` : ''
+export async function fetchCargues(templateKey = '', mes = '') {
+  const params = new URLSearchParams()
+  if (templateKey) params.set('template_key', templateKey)
+  if (mes) params.set('mes', mes)
+  const q = params.toString() ? `?${params}` : ''
   const data = await apiFetch(`${API_BASE}/cargues${q}`)
   return data.cargues || []
 }
@@ -305,10 +308,11 @@ export async function fetchGestanteDiagnostico() {
   return apiFetch(`${API_BASE}/data/gestantes/diagnostico`)
 }
 
-export async function fetchGestantes(page = 1, pageSize = 50, search = '', ips = '') {
+export async function fetchGestantes(page = 1, pageSize = 50, search = '', ips = '', mes = '') {
   const params = new URLSearchParams({ page, page_size: pageSize })
   if (search) params.set('search', search)
   if (ips) params.set('ips', ips)
+  if (mes) params.set('mes', mes)
   return apiFetch(`${API_BASE}/data/gestantes?${params}`)
 }
 
@@ -363,8 +367,9 @@ export async function revalidateData(raw_text, mapping, templateKey, mode = 'lim
   })
 }
 
-export async function fetchMisGestantes() {
-  return apiFetch(`${API_BASE}/data/gestantes/mis-gestantes`)
+export async function fetchMisGestantes(mes = '') {
+  const q = mes ? `?mes=${encodeURIComponent(mes)}` : ''
+  return apiFetch(`${API_BASE}/data/gestantes/mis-gestantes${q}`)
 }
 
 export async function deleteCargue(id) {

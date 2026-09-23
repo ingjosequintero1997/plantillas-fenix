@@ -175,16 +175,17 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
   const [query, setQuery] = useState('')
+  const [mesFiltro, setMesFiltro] = useState('')
   const [page, setPage] = useState(1)
   const [deleting, setDeleting] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const loadRecords = useCallback(async () => {
     setLoading(true); setError('')
-    try { setRecords(await fetchCargues(templateKey)) }
+    try { setRecords(await fetchCargues(templateKey, mesFiltro)) }
     catch (e) { setError('No se pudieron cargar los cargues.') }
     finally { setLoading(false) }
-  }, [templateKey])
+  }, [templateKey, mesFiltro])
 
   useEffect(() => { loadRecords() }, [loadRecords])
 
@@ -298,6 +299,8 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
               <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder="Buscar por archivo o prestador..." className="input pl-9" />
             </div>
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{filtered.length} cargues</span>
+            <input type="month" value={mesFiltro} onChange={(e) => { setMesFiltro(e.target.value); setPage(1) }}
+              className="input text-sm" style={{ maxWidth: 160 }} title="Filtrar por periodo (mes)" />
           </div>
 
           <div className="table-wrap">

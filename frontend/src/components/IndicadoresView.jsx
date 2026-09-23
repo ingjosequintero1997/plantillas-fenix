@@ -203,6 +203,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
   const [cargues, setCargues] = useState([])
   const [cargueId, setCargueId] = useState('')
   const [carguesLoaded, setCarguesLoaded] = useState(false)
+  const [mesFiltro, setMesFiltro] = useState('')
 
   useEffect(() => { if (templateKey) setSelectedTemplate(templateKey) }, [templateKey])
 
@@ -226,6 +227,14 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
     load()
     return () => { mounted = false }
   }, [selectedTemplate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const carguesVisibles = mesFiltro ? cargues.filter((c) => c.mes === mesFiltro) : cargues
+
+  useEffect(() => {
+    if (carguesVisibles.length && !carguesVisibles.some((c) => String(c.id) === cargueId)) {
+      setCargueId(String(carguesVisibles[0].id))
+    }
+  }, [mesFiltro, cargues]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cargueIdRef = useRef(cargueId)
   cargueIdRef.current = cargueId
@@ -325,10 +334,16 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
           </select>
         </div>
         {cargues.length > 0 && (
+          <div>
+            <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>Periodo</label>
+            <input type="month" value={mesFiltro} onChange={(e) => setMesFiltro(e.target.value)} className="input" style={{ maxWidth: 170 }} title="Filtrar por periodo (mes)" />
+          </div>
+        )}
+        {carguesVisibles.length > 0 && (
           <div className="flex-1">
             <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-secondary)' }}>Data validada (cargue)</label>
             <select value={cargueId} onChange={(e) => setCargueId(e.target.value)} className="input" style={{ minWidth: 280, width: '100%' }}>
-              {cargues.map((c) => <option key={c.id} value={String(c.id)}>{c.original_filename} - {c.row_count} registros - {c.quality_percent}% calidad</option>)}
+              {carguesVisibles.map((c) => <option key={c.id} value={String(c.id)}>{c.original_filename} - {c.row_count} registros - {c.quality_percent}% calidad</option>)}
             </select>
           </div>
         )}

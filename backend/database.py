@@ -279,6 +279,12 @@ def init_db():
             conn.execute(text("ALTER TABLE gestantes ADD COLUMN CASO_CERRADO BOOLEAN DEFAULT FALSE"))
     except Exception:
         pass
+    # Migracion: columna mes (periodo del cargue) para clasificar por meses
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE gestantes ADD COLUMN mes VARCHAR(7)"))
+    except Exception:
+        pass
     # Crear tabla usuarios_ips si no existe
     try:
         with engine.begin() as conn:
@@ -756,6 +762,12 @@ def crear_tabla_gestantes():
                         conn.execute(_text(f'ALTER TABLE gestantes ADD COLUMN "{col}" TEXT'))
                     except Exception:
                         pass
+        except Exception:
+            pass
+
+        # Asegurar columna mes (periodo del cargue) para clasificar por meses
+        try:
+            conn.execute(_text('ALTER TABLE gestantes ADD COLUMN mes VARCHAR(7)'))
         except Exception:
             pass
 

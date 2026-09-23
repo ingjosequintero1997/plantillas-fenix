@@ -77,6 +77,7 @@ export default function DataManagement({ correctedText }) {
   const [downloadingIps, setDownloadingIps] = useState(null)
   const [ipsSearch, setIpsSearch] = useState('')
   const [municipioFilter, setMunicipioFilter] = useState('')
+  const [mesFiltro, setMesFiltro] = useState('')
 
   const [ipsRows, setIpsRows] = useState([])
   const [ipsColumns, setIpsColumns] = useState([])
@@ -84,11 +85,12 @@ export default function DataManagement({ correctedText }) {
 
   const [ipsLoadAttempted, setIpsLoadAttempted] = useState(false)
 
-  const loadIpsData = useCallback(async () => {
+  const loadIpsData = useCallback(async (mesParam) => {
     if (!isIpsUser) return
+    const mes = mesParam !== undefined ? mesParam : mesFiltro
     setIpsLoading(true); setError('')
     try {
-      const data = await fetchMisGestantes()
+      const data = await fetchMisGestantes(mes)
       setIpsRows(data.rows || [])
       setIpsColumns(data.columns || [])
       setIpsLoadAttempted(true)
@@ -98,7 +100,7 @@ export default function DataManagement({ correctedText }) {
     } finally {
       setIpsLoading(false)
     }
-  }, [isIpsUser])
+  }, [isIpsUser, mesFiltro])
 
   useEffect(() => {
     if (isIpsUser && !ipsLoadAttempted && !ipsLoading) {
@@ -349,7 +351,13 @@ export default function DataManagement({ correctedText }) {
           </div>
         )}
         {ipsNames.length > 0 && (
-          <div className="relative max-w-md">
+          <div className="flex flex-wrap items-center gap-3">
+            {isIpsUser && (
+              <input type="month" value={mesFiltro}
+                onChange={(e) => { setMesFiltro(e.target.value); loadIpsData(e.target.value) }}
+                className="input text-sm" style={{ maxWidth: 170 }} title="Filtrar por periodo (mes)" />
+            )}
+            <div className="relative max-w-md flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -360,6 +368,7 @@ export default function DataManagement({ correctedText }) {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             )}
+            </div>
           </div>
         )}
         {instValidating ? (

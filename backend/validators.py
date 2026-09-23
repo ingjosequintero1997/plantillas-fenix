@@ -1516,8 +1516,9 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 							"row": _ridx + 1,
 							"column": _espec_col,
 							"original": _val_esp,
-							"corrected": "Indique la especialidad que atendio a la usuaria (Remitida a especialista = Si)",
+							"corrected": "Si 'Remitida a especialista' = SI, debe indicar cual(es) especialistas la atendieron.",
 							"status": "error",
+							"kind": "cross",
 						})
 					stats["errors"] += 1
 	except Exception:

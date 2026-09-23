@@ -1933,6 +1933,7 @@ async def eliminar_registro_unificado(
 @app.get("/cargues")
 async def list_cargues(
     template_key: str = Query(""),
+    mes: str = Query(""),
     current_user: User = Depends(get_current_user),
 ):
 	ensure_db_ready()
@@ -1951,6 +1952,8 @@ async def list_cargues(
 				q = q.filter(Cargue.id == -1)
 		if template_key:
 			q = q.filter(Cargue.template_key == template_key)
+		if mes:
+			q = q.filter(Cargue.mes == mes)
 		# Regla "todo o nada": solo mostrar cargues validados (sin errores).
 		q = q.filter(Cargue.status == "validado")
 		q = q.order_by(Cargue.created_at.desc())
@@ -3540,6 +3543,11 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 		col = l["column"]
 		corr = l["corrected"] or "Dato invalido"
 		orig = l["original"] or ""
+		# Los errores de regla cruzada traen su propio mensaje especifico; no
+		# reemplazarlos por el mensaje generico del tipo de variable.
+		if l.get("kind") == "cross":
+			errors[(row, col)] = corr
+			continue
 		es_vacio = orig.strip() == ""
 		# Comentario explicito: que se encontro y que debe ingresar
 		tdef2 = tmap2.get(col)
@@ -4829,6 +4837,7 @@ async def listar_gestantes(
 	page_size: int = 50,
 	search: str = "",
 	ips: str = "",
+	mes: str = "",
 ):
 	"""Lista registros de gestantes. Admin ve todos, prestador solo los de su IPS."""
 	ensure_db_ready()
@@ -4867,6 +4876,9 @@ async def listar_gestantes(
 		if search:
 			count_sql += ' AND ("NO_DE_IDENTIFICACION" ILIKE :q OR "APELLIDO_1" ILIKE :q OR "NOMBRE_1" ILIKE :q)'
 			count_params["q"] = f"%{search}%"
+		if mes:
+			count_sql += ' AND mes = :mes'
+			count_params["mes"] = mes
 
 		total = db.execute(text(count_sql), count_params).scalar() or 0
 
@@ -4876,12 +4888,16 @@ async def listar_gestantes(
 			query_sql += ' AND UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips'
 		if search:
 			query_sql += ' AND ("NO_DE_IDENTIFICACION" ILIKE :q OR "APELLIDO_1" ILIKE :q OR "NOMBRE_1" ILIKE :q)'
+		if mes:
+			query_sql += ' AND mes = :mes'
 		query_sql += ' ORDER BY id DESC LIMIT :limit OFFSET :offset'
 		params = {"limit": page_size, "offset": offset}
 		if ips_filtro:
 			params["ips"] = ips_filtro
 		if search:
 			params["q"] = f"%{search}%"
+		if mes:
+			params["mes"] = mes
 
 		rows = db.execute(text(query_sql), params).fetchall()
 		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
@@ -4952,7 +4968,7 @@ def _check_gestante_ips(db, current_user, registro_id):
 
 
 @app.get("/data/gestantes/mis-gestantes")
-async def mis_gestantes(request: Request, current_user: User = Depends(get_current_user)):
+async def mis_gestantes(request: Request, current_user: User = Depends(get_current_user), mes: str = ""):
 	"""Retorna TODA la data de las gestantes de la IPS del usuario logueado, leida del cargue."""
 	ensure_db_ready()
 	db = SessionLocal()
@@ -4994,9 +5010,12 @@ async def mis_gestantes(request: Request, current_user: User = Depends(get_curre
 		if not ips_nombre:
 			return {"columns": [], "rows": [], "total": 0, "ips_name": ""}
 
-		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
+		cargues_q = db.query(Cargue).filter(Cargue.template_key == "gestante")
+		if mes:
+			cargues_q = cargues_q.filter(Cargue.mes == mes)
+		cargues = cargues_q.order_by(Cargue.id.desc()).limit(1).all()
 		if not cargues:
-			return {"columns": [], "rows": [], "total": 0, "ips_name": ips_nombre}
+			return {"columns": [], "rows": [], "total": 0, "ips_name": ips_nombre, "mes": mes}
 
 		texto = cargues[0].corrected_text or cargues[0].raw_text or ""
 		if cargues[0].compressed and texto:
