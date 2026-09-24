@@ -200,7 +200,7 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
 
   const handleDescargarCasosCerrados = async () => {
     setError('')
-    try { await exportarCasoCerrado('casos_cerrados.xlsx') }
+    try { await exportarCasoCerrado('caso_cerrado.xlsx') }
     catch (e) { setError(e.message || 'No se pudieron descargar los casos cerrados') }
   }
 
@@ -271,24 +271,6 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
         </div>
       </div>
 
-      {casosCerrados > 0 && (
-        <div className="panel flex items-center justify-between gap-3 flex-wrap" style={{ borderLeft: '4px solid #B42318' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <div>
-              <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>Casos cerrados</div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{casosCerrados} registro{casosCerrados !== 1 ? 's' : ''} en su propia data (fuera de los cargues)</div>
-            </div>
-          </div>
-          <button onClick={handleDescargarCasosCerrados} className="btn-secondary text-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Descargar Excel
-          </button>
-        </div>
-      )}
-
       {error && <div className="px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid rgba(180,35,24,0.1)' }}>
         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         {error}
@@ -351,6 +333,37 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                 </tr>
               </thead>
               <tbody>
+                {casosCerrados > 0 && (
+                  <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                    <td>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>caso_cerrado.xlsx</div>
+                          <div className="text-[0.65rem]" style={{ color: 'var(--text-muted)' }}>Casos cerrados (propia data)</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="text-sm" style={{ color: 'var(--text-secondary)' }}>—</td>
+                    <td><span className="badge-neutral">—</span></td>
+                    <td className="text-center font-semibold text-sm">{casosCerrados}</td>
+                    <td className="text-center">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style={{ color: 'var(--success)', backgroundColor: '#DCFCE7' }}>0</span>
+                    </td>
+                    <td className="text-center"><span className="badge-success">100%</span></td>
+                    <td className="text-center"><span className="badge-error">Caso cerrado</span></td>
+                    <td className="text-center">
+                      <button onClick={handleDescargarCasosCerrados} title="Descargar Excel" className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#DCFCE7' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                )}
                 {pageItems.map((r) => (
                   <tr key={r.id}>
                     <td className="table-row-click" onClick={() => setSelected(r)}>
