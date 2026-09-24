@@ -342,7 +342,7 @@
 
 @layer utilities {
   .fade-in { animation: fadeIn var(--dur-slow) var(--ease-out) both; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
   .skeleton {
     border-radius: var(--radius-sm);
