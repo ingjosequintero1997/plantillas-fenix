@@ -5050,19 +5050,13 @@ async def mis_gestantes(request: Request, current_user: User = Depends(get_curre
 		cargues_q = db.query(Cargue).filter(Cargue.template_key == "gestante")
 		if mes:
 			cargues_q = cargues_q.filter(Cargue.mes == mes)
-		cargues = cargues_q.order_by(Cargue.id.desc()).limit(1).all()
+		cargues = cargues_q.order_by(Cargue.id.desc()).all()
 		if not cargues:
 			return {"columns": [], "rows": [], "total": 0, "ips_name": ips_nombre, "mes": mes}
 
-		texto = cargues[0].corrected_text or cargues[0].raw_text or ""
-		if cargues[0].compressed and texto:
-			try: texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
-			except: pass
-		if not texto:
-			return {"columns": [], "rows": [], "total": 0, "ips_name": ips_nombre}
-
 		meta = get_template_by_key("gestante")
 		tmpl_names = [t["name"] for t in meta["template"]]
+		n_tmpl = len(tmpl_names)
 
 		def _norm(s):
 			s = str(s).strip()
@@ -5071,35 +5065,49 @@ async def mis_gestantes(request: Request, current_user: User = Depends(get_curre
 			s = '__'.join(filter(None, s.split('__')))
 			return s.strip('_')
 
-		df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
-		df = df.fillna('').astype(str)
-
-		n_cols = len(df.columns)
-		n_tmpl = len(tmpl_names)
-
-		norm_names = [_norm(tmpl_names[i]) if i < n_tmpl else f"COL_{i}" for i in range(n_cols)]
-
 		ips_col_idx = 28
-		norm_ips_col = norm_names[ips_col_idx] if ips_col_idx < n_cols else ""
-
 		norm_ips_user = _norm(ips_nombre)
 
-		mask = []
-		for _, row_data in df.iterrows():
-			val_ips = _norm(str(row_data.iloc[ips_col_idx])) if ips_col_idx < n_cols else ""
-			match = (norm_ips_user in val_ips) or (val_ips in norm_ips_user) or (norm_ips_user.replace('_', '') in val_ips.replace('_', ''))
-			mask.append(match)
-
-		filtered = df[mask]
-
 		result_rows = []
-		for _, row_data in filtered.iterrows():
-			reg = {}
-			for i in range(min(n_cols, n_tmpl)):
-				reg[norm_names[i]] = str(row_data.iloc[i]).strip()
-			result_rows.append(reg)
+		seen = set()
+		norm_names = []
+		n_cols_out = 0
+		for c in cargues:
+			texto = c.corrected_text or c.raw_text or ""
+			if c.compressed and texto:
+				try:
+					texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
+				except Exception:
+					pass
+			if not texto:
+				continue
+			try:
+				df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+			except Exception:
+				continue
+			df = df.fillna('').astype(str)
+			n_cols = len(df.columns)
+			if n_cols == 0:
+				continue
+			norm_names = [_norm(tmpl_names[i]) if i < n_tmpl else f"COL_{i}" for i in range(n_cols)]
+			n_cols_out = min(n_cols, n_tmpl)
+			for _, row_data in df.iterrows():
+				val_ips = _norm(str(row_data.iloc[ips_col_idx])) if ips_col_idx < n_cols else ""
+				match = (norm_ips_user in val_ips) or (val_ips in norm_ips_user) or (norm_ips_user.replace('_', '') in val_ips.replace('_', ''))
+				if not match:
+					continue
+				doc = str(row_data.iloc[2]).strip() if n_cols > 2 else ""
+				if doc and doc in seen:
+					continue
+				if doc:
+					seen.add(doc)
+				reg = {}
+				for i in range(n_cols_out):
+					reg[norm_names[i]] = str(row_data.iloc[i]).strip()
+				result_rows.append(reg)
 
-		return {"columns": norm_names[:min(n_cols, n_tmpl)], "rows": result_rows, "total": len(result_rows), "ips_name": ips_nombre}
+		cols_out = norm_names[:n_cols_out] if norm_names else []
+		return {"columns": cols_out, "rows": result_rows, "total": len(result_rows), "ips_name": ips_nombre}
 	except HTTPException:
 		raise
 	except Exception as e:
@@ -5143,51 +5151,44 @@ async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depend
 		except Exception:
 			pass
 
-		# 2) Leer del correctedText con mapeo por NOMBRE (no por posición)
+		# 2) Leer del correctedText (todos los cargues) con mapeo por NOMBRE
 		try:
-			cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
-			if cargues:
-				texto = cargues[0].corrected_text or cargues[0].raw_text or ""
-				if cargues[0].compressed and texto:
+			import pandas as _pd, io as _io, unicodedata as _ud
+
+			def _norm2(s):
+				s = str(s).strip()
+				s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+				s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+				s = '__'.join(filter(None, s.split('__')))
+				return s.strip('_')
+
+			meta = get_template_by_key("gestante")
+			tmpl_names = [t["name"] for t in meta["template"]]
+			n_tmpl = len(tmpl_names)
+
+			cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).all()
+			for c in cargues:
+				texto = c.corrected_text or c.raw_text or ""
+				if c.compressed and texto:
 					try: texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
 					except: pass
-				if texto:
-					meta = get_template_by_key("gestante")
-					tmpl_names = [t["name"] for t in meta["template"]]
-
-					try:
-						from .template_to_db_map import TEMPLATE_TO_DB_EXPLICIT as _LEGACY_MAP
-					except ImportError:
-						try:
-							from template_to_db_map import TEMPLATE_TO_DB_EXPLICIT as _LEGACY_MAP
-						except ImportError:
-							_LEGACY_MAP = {}
-
-					import pandas as _pd, io as _io, unicodedata as _ud
+				if not texto:
+					continue
+				try:
 					df = _pd.read_csv(_io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
-					df = df.fillna('').astype(str)
-
-					def _norm(s):
-						s = str(s).strip()
-						s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
-						s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
-						s = '__'.join(filter(None, s.split('__')))
-						return s.strip('_')
-
-					n_cols = len(df.columns)
-					n_tmpl = len(tmpl_names)
-
-					num_col_idx = 2
-					if n_cols > num_col_idx:
-						for idx, row_data in df.iterrows():
-							val = str(row_data.iloc[num_col_idx]).strip()
-							if val == num_clean:
-								resultado_full = {}
-								for i in range(min(n_cols, n_tmpl)):
-									key = _norm(tmpl_names[i])
-									val_i = str(row_data.iloc[i]).strip()
-									resultado_full[key] = val_i
-								return resultado_full
+				except Exception:
+					continue
+				df = df.fillna('').astype(str)
+				n_cols = len(df.columns)
+				if n_cols <= 2:
+					continue
+				for idx, row_data in df.iterrows():
+					val = str(row_data.iloc[2]).strip()
+					if val == num_clean:
+						resultado_full = {}
+						for i in range(min(n_cols, n_tmpl)):
+							resultado_full[_norm2(tmpl_names[i])] = str(row_data.iloc[i]).strip()
+						return resultado_full
 		except Exception:
 			pass
 
