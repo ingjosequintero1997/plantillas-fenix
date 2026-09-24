@@ -174,11 +174,13 @@ export default function DataManagement({ correctedText }) {
     finally { setDownloadingIps(null) }
   }
 
-  const runAffiliationValidation = useCallback(async () => {
-    if (instValidating || instResult) return
+  const runAffiliationValidation = useCallback(async (mesParam, force = false) => {
+    if (instValidating) return
+    if (instResult && !force) return
+    const mes = mesParam !== undefined ? mesParam : mesFiltro
     setInstValidating(true); setError('')
     try {
-      const data = await validateAffiliation('')
+      const data = await validateAffiliation('', 'gestante', mes)
       setInstResult(data)
     } catch (e) {
       setError(e.message || 'Error validando afiliación')
@@ -186,7 +188,7 @@ export default function DataManagement({ correctedText }) {
     } finally {
       setInstValidating(false)
     }
-  }, [instValidating, instResult])
+  }, [instValidating, instResult, mesFiltro])
 
   useEffect(() => {
     if (!isIpsUser && !instResult && !instValidating) {
@@ -352,11 +354,14 @@ export default function DataManagement({ correctedText }) {
         )}
         {ipsNames.length > 0 && (
           <div className="flex flex-wrap items-center gap-3">
-            {isIpsUser && (
-              <input type="month" value={mesFiltro}
-                onChange={(e) => { setMesFiltro(e.target.value); loadIpsData(e.target.value) }}
-                className="input text-sm" style={{ maxWidth: 170 }} title="Filtrar por periodo (mes)" />
-            )}
+            <input type="month" value={mesFiltro}
+              onChange={(e) => {
+                const v = e.target.value
+                setMesFiltro(v); setPage(1)
+                if (isIpsUser) loadIpsData(v)
+                else runAffiliationValidation(v, true)
+              }}
+              className="input text-sm" style={{ maxWidth: 170 }} title="Filtrar por periodo (mes de cargue)" />
             <div className="relative max-w-md flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -546,6 +551,12 @@ export default function DataManagement({ correctedText }) {
               )}
             </div>
           )}
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <input type="month" value={mesFiltro}
+              onChange={(e) => { setMesFiltro(e.target.value); setPage(1); runAffiliationValidation(e.target.value, true) }}
+              className="input" style={{ fontSize: '0.8rem', maxWidth: 170 }} title="Filtrar por periodo (mes de cargue)" />
+          </div>
           {search && (
             <button onClick={() => { setSearch(''); setPage(1) }} className="btn-ghost text-xs px-2 py-1" style={{ color: 'var(--text-secondary)' }}>
               Limpiar

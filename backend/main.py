@@ -4026,13 +4026,17 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	ensure_db_ready()
 	
 	corrected_text = payload.get("corrected_text", "")
+	mes_filtro = str(payload.get("mes", "") or "").strip()
 	
-	# Si no viene texto, leer del último cargue
+	# Si no viene texto, leer del último cargue (o del mes solicitado)
 	if not corrected_text or not corrected_text.strip():
 		try:
 			db = SessionLocal()
 			from sqlalchemy import text as sa_text
-			cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.desc()).limit(1).all()
+			cargues_q = db.query(Cargue).filter(Cargue.template_key == "gestante")
+			if mes_filtro:
+				cargues_q = cargues_q.filter(Cargue.mes == mes_filtro)
+			cargues = cargues_q.order_by(Cargue.id.desc()).limit(1).all()
 			if cargues:
 				c = cargues[0]
 				texto = c.corrected_text or c.raw_text or ""
