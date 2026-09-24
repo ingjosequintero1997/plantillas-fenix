@@ -4027,37 +4027,49 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 	
 	corrected_text = payload.get("corrected_text", "")
 	mes_filtro = str(payload.get("mes", "") or "").strip()
-	
-	# Si no viene texto, leer del último cargue (o del mes solicitado)
-	if not corrected_text or not corrected_text.strip():
+
+	mes_por_fila = None
+	if corrected_text and corrected_text.strip():
+		try:
+			df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+			df = df.fillna('').astype(str)
+		except Exception:
+			return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Error al leer los datos. Verifica el formato."}
+	else:
+		# Sin texto: juntar TODOS los cargues (o solo el mes pedido) y etiquetar
+		# cada fila con el mes del cargue del que proviene.
+		frames = []
+		meses = []
 		try:
 			db = SessionLocal()
-			from sqlalchemy import text as sa_text
 			cargues_q = db.query(Cargue).filter(Cargue.template_key == "gestante")
 			if mes_filtro:
 				cargues_q = cargues_q.filter(Cargue.mes == mes_filtro)
-			cargues = cargues_q.order_by(Cargue.id.desc()).limit(1).all()
-			if cargues:
-				c = cargues[0]
+			for c in cargues_q.order_by(Cargue.id.asc()).all():
 				texto = c.corrected_text or c.raw_text or ""
 				if c.compressed and texto:
 					try:
 						texto = _gzip.decompress(_b64.b64decode(texto)).decode("utf-8", errors="replace")
 					except Exception:
 						pass
-				corrected_text = texto
+				if not texto or not texto.strip():
+					continue
+				try:
+					f = pd.read_csv(io.StringIO(texto), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
+				except Exception:
+					continue
+				f = f.fillna('').astype(str)
+				frames.append(f)
+				meses.extend([c.mes] * len(f))
 			db.close()
 		except Exception:
 			pass
-	
-	if not corrected_text or not corrected_text.strip():
-		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "No hay datos para validar"}
-	
-	try:
-		df = pd.read_csv(io.StringIO(corrected_text), sep='|', header=None, dtype=str, engine='python', keep_default_na=False)
-		df = df.fillna('').astype(str)
-	except Exception as e:
-		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Error al leer los datos. Verifica el formato."}
+		if not frames:
+			return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "No hay datos para validar"}
+		ncols = max(f.shape[1] for f in frames)
+		frames = [f.reindex(columns=range(ncols), fill_value='') for f in frames]
+		df = pd.concat(frames, ignore_index=True)
+		mes_por_fila = meses
 	
 	if df.empty:
 		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Sin datos"}
@@ -4106,6 +4118,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"apellido1": apellido1,
 				"apellido2": apellido2,
 				"municipio": municipio,
+				"mes": mes_por_fila[idx] if mes_por_fila else "",
 			})
 	
 	if not usuarios:
@@ -4151,6 +4164,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"apellido1": a1, "apellido2": a2,
 				"municipio": str(row.get(municipio_col, "")).strip() if municipio_col is not None else "",
 				"gestante_id": None, "ips_code": "",
+				"mes": mes_por_fila[idx] if mes_por_fila else "",
 			})
 		return {
 			"success": True, "encontrados": len(usuarios), "no_encontrados": 0,
@@ -4230,6 +4244,7 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"municipio": u.get("municipio", ""),
 				"gestante_id": gid,
 				"ips_code": str(ips_code).strip(),
+				"mes": u.get("mes", ""),
 			})
 	
 	return {
