@@ -5573,8 +5573,17 @@ async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
 		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.asc()).all()
 		rows_out = []
 		vistos = set()
+		total_filas = 0
 		for c in cargues:
 			texto = _decompress_cargue(c)
+			if not texto:
+				rt = c.raw_text or ""
+				if c.compressed and rt:
+					try:
+						rt = gzip.decompress(base64.b64decode(rt)).decode("utf-8", errors="replace")
+					except Exception:
+						pass
+				texto = rt
 			if not texto:
 				continue
 			for line in texto.replace("\r\n", "\n").split("\n"):
@@ -5583,6 +5592,7 @@ async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
 				cols = line.split("|")
 				if len(cols) < 3:
 					continue
+				total_filas += 1
 				doc = cols[2].strip()
 				if not doc or doc.upper() == "NO_DE_IDENTIFICACION" or doc in vistos:
 					continue
@@ -5594,7 +5604,10 @@ async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
 					rows_out.append(line)
 
 		if not rows_out:
-			raise HTTPException(status_code=404, detail="No se encontraron casos cerrados (con fecha real de parto o aborto).")
+			raise HTTPException(
+				status_code=404,
+				detail=f"No se encontraron casos cerrados. Cargues leídos: {len(cargues)}, filas: {total_filas}, indices parto/aborto: {i_parto}/{i_aborto}.",
+			)
 
 		corrected_text = "\n".join(rows_out)
 		buf = build_data_excel(corrected_text, tmpl)
