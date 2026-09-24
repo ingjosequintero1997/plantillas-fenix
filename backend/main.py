@@ -5548,6 +5548,10 @@ async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
 	db = SessionLocal()
 	try:
 		import re as _re
+		try:
+			from .excel_export import build_data_excel
+		except ImportError:
+			from excel_export import build_data_excel
 		meta = get_template_by_key("gestante")
 		tmpl = meta["template"]
 		names = [t["name"] for t in tmpl]
