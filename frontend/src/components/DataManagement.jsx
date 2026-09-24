@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
-import { updateGestante, createGestante, autoFillCasoCerrado, exportarCasoCerrado, fetchCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns, fetchMisGestantes } from '../api'
+import { updateGestante, createGestante, autoFillCasoCerrado, exportarCasoCerrado, exportarIpsExcel, fetchCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns, fetchMisGestantes } from '../api'
 import GestanteForm from './GestanteForm'
 import ExcelJS from 'exceljs'
 
@@ -117,7 +117,16 @@ export default function DataManagement({ correctedText }) {
   }, [isIpsUser])
 
   const downloadIpsExcel = async (ipsName, filteredData) => {
-    const usuarios = filteredData || (isIpsUser ? ipsRows : (filteredIpsGroups[ipsName] || []))
+    if (!isIpsUser) {
+      setDownloadingIps(ipsName)
+      try {
+        const safe = ipsName.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'ips'
+        await exportarIpsExcel(ipsName, mesFiltro, `${safe}.xlsx`)
+      } catch (e) { alert('Error descargando: ' + (e.message || e)) }
+      finally { setDownloadingIps(null) }
+      return
+    }
+    const usuarios = filteredData || ipsRows
     if (!usuarios.length) return
     setDownloadingIps(ipsName)
     try {

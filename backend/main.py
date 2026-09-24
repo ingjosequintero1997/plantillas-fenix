@@ -5222,6 +5222,96 @@ async def listar_columnas_gestantes_planilla(current_user: User = Depends(get_cu
 	return {"columns": columns, "labels": labels}
 
 
+@app.get("/data/gestantes/ips-exportar")
+async def exportar_ips(
+	ips: str = Query(""),
+	mes: str = Query(""),
+	current_user: User = Depends(get_current_user),
+):
+	"""Exporta en Excel TODAS las variables de una IPS, leidas de los cargues."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		import re as _re
+		import unicodedata as _ud, io as _io, pandas as _pd, base64 as _b64, gzip as _gzip
+		try:
+			from .excel_export import build_data_excel
+		except ImportError:
+			from excel_export import build_data_excel
+
+		ips_nombre = (ips or "").strip()
+		if not ips_nombre:
+			ips_nombre = _get_prestador_ips_name(db, current_user) or ""
+		if not ips_nombre:
+			raise HTTPException(status_code=400, detail="Indica la IPS a exportar.")
+
+		def _norm(s):
+			s = str(s).strip()
+			s = ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+			s = s.upper().replace(' ', '_').replace('\n', '_').replace('(', '').replace(')', '').replace(',', '').replace('-', '_').replace('/', '_').replace('.', '').replace('?', '').replace(':', '').replace(';', '')
+			s = '__'.join(filter(None, s.split('__')))
+			return s.strip('_')
+
+		meta = get_template_by_key("gestante")
+		tmpl = meta["template"]
+		ips_col_idx = 28
+		norm_ips = _norm(ips_nombre)
+
+		cargues_q = db.query(Cargue).filter(Cargue.template_key == "gestante")
+		if mes:
+			cargues_q = cargues_q.filter(Cargue.mes == mes)
+		cargues = cargues_q.order_by(Cargue.id.asc()).all()
+
+		rows_out = []
+		seen = set()
+		for c in cargues:
+			texto = _decompress_cargue(c)
+			if not texto:
+				rt = c.raw_text or ""
+				if c.compressed and rt:
+					try:
+						rt = _gzip.decompress(_b64.b64decode(rt)).decode("utf-8", errors="replace")
+					except Exception:
+						pass
+				texto = rt
+			if not texto:
+				continue
+			for line in texto.replace("\r\n", "\n").split("\n"):
+				if not line.strip():
+					continue
+				cols = line.split("|")
+				if len(cols) <= ips_col_idx:
+					continue
+				val = _norm(cols[ips_col_idx])
+				match = (norm_ips in val) or (val in norm_ips) or (norm_ips.replace('_', '') in val.replace('_', ''))
+				if not match:
+					continue
+				doc = cols[2].strip()
+				if doc and doc in seen:
+					continue
+				if doc:
+					seen.add(doc)
+				rows_out.append(line)
+
+		if not rows_out:
+			raise HTTPException(status_code=404, detail=f"No hay registros para la IPS '{ips_nombre}'.")
+
+		buf = build_data_excel("\n".join(rows_out), tmpl)
+		safe = _re.sub(r"[^A-Za-z0-9]+", "_", ips_nombre)[:40].strip("_") or "ips"
+		return StreamingResponse(
+			buf,
+			media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename={safe}.xlsx"},
+		)
+	except HTTPException:
+		raise
+	except Exception as e:
+		print(f"ERROR exportar_ips: {type(e).__name__}: {e}")
+		raise HTTPException(status_code=500, detail=f"Error al exportar la IPS: {type(e).__name__}: {e}")
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/caso-cerrado")
 async def listar_caso_cerrado(
 	current_user: User = Depends(get_current_user),

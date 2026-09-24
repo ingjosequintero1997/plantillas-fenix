@@ -376,6 +376,30 @@ export async function exportarCasoCerrado(filename = 'casos_cerrados.xlsx') {
   }, 200)
 }
 
+// Descarga el Excel de una IPS con TODAS las variables.
+export async function exportarIpsExcel(ips, mes = '', filename = 'ips.xlsx') {
+  const params = new URLSearchParams()
+  if (ips) params.set('ips', ips)
+  if (mes) params.set('mes', mes)
+  const resp = await fetch(`${API_BASE}/data/gestantes/ips-exportar?${params}`, { headers: authHeaders() })
+  if (!resp.ok) {
+    let msg = 'No se pudo exportar la IPS'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 200)
+}
+
 export async function fetchCasoCerrado(page = 1, pageSize = 50, search = '') {
   const params = new URLSearchParams({ page, page_size: pageSize })
   if (search) params.set('search', search)
