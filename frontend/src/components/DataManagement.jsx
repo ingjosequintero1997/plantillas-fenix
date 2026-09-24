@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
-import { updateGestante, createGestante, autoFillCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns, fetchMisGestantes } from '../api'
+import { updateGestante, createGestante, autoFillCasoCerrado, exportarCasoCerrado, fetchCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns, fetchMisGestantes } from '../api'
 import GestanteForm from './GestanteForm'
 import ExcelJS from 'exceljs'
 
@@ -78,6 +78,7 @@ export default function DataManagement({ correctedText }) {
   const [ipsSearch, setIpsSearch] = useState('')
   const [municipioFilter, setMunicipioFilter] = useState('')
   const [mesFiltro, setMesFiltro] = useState('')
+  const [casosCerradosTotal, setCasosCerradosTotal] = useState(0)
 
   const [ipsRows, setIpsRows] = useState([])
   const [ipsColumns, setIpsColumns] = useState([])
@@ -282,10 +283,33 @@ export default function DataManagement({ correctedText }) {
     }
   }
 
-  const handleAutoFillCasoCerrado = async () => {
+  const loadCasosCerrados = useCallback(async () => {
+    try {
+      const d = await fetchCasoCerrado()
+      setCasosCerradosTotal(d?.total || 0)
+    } catch (e) { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    if (!isIpsUser) loadCasosCerrados()
+  }, [isIpsUser, loadCasosCerrados])
+
+  const handleGenerarCasosCerrados = async () => {
+    setAutoFillMsg('Procesando casos cerrados...')
     try {
       const data = await autoFillCasoCerrado()
-      setAutoFillMsg(`Caso Cerrado auto-llenado: ${data.total_caso_cerrado} registros`)
+      await loadCasosCerrados()
+      await runAffiliationValidation(undefined, true)
+      setAutoFillMsg(`Casos cerrados procesados: ${data.total_caso_cerrado} registros movidos a su propia data.`)
+      setTimeout(() => setAutoFillMsg(''), 6000)
+    } catch (e) { setAutoFillMsg('Error: ' + (e.message || '')) }
+  }
+
+  const handleDescargarCasosCerrados = async () => {
+    setAutoFillMsg('Generando Excel de casos cerrados...')
+    try {
+      await exportarCasoCerrado('casos_cerrados.xlsx')
+      setAutoFillMsg('Excel de casos cerrados descargado.')
       setTimeout(() => setAutoFillMsg(''), 5000)
     } catch (e) { setAutoFillMsg('Error: ' + (e.message || '')) }
   }
@@ -339,7 +363,10 @@ export default function DataManagement({ correctedText }) {
                 <button onClick={handlePopulate} disabled={populating} className="btn-secondary text-sm" style={{ borderColor: '#e74c3c', color: '#e74c3c' }}>
                   {populating ? 'Re-poblando...' : 'Re-poblar data'}
                 </button>
-                <button onClick={handleAutoFillCasoCerrado} className="btn-secondary text-sm">Auto-fill Caso Cerrado</button>
+                <button onClick={handleGenerarCasosCerrados} className="btn-secondary text-sm">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  Generar casos cerrados
+                </button>
               </>
             )}
           </div>
@@ -350,6 +377,23 @@ export default function DataManagement({ correctedText }) {
         {noEncontrados > 0 && (
           <div className="px-3 py-2 rounded-md text-xs" style={{ color: '#e67e22', backgroundColor: '#FEF3E2' }}>
             {noEncontrados} usuaria(s) no encontradas en base de afiliados.
+          </div>
+        )}
+        {casosCerradosTotal > 0 && (
+          <div className="panel flex items-center justify-between gap-3 flex-wrap" style={{ borderLeft: '4px solid #B42318' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div>
+                <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>Casos cerrados</div>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{casosCerradosTotal} registro{casosCerradosTotal !== 1 ? 's' : ''} aparte, fuera de la data principal</div>
+              </div>
+            </div>
+            <button onClick={handleDescargarCasosCerrados} className="btn-secondary text-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Descargar Excel
+            </button>
           </div>
         )}
         {ipsNames.length > 0 && (

@@ -353,6 +353,29 @@ export async function autoFillCasoCerrado() {
   return apiFetch(`${API_BASE}/data/gestantes/caso-cerrado/auto-fill`, { method: 'POST' })
 }
 
+// Descarga el Excel de los casos cerrados (con todas las variables).
+export async function exportarCasoCerrado(filename = 'casos_cerrados.xlsx') {
+  const resp = await fetch(`${API_BASE}/data/gestantes/caso-cerrado/exportar`, {
+    headers: authHeaders(),
+  })
+  if (!resp.ok) {
+    let msg = 'No se pudieron exportar los casos cerrados'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 200)
+}
+
 export async function fetchCasoCerrado(page = 1, pageSize = 50, search = '') {
   const params = new URLSearchParams({ page, page_size: pageSize })
   if (search) params.set('search', search)

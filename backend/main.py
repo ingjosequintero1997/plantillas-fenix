@@ -4121,6 +4121,24 @@ async def validate_affiliation(payload: dict, current_user: User = Depends(get_c
 				"mes": mes_por_fila[idx] if mes_por_fila else "",
 			})
 	
+	# Excluir de la data principal las usuarias marcadas como Caso Cerrado
+	# (se manejan en su propia data/descarga).
+	try:
+		_db = SessionLocal()
+		from sqlalchemy import text as _t3
+		rows_cc = _db.execute(_t3(
+			'SELECT "NO_DE_IDENTIFICACION" FROM gestantes '
+			"WHERE LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('true','1')"
+		)).fetchall()
+		cerrados = {str(r[0]).strip() for r in rows_cc if r[0]}
+		_db.close()
+		if cerrados:
+			usuarios = [u for u in usuarios if u["numero_id"] not in cerrados]
+			if not usuarios:
+				return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}, "info": "Toda la data corresponde a casos cerrados."}
+	except Exception:
+		pass
+	
 	if not usuarios:
 		return {"success": True, "encontrados": 0, "no_encontrados": 0, "errors": [], "valid_users": [], "ips_groups": {}}
 	
@@ -5519,6 +5537,80 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 		db.rollback()
 		print(f"ERROR auto_fill_caso_cerrado: {type(e).__name__}: {e}")
 		raise HTTPException(status_code=500, detail=f"Error al ejecutar el autocompletado: {type(e).__name__}: {e}")
+
+
+@app.get("/data/gestantes/caso-cerrado/exportar")
+async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
+	"""Genera un Excel con los casos cerrados (fecha real de parto o aborto),
+	con TODAS las variables del instructivo, leyendo los cargues."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		import re as _re
+		meta = get_template_by_key("gestante")
+		tmpl = meta["template"]
+		names = [t["name"] for t in tmpl]
+
+		def _idx(patterns):
+			for i, n in enumerate(names):
+				un = n.strip().upper()
+				if any(p in un for p in patterns):
+					return i
+			return None
+
+		i_parto = _idx(["FECHA DE PARTO"])
+		i_aborto = _idx(["FECHA DE ABORTO"])
+		i_fecha = next((i for i, n in enumerate(names) if n.strip().upper() == "FECHA"), None)
+
+		_fr = _re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
+
+		def _real(v):
+			if v is None:
+				return False
+			m = _fr.match(str(v).strip())
+			return bool(m) and int(m.group(1)) >= 1900
+
+		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").order_by(Cargue.id.asc()).all()
+		rows_out = []
+		vistos = set()
+		for c in cargues:
+			texto = _decompress_cargue(c)
+			if not texto:
+				continue
+			for line in texto.replace("\r\n", "\n").split("\n"):
+				if not line.strip():
+					continue
+				cols = line.split("|")
+				if len(cols) < 3:
+					continue
+				doc = cols[2].strip()
+				if not doc or doc.upper() == "NO_DE_IDENTIFICACION" or doc in vistos:
+					continue
+				parto = cols[i_parto] if (i_parto is not None and i_parto < len(cols)) else ""
+				aborto = cols[i_aborto] if (i_aborto is not None and i_aborto < len(cols)) else ""
+				fecha = cols[i_fecha] if (i_fecha is not None and i_fecha < len(cols)) else ""
+				if _real(parto) or _real(aborto) or _real(fecha):
+					vistos.add(doc)
+					rows_out.append(line)
+
+		if not rows_out:
+			raise HTTPException(status_code=404, detail="No se encontraron casos cerrados (con fecha real de parto o aborto).")
+
+		corrected_text = "\n".join(rows_out)
+		buf = build_data_excel(corrected_text, tmpl)
+		fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+		return StreamingResponse(
+			buf,
+			media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			headers={"Content-Disposition": f"attachment; filename=casos_cerrados_{fecha_hoy}.xlsx"},
+		)
+	except HTTPException:
+		raise
+	except Exception as e:
+		print(f"ERROR exportar_caso_cerrado: {type(e).__name__}: {e}")
+		raise HTTPException(status_code=500, detail=f"Error al exportar casos cerrados: {type(e).__name__}: {e}")
+	finally:
+		db.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════
