@@ -18,7 +18,7 @@ function WakingUpScreen() {
           </svg>
         </div>
         <div style={{ fontSize: '1rem', fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>
-          FÉNIX Data
+          DATAS PYM
         </div>
         <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: 16 }}>
           Conectando con el servidor...

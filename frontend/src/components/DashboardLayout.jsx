@@ -241,7 +241,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           <button onClick={() => setOpen(!open)} className="p-1.5 rounded-lg text-white/80 hover:bg-white/15 transition-all" style={{ transitionDuration: '120ms' }}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          <span className="text-white font-semibold text-[0.85rem] tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>FENIX DATA</span>
+          <span className="text-white font-semibold text-[0.85rem] tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>DATAS PYM</span>
         </div>
       </header>
 

@@ -131,7 +131,7 @@ export default function DataManagement({ correctedText }) {
     setDownloadingIps(ipsName)
     try {
       const workbook = new ExcelJS.Workbook()
-      workbook.creator = 'FENIX DATA'
+      workbook.creator = 'DATAS PYM'
       workbook.created = new Date()
       const sheet = workbook.addWorksheet(ipsName.substring(0, 31))
       if (isIpsUser && ipsColumns.length) {
