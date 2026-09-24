@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import ReactDOM from 'react-dom'
 import * as pako from 'pako'
-import { fetchCargues, fetchCargue, deleteCargue, descargarCargueExcel, descargarCargueTxt, descargarReporteErroresExcel } from '../api'
+import { fetchCargues, fetchCargue, deleteCargue, descargarCargueExcel, descargarCargueTxt, descargarReporteErroresExcel, fetchCasoCerrado, exportarCasoCerrado } from '../api'
 import ErrorSummaryTable from './ErrorSummaryTable'
 
 const PER_PAGE = 12
@@ -189,6 +189,21 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
 
   useEffect(() => { loadRecords() }, [loadRecords])
 
+  const [casosCerrados, setCasosCerrados] = useState(0)
+  useEffect(() => {
+    let m = true
+    fetchCasoCerrado()
+      .then((d) => { if (m) setCasosCerrados(d?.total || 0) })
+      .catch(() => {})
+    return () => { m = false }
+  }, [])
+
+  const handleDescargarCasosCerrados = async () => {
+    setError('')
+    try { await exportarCasoCerrado('casos_cerrados.xlsx') }
+    catch (e) { setError(e.message || 'No se pudieron descargar los casos cerrados') }
+  }
+
   const handleDelete = useCallback(async () => {
     if (!deleting) return
     setDeleteLoading(true)
@@ -255,6 +270,24 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
           </div>
         </div>
       </div>
+
+      {casosCerrados > 0 && (
+        <div className="panel flex items-center justify-between gap-3 flex-wrap" style={{ borderLeft: '4px solid #B42318' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <div>
+              <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>Casos cerrados</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{casosCerrados} registro{casosCerrados !== 1 ? 's' : ''} en su propia data (fuera de los cargues)</div>
+            </div>
+          </div>
+          <button onClick={handleDescargarCasosCerrados} className="btn-secondary text-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Descargar Excel
+          </button>
+        </div>
+      )}
 
       {error && <div className="px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid rgba(180,35,24,0.1)' }}>
         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

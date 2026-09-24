@@ -290,10 +290,6 @@ export default function DataManagement({ correctedText }) {
     } catch (e) { /* ignore */ }
   }, [])
 
-  useEffect(() => {
-    if (!isIpsUser) loadCasosCerrados()
-  }, [isIpsUser, loadCasosCerrados])
-
   const handleGenerarCasosCerrados = async () => {
     setAutoFillMsg('Procesando casos cerrados...')
     try {
