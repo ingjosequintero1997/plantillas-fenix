@@ -40,14 +40,9 @@ function defaultsForRole(role, roleDefaults) {
 
 function PermissionToggles({ perms, onChange }) {
   const toggle = (key) => onChange({ ...perms, [key]: !perms[key] })
-  const setAll = (value) => onChange(Object.fromEntries(ALL_PERMISSION_KEYS.map((k) => [k, value])))
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
-        <button type="button" onClick={() => setAll(true)} className="btn-secondary text-xs px-2.5 py-1">Habilitar todo</button>
-        <button type="button" onClick={() => setAll(false)} className="btn-secondary text-xs px-2.5 py-1">Deshabilitar todo</button>
-      </div>
       {PERMISSION_GROUPS.map((group) => (
         <div key={group.label}>
           <div className="section-label mb-2">{group.label}</div>
@@ -58,17 +53,27 @@ function PermissionToggles({ perms, onChange }) {
                   <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</div>
                   <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{desc}</div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => toggle(key)}
-                  className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                  style={{ backgroundColor: perms[key] ? 'var(--primary)' : '#D1D5DB' }}
-                >
-                  <span
-                    className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                    style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
-                  />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => toggle(key)}
+                    className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                    style={{ backgroundColor: perms[key] ? 'var(--green-500)' : '#D1D5DB' }}
+                    aria-label={perms[key] ? 'Deshabilitar ' + label : 'Habilitar ' + label}
+                  >
+                    <span
+                      className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                      style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggle(key)}
+                    className={perms[key] ? 'btn-ghost text-xs px-2.5 py-1' : 'btn-primary text-xs px-2.5 py-1'}
+                  >
+                    {perms[key] ? 'Deshabilitar' : 'Habilitar'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
