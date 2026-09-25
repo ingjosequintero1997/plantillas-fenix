@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { fetchMyPermissions } from './api'
 
 const AuthContext = createContext(null)
 
@@ -37,10 +38,21 @@ async function fetchSystemConfig(retries = 2) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStored())
+  const [permissions, setPermissions] = useState(null)
   const [systemConfig, setSystemConfig] = useState({ cargue_masivo: false, historias_pdf: true })
   const [ready, setReady] = useState(false)
 
   const isAuthenticated = !!user
+
+  const loadPermissions = useCallback(async () => {
+    try {
+      const data = await fetchMyPermissions()
+      setPermissions(data?.permissions || null)
+    } catch {
+      // Si falla, el menu usa la visibilidad por rol (no se bloquea nada).
+      setPermissions(null)
+    }
+  }, [])
 
   useEffect(() => {
     const stored = getStored()
@@ -51,6 +63,7 @@ export function AuthProvider({ children }) {
 
     // NO bloquear la UI: entrar de inmediato con la sesion guardada.
     setReady(true)
+    loadPermissions()
 
     const base = getApiBase()
 
@@ -87,6 +100,7 @@ export function AuthProvider({ children }) {
       sessionStorage.removeItem('auth')
       localStorage.removeItem('ultima_data_validada')
       setUser(null)
+      setPermissions(null)
       setSystemConfig({ cargue_masivo: false, historias_pdf: true })
     }
     window.addEventListener('auth:expired', onExpired)
@@ -122,7 +136,8 @@ export function AuthProvider({ children }) {
         const userData = { ...data.user, token: data.token }
         sessionStorage.setItem('auth', JSON.stringify(userData))
         setUser(userData)
-        return
+        loadPermissions()
+        return userData
       } catch (e) {
         clearTimeout(timer)
         if (e.name === 'AbortError') {
@@ -168,9 +183,10 @@ export function AuthProvider({ children }) {
         const userData = { ...data.user, token: data.token, role: 'ips_user' }
         sessionStorage.setItem('auth', JSON.stringify(userData))
         setUser(userData)
+        loadPermissions()
         const cfg = await fetchSystemConfig()
         setSystemConfig(cfg)
-        return
+        return userData
       } catch (e) {
         clearTimeout(timer)
         if (e.name === 'AbortError') {
@@ -192,11 +208,12 @@ export function AuthProvider({ children }) {
     sessionStorage.removeItem('auth')
     localStorage.removeItem('ultima_data_validada')
     setUser(null)
+    setPermissions(null)
     setSystemConfig({ cargue_masivo: false, historias_pdf: true })
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, ready, login, loginIps, logout, systemConfig, refreshConfig }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, ready, login, loginIps, logout, permissions, refreshPermissions: loadPermissions, systemConfig, refreshConfig }}>
       {children}
     </AuthContext.Provider>
   )

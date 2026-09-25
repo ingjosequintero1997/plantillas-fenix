@@ -102,8 +102,17 @@ function NavItem({ item, active, onClick }) {
   )
 }
 
-function NavSection({ label, items, role, section, onNavigate, onSidebarClose }) {
-  const visible = items.filter((i) => i.roles.includes(role))
+// Modulos que siempre quedan reservados al administrador.
+const ADMIN_ONLY_SECTIONS = ['prestadores', 'configuracion']
+
+function NavSection({ label, items, role, section, onNavigate, onSidebarClose, permissions }) {
+  const visible = items.filter((i) => {
+    if (!i.roles.includes(role)) return false
+    // Los permisos configurables solo aplican a prestador y lider.
+    if (!permissions || (role !== 'prestador' && role !== 'lider')) return true
+    if (ADMIN_ONLY_SECTIONS.includes(i.key)) return true
+    return permissions[i.key] !== false
+  })
   if (visible.length === 0) return null
   return (
     <div className="mb-1">
@@ -243,7 +252,7 @@ function ChangePasswordModal({ onClose }) {
 }
 
 export default function DashboardLayout({ section, onNavigate, children, templates = [], activeTemplate = null, onSelectTemplate, systemConfig = {}, onRefreshConfig }) {
-  const { user, logout } = useAuth()
+  const { user, logout, permissions } = useAuth()
   const [dark, setDark] = useState(false)
   const [open, setOpen] = useState(false)
   const [pwdOpen, setPwdOpen] = useState(false)
@@ -288,11 +297,11 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <nav className="flex-1 overflow-y-auto py-2">
 
         {role === 'ips_user' ? (
-          <NavSection label="Menu" items={getIpsMenuItems(systemConfig)} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
+          <NavSection label="Menu" items={getIpsMenuItems(systemConfig)} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
         ) : (
           <>
             {/* Menu: siempre visible */}
-            <NavSection label="Menu" items={MENU_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
+            <NavSection label="Menu" items={MENU_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
 
             {/* Plantilla activa: indicador */}
             {hasTemplate && templateMeta && (
@@ -325,8 +334,8 @@ export default function DashboardLayout({ section, onNavigate, children, templat
             {/* Operaciones y Gestion: solo si hay plantilla activa */}
             {hasTemplate && (
               <>
-                <NavSection label="Operaciones" items={OPERACIONES_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
-                <NavSection label="Gestion" items={GESTION_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} />
+                <NavSection label="Operaciones" items={OPERACIONES_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
+                <NavSection label="Gestion" items={GESTION_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
               </>
             )}
           </>

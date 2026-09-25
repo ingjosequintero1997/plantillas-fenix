@@ -2721,6 +2721,109 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 		db.close()
 
 
+# ─── Permisos por modulo (control total del administrador) ────────────────
+# Cada prestador o lider tiene un mapa de modulos habilitados/deshabilitados.
+# El admin siempre tiene todo habilitado. "Usuarios" y "Configuracion" no son
+# configurables: son exclusivos del admin.
+MODULE_KEYS = (
+	"inicio", "subir", "data", "historial", "consolidar",
+	"indicadores", "verificar", "historias", "reportes",
+)
+
+MODULE_LABELS = {
+	"inicio": "Inicio",
+	"subir": "Validar data",
+	"data": "Gestion de data",
+	"historial": "Verificar data",
+	"consolidar": "Consolidar",
+	"indicadores": "Indicadores",
+	"verificar": "Verificar afiliado",
+	"historias": "Historias clinicas",
+	"reportes": "Reportes pendientes",
+}
+
+# Modulos visibles por defecto segun el rol (mantiene el comportamiento actual).
+ROLE_DEFAULT_MODULES = {
+	"prestador": {"inicio", "subir", "data", "indicadores", "verificar", "historias", "reportes"},
+	"lider": {"inicio", "data", "historial", "consolidar", "indicadores", "verificar", "historias", "reportes"},
+}
+
+# Ruta del backend -> modulo que la habilita. Solo se listan endpoints que
+# pertenecen a un unico modulo; los compartidos (ej. /cargues) quedan abiertos.
+MODULE_PATH_RULES = (
+	("consolidar", ("/consolidate",)),
+	("indicadores", ("/indicadores",)),
+	("reportes", ("/reportes",)),
+	("historias", ("/historias",)),
+	("verificar", ("/verificar-afiliado",)),
+	("subir", ("/upload", "/revalidate", "/evaluate", "/validate-data", "/export")),
+	("data", ("/data/", "/setup-gestantes")),
+)
+
+
+def default_permissions(role: str) -> dict:
+	allowed = ROLE_DEFAULT_MODULES.get(role or "")
+	if allowed is None:
+		# Roles sin configuracion (ej. ips_user, admin) no se limitan por modulo.
+		return {k: True for k in MODULE_KEYS}
+	return {k: (k in allowed) for k in MODULE_KEYS}
+
+
+def effective_permissions(role: str, stored) -> dict:
+	"""Permisos por defecto del rol, sobrescritos por lo guardado en la BD."""
+	perms = default_permissions(role)
+	if isinstance(stored, dict):
+		for k in MODULE_KEYS:
+			if k in stored:
+				perms[k] = bool(stored[k])
+	return perms
+
+
+def permissions_for_user(user_id, role: str) -> dict:
+	"""Permisos efectivos del usuario. Ante error de BD se permite todo."""
+	if role == "admin":
+		return {k: True for k in MODULE_KEYS}
+	try:
+		db = SessionLocal()
+		try:
+			prestador = db.query(Prestador).filter(Prestador.user_id == user_id).first()
+			return effective_permissions(role, prestador.permissions if prestador else None)
+		finally:
+			db.close()
+	except Exception:
+		return {k: True for k in MODULE_KEYS}
+
+
+def _module_for_path(path: str):
+	for module, prefixes in MODULE_PATH_RULES:
+		for prefix in prefixes:
+			if path == prefix or path.startswith(prefix):
+				return module
+	return None
+
+
+@app.middleware("http")
+async def enforce_module_permissions(request: Request, call_next):
+	"""Bloquea en el servidor los modulos que el administrador deshabilito."""
+	module = _module_for_path(request.url.path)
+	if module is None or request.method == "OPTIONS":
+		return await call_next(request)
+	auth = request.headers.get("authorization") or ""
+	if not auth.lower().startswith("bearer "):
+		return await call_next(request)
+	payload = verify_token(auth.split(" ", 1)[1].strip())
+	if not payload:
+		return await call_next(request)
+	role = payload.get("role")
+	if role not in ("prestador", "lider"):
+		return await call_next(request)
+	if permissions_for_user(payload.get("uid"), role).get(module, True):
+		return await call_next(request)
+	return JSONResponse(status_code=403, content={
+		"detail": "Tu usuario no tiene habilitado el modulo de " + MODULE_LABELS.get(module, module)
+	})
+
+
 @app.get("/admin/prestadores")
 async def list_prestadores(admin: User = Depends(require_admin)):
 	ensure_db_ready()
@@ -2741,7 +2844,7 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 				"cargues_count": cargues_count,
 				"template_key": plantillas[0] if plantillas else "gestante",
 				"role": p.user.role if p.user else "prestador",
-				"permissions": p.permissions or {},
+				"permissions": effective_permissions(p.user.role if p.user else "prestador", p.permissions),
 			})
 		return {"prestadores": result}
 	except OperationalError:
@@ -2800,28 +2903,8 @@ async def update_prestador(prestador_id: int, payload: dict, admin: User = Depen
 
 @app.get("/auth/permissions")
 async def get_my_permissions(current_user: User = Depends(get_current_user)):
-	"""Devuelve los permisos del prestador actual."""
-	DEFAULT_PERMISSIONS = {
-		"cargue_masivo": True,
-		"historias_clinicas": True,
-		"ver_historial": True,
-		"verificar_afiliado": True,
-		"formulario_registro": True,
-	}
-	try:
-		db = SessionLocal()
-		try:
-			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
-			if current_user.role == "admin":
-				return {"permissions": {k: True for k in DEFAULT_PERMISSIONS}}
-			if prestador and prestador.permissions:
-				merged = {**DEFAULT_PERMISSIONS, **prestador.permissions}
-				return {"permissions": merged}
-			return {"permissions": DEFAULT_PERMISSIONS}
-		finally:
-			db.close()
-	except Exception:
-		return {"permissions": DEFAULT_PERMISSIONS}
+	"""Devuelve los permisos efectivos del usuario actual."""
+	return {"permissions": permissions_for_user(current_user.id, current_user.role)}
 
 
 # ─── Consolidación de cargues (admin / EPS) ───────────────────────────────

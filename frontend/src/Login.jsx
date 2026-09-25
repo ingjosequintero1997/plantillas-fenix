@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
 export default function Login() {
-  const { isAuthenticated, login, loginIps } = useAuth()
+  const { isAuthenticated, login, loginIps, logout } = useAuth()
   const navigate = useNavigate()
+  const [profile, setProfile] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -16,11 +17,27 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!profile) { setError('Selecciona tu perfil.'); return }
     if (!username.trim() || !password.trim()) { setError('Completa todos los campos.'); return }
     setSubmitting(true); setError('')
     try {
-      try { await loginIps(username, password) }
-      catch { await login(username, password) }
+      let userData = null
+      if (profile === 'prestador') {
+        // El perfil Prestador incluye tanto al prestador como al usuario IPS.
+        try { userData = await loginIps(username, password) }
+        catch { userData = await login(username, password) }
+      } else {
+        userData = await login(username, password)
+      }
+      const role = userData?.role
+      const matches = profile === 'admin' ? role === 'admin'
+        : profile === 'lider' ? role === 'lider'
+          : (role === 'prestador' || role === 'ips_user')
+      if (!matches) {
+        logout()
+        setError('El perfil seleccionado no coincide con estas credenciales.')
+        passRef.current?.focus()
+      }
     }
     catch (err) { setError(err.message || 'Credenciales incorrectas.'); passRef.current?.focus() }
     finally { setSubmitting(false) }
@@ -57,6 +74,20 @@ export default function Login() {
           {/* Formulario */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#333' }}>Perfil</label>
+                <select
+                  value={profile}
+                  onChange={(e) => { setProfile(e.target.value); setError('') }}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#3a863a]/30 focus:border-[#3a863a] transition-all"
+                >
+                  <option value="">Selecciona tu perfil</option>
+                  <option value="admin">Administrador</option>
+                  <option value="lider">Líder de área</option>
+                  <option value="prestador">Prestador / IPS</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#333' }}>Usuario</label>
                 <input

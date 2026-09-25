@@ -124,7 +124,7 @@ function maybeDecompress(data) {
 }
 
 export default function App() {
-  const { user, systemConfig, refreshConfig } = useAuth()
+  const { user, systemConfig, refreshConfig, permissions } = useAuth()
 
   const [section, setSection] = useState(user?.role === 'ips_user' ? 'data' : 'inicio')
   const [activeTemplate, setActiveTemplate] = useState('')
@@ -170,12 +170,21 @@ export default function App() {
   }, [user, section, systemConfig])
 
   const isAdmin = user?.role === 'admin'
+
   // Los prestadores y lideres solo validan: forzar modo validador para ellos.
   useEffect(() => {
     if (!isAdmin && processingMode === 'limpiador') {
       setProcessingMode('validador')
     }
   }, [isAdmin, processingMode])
+
+  // Si el administrador deshabilito el modulo de la seccion actual, volver a Inicio.
+  useEffect(() => {
+    const role = user?.role
+    if (!permissions || (role !== 'prestador' && role !== 'lider')) return
+    if (section === 'prestadores' || section === 'configuracion') return
+    if (permissions[section] === false) setSection('inicio')
+  }, [permissions, user, section])
 
   const hasDataLoaded = Boolean(rawText)
 

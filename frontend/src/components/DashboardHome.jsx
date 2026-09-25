@@ -45,7 +45,7 @@ function Stat({ label, value, icon, isCritical }) {
   )
 }
 
-export default function DashboardHome({ user, summary, batchResults, templates, activeTemplate, onNavigate }) {
+export default function DashboardHome({ user, summary, batchResults, templates, activeTemplate, onNavigate, permissions }) {
   const isAdmin = user?.role === 'admin'
   const role = user?.role === 'admin' ? 'admin' : user?.role === 'lider' ? 'lider' : 'prestador'
   const firstName = (user?.name || 'usuario').split(' ')[0]
@@ -53,7 +53,12 @@ export default function DashboardHome({ user, summary, batchResults, templates, 
   const saludo = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
   const now = new Date().toLocaleString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
   const hasErrors = (summary?.errors ?? 0) > 0
-  const quickActions = QUICK_ACTIONS.filter((a) => a.roles.includes(role))
+  const quickActions = QUICK_ACTIONS.filter((a) => {
+    if (!a.roles.includes(role)) return false
+    // Los permisos configurables solo aplican a prestador y lider.
+    if (!permissions || (role !== 'prestador' && role !== 'lider')) return true
+    return permissions[a.key] !== false
+  })
 
   const recientes = batchResults.slice(0, 5).map((item) => ({
     prestador: user?.name || '—',

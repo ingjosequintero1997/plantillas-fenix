@@ -4,21 +4,34 @@ import { fetchPrestadores, createPrestador, updatePrestador, updatePrestadorPerm
 const TEMPLATE_LABELS = { gestante: 'Gestante', citologia: 'Citología', mamografia: 'Mamografía', penta: 'Penta' }
 const PER_PAGE = 10
 
-const PERMISSION_LABELS = {
-  cargue_masivo: { label: 'Cargue masivo de data', desc: 'Puede subir archivos Excel con múltiples registros' },
-  historias_clinicas: { label: 'Historias clínicas', desc: 'Puede subir y gestionar historias clínicas (PDF)' },
-  ver_historial: { label: 'Ver historial de cargues', desc: 'Puede ver el historial de cargues anteriores' },
-  verificar_afiliado: { label: 'Verificar afiliado', desc: 'Puede consultar datos de afiliadas por documento' },
-  formulario_registro: { label: 'Formulario de registro', desc: 'Puede usar el formulario manual de registro' },
-}
+const PERMISSION_GROUPS = [
+  {
+    label: 'General',
+    items: [
+      { key: 'inicio', label: 'Inicio', desc: 'Centro de operaciones' },
+    ],
+  },
+  {
+    label: 'Operaciones',
+    items: [
+      { key: 'subir', label: 'Validar data', desc: 'Subir y validar archivos' },
+      { key: 'data', label: 'Gestión de data', desc: 'Ver y editar registros de gestantes' },
+      { key: 'historial', label: 'Verificar data', desc: 'Historial de cargues' },
+      { key: 'consolidar', label: 'Consolidar', desc: 'Unir las datas' },
+      { key: 'indicadores', label: 'Indicadores', desc: 'Métricas y estadísticas' },
+    ],
+  },
+  {
+    label: 'Gestión',
+    items: [
+      { key: 'verificar', label: 'Verificar afiliado', desc: 'Consulta de datos por documento' },
+      { key: 'historias', label: 'Historias clínicas', desc: 'Expedientes PDF' },
+      { key: 'reportes', label: 'Reportes pendientes', desc: 'Procedimientos y medicamentos' },
+    ],
+  },
+]
 
-const DEFAULT_PERMISSIONS = {
-  cargue_masivo: true,
-  historias_clinicas: true,
-  ver_historial: true,
-  verificar_afiliado: true,
-  formulario_registro: true,
-}
+const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap((g) => g.items.map((i) => i.key))
 
 function EmptyState({ onNew }) {
   return (
@@ -127,11 +140,20 @@ function NewPrestadorForm({ onClose, onCreated }) {
 }
 
 function PermissionsPanel({ prestador, onClose, onSaved }) {
-  const [perms, setPerms] = useState({ ...DEFAULT_PERMISSIONS, ...(prestador.permissions || {}) })
+  const [perms, setPerms] = useState(() => {
+    const base = {}
+    ALL_PERMISSION_KEYS.forEach((k) => { base[k] = prestador.permissions?.[k] !== false })
+    return base
+  })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
   const toggle = (key) => setPerms((p) => ({ ...p, [key]: !p[key] }))
+  const setAll = (value) => setPerms(() => {
+    const next = {}
+    ALL_PERMISSION_KEYS.forEach((k) => { next[k] = value })
+    return next
+  })
 
   const save = async () => {
     setSaving(true); setMsg('')
@@ -152,7 +174,9 @@ function PermissionsPanel({ prestador, onClose, onSaved }) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Permisos de {prestador.nombre}</div>
-          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Controla qué acciones puede realizar este usuario.</div>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Controla qué módulos puede usar este usuario ({prestador.role === 'lider' ? 'Líder de área' : 'Prestador'}).
+          </div>
         </div>
         <button onClick={onClose} className="btn-ghost text-sm">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -160,24 +184,36 @@ function PermissionsPanel({ prestador, onClose, onSaved }) {
         </button>
       </div>
 
-      <div className="space-y-2">
-        {Object.entries(PERMISSION_LABELS).map(([key, { label, desc }]) => (
-          <div key={key} className="flex items-center justify-between px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-            <div>
-              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{desc}</div>
+      <div className="flex items-center justify-end gap-2 mb-3">
+        <button type="button" onClick={() => setAll(true)} className="btn-secondary text-xs px-2.5 py-1">Habilitar todo</button>
+        <button type="button" onClick={() => setAll(false)} className="btn-secondary text-xs px-2.5 py-1">Deshabilitar todo</button>
+      </div>
+
+      <div className="space-y-4">
+        {PERMISSION_GROUPS.map((group) => (
+          <div key={group.label}>
+            <div className="section-label mb-2">{group.label}</div>
+            <div className="space-y-2">
+              {group.items.map(({ key, label, desc }) => (
+                <div key={key} className="flex items-center justify-between px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{desc}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggle(key)}
+                    className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                    style={{ backgroundColor: perms[key] ? 'var(--primary)' : '#D1D5DB' }}
+                  >
+                    <span
+                      className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                      style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
+                    />
+                  </button>
+                </div>
+              ))}
             </div>
-            <button
-              type="button"
-              onClick={() => toggle(key)}
-              className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-              style={{ backgroundColor: perms[key] ? 'var(--primary)' : '#D1D5DB' }}
-            >
-              <span
-                className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
-              />
-            </button>
           </div>
         ))}
       </div>
