@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
-import { fetchPrestadores, createPrestador, updatePrestador, updatePrestadorPermissions, fetchPermissionsCatalog } from '../api'
+import { fetchPrestadores, createPrestador, updatePrestador, updatePrestadorPermissions, fetchPermissionsCatalog, setUsuarioIpsActive } from '../api'
 
 const TEMPLATE_LABELS = { gestante: 'Gestante', citologia: 'Citología', mamografia: 'Mamografía', penta: 'Penta' }
 const PER_PAGE = 10
@@ -471,7 +471,7 @@ export default function PrestadoresView() {
               </thead>
               <tbody>
                 {pageItems.map((p) => (
-                  <tr key={p.id}>
+                  <tr key={`${p.tipo || 'prestador'}-${p.id}`}>
                     <td>
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium"
@@ -484,22 +484,38 @@ export default function PrestadoresView() {
                         </div>
                       </div>
                     </td>
-                    <td><span className="badge-neutral">{p.ips || '—'}</span></td>
+                    <td><span className="badge-neutral">{p.tipo === 'ips' ? (p.active ? 'Activa' : 'Inactiva') : (p.ips || '—')}</span></td>
                     <td>
-                      <span className={p.role === 'lider' ? 'badge-success' : 'badge-neutral'}>
-                        {p.role === 'lider' ? 'Líder' : 'Prestador'}
+                      <span className={p.role === 'lider' ? 'badge-success' : p.tipo === 'ips' ? 'badge-accent' : 'badge-neutral'}>
+                        {p.tipo === 'ips' ? 'IPS' : p.role === 'lider' ? 'Líder' : 'Prestador'}
                       </span>
                     </td>
-                    <td className="text-center">{p.cargues_count ?? 0}</td>
+                    <td className="text-center">{p.tipo === 'ips' ? '—' : (p.cargues_count ?? 0)}</td>
                     <td className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setView({ type: 'edit', data: p })} className="btn-ghost text-xs px-2 py-1" title="Editar datos">
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      {p.tipo === 'ips' ? (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await setUsuarioIpsActive(p.id, !p.active)
+                              load()
+                            } catch (e) {
+                              setError(e.message || 'No se pudo actualizar el acceso de la IPS.')
+                            }
+                          }}
+                          className={p.active ? 'btn-ghost text-xs px-2.5 py-1' : 'btn-primary text-xs px-2.5 py-1'}
+                        >
+                          {p.active ? 'Desactivar' : 'Activar'}
                         </button>
-                        <button onClick={() => setView({ type: 'perms', data: p })} className="btn-ghost text-xs px-2 py-1" title="Permisos">
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                        </button>
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => setView({ type: 'edit', data: p })} className="btn-ghost text-xs px-2 py-1" title="Editar datos">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          </button>
+                          <button onClick={() => setView({ type: 'perms', data: p })} className="btn-ghost text-xs px-2 py-1" title="Permisos">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

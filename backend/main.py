@@ -2847,6 +2847,7 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 			cargues_count = db.query(Cargue).filter(Cargue.prestador_id == p.id).count()
 			plantillas = [pp.template_key for pp in p.plantillas]
 			result.append({
+				"tipo": "prestador",
 				"id": p.id,
 				"nombre": p.nombre,
 				"nit": p.nit,
@@ -2857,6 +2858,21 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 				"template_key": plantillas[0] if plantillas else "gestante",
 				"role": p.user.role if p.user else "prestador",
 				"permissions": effective_permissions(p.user.role if p.user else "prestador", p.permissions),
+			})
+		# Incluir las IPS habilitadas (usuarios_ips) como usuarios del modulo.
+		ips = db.query(UsuarioIPS).order_by(UsuarioIPS.ips_name.asc()).all()
+		for u in ips:
+			result.append({
+				"tipo": "ips",
+				"id": u.id,
+				"nombre": u.ips_name,
+				"ips_name": u.ips_name,
+				"ips": u.ips_name,
+				"username": u.username,
+				"cargues_count": 0,
+				"active": u.active,
+				"role": "ips_user",
+				"permissions": {},
 			})
 		return {"prestadores": result}
 	except OperationalError:
