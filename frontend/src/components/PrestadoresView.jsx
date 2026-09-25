@@ -93,7 +93,7 @@ function EmptyState({ onNew }) {
 }
 
 function NewPrestadorForm({ onClose, onCreated, roleDefaults }) {
-  const [form, setForm] = useState({ nombre: '', ips: '', username: '', password: '', role: 'prestador', template_key: 'gestante' })
+  const [form, setForm] = useState({ nombre: '', ips: '', municipio: '', username: '', password: '', role: 'prestador', template_key: 'gestante' })
   const [perms, setPerms] = useState(() => defaultsForRole('prestador', roleDefaults))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -153,14 +153,21 @@ function NewPrestadorForm({ onClose, onCreated, roleDefaults }) {
 
         <div className="space-y-3">
           <div>
-            <label className="form-label">Nombre de la institución *</label>
-            <input name="nombre" value={form.nombre} onChange={handleChange} required className="input" placeholder="E.S.E. Hospital San José" />
+            <label className="form-label">{form.role === 'lider' ? 'Nombre del líder de área *' : 'Nombre de la institución *'}</label>
+            <input name="nombre" value={form.nombre} onChange={handleChange} required className="input" placeholder={form.role === 'lider' ? 'Coordinador área norte' : 'E.S.E. Hospital San José'} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="form-label">Código IPS</label>
-              <input name="ips" value={form.ips} onChange={handleChange} className="input" placeholder="803709" />
-            </div>
+            {form.role === 'prestador' ? (
+              <div>
+                <label className="form-label">Código IPS</label>
+                <input name="ips" value={form.ips} onChange={handleChange} className="input" placeholder="803709" />
+              </div>
+            ) : (
+              <div>
+                <label className="form-label">Área / Regional</label>
+                <input name="municipio" value={form.municipio} onChange={handleChange} className="input" placeholder="Área norte" />
+              </div>
+            )}
             <div>
               <label className="form-label">Rol</label>
               <select name="role" value={form.role} onChange={handleChange} className="input">
@@ -315,20 +322,24 @@ function EditPrestadorForm({ prestador, onClose, onSaved, roleDefaults }) {
 
         <div className="space-y-3">
           <div>
-            <label className="form-label">Nombre de la institución</label>
+            <label className="form-label">{form.role === 'lider' ? 'Nombre del líder de área' : 'Nombre de la institución'}</label>
             <input name="nombre" value={form.nombre} onChange={handleChange} className="input" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {form.role === 'prestador' ? (
+              <>
+                <div>
+                  <label className="form-label">Código IPS</label>
+                  <input name="ips" value={form.ips} onChange={handleChange} className="input" placeholder="803709" />
+                </div>
+                <div>
+                  <label className="form-label">NIT</label>
+                  <input name="nit" value={form.nit} onChange={handleChange} className="input" />
+                </div>
+              </>
+            ) : null}
             <div>
-              <label className="form-label">Código IPS</label>
-              <input name="ips" value={form.ips} onChange={handleChange} className="input" placeholder="803709" />
-            </div>
-            <div>
-              <label className="form-label">NIT</label>
-              <input name="nit" value={form.nit} onChange={handleChange} className="input" />
-            </div>
-            <div>
-              <label className="form-label">Municipio</label>
+              <label className="form-label">{form.role === 'lider' ? 'Área / Regional' : 'Municipio'}</label>
               <input name="municipio" value={form.municipio} onChange={handleChange} className="input" />
             </div>
           </div>
