@@ -625,9 +625,54 @@ def _get_system_config(key, default="true"):
         return default
 
 
+def _health_error(e: Exception) -> str:
+	"""Primer renglon del error, con credenciales de URL redactadas."""
+	import re as _re
+	try:
+		s = str(e).splitlines()[0]
+	except Exception:
+		s = type(e).__name__
+	s = _re.sub(r"[^\s/@]+:[^\s/@]+@", "***@", s)
+	return s[:200]
+
+
 @app.get("/health")
 async def health():
-	return {"status": "ok"}
+	info = {"status": "ok"}
+	db_info: dict = {}
+	try:
+		db_info["dialect"] = str(db_engine.dialect.name)
+		session = SessionLocal()
+		try:
+			from sqlalchemy import text as _ht
+			try:
+				session.execute(_ht("select 1"))
+				db_info["ok"] = True
+			except Exception as e:
+				db_info["ok"] = False
+				db_info["error"] = _health_error(e)
+			if db_info.get("ok"):
+				try:
+					if str(db_info["dialect"]).startswith("postgres"):
+						db_info["database"] = session.execute(_ht("select current_database()")).scalar()
+						db_info["server"] = str(session.execute(
+							_ht("select inet_server_addr() || ':' || inet_server_port()")).scalar())
+					else:
+						db_info["database"] = str(db_engine.url).split("///")[-1]
+				except Exception as e:
+					db_info["identity_error"] = _health_error(e)
+				for _t in ("users", "usuarios_ips", "gestantes"):
+					try:
+						db_info[_t] = session.execute(_ht(f"select count(*) from {_t}")).scalar()
+					except Exception:
+						db_info[_t] = None
+		finally:
+			session.close()
+	except Exception as e:
+		db_info["ok"] = False
+		db_info["error"] = _health_error(e)
+	info["db"] = db_info
+	return info
 
 @app.get("/debug-db")
 async def debug_db(current_user: User = Depends(require_admin)):

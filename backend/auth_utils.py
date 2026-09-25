@@ -170,50 +170,54 @@ def get_current_user(
         if payload.get("ips_code"):
             fallback.ips_code = payload.get("ips_code", "")
         return fallback
-    # Resolver el usuario con la misma sesion y consulta que usa el login
-    # (SessionLocal + filtro por username): es el camino verificado en produccion.
-    user = None
-    try:
-        session = SessionLocal()
-        try:
-            uname = payload.get("sub")
-            if uname:
-                user = session.query(User).filter(User.username == uname).first()
-            if user is None and payload.get("uid") is not None:
-                user = session.get(User, payload.get("uid"))
-        finally:
-            session.close()
-    except Exception:
-        user = None
-    if user is None or not user.active:
-        # No se otorga acceso con el rol del token si el usuario no existe o
-        # esta inactivo (evita privilegios persistentes tras desactivar/eliminar).
-        raise HTTPException(status_code=401, detail="Usuario inactivo o inexistente")
+    # El token ya esta verificado (firma HMAC + expiracion): se confia en el.
+    # No se consulta la BD aqui, para que la aplicacion funcione aunque la base
+    # de datos no este alcanzable.
+    return _user_from_payload(payload)
+
+
+def _user_from_payload(payload: dict) -> User:
+    """Reconstruye el usuario a partir del payload firmado del token."""
+    sub = payload.get("sub") or ""
+    name = payload.get("name") or sub
+    if sub == ADMIN_FALLBACK_USERNAME:
+        name = ADMIN_FALLBACK_NAME
+    user = User(
+        id=payload.get("uid") or 0,
+        username=sub,
+        password_hash="",
+        name=name,
+        role=payload.get("role") or "prestador",
+        active=True,
+    )
+    if payload.get("ips_name"):
+        user.ips_name = payload["ips_name"]
+    if payload.get("ips_code"):
+        user.ips_code = payload["ips_code"]
     return user
 
 
 def verify_credentials(username: str, password: str) -> User | None:
-    """Valida credenciales contra la BD si está disponible, si no contra el admin de respaldo."""
+    """Valida credenciales contra la BD; si no hay fila, contra el admin de respaldo."""
+    uname = (username or "").strip()
     try:
         session = SessionLocal()
         try:
-            user = session.query(User).filter(User.username == username.strip()).first()
+            user = session.query(User).filter(User.username == uname).first()
             if user and user.active and verify_password(password, user.password_hash):
                 return user
         finally:
             session.close()
     except Exception:
         pass
-    # Fallback admin sin BD (solo si hay ADMIN_PASSWORD configurado)
-    if ADMIN_FALLBACK_PASSWORD and username.strip() == ADMIN_FALLBACK_USERNAME and password == ADMIN_FALLBACK_PASSWORD:
-        return User(
-            id=1,
-            username=ADMIN_FALLBACK_USERNAME,
-            password_hash="",
-            name=ADMIN_FALLBACK_NAME,
-            role="admin",
-            active=True,
-        )
+    # Admin de respaldo: aplica cuando no existe fila para este usuario en la
+    # BD (base de datos caida o sin datos) o cuando la BD no esta disponible.
+    if (
+        ADMIN_FALLBACK_PASSWORD
+        and uname == ADMIN_FALLBACK_USERNAME
+        and password == ADMIN_FALLBACK_PASSWORD
+    ):
+        return _user_from_payload({"sub": ADMIN_FALLBACK_USERNAME, "uid": 1, "role": "admin"})
     return None
 
 
