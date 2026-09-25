@@ -437,23 +437,32 @@ async def eliminar_usuario_ips(user_id: int, current_user: User = Depends(requir
 
 @app.put("/data/usuarios-ips/{user_id}")
 async def actualizar_usuario_ips(user_id: int, payload: dict, current_user: User = Depends(require_admin)):
-    """Actualiza un usuario IPS (contrasena, ips_name, active)."""
-    ensure_db_ready()
-    db = SessionLocal()
-    try:
-        u = db.query(UsuarioIPS).get(user_id)
-        if not u:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        if "contrasena" in payload and payload["contrasena"]:
-            u.contrasena = hash_password(payload["contrasena"])
-        if "ips_name" in payload:
-            u.ips_name = payload["ips_name"]
-        if "active" in payload:
-            u.active = payload["active"]
-        db.commit()
-        return {"ok": True}
-    finally:
-        db.close()
+	"""Actualiza un usuario IPS (username, contrasena, ips_name, active, permissions)."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		u = db.query(UsuarioIPS).get(user_id)
+		if not u:
+			raise HTTPException(status_code=404, detail="Usuario no encontrado")
+		if "username" in payload and payload["username"]:
+			nuevo = payload["username"].strip()
+			if nuevo and nuevo != u.username:
+				exists = db.query(UsuarioIPS).filter(UsuarioIPS.username == nuevo, UsuarioIPS.id != user_id).first()
+				if exists:
+					raise HTTPException(status_code=409, detail=f"El usuario '{nuevo}' ya existe")
+				u.username = nuevo
+		if "contrasena" in payload and payload["contrasena"]:
+			u.contrasena = hash_password(payload["contrasena"])
+		if "ips_name" in payload:
+			u.ips_name = payload["ips_name"]
+		if "active" in payload:
+			u.active = payload["active"]
+		if "permissions" in payload and isinstance(payload["permissions"], dict):
+			u.permissions = effective_permissions("ips_user", payload["permissions"])
+		db.commit()
+		return {"ok": True}
+	finally:
+		db.close()
 
 
 def seed_admin():
@@ -2798,6 +2807,9 @@ def permissions_for_user(user_id, role: str) -> dict:
 	try:
 		db = SessionLocal()
 		try:
+			if role == "ips_user":
+				u = db.query(UsuarioIPS).filter(UsuarioIPS.id == user_id).first()
+				return effective_permissions(role, u.permissions if u else None)
 			prestador = db.query(Prestador).filter(Prestador.user_id == user_id).first()
 			return effective_permissions(role, prestador.permissions if prestador else None)
 		finally:
@@ -2827,7 +2839,7 @@ async def enforce_module_permissions(request: Request, call_next):
 	if not payload:
 		return await call_next(request)
 	role = payload.get("role")
-	if role not in ("prestador", "lider"):
+	if role not in ("prestador", "lider", "ips_user"):
 		return await call_next(request)
 	if permissions_for_user(payload.get("uid"), role).get(module, True):
 		return await call_next(request)
@@ -2872,7 +2884,7 @@ async def list_prestadores(admin: User = Depends(require_admin)):
 				"cargues_count": 0,
 				"active": u.active,
 				"role": "ips_user",
-				"permissions": {},
+				"permissions": effective_permissions("ips_user", u.permissions),
 			})
 		return {"prestadores": result}
 	except OperationalError:

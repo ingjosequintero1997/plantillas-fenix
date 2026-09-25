@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
-import { fetchPrestadores, createPrestador, updatePrestador, updatePrestadorPermissions, fetchPermissionsCatalog, setUsuarioIpsActive } from '../api'
+import { fetchPrestadores, createPrestador, updatePrestador, updatePrestadorPermissions, fetchPermissionsCatalog, setUsuarioIpsActive, updateUsuarioIps } from '../api'
 
 const TEMPLATE_LABELS = { gestante: 'Gestante', citologia: 'Citología', mamografia: 'Mamografía', penta: 'Penta' }
 const PER_PAGE = 10
@@ -237,7 +237,11 @@ function PermissionsPanel({ prestador, onClose, onSaved }) {
   const save = async () => {
     setSaving(true); setMsg('')
     try {
-      await updatePrestadorPermissions(prestador.id, perms)
+      if (prestador.tipo === 'ips') {
+        await updateUsuarioIps(prestador.id, { permissions: perms })
+      } else {
+        await updatePrestadorPermissions(prestador.id, perms)
+      }
       setMsg('Guardado')
       onSaved()
       setTimeout(() => setMsg(''), 2000)
@@ -254,7 +258,7 @@ function PermissionsPanel({ prestador, onClose, onSaved }) {
         <div>
           <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Permisos de {prestador.nombre}</div>
           <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Controla qué módulos puede usar este usuario ({prestador.role === 'lider' ? 'Líder de área' : 'Prestador'}).
+            Controla qué módulos puede usar este usuario ({prestador.tipo === 'ips' ? 'IPS' : prestador.role === 'lider' ? 'Líder de área' : 'Prestador'}).
           </div>
         </div>
         <button onClick={onClose} className="btn-ghost text-sm">
@@ -271,6 +275,72 @@ function PermissionsPanel({ prestador, onClose, onSaved }) {
           {saving ? 'Guardando...' : 'Guardar permisos'}
         </button>
       </div>
+    </div>
+  )
+}
+
+function EditIpsForm({ prestador, onClose, onSaved }) {
+  const [form, setForm] = useState({ ips_name: prestador.ips_name || '', username: prestador.username || '', contrasena: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true); setError('')
+    try {
+      const payload = { ips_name: form.ips_name, username: form.username }
+      if (form.contrasena) payload.contrasena = form.contrasena
+      await updateUsuarioIps(prestador.id, payload)
+      onSaved()
+    } catch (err) {
+      setError(err.message || 'No se pudo guardar.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="panel fade-in">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Editar IPS</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Modifica los datos de acceso de la IPS.</div>
+          </div>
+          <button type="button" onClick={onClose} className="btn-ghost text-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Volver
+          </button>
+        </div>
+
+        {error && (
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="form-label">Nombre de la IPS</label>
+            <input name="ips_name" value={form.ips_name} onChange={handleChange} className="input" />
+          </div>
+          <div>
+            <label className="form-label">Usuario de acceso</label>
+            <input name="username" value={form.username} onChange={handleChange} className="input" autoComplete="off" />
+          </div>
+          <div>
+            <label className="form-label">Nueva contraseña</label>
+            <input name="contrasena" value={form.contrasena} onChange={handleChange} type="password" className="input" placeholder="Déjala vacía para no cambiarla" autoComplete="new-password" />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+          <button type="button" onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
+          <button type="submit" className="btn-primary" disabled={saving}>
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
@@ -418,6 +488,9 @@ export default function PrestadoresView() {
   if (view === 'new') {
     return <NewPrestadorForm roleDefaults={roleDefaults} onClose={() => setView(null)} onCreated={() => { setView(null); load() }} />
   }
+  if (view?.type === 'edit-ips') {
+    return <EditIpsForm prestador={view.data} onClose={() => setView(null)} onSaved={() => { setView(null); load() }} />
+  }
   if (view?.type === 'edit') {
     return <EditPrestadorForm roleDefaults={roleDefaults} prestador={view.data} onClose={() => setView(null)} onSaved={() => { setView(null); load() }} />
   }
@@ -493,19 +566,27 @@ export default function PrestadoresView() {
                     <td className="text-center">{p.tipo === 'ips' ? '—' : (p.cargues_count ?? 0)}</td>
                     <td className="text-right">
                       {p.tipo === 'ips' ? (
-                        <button
-                          onClick={async () => {
-                            try {
-                              await setUsuarioIpsActive(p.id, !p.active)
-                              load()
-                            } catch (e) {
-                              setError(e.message || 'No se pudo actualizar el acceso de la IPS.')
-                            }
-                          }}
-                          className={p.active ? 'btn-ghost text-xs px-2.5 py-1' : 'btn-primary text-xs px-2.5 py-1'}
-                        >
-                          {p.active ? 'Desactivar' : 'Activar'}
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => setView({ type: 'edit-ips', data: p })} className="btn-ghost text-xs px-2 py-1" title="Editar IPS">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          </button>
+                          <button onClick={() => setView({ type: 'perms', data: p })} className="btn-ghost text-xs px-2 py-1" title="Permisos">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await setUsuarioIpsActive(p.id, !p.active)
+                                load()
+                              } catch (e) {
+                                setError(e.message || 'No se pudo actualizar el acceso de la IPS.')
+                              }
+                            }}
+                            className={p.active ? 'btn-ghost text-xs px-2.5 py-1' : 'btn-primary text-xs px-2.5 py-1'}
+                          >
+                            {p.active ? 'Desactivar' : 'Activar'}
+                          </button>
+                        </div>
                       ) : (
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => setView({ type: 'edit', data: p })} className="btn-ghost text-xs px-2 py-1" title="Editar datos">

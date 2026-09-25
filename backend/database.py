@@ -241,6 +241,7 @@ class UsuarioIPS(Base):
     ips_name = Column(String(255), nullable=False)
     contrasena = Column(String(255), nullable=False)
     active = Column(Boolean, nullable=False, default=True)
+    permissions = Column(JSON, nullable=True)
 
 
 def init_db():
@@ -305,6 +306,11 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE prestadores ADD COLUMN permissions JSON"))
+    except Exception:
+        pass
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE usuarios_ips ADD COLUMN permissions JSON"))
     except Exception:
         pass
     try:

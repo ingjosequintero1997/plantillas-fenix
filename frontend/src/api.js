@@ -293,13 +293,17 @@ export async function updatePrestador(id, payload) {
   })
 }
 
-// Activa o desactiva el acceso de una IPS (usuarios_ips).
-export async function setUsuarioIpsActive(id, active) {
+// Activa, desactiva o edita una IPS (usuarios_ips).
+export async function updateUsuarioIps(id, payload) {
   return apiFetch(`${API_BASE}/data/usuarios-ips/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ active }),
+    body: JSON.stringify(payload),
   })
+}
+
+export async function setUsuarioIpsActive(id, active) {
+  return updateUsuarioIps(id, { active })
 }
 
 export async function updatePrestadorPermissions(id, permissions) {
