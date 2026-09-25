@@ -170,8 +170,19 @@ def get_current_user(
         if payload.get("ips_code"):
             fallback.ips_code = payload.get("ips_code", "")
         return fallback
+    # Resolver el usuario con la misma sesion y consulta que usa el login
+    # (SessionLocal + filtro por username): es el camino verificado en produccion.
+    user = None
     try:
-        user = db.get(User, payload.get("uid"))
+        session = SessionLocal()
+        try:
+            uname = payload.get("sub")
+            if uname:
+                user = session.query(User).filter(User.username == uname).first()
+            if user is None and payload.get("uid") is not None:
+                user = session.get(User, payload.get("uid"))
+        finally:
+            session.close()
     except Exception:
         user = None
     if user is None or not user.active:

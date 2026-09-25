@@ -282,10 +282,15 @@ async def ips_login(payload: LoginPayload, request: Request):
 				"user": {"id": user_ips.id, "username": user_ips.username, "name": user_ips.ips_name, "role": "ips_user", "ips_name": user_ips.ips_name},
 			}
 
-		# 2) Buscar en tabla users (prestadores asignados a IPS)
+		# 2) Buscar en tabla users SOLO usuarios de tipo IPS. Admin, lider y
+		#    prestador deben entrar por /auth/login con su rol real.
 		user = None
 		try:
-			user = db.query(User).filter(User.username == payload.username.strip(), User.active == True).first()
+			user = db.query(User).filter(
+				User.username == payload.username.strip(),
+				User.active == True,
+				User.role == "ips_user",
+			).first()
 		except Exception:
 			pass
 		if user and verify_password(payload.password, user.password_hash):
