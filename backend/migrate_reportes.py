@@ -9,10 +9,11 @@ o la URL de prueba por defecto.
 import os
 import sys
 
-DATABASE_URL = sys.argv[1] if len(sys.argv) > 1 else os.environ.get(
-    "DATABASE_URL",
-    "postgres://postgres:qazwsx12A.@129.80.159.38:5436/base_sie_dusakawi"
-)
+DATABASE_URL = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("DATABASE_URL", "")
+if not DATABASE_URL:
+    raise SystemExit("Define DATABASE_URL (como argumento o variable de entorno).")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://"):]
 
 DDL = [
     # ─── reporte_consultas ────────────────────────────────────────────

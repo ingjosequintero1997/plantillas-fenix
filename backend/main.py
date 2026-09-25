@@ -37,10 +37,19 @@ class RevalidatePayload(BaseModel):
 def template_names(template: list[dict]):
 	return [t['name'] for t in template]
 
-# CORS config
+# CORS config (restringido a origenes permitidos via ALLOWED_ORIGINS)
+_origins_env = os.environ.get("ALLOWED_ORIGINS", "").strip()
+if _origins_env:
+    _allow_origins = [o.strip() for o in _origins_env.split(",") if o.strip()]
+else:
+    _allow_origins = [
+        "https://plantillas-fenix.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,11 +58,16 @@ app.add_middleware(
 # ─── Auth ────────────────────────────────────────────────────────────────
 try:
     from .auth_utils import (
+        check_rate_limit,
+        clear_attempts,
         create_token,
         get_current_user,
         hash_password,
+        rate_limit_key,
+        register_failed_attempt,
         require_admin,
         verify_credentials,
+        verify_password,
         verify_token,
         TOKEN_SECRET,
     )
@@ -63,11 +77,16 @@ try:
     from . import corporate_db
 except ImportError:
     from auth_utils import (
+        check_rate_limit,
+        clear_attempts,
         create_token,
         get_current_user,
         hash_password,
+        rate_limit_key,
+        register_failed_attempt,
         require_admin,
         verify_credentials,
+        verify_password,
         verify_token,
         TOKEN_SECRET,
     )
@@ -80,12 +99,20 @@ class LoginPayload(BaseModel):
     username: str
     password: str
 
+class ChangePasswordPayload(BaseModel):
+    current_password: str
+    new_password: str
+
 @app.post("/auth/login")
-async def auth_login(payload: LoginPayload):
+async def auth_login(payload: LoginPayload, request: Request):
     ensure_db_ready()
+    key = rate_limit_key(request, payload.username)
+    check_rate_limit(key)
     user = verify_credentials(payload.username, payload.password)
     if user is None:
+        register_failed_attempt(key)
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+    clear_attempts(key)
     token = create_token(user)
     return {
         "token": token,
@@ -143,10 +170,68 @@ async def verify_ips_active(current_user: User = Depends(get_current_user)):
 		db.close()
 
 
+# ─── Cambio de contraseña ───────────────────────────────────────────────────
+
+@app.post("/auth/change-password")
+async def auth_change_password(payload: ChangePasswordPayload, request: Request, current_user: User = Depends(get_current_user)):
+	"""Cambia la contraseña del usuario autenticado (admin, prestador o IPS)."""
+	key = rate_limit_key(request, current_user.username)
+	check_rate_limit(key)
+	current_password = payload.current_password or ""
+	new_password = (payload.new_password or "").strip()
+	if len(new_password) < 8:
+		raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 8 caracteres")
+	if new_password == current_password.strip():
+		raise HTTPException(status_code=400, detail="La nueva contraseña debe ser distinta a la actual")
+
+	db = SessionLocal()
+	try:
+		ips = None
+		try:
+			ips = db.query(UsuarioIPS).filter(UsuarioIPS.username == current_user.username).first()
+		except Exception:
+			ips = None
+
+		if ips is not None:
+			stored = ips.contrasena or ""
+			if stored.startswith("pbkdf2_sha256$"):
+				ok = verify_password(current_password, stored)
+			else:
+				ok = (current_password.strip() == stored.strip())
+			if not ok:
+				register_failed_attempt(key)
+				raise HTTPException(status_code=401, detail="La contraseña actual es incorrecta")
+			ips.contrasena = hash_password(new_password)
+			db.commit()
+			clear_attempts(key)
+			return {"ok": True, "message": "Contraseña actualizada"}
+
+		user = None
+		try:
+			user = db.query(User).filter(User.username == current_user.username).first()
+		except Exception:
+			user = None
+		if user is None:
+			raise HTTPException(status_code=404, detail="Usuario no encontrado")
+		if not verify_password(current_password, user.password_hash or ""):
+			register_failed_attempt(key)
+			raise HTTPException(status_code=401, detail="La contraseña actual es incorrecta")
+		user.password_hash = hash_password(new_password)
+		db.commit()
+		clear_attempts(key)
+		return {"ok": True, "message": "Contraseña actualizada"}
+	except HTTPException:
+		raise
+	except Exception:
+		raise HTTPException(status_code=500, detail="No se pudo actualizar la contraseña")
+	finally:
+		db.close()
+
+
 # ─── Auth IPS ──────────────────────────────────────────────────────────────
 
 @app.post("/auth/ips-login")
-async def ips_login(payload: LoginPayload):
+async def ips_login(payload: LoginPayload, request: Request):
 	"""Login para usuarios IPS. Busca en usuarios_ips, luego en users con prestador."""
 	db = None
 	try:
@@ -154,6 +239,8 @@ async def ips_login(payload: LoginPayload):
 		db = SessionLocal()
 	except Exception:
 		raise HTTPException(status_code=401, detail="Error de conexion a base de datos")
+	key = rate_limit_key(request, payload.username)
+	check_rate_limit(key)
 	try:
 		# 1) Buscar en tabla usuarios_ips
 		user_ips = None
@@ -164,7 +251,22 @@ async def ips_login(payload: LoginPayload):
 			).first()
 		except Exception:
 			pass
-		if user_ips and payload.password.strip() == user_ips.contrasena:
+		_ips_ok = False
+		if user_ips:
+			stored = user_ips.contrasena or ""
+			if stored.startswith("pbkdf2_sha256$"):
+				_ips_ok = verify_password(payload.password, stored)
+			else:
+				# Compatibilidad con contrasenas antiguas en texto plano: migrar a hash
+				_ips_ok = (payload.password.strip() == stored.strip())
+				if _ips_ok:
+					try:
+						user_ips.contrasena = hash_password(payload.password)
+						db.commit()
+					except Exception:
+						pass
+		if user_ips and _ips_ok:
+			clear_attempts(key)
 			token_data = {
 				"sub": user_ips.username,
 				"uid": user_ips.id,
@@ -187,6 +289,7 @@ async def ips_login(payload: LoginPayload):
 		except Exception:
 			pass
 		if user and verify_password(payload.password, user.password_hash):
+			clear_attempts(key)
 			prest = None
 			try:
 				prest = db.query(Prestador).filter(Prestador.user_id == user.id).first()
@@ -217,6 +320,7 @@ async def ips_login(payload: LoginPayload):
 				"user": {"id": user.id, "username": user.username, "name": ips_name, "role": "ips_user", "ips_name": ips_name, "ips_code": ips_code},
 			}
 
+		register_failed_attempt(key)
 		raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 	except HTTPException:
 		raise
@@ -277,7 +381,7 @@ async def listar_usuarios_ips(current_user: User = Depends(require_admin)):
     db = SessionLocal()
     try:
         rows = db.query(UsuarioIPS).order_by(UsuarioIPS.ips_name).all()
-        return [{"id": r.id, "username": r.username, "ips_name": r.ips_name, "contrasena": r.contrasena, "active": r.active} for r in rows]
+        return [{"id": r.id, "username": r.username, "ips_name": r.ips_name, "active": r.active} for r in rows]
     finally:
         db.close()
 
@@ -299,7 +403,7 @@ async def crear_usuario_ips(payload: dict, current_user: User = Depends(require_
         u = UsuarioIPS(
             username=username,
             ips_name=ips_name,
-            contrasena=contrasena,
+            contrasena=hash_password(contrasena),
             active=True,
         )
         db.add(u)
@@ -336,7 +440,7 @@ async def actualizar_usuario_ips(user_id: int, payload: dict, current_user: User
         if not u:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         if "contrasena" in payload and payload["contrasena"]:
-            u.contrasena = payload["contrasena"]
+            u.contrasena = hash_password(payload["contrasena"])
         if "ips_name" in payload:
             u.ips_name = payload["ips_name"]
         if "active" in payload:
@@ -348,6 +452,10 @@ async def actualizar_usuario_ips(user_id: int, payload: dict, current_user: User
 
 
 def seed_admin():
+    admin_password = os.environ.get("ADMIN_PASSWORD", "").strip()
+    if not admin_password:
+        # No crear admin con clave por defecto: define ADMIN_PASSWORD en el entorno
+        return
     try:
         db = SessionLocal()
         try:
@@ -356,7 +464,7 @@ def seed_admin():
                 db.add(
                     User(
                         username="admin",
-                        password_hash=hash_password("admin123"),
+                        password_hash=hash_password(admin_password),
                         name="Administrador",
                         role="admin",
                         active=True,
@@ -405,7 +513,10 @@ def seed_ips_users():
                 for r in rows:
                     ips_set.add(str(r[0]).strip())
 
-            default_pass = "ips123"
+            default_pass = os.environ.get("IPS_DEFAULT_PASSWORD", "").strip()
+            if not default_pass:
+                # No crear usuarios IPS con clave por defecto: define IPS_DEFAULT_PASSWORD
+                return
             for ips_name in sorted(ips_set):
                 if not ips_name:
                     continue
@@ -420,7 +531,7 @@ def seed_ips_users():
                     u = UsuarioIPS(
                         username=username,
                         ips_name=ips_name,
-                        contrasena=default_pass,
+                        contrasena=hash_password(default_pass),
                         active=True,
                     )
                     db.add(u)
@@ -514,7 +625,7 @@ async def health():
 	return {"status": "ok"}
 
 @app.get("/debug-db")
-async def debug_db():
+async def debug_db(current_user: User = Depends(require_admin)):
 	"""Diagnostica el estado de la conexion a la base de datos."""
 	try:
 		from .database import engine, DB_AVAILABLE, DATABASE_URL
@@ -557,7 +668,7 @@ async def debug_db():
 	return info
 
 @app.get("/debug-oci")
-async def debug_oci():
+async def debug_oci(current_user: User = Depends(require_admin)):
 	"""Prueba la conexion a OCI Object Storage."""
 	import os, hashlib
 	info = {"oci_enabled": oci_storage.oci_enabled()}
@@ -630,7 +741,7 @@ async def debug_oci():
 	return info
 
 @app.get("/debug-historias")
-async def debug_historias():
+async def debug_historias(current_user: User = Depends(require_admin)):
 	"""Diagnostica el estado de la tabla historias_clinicas y GCS."""
 	info = {"gcs_enabled": gcs_storage.gcs_enabled(), "oci_enabled": oci_storage.oci_enabled()}
 	try:
@@ -658,7 +769,7 @@ async def debug_historias():
 	return info
 
 @app.get("/debug-corporate-db")
-async def debug_corporate_db():
+async def debug_corporate_db(current_user: User = Depends(require_admin)):
 	"""Diagnostica la conexión con la BD corporativa Dusakawi."""
 	try:
 		conectado = corporate_db.test_conexion_corporativa()
@@ -707,7 +818,7 @@ async def setup_gestantes(current_user: User = Depends(require_admin)):
 		raise HTTPException(status_code=500, detail="No se pudo crear la tabla de gestantes. Verifica la conexion a la base de datos.")
 
 @app.get("/debug-oidc")
-async def debug_oidc(request: Request):
+async def debug_oidc(request: Request, current_user: User = Depends(require_admin)):
 	token = request.headers.get("x-vercel-oidc-token", "")
 	return {
 		"oidc_header_present": bool(token),
@@ -1032,6 +1143,7 @@ async def upload_file(
 	min_template_coverage: float = Form(default=95.0),
 	require_exact_columns: bool = Form(default=True),
 	mode: str = Form(default="limpiador"),
+	current_user: User = Depends(get_current_user),
 ):
 	filename = (file.filename or '').lower()
 	if not (filename.endswith('.txt') or filename.endswith('.xlsx') or filename.endswith('.xls')):
@@ -1235,6 +1347,7 @@ async def upload_chunk(
 	strict_mode: bool = Form(default=False),
 	min_template_coverage: float = Form(default=95.0),
 	require_exact_columns: bool = Form(default=True),
+	current_user: User = Depends(get_current_user),
 ):
 	tmp_dir = tempfile.gettempdir()
 	chunk_path = _os.path.join(tmp_dir, f"fenix_{upload_id}_{chunk_index}")
@@ -1332,7 +1445,7 @@ async def upload_chunk(
 		raise
 	except Exception as e:
 		raise HTTPException(status_code=500, detail="Error inesperado al procesar el archivo. Intenta de nuevo o contacta al administrador.")
-async def revalidate(payload: RevalidatePayload):
+async def revalidate(payload: RevalidatePayload, current_user: User = Depends(get_current_user)):
 	try:
 		meta = get_template_by_key(payload.template_key)
 		active_template = meta["template"]
@@ -1392,7 +1505,7 @@ async def revalidate(payload: RevalidatePayload):
 		raise HTTPException(status_code=500, detail="Error inesperado al revalidar los datos. Intenta de nuevo.")
 
 @app.post("/export")
-async def export_file(payload: dict):
+async def export_file(payload: dict, current_user: User = Depends(get_current_user)):
 	ct = payload.get('corrected_text')
 	if not ct:
 		raise HTTPException(status_code=400, detail="Se requiere corrected_text")
@@ -1406,7 +1519,7 @@ async def export_file(payload: dict):
 	)
 
 @app.post("/export-excel")
-async def export_excel(payload: dict):
+async def export_excel(payload: dict, current_user: User = Depends(get_current_user)):
 	try:
 		from .excel_export import build_data_excel
 	except ImportError:
@@ -2697,7 +2810,7 @@ async def consolidate_cargues(payload: dict, current_user: User = Depends(get_cu
 
 
 @app.post("/evaluate")
-async def evaluate_endpoint(payload: dict, format: str = Query(default="json")):
+async def evaluate_endpoint(payload: dict, format: str = Query(default="json"), current_user: User = Depends(get_current_user)):
 	ct = payload.get('corrected_text', '')
 	template_names = payload.get('template_names', [])
 	template_key = payload.get('template_key', 'gestante')
@@ -2908,7 +3021,7 @@ async def delete_cargue(cargue_id: int, current_user: User = Depends(get_current
 # ─── Validacion sin correccion (validador estricto) ──────────────────────
 
 @app.post("/validate-data")
-async def validate_data(payload: dict):
+async def validate_data(payload: dict, current_user: User = Depends(get_current_user)):
 	template_key = payload.get("template_key", "gestante")
 	corrected_text = payload.get("corrected_text", "")
 	template_names_list = payload.get("template_names", [])
@@ -3110,7 +3223,7 @@ async def validate_data(payload: dict):
 
 
 @app.post("/indicadores")
-async def indicadores_endpoint(payload: dict):
+async def indicadores_endpoint(payload: dict, current_user: User = Depends(get_current_user)):
 	template_key = payload.get("template_key", "gestante")
 	corrected_text = payload.get("corrected_text", "")
 
@@ -5436,10 +5549,13 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 					"new_value": new_val[:500] if new_val else "",
 				})
 
-		# Actualizar
+		# Actualizar (solo columnas reales de la tabla: evita inyeccion por nombres)
+		valid_cols = set(columnas)
 		set_parts = []
 		params = {"id": registro_id}
 		for key, val in payload.items():
+			if key not in valid_cols or key in ("id", "created_at"):
+				continue
 			set_parts.append(f'"{key}" = :{key}')
 			params[key] = str(val) if val is not None else ""
 

@@ -5,6 +5,8 @@ import hashlib
 import hmac
 import json
 import os
+import time
+from collections import deque
 from datetime import datetime, timedelta
 
 from fastapi import Depends, HTTPException
@@ -19,7 +21,7 @@ except ImportError:
 # Usuario admin de respaldo para entornos sin base de datos persistente
 # (ej. funciones serverless donde SQLite no puede escribir).
 ADMIN_FALLBACK_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_FALLBACK_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+ADMIN_FALLBACK_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 ADMIN_FALLBACK_NAME = "Administrador"
 
 TOKEN_SECRET = os.environ.get("TOKEN_SECRET")
@@ -33,6 +35,67 @@ TOKEN_HOURS = int(os.environ.get("TOKEN_HOURS", "8"))
 PBKDF2_ITERATIONS = 200_000
 
 security = HTTPBearer(auto_error=False)
+
+# ─── Rate limiting (ventana deslizante, en memoria por proceso) ─────────────
+LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_WINDOW_SECONDS = int(os.environ.get("LOGIN_WINDOW_SECONDS", "300"))
+_login_attempts: dict[str, deque] = {}
+
+
+def _client_ip(request) -> str:
+    if request is None:
+        return "unknown"
+    try:
+        forwarded = (request.headers.get("x-forwarded-for") or "").strip()
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    except Exception:
+        pass
+    try:
+        return request.client.host if request.client else "unknown"
+    except Exception:
+        return "unknown"
+
+
+def rate_limit_key(request, username: str = "") -> str:
+    return f"{_client_ip(request)}|{(username or '').strip().lower()}"
+
+
+def _prune(dq: deque, now: float) -> None:
+    while dq and dq[0] <= now - LOGIN_WINDOW_SECONDS:
+        dq.popleft()
+
+
+def check_rate_limit(key: str) -> None:
+    """Lanza 429 si se superaron los intentos fallidos en la ventana."""
+    now = time.time()
+    dq = _login_attempts.get(key)
+    if not dq:
+        return
+    _prune(dq, now)
+    if len(dq) >= LOGIN_MAX_ATTEMPTS:
+        retry = max(1, int(LOGIN_WINDOW_SECONDS - (now - dq[0])))
+        raise HTTPException(
+            status_code=429,
+            detail=f"Demasiados intentos fallidos. Intenta de nuevo en {retry} segundos",
+        )
+
+
+def register_failed_attempt(key: str) -> None:
+    now = time.time()
+    dq = _login_attempts.setdefault(key, deque())
+    _prune(dq, now)
+    dq.append(now)
+    if len(_login_attempts) > 5000:
+        stale = [
+            k for k, v in _login_attempts.items() if not v or v[-1] <= now - LOGIN_WINDOW_SECONDS
+        ]
+        for k in stale[:2000]:
+            _login_attempts.pop(k, None)
+
+
+def clear_attempts(key: str) -> None:
+    _login_attempts.pop(key, None)
 
 
 def hash_password(password: str) -> str:
@@ -112,15 +175,9 @@ def get_current_user(
     except Exception:
         user = None
     if user is None or not user.active:
-        fallback = User(
-            id=payload.get("uid") or 1,
-            username=payload.get("sub") or ADMIN_FALLBACK_USERNAME,
-            password_hash="",
-            name=payload.get("name") or ADMIN_FALLBACK_NAME,
-            role=payload.get("role") or "admin",
-            active=True,
-        )
-        return fallback
+        # No se otorga acceso con el rol del token si el usuario no existe o
+        # esta inactivo (evita privilegios persistentes tras desactivar/eliminar).
+        raise HTTPException(status_code=401, detail="Usuario inactivo o inexistente")
     return user
 
 
@@ -136,8 +193,8 @@ def verify_credentials(username: str, password: str) -> User | None:
             session.close()
     except Exception:
         pass
-    # Fallback admin sin BD
-    if username.strip() == ADMIN_FALLBACK_USERNAME and password == ADMIN_FALLBACK_PASSWORD:
+    # Fallback admin sin BD (solo si hay ADMIN_PASSWORD configurado)
+    if ADMIN_FALLBACK_PASSWORD and username.strip() == ADMIN_FALLBACK_USERNAME and password == ADMIN_FALLBACK_PASSWORD:
         return User(
             id=1,
             username=ADMIN_FALLBACK_USERNAME,

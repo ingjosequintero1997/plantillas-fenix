@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import ReactDOM from 'react-dom'
 import { useAuth } from '../AuthContext'
+import { changePassword } from '../api'
 
 const MENU_ITEMS = [
   { key: 'inicio', label: 'Inicio', roles: ['admin', 'prestador', 'lider'],
@@ -122,10 +124,129 @@ function NavSection({ label, items, role, section, onNavigate, onSidebarClose })
   )
 }
 
+function ChangePasswordModal({ onClose }) {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [repeat, setRepeat] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setError('')
+    if (next.length < 8) { setError('La nueva contraseña debe tener al menos 8 caracteres'); return }
+    if (next !== repeat) { setError('Las contraseñas nuevas no coinciden'); return }
+    setLoading(true)
+    try {
+      await changePassword(current, next)
+      setDone(true)
+    } catch (err) {
+      setError(err?.message || 'No se pudo cambiar la contraseña')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return ReactDOM.createPortal(
+    <div className="modal-overlay" onMouseDown={() => { if (!loading) onClose() }}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <div className="modal-title">Cambiar contraseña</div>
+            <div className="modal-desc" style={{ marginBottom: 0 }}>Actualiza la clave de tu cuenta.</div>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            aria-label="Cerrar"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {done ? (
+          <>
+            <div className="rounded-lg p-3 mb-4 text-sm" style={{ backgroundColor: 'var(--green-50)', color: 'var(--green-700)', border: '1px solid var(--green-100)' }}>
+              Contraseña actualizada correctamente.
+            </div>
+            <div className="flex justify-end">
+              <button onClick={onClose} className="btn-primary text-sm px-4 py-2">Entendido</button>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <label className="block">
+              <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Contraseña actual</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+                required
+                className="w-full input"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Nueva contraseña</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={next}
+                onChange={(e) => setNext(e.target.value)}
+                required
+                minLength={8}
+                className="w-full input"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Repetir nueva contraseña</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={repeat}
+                onChange={(e) => setRepeat(e.target.value)}
+                required
+                minLength={8}
+                className="w-full input"
+              />
+            </label>
+
+            {error && (
+              <div className="rounded-lg px-3 py-2 text-xs" style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(180,35,24,0.2)' }}>
+                {error}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={onClose} disabled={loading} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
+              <button type="submit" disabled={loading} className="btn-primary text-sm px-4 py-2">
+                {loading ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 export default function DashboardLayout({ section, onNavigate, children, templates = [], activeTemplate = null, onSelectTemplate, systemConfig = {}, onRefreshConfig }) {
   const { user, logout } = useAuth()
   const [dark, setDark] = useState(false)
   const [open, setOpen] = useState(false)
+  const [pwdOpen, setPwdOpen] = useState(false)
 
   useEffect(() => { document.documentElement.classList.toggle('dark', dark) }, [dark])
 
@@ -216,6 +337,16 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <div className="shrink-0 px-2 pb-3">
         <div className="mx-3 mb-2" style={{ borderTop: '1px solid var(--border-subtle)' }} />
         <button
+          onClick={() => setPwdOpen(true)}
+          className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-all"
+          style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', transitionDuration: '150ms' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <svg className="w-[17px] h-[17px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          <span>Cambiar contrasena</span>
+        </button>
+        <button
           onClick={logout}
           className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-all"
           style={{ fontSize: '0.8rem', color: 'var(--danger)', transitionDuration: '150ms' }}
@@ -272,6 +403,8 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           </footer>
         </div>
       </div>
+
+      {pwdOpen && <ChangePasswordModal onClose={() => setPwdOpen(false)} />}
     </div>
   )
 }

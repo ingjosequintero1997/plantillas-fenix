@@ -4,7 +4,11 @@ import base64, gzip, unicodedata, sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 from gestante_config import build_gestante_template
 
-DB_URL = "postgresql://postgres:qazwsx12A.@129.80.159.38:5436/base_sie_dusakawi"
+DB_URL = os.environ.get("DATABASE_URL")
+if not DB_URL:
+    raise SystemExit("Define DATABASE_URL en el entorno (no la pongas en el repo).")
+if DB_URL.startswith("postgres://"):
+    DB_URL = "postgresql://" + DB_URL[len("postgres://"):]
 engine = create_engine(DB_URL, connect_args={'connect_timeout': 10})
 
 def _norm(s):

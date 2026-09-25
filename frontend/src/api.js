@@ -814,3 +814,16 @@ export async function exportarReportesMedicamentos(filters = {}) {
   if (!resp.ok) return null
   return resp.blob()
 }
+
+export async function changePassword(currentPassword, newPassword) {
+  const resp = await fetch(`${API_BASE}/auth/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
+  const text = await resp.text()
+  let data = null
+  try { data = JSON.parse(text) } catch { /* respuesta sin JSON */ }
+  if (!resp.ok) throw new Error((data && data.detail) || text || 'No se pudo cambiar la contraseña')
+  return data
+}

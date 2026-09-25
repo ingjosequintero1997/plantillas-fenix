@@ -7,7 +7,9 @@ import os
 def get_engine():
     db_url = os.environ.get("DATABASE_URL", "")
     if not db_url:
-        db_url = "postgresql://neondb_owner:npg_j1bE0dvmu2Vm@ep-dry-pine-a5gmdzov.us-east-2.aws.neon.tech/neondb?sslmode=require"
+        raise SystemExit("Define DATABASE_URL en el entorno (no la pongas en el repo).")
+    if db_url.startswith("postgres://"):
+        db_url = "postgresql://" + db_url[len("postgres://"):]
     from sqlalchemy import create_engine
     return create_engine(db_url)
 
