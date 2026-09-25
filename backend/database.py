@@ -38,14 +38,37 @@ def _utcnow():
 # Se da prioridad a DATABASE_URL y se acepta DATABASE como alternativa.
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("DATABASE") or "sqlite:///./validador.db"
 
+# Normalizacion: la variable puede llegar con espacios, comillas (algunos
+# paneles las incluyen) o con un driver que no esta instalado.
+DATABASE_URL = str(DATABASE_URL).strip().strip('"').strip("'").strip()
+
 # SQLAlchemy 2.x requiere postgresql:// (no acepta el alias postgres://)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://"):]
+
+# Drivers no instalados -> usar el driver por defecto (psycopg2).
+for _scheme in ("postgresql+psycopg://", "postgresql+asyncpg://", "postgresql+pg8000://"):
+    if DATABASE_URL.startswith(_scheme):
+        DATABASE_URL = "postgresql://" + DATABASE_URL[len(_scheme):]
+        break
 
 # Resiliencia: si el driver de la BD no está disponible o la URL es inválida
 # (p. ej. serverless sin driver instalado), se usa SQLite en memoria para no
 # romper la importación. Las consultas caerán en el admin de respaldo.
 DB_AVAILABLE = True
+DB_ERROR = ""
+
+
+def _redact(text_: str) -> str:
+    """Elimina credenciales (user:pass@) de mensajes de error de conexion."""
+    import re as _re
+    try:
+        first = str(text_).splitlines()[0]
+    except Exception:
+        first = type(text_).__name__
+    return _re.sub(r"[^\s/@]+:[^\s/@]+@", "***@", first)[:300]
+
+
 try:
     connect_args = {}
     if DATABASE_URL.startswith("sqlite"):
@@ -54,8 +77,9 @@ try:
         # Timeout corto para no bloquear el cold start si la BD no responde.
         connect_args = {"connect_timeout": 5}
     engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
-except Exception:
+except Exception as e:
     DB_AVAILABLE = False
+    DB_ERROR = _redact(e)
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)

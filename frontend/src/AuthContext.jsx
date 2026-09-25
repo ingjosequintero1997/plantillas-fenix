@@ -81,6 +81,18 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Sesion caducada: apiFetch dispara este evento ante un 401 definitivo.
+  useEffect(() => {
+    const onExpired = () => {
+      sessionStorage.removeItem('auth')
+      localStorage.removeItem('ultima_data_validada')
+      setUser(null)
+      setSystemConfig({ cargue_masivo: false, historias_pdf: true })
+    }
+    window.addEventListener('auth:expired', onExpired)
+    return () => window.removeEventListener('auth:expired', onExpired)
+  }, [])
+
   const login = useCallback(async (username, password) => {
     const base = getApiBase()
     let lastError = null

@@ -18,6 +18,19 @@ function authHeaders() {
 const TIMEOUT_MS = 30000
 const MAX_RETRIES = 2
 
+// Endpoints donde un 401 es una respuesta normal (no significa sesion caducada).
+const NO_LOGOUT_ON_401 = ['/auth/login', '/auth/ips-login', '/auth/change-password']
+
+class UnauthorizedError extends Error {}
+
+function notifyAuthExpired(url) {
+  if (NO_LOGOUT_ON_401.some((p) => url.includes(p))) return
+  try {
+    if (!sessionStorage.getItem('auth')) return
+    window.dispatchEvent(new Event('auth:expired'))
+  } catch { /* ignore */ }
+}
+
 async function apiFetch(url, options = {}) {
   let lastError = null
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -38,6 +51,12 @@ async function apiFetch(url, options = {}) {
         continue
       }
       const text = await resp.text()
+      // 401 definitivo: no reintentar (solo genera ruido) y cerrar sesion.
+      if (resp.status === 401) {
+        clearTimeout(timer)
+        notifyAuthExpired(url)
+        throw new UnauthorizedError(text)
+      }
       if (!resp.ok) throw new Error(text)
       try {
         return JSON.parse(text)
@@ -51,6 +70,7 @@ async function apiFetch(url, options = {}) {
         continue
       }
       lastError = e
+      if (e instanceof UnauthorizedError) break
     }
   }
   throw lastError || new Error('Error de conexión con el servidor')

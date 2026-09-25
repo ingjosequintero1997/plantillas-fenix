@@ -641,6 +641,14 @@ async def health():
 	info = {"status": "ok"}
 	db_info: dict = {}
 	try:
+		try:
+			from database import DB_AVAILABLE as _DB_OK, DB_ERROR as _DB_ERR, DATABASE_URL as _DB_URL
+		except ImportError:
+			from .database import DB_AVAILABLE as _DB_OK, DB_ERROR as _DB_ERR, DATABASE_URL as _DB_URL
+		db_info["available"] = _DB_OK
+		db_info["configured"] = _DB_URL.split("://")[0] if "://" in str(_DB_URL) else "unknown"
+		if _DB_ERR:
+			db_info["init_error"] = _DB_ERR
 		db_info["dialect"] = str(db_engine.dialect.name)
 		session = SessionLocal()
 		try:
