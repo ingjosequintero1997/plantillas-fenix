@@ -448,6 +448,7 @@ export default function PrestadoresView() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState('todos')
   const [sort, setSort] = useState({ key: 'nombre', dir: 1 })
   const [page, setPage] = useState(1)
   const [view, setView] = useState(null) // null | 'new' | { type: 'edit', data } | { type: 'perms', data }
@@ -467,14 +468,19 @@ export default function PrestadoresView() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    let list = prestadores.filter((p) => !q || `${p.nombre} ${p.municipio} ${p.username} ${p.ips} ${p.nit}`.toLowerCase().includes(q))
+    let list = prestadores.filter((p) => {
+      if (roleFilter === 'prestador' && p.role !== 'prestador') return false
+      if (roleFilter === 'lider' && p.role !== 'lider') return false
+      if (roleFilter === 'ips' && p.tipo !== 'ips') return false
+      return !q || `${p.nombre} ${p.municipio} ${p.username} ${p.ips} ${p.nit}`.toLowerCase().includes(q)
+    })
     list = list.sort((a, b) => {
       const va = (a[sort.key] || '').toString().toLowerCase()
       const vb = (b[sort.key] || '').toString().toLowerCase()
       return va < vb ? -sort.dir : va > vb ? sort.dir : 0
     })
     return list
-  }, [prestadores, query, sort])
+  }, [prestadores, query, roleFilter, sort])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const safePage = Math.min(page, totalPages)
@@ -519,14 +525,20 @@ export default function PrestadoresView() {
         <EmptyState onNew={() => setView('new')} />
       ) : (
         <>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="relative flex-1 max-w-sm">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder="Buscar usuario..." className="input pl-9" />
             </div>
-            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{filtered.length} usuarios</span>
+            <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }} className="input w-auto">
+              <option value="todos">Todos</option>
+              <option value="prestador">Prestador</option>
+              <option value="lider">Líder de programa</option>
+              <option value="ips">IPS</option>
+            </select>
+            <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{filtered.length} usuarios</span>
           </div>
 
           <div className="table-wrap">
