@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { fetchPrestadores, createPrestador, updatePrestador, updatePrestadorPermissions } from '../api'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
+import { fetchPrestadores, createPrestador, updatePrestador, updatePrestadorPermissions, fetchPermissionsCatalog } from '../api'
 
 const TEMPLATE_LABELS = { gestante: 'Gestante', citologia: 'Citología', mamografia: 'Mamografía', penta: 'Penta' }
 const PER_PAGE = 10
@@ -33,6 +33,51 @@ const PERMISSION_GROUPS = [
 
 const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap((g) => g.items.map((i) => i.key))
 
+function defaultsForRole(role, roleDefaults) {
+  const d = roleDefaults?.[role] || {}
+  return Object.fromEntries(ALL_PERMISSION_KEYS.map((k) => [k, d[k] !== false]))
+}
+
+function PermissionToggles({ perms, onChange }) {
+  const toggle = (key) => onChange({ ...perms, [key]: !perms[key] })
+  const setAll = (value) => onChange(Object.fromEntries(ALL_PERMISSION_KEYS.map((k) => [k, value])))
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end gap-2">
+        <button type="button" onClick={() => setAll(true)} className="btn-secondary text-xs px-2.5 py-1">Habilitar todo</button>
+        <button type="button" onClick={() => setAll(false)} className="btn-secondary text-xs px-2.5 py-1">Deshabilitar todo</button>
+      </div>
+      {PERMISSION_GROUPS.map((group) => (
+        <div key={group.label}>
+          <div className="section-label mb-2">{group.label}</div>
+          <div className="space-y-2">
+            {group.items.map(({ key, label, desc }) => (
+              <div key={key} className="flex items-center justify-between px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                <div>
+                  <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</div>
+                  <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{desc}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggle(key)}
+                  className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                  style={{ backgroundColor: perms[key] ? 'var(--primary)' : '#D1D5DB' }}
+                >
+                  <span
+                    className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                    style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function EmptyState({ onNew }) {
   return (
     <div className="empty">
@@ -47,13 +92,30 @@ function EmptyState({ onNew }) {
   )
 }
 
-function NewPrestadorForm({ onClose, onCreated }) {
+function NewPrestadorForm({ onClose, onCreated, roleDefaults }) {
   const [form, setForm] = useState({ nombre: '', ips: '', username: '', password: '', role: 'prestador', template_key: 'gestante' })
+  const [perms, setPerms] = useState(() => defaultsForRole('prestador', roleDefaults))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showPass, setShowPass] = useState(false)
+  const dirtyRef = useRef(false)
 
-  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
+  // Cuando llega el catalogo, aplicar los modulos por defecto del rol inicial
+  // (solo si el administrador no ha modificado los toggles todavia).
+  useEffect(() => {
+    if (roleDefaults && !dirtyRef.current) {
+      setPerms(defaultsForRole(form.role, roleDefaults))
+    }
+  }, [roleDefaults])
+
+  const handleChange = (e) => {
+    const next = { ...form, [e.target.name]: e.target.value }
+    setForm(next)
+    // Al cambiar el rol, las opciones habilitadas se recalculan segun el rol.
+    if (e.target.name === 'role') setPerms(defaultsForRole(next.role, roleDefaults))
+  }
+
+  const handlePermsChange = (next) => { dirtyRef.current = true; setPerms(next) }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -62,7 +124,7 @@ function NewPrestadorForm({ onClose, onCreated }) {
     if (form.password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return }
     setSaving(true); setError('')
     try {
-      await createPrestador(form)
+      await createPrestador({ ...form, permissions: perms })
       onCreated()
     } catch (err) {
       setError(err.message || 'No fue posible crear el usuario.')
@@ -128,6 +190,18 @@ function NewPrestadorForm({ onClose, onCreated }) {
           </div>
         </div>
 
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="section-label">Módulos habilitados</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Se ajustan automáticamente al rol {form.role === 'lider' ? 'Líder de programa' : 'Prestador'}. Puedes modificarlos aquí.
+              </div>
+            </div>
+          </div>
+          <PermissionToggles perms={perms} onChange={handlePermsChange} />
+        </div>
+
         <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
           <button type="button" onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
           <button type="submit" className="btn-primary" disabled={saving}>
@@ -147,13 +221,6 @@ function PermissionsPanel({ prestador, onClose, onSaved }) {
   })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-
-  const toggle = (key) => setPerms((p) => ({ ...p, [key]: !p[key] }))
-  const setAll = (value) => setPerms(() => {
-    const next = {}
-    ALL_PERMISSION_KEYS.forEach((k) => { next[k] = value })
-    return next
-  })
 
   const save = async () => {
     setSaving(true); setMsg('')
@@ -184,39 +251,7 @@ function PermissionsPanel({ prestador, onClose, onSaved }) {
         </button>
       </div>
 
-      <div className="flex items-center justify-end gap-2 mb-3">
-        <button type="button" onClick={() => setAll(true)} className="btn-secondary text-xs px-2.5 py-1">Habilitar todo</button>
-        <button type="button" onClick={() => setAll(false)} className="btn-secondary text-xs px-2.5 py-1">Deshabilitar todo</button>
-      </div>
-
-      <div className="space-y-4">
-        {PERMISSION_GROUPS.map((group) => (
-          <div key={group.label}>
-            <div className="section-label mb-2">{group.label}</div>
-            <div className="space-y-2">
-              {group.items.map(({ key, label, desc }) => (
-                <div key={key} className="flex items-center justify-between px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                  <div>
-                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</div>
-                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{desc}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggle(key)}
-                    className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                    style={{ backgroundColor: perms[key] ? 'var(--primary)' : '#D1D5DB' }}
-                  >
-                    <span
-                      className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                      style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <PermissionToggles perms={perms} onChange={setPerms} />
 
       <div className="flex items-center justify-between pt-4 mt-4 border-t" style={{ borderColor: 'var(--border)' }}>
         <div className="text-sm" style={{ color: msg.includes('Error') ? 'var(--error)' : 'var(--primary)' }}>{msg}</div>
@@ -228,18 +263,30 @@ function PermissionsPanel({ prestador, onClose, onSaved }) {
   )
 }
 
-function EditPrestadorForm({ prestador, onClose, onSaved }) {
+function EditPrestadorForm({ prestador, onClose, onSaved, roleDefaults }) {
   const [form, setForm] = useState({ nombre: prestador.nombre || '', nit: prestador.nit || '', ips: prestador.ips || '', municipio: prestador.municipio || '', role: prestador.role || 'prestador' })
+  const [perms, setPerms] = useState(() => {
+    const base = {}
+    ALL_PERMISSION_KEYS.forEach((k) => { base[k] = prestador.permissions?.[k] !== false })
+    return base
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
+  const handleChange = (e) => {
+    const next = { ...form, [e.target.name]: e.target.value }
+    setForm(next)
+    // Al cambiar el rol, las opciones habilitadas se recalculan segun el rol.
+    if (e.target.name === 'role' && e.target.value !== prestador.role) {
+      setPerms(defaultsForRole(e.target.value, roleDefaults))
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSaving(true); setError('')
     try {
-      await updatePrestador(prestador.id, form)
+      await updatePrestador(prestador.id, { ...form, permissions: perms })
       onSaved()
     } catch (err) {
       setError(err.message || 'No se pudo guardar.')
@@ -294,6 +341,11 @@ function EditPrestadorForm({ prestador, onClose, onSaved }) {
           </div>
         </div>
 
+        <div>
+          <div className="section-label mb-2">Módulos habilitados</div>
+          <PermissionToggles perms={perms} onChange={setPerms} />
+        </div>
+
         <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
           <button type="button" onClick={onClose} className="btn-ghost text-sm">Cancelar</button>
           <button type="submit" className="btn-primary" disabled={saving}>
@@ -313,6 +365,7 @@ export default function PrestadoresView() {
   const [sort, setSort] = useState({ key: 'nombre', dir: 1 })
   const [page, setPage] = useState(1)
   const [view, setView] = useState(null) // null | 'new' | { type: 'edit', data } | { type: 'perms', data }
+  const [roleDefaults, setRoleDefaults] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -321,6 +374,10 @@ export default function PrestadoresView() {
     finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    fetchPermissionsCatalog().then((d) => setRoleDefaults(d.defaults || null)).catch(() => {})
+  }, [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -343,10 +400,10 @@ export default function PrestadoresView() {
   }
 
   if (view === 'new') {
-    return <NewPrestadorForm onClose={() => setView(null)} onCreated={() => { setView(null); load() }} />
+    return <NewPrestadorForm roleDefaults={roleDefaults} onClose={() => setView(null)} onCreated={() => { setView(null); load() }} />
   }
   if (view?.type === 'edit') {
-    return <EditPrestadorForm prestador={view.data} onClose={() => setView(null)} onSaved={() => { setView(null); load() }} />
+    return <EditPrestadorForm roleDefaults={roleDefaults} prestador={view.data} onClose={() => setView(null)} onSaved={() => { setView(null); load() }} />
   }
   if (view?.type === 'perms') {
     return <PermissionsPanel prestador={view.data} onClose={() => setView(null)} onSaved={load} />

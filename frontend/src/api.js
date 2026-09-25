@@ -301,6 +301,10 @@ export async function updatePrestadorPermissions(id, permissions) {
   })
 }
 
+export async function fetchPermissionsCatalog() {
+  return apiFetch(`${API_BASE}/admin/permissions/catalog`)
+}
+
 export async function fetchMyPermissions() {
   return apiFetch(`${API_BASE}/auth/permissions`)
 }

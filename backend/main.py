@@ -2678,6 +2678,16 @@ class PrestadorPayload(BaseModel):
 	password: str
 	template_key: str = "gestante"
 	role: str = "prestador"  # "prestador" | "lider"
+	permissions: dict | None = None
+
+
+@app.get("/admin/permissions/catalog")
+async def permissions_catalog(admin: User = Depends(require_admin)):
+	"""Catálogo de modulos y permisos por defecto segun el rol."""
+	return {
+		"modules": list(MODULE_KEYS),
+		"defaults": {role: default_permissions(role) for role in ("prestador", "lider")},
+	}
 
 
 @app.post("/admin/prestadores")
@@ -2705,6 +2715,8 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 			ips=payload.ips,
 			municipio=payload.municipio,
 		)
+		if isinstance(payload.permissions, dict):
+			prestador.permissions = effective_permissions(role, payload.permissions)
 		db.add(prestador)
 		db.flush()
 		pp = PrestadorPlantilla(prestador_id=prestador.id, template_key=payload.template_key)
@@ -2890,11 +2902,18 @@ async def update_prestador(prestador_id: int, payload: dict, admin: User = Depen
 			prestador.ips = payload["ips"]
 		if "municipio" in payload:
 			prestador.municipio = payload["municipio"]
+		role_changed = False
 		if "role" in payload and prestador.user:
 			if payload["role"] in ("prestador", "lider"):
+				role_changed = prestador.user.role != payload["role"]
 				prestador.user.role = payload["role"]
+		if "permissions" in payload and isinstance(payload["permissions"], dict):
+			prestador.permissions = effective_permissions(prestador.user.role, payload["permissions"])
+		elif role_changed:
+			# Al cambiar el rol se aplican los modulos por defecto del nuevo rol.
+			prestador.permissions = None
 		db.commit()
-		return {"success": True}
+		return {"success": True, "role": prestador.user.role if prestador.user else None}
 	except OperationalError:
 		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos.")
 	finally:
