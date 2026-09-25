@@ -52,6 +52,15 @@ for _scheme in ("postgresql+psycopg://", "postgresql+asyncpg://", "postgresql+pg
         DATABASE_URL = "postgresql://" + DATABASE_URL[len(_scheme):]
         break
 
+# Sin driver explicito, SQLAlchemy puede elegir psycopg (v3) segun su version,
+# pero en este proyecto solo esta instalado psycopg2-binary. Se fija psycopg2.
+if DATABASE_URL.startswith("postgresql://"):
+    try:
+        import psycopg2  # noqa: F401
+        DATABASE_URL = "postgresql+psycopg2://" + DATABASE_URL[len("postgresql://"):]
+    except ImportError:
+        pass
+
 # Resiliencia: si el driver de la BD no está disponible o la URL es inválida
 # (p. ej. serverless sin driver instalado), se usa SQLite en memoria para no
 # romper la importación. Las consultas caerán en el admin de respaldo.

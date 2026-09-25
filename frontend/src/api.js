@@ -51,6 +51,8 @@ async function apiFetch(url, options = {}) {
         continue
       }
       const text = await resp.text()
+      // Deja en consola la URL exacta de cualquier 404 para poder rastrearla.
+      if (resp.status === 404) console.warn(`[api] 404 -> ${url}`)
       // 401 definitivo: no reintentar (solo genera ruido) y cerrar sesion.
       if (resp.status === 401) {
         clearTimeout(timer)

@@ -636,6 +636,15 @@ def _health_error(e: Exception) -> str:
 	return s[:200]
 
 
+def _health_module(name: str) -> bool:
+	"""Indica si un modulo (driver de BD) es importable en el contenedor."""
+	try:
+		__import__(name)
+		return True
+	except Exception:
+		return False
+
+
 @app.get("/health")
 async def health():
 	info = {"status": "ok"}
@@ -650,6 +659,7 @@ async def health():
 		if _DB_ERR:
 			db_info["init_error"] = _DB_ERR
 		db_info["dialect"] = str(db_engine.dialect.name)
+		db_info["drivers"] = {_n: _health_module(_n) for _n in ("psycopg2", "psycopg")}
 		session = SessionLocal()
 		try:
 			from sqlalchemy import text as _ht
