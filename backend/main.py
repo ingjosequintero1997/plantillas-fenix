@@ -2848,6 +2848,38 @@ async def enforce_module_permissions(request: Request, call_next):
 	})
 
 
+@app.get("/admin/bucket-usage")
+async def bucket_usage(admin: User = Depends(require_admin)):
+	"""Uso de almacenamiento de historias clinicas agrupado por IPS."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import func as _f
+		rows = db.query(
+			HistoriaClinica.ips_name,
+			_f.count(HistoriaClinica.id),
+			_f.coalesce(_f.sum(HistoriaClinica.file_size), 0),
+		).group_by(HistoriaClinica.ips_name).all()
+		items = []
+		total_bytes = 0
+		for ips_name, count, size in rows:
+			nombre = (ips_name or "Sin IPS").strip()
+			if not nombre:
+				nombre = "Sin IPS"
+			total_bytes += int(size)
+			items.append({"ips": nombre, "count": count, "bytes": int(size)})
+		items.sort(key=lambda i: i["bytes"], reverse=True)
+		return {
+			"total_bytes": total_bytes,
+			"total_mb": round(total_bytes / (1024 * 1024), 2),
+			"ips": items,
+		}
+	except OperationalError:
+		raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos.")
+	finally:
+		db.close()
+
+
 @app.get("/admin/prestadores")
 async def list_prestadores(admin: User = Depends(require_admin)):
 	ensure_db_ready()

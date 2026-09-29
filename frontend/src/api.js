@@ -318,6 +318,10 @@ export async function fetchPermissionsCatalog() {
   return apiFetch(`${API_BASE}/admin/permissions/catalog`)
 }
 
+export async function fetchBucketUsage() {
+  return apiFetch(`${API_BASE}/admin/bucket-usage`)
+}
+
 export async function fetchMyPermissions() {
   return apiFetch(`${API_BASE}/auth/permissions`)
 }

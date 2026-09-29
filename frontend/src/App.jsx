@@ -67,6 +67,7 @@ const HistorialView = lazy(() => import('./components/HistorialView'))
 const PrestadoresView = lazy(() => import('./components/PrestadoresView'))
 const IndicadoresView = lazy(() => import('./components/IndicadoresView'))
 const ConfiguracionView = lazy(() => import('./components/ConfiguracionView'))
+const BucketView = lazy(() => import('./components/BucketView'))
 const CargueMasivoIPS = lazy(() => import('./components/CargueMasivoIPS'))
 const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
@@ -800,6 +801,15 @@ export default function App() {
               <SectionErrorBoundary>
                 <Suspense fallback={<ModuleSkeleton />}>
                   <ConfiguracionView />
+                </Suspense>
+              </SectionErrorBoundary>
+            )}
+
+            {/* ─── GESTION DE BUCKET ─── */}
+            {section === 'bucket' && (
+              <SectionErrorBoundary>
+                <Suspense fallback={<ModuleSkeleton />}>
+                  <BucketView />
                 </Suspense>
               </SectionErrorBoundary>
             )}
