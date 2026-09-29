@@ -5022,6 +5022,18 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 				if name_key not in ips_to_prestador:
 					ips_to_prestador[name_key] = prest.id
 
+		# ── IPS real de cada usuaria desde af_afiliado (sobrescribe la del archivo) ──
+		# Extraer los documentos usando el mapeo a la columna NO_DE_IDENTIFICACION.
+		_docs_para_ips = []
+		_doc_col_key = None
+		for cname, db_col in tmpl_to_db.items():
+			if db_col and "NO_DE_IDENTIFICACION" in db_col.upper():
+				_doc_col_key = cname
+				break
+		if _doc_col_key is not None and _doc_col_key in df.columns:
+			_docs_para_ips = df[_doc_col_key].astype(str).tolist()
+		mapa_ips_afiliados = _mapa_ips_afiliados(_docs_para_ips)
+
 		# ── Insertar filas ──
 		total_insertadas = 0
 		total_errores = []
@@ -5035,6 +5047,21 @@ async def populate_gestantes_from_cargues(current_user: User = Depends(require_a
 					registro[db_col] = str(val).strip()
 
 			ips_primaria = registro.get("NOMBRE_DE_LA_IPS_PRIMARIA", "").strip().upper()
+			# Si encontramos la IPS real en af_afiliado, usarla en lugar de la del archivo.
+			if mapa_ips_afiliados:
+				# Numero de documento: buscar por nombre de columna o indice 2
+				doc_value = ""
+				if 2 in tmpl_to_db and tmpl_to_db[2] in registro:
+					doc_value = str(registro.get(tmpl_to_db[2], "")).strip()
+				if not doc_value:
+					for cname, db_col in tmpl_to_db.items():
+						if db_col and "NO_DE_IDENTIFICACION" in db_col.upper():
+							doc_value = str(registro.get(db_col, "")).strip()
+							break
+				real_ips = mapa_ips_afiliados.get(doc_value) if doc_value else None
+				if real_ips:
+					ips_primaria = real_ips
+					registro["NOMBRE_DE_LA_IPS_PRIMARIA"] = real_ips
 			prestador_id = ips_to_prestador.get(ips_primaria)
 
 			registro["prestador_id"] = prestador_id if prestador_id else (cargue.prestador_id if cargue.prestador_id else None)
@@ -5177,6 +5204,16 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 		except:
 			real_cols = db_cols
 
+		_docs_para_ips = []
+		_doc_col_key = None
+		for cname, db_col in tmpl_to_db.items():
+			if db_col and "NO_DE_IDENTIFICACION" in db_col.upper():
+				_doc_col_key = cname
+				break
+		if _doc_col_key is not None and _doc_col_key in df.columns:
+			_docs_para_ips = df[_doc_col_key].astype(str).tolist()
+		mapa_ips_afiliados = _mapa_ips_afiliados(_docs_para_ips)
+
 		total_insertadas = 0
 		errores = []
 
@@ -5188,6 +5225,17 @@ async def clean_and_repopulate(current_user: User = Depends(require_admin)):
 					registro[db_col] = str(val).strip()
 
 			ips_primaria = registro.get("NOMBRE_DE_LA_IPS_PRIMARIA", "").strip().upper()
+			# Usar la IPS real de af_afiliado en lugar de la del archivo.
+			if mapa_ips_afiliados:
+				doc_value = ""
+				for cname, db_col in tmpl_to_db.items():
+					if db_col and "NO_DE_IDENTIFICACION" in db_col.upper():
+						doc_value = str(registro.get(db_col, "")).strip()
+						break
+				real_ips = mapa_ips_afiliados.get(doc_value) if doc_value else None
+				if real_ips:
+					ips_primaria = real_ips
+					registro["NOMBRE_DE_LA_IPS_PRIMARIA"] = real_ips
 			prestador_id = ips_to_prestador.get(ips_primaria)
 
 			registro["prestador_id"] = prestador_id if prestador_id else (cargue.prestador_id if cargue.prestador_id else None)
@@ -5361,6 +5409,60 @@ def _check_gestante_ips(db, current_user, registro_id):
 	ips_gestante = str(row[0] or "").strip().upper()
 	if ips_gestante and ips_gestante != ips_nombre and ips_gestante != "NA":
 		raise HTTPException(status_code=403, detail="No autorizado: esta gestante pertenece a otra IPS")
+
+
+def _mapa_ips_afiliados(documentos):
+	"""Consulta la IPS primaria real de cada documento en af_afiliado y la
+	convierte a nombre (ct_ips). Retorna {numero_id: nombre_ips}.
+	Si la BD corporativa no esta disponible, retorna {} (se usa el valor del archivo)."""
+	try:
+		from .corporate_db import get_corporate_connection
+	except ImportError:
+		try:
+			from corporate_db import get_corporate_connection
+		except ImportError:
+			return {}
+	engine = get_corporate_connection()
+	if not engine:
+		return {}
+	docs = list({str(d).strip() for d in documentos if str(d).strip()})
+	if not docs:
+		return {}
+	from sqlalchemy import text as _t
+	resultado = {}
+	try:
+		conn = engine.connect()
+		try:
+			codes = set()
+			BATCH = 200
+			for i in range(0, len(docs), BATCH):
+				batch = docs[i:i + BATCH]
+				params = {f"d{j}": d for j, d in enumerate(batch)}
+				placeholders = ", ".join(f":d{j}" for j in range(len(batch)))
+				rows = conn.execute(_t(f'SELECT "numero_identificacion", "ips" FROM administrativo."af_afiliado" WHERE "numero_identificacion" IN ({placeholders})'), params).fetchall()
+				for num, ips in rows:
+					resultado[str(num).strip()] = str(ips).strip()
+					if ips:
+						codes.add(str(ips).strip())
+			# Convertir codigos a nombres
+			if codes:
+				try:
+					from .corporate_db import obtener_nombres_ips
+				except ImportError:
+					try:
+						from corporate_db import obtener_nombres_ips
+					except ImportError:
+						obtener_nombres_ips = None
+				if obtener_nombres_ips:
+					nombres = obtener_nombres_ips(list(codes)) or {}
+					for k, v in resultado.items():
+						if v and v in nombres:
+							resultado[k] = str(nombres[v]).strip().upper()
+		finally:
+			conn.close()
+	except Exception:
+		return {}
+	return resultado
 
 
 @app.get("/data/gestantes/mis-gestantes")
