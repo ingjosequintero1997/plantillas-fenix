@@ -2885,9 +2885,11 @@ async def bucket_usage(admin: User = Depends(require_admin)):
 			total_bytes += int(size)
 			items.append({"ips": nombre, "count": count, "bytes": int(size)})
 		items.sort(key=lambda i: i["bytes"], reverse=True)
+		tope_mb = int(os.environ.get("BUCKET_TOPE_MB", "100") or 100)
 		return {
 			"total_bytes": total_bytes,
 			"total_mb": round(total_bytes / (1024 * 1024), 2),
+			"tope_mb": tope_mb,
 			"ips": items,
 		}
 	except OperationalError:

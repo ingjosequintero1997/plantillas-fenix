@@ -38,6 +38,7 @@ export default function BucketView() {
             <div className="rounded-xl px-4 py-3.5" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
               <div className="text-[0.65rem] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Almacenamiento total</div>
               <div className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatMb(data.total_bytes)}</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>de {data.tope_mb || 100} MB por IPS</div>
             </div>
             <div className="rounded-xl px-4 py-3.5" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
               <div className="text-[0.65rem] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>IPS con historias</div>
@@ -52,7 +53,7 @@ export default function BucketView() {
                   <th>IPS</th>
                   <th className="text-center">Historias</th>
                   <th className="text-right">Uso</th>
-                  <th style={{ width: '30%' }}>Uso del total</th>
+                  <th style={{ width: '32%' }}>{`Uso del tope (${data.tope_mb || 100} MB)`}</th>
                 </tr>
               </thead>
               <tbody>
@@ -64,7 +65,8 @@ export default function BucketView() {
                   </tr>
                 )}
                 {data.ips.map((row) => {
-                  const pct = data.total_bytes > 0 ? (row.bytes / data.total_bytes) * 100 : 0
+                  const topeBytes = (data.tope_mb || 100) * 1024 * 1024
+                  const pct = topeBytes > 0 ? (row.bytes / topeBytes) * 100 : 0
                   return (
                     <tr key={row.ips}>
                       <td><div className="font-medium">{row.ips}</div></td>
@@ -73,9 +75,9 @@ export default function BucketView() {
                       <td>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-subtle)' }}>
-                            <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: pct >= 50 ? 'var(--accent-500)' : 'var(--green-500)' }} />
+                            <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: pct >= 80 ? 'var(--accent-500)' : 'var(--green-500)' }} />
                           </div>
-                          <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{pct.toFixed(1)}%</span>
+                          <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{pct.toFixed(2)}%</span>
                         </div>
                       </td>
                     </tr>
