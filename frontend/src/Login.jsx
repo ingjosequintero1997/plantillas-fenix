@@ -20,6 +20,8 @@ export default function Login() {
     if (!profile) { setError('Selecciona tu perfil.'); return }
     if (!username.trim() || !password.trim()) { setError('Completa todos los campos.'); return }
     setSubmitting(true); setError('')
+    // Limpiar cualquier sesion anterior para que la nueva sea la unica activa.
+    logout()
     try {
       let userData = null
       if (profile === 'prestador') {
