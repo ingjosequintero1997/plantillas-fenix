@@ -38,7 +38,7 @@ function defaultsForRole(role, roleDefaults) {
   return Object.fromEntries(ALL_PERMISSION_KEYS.map((k) => [k, d[k] !== false]))
 }
 
-function PermissionToggles({ perms, onChange }) {
+function PermissionToggles({ perms, onChange, isIps }) {
   const toggle = (key) => onChange({ ...perms, [key]: !perms[key] })
 
   return (
@@ -47,35 +47,43 @@ function PermissionToggles({ perms, onChange }) {
         <div key={group.label}>
           <div className="section-label mb-2">{group.label}</div>
           <div className="space-y-2">
-            {group.items.map(({ key, label, desc }) => (
-              <div key={key} className="flex items-center justify-between px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                <div>
-                  <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{desc}</div>
+            {group.items.map(({ key, label, desc }) => {
+              // Para IPS, historias clinicas lo controla la config global.
+              const fixed = isIps && key === 'historias'
+              return (
+                <div key={key} className="flex items-center justify-between px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{fixed ? 'Se controla desde Configuración (Historias clínicas PDF).' : desc}</div>
+                  </div>
+                  {fixed ? (
+                    <span className="badge-success text-xs">Siempre activo</span>
+                  ) : (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => toggle(key)}
+                        className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                        style={{ backgroundColor: perms[key] ? 'var(--green-500)' : '#D1D5DB' }}
+                        aria-label={perms[key] ? 'Deshabilitar ' + label : 'Habilitar ' + label}
+                      >
+                        <span
+                          className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                          style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggle(key)}
+                        className={perms[key] ? 'btn-ghost text-xs px-2.5 py-1' : 'btn-primary text-xs px-2.5 py-1'}
+                      >
+                        {perms[key] ? 'Deshabilitar' : 'Habilitar'}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => toggle(key)}
-                    className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                    style={{ backgroundColor: perms[key] ? 'var(--green-500)' : '#D1D5DB' }}
-                    aria-label={perms[key] ? 'Deshabilitar ' + label : 'Habilitar ' + label}
-                  >
-                    <span
-                      className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                      style={{ transform: perms[key] ? 'translateX(20px)' : 'translateX(0)' }}
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggle(key)}
-                    className={perms[key] ? 'btn-ghost text-xs px-2.5 py-1' : 'btn-primary text-xs px-2.5 py-1'}
-                  >
-                    {perms[key] ? 'Deshabilitar' : 'Habilitar'}
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       ))}
@@ -429,7 +437,7 @@ function EditPrestadorForm({ prestador, onClose, onSaved, roleDefaults }) {
 
         <div>
           <div className="section-label mb-2">Módulos habilitados</div>
-          <PermissionToggles perms={perms} onChange={setPerms} />
+<PermissionToggles perms={perms} onChange={setPerms} isIps={prestador.tipo === 'ips'} />
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>

@@ -2365,6 +2365,18 @@ async def upload_historia(
         prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
         user_in_db = db.query(User).filter(User.id == current_user.id).first()
         ips_name_attr = _get_prestador_ips_name(db, current_user)
+        # Si no se pudo determinar la IPS (ej. admin), usar la IPS primaria de la gestante.
+        if not ips_name_attr and paciente_documento.strip():
+            try:
+                from sqlalchemy import text as _t
+                _row = db.execute(
+                    _t('SELECT "NOMBRE_DE_LA_IPS_PRIMARIA" FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :d LIMIT 1'),
+                    {"d": paciente_documento.strip()},
+                ).fetchone()
+                if _row and _row[0]:
+                    ips_name_attr = str(_row[0]).strip().upper()
+            except Exception:
+                pass
         historia = HistoriaClinica(
             prestador_id=prestador.id if prestador else None,
             user_id=current_user.id,
@@ -2797,6 +2809,10 @@ def effective_permissions(role: str, stored) -> dict:
 		for k in MODULE_KEYS:
 			if k in stored:
 				perms[k] = bool(stored[k])
+	# Para IPS, "historias" lo controla SOLO la config global (historias_pdf),
+	# no los permisos por modulo. Asi el middleware nunca bloquea /historias.
+	if role == "ips_user":
+		perms["historias"] = True
 	return perms
 
 
