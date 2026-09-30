@@ -77,7 +77,6 @@ export default function DataManagement({ correctedText }) {
   const [downloadingIps, setDownloadingIps] = useState(null)
   const [ipsSearch, setIpsSearch] = useState('')
   const [municipioFilter, setMunicipioFilter] = useState('')
-  const [mesFiltro, setMesFiltro] = useState('')
   const [casosCerradosTotal, setCasosCerradosTotal] = useState(0)
 
   const [ipsRows, setIpsRows] = useState([])
@@ -86,12 +85,11 @@ export default function DataManagement({ correctedText }) {
 
   const [ipsLoadAttempted, setIpsLoadAttempted] = useState(false)
 
-  const loadIpsData = useCallback(async (mesParam) => {
+  const loadIpsData = useCallback(async () => {
     if (!isIpsUser) return
-    const mes = mesParam !== undefined ? mesParam : mesFiltro
     setIpsLoading(true); setError('')
     try {
-      const data = await fetchMisGestantes(mes)
+      const data = await fetchMisGestantes()
       setIpsRows(data.rows || [])
       setIpsColumns(data.columns || [])
       setIpsLoadAttempted(true)
@@ -101,7 +99,7 @@ export default function DataManagement({ correctedText }) {
     } finally {
       setIpsLoading(false)
     }
-  }, [isIpsUser, mesFiltro])
+  }, [isIpsUser])
 
   useEffect(() => {
     if (isIpsUser && !ipsLoadAttempted && !ipsLoading) {
@@ -121,7 +119,7 @@ export default function DataManagement({ correctedText }) {
       setDownloadingIps(ipsName)
       try {
         const safe = ipsName.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'ips'
-        await exportarIpsExcel(ipsName, mesFiltro, `${safe}.xlsx`)
+        await exportarIpsExcel(ipsName, '', `${safe}.xlsx`)
       } catch (e) { alert('Error descargando: ' + (e.message || e)) }
       finally { setDownloadingIps(null) }
       return
@@ -184,13 +182,12 @@ export default function DataManagement({ correctedText }) {
     finally { setDownloadingIps(null) }
   }
 
-  const runAffiliationValidation = useCallback(async (mesParam, force = false) => {
+  const runAffiliationValidation = useCallback(async (force = false) => {
     if (instValidating) return
     if (instResult && !force) return
-    const mes = mesParam !== undefined ? mesParam : mesFiltro
     setInstValidating(true); setError('')
     try {
-      const data = await validateAffiliation('', 'gestante', mes)
+      const data = await validateAffiliation('', 'gestante', '')
       setInstResult(data)
     } catch (e) {
       setError(e.message || 'Error validando afiliación')
@@ -198,7 +195,7 @@ export default function DataManagement({ correctedText }) {
     } finally {
       setInstValidating(false)
     }
-  }, [instValidating, instResult, mesFiltro])
+  }, [instValidating, instResult])
 
   useEffect(() => {
     if (!isIpsUser && !instResult && !instValidating) {
@@ -304,7 +301,7 @@ export default function DataManagement({ correctedText }) {
     try {
       const data = await autoFillCasoCerrado()
       await loadCasosCerrados()
-      await runAffiliationValidation(undefined, true)
+      await runAffiliationValidation(true)
       setAutoFillMsg(`Casos cerrados procesados: ${data.total_caso_cerrado} registros movidos a su propia data.`)
       setTimeout(() => setAutoFillMsg(''), 6000)
     } catch (e) { setAutoFillMsg('Error: ' + (e.message || '')) }
@@ -512,7 +509,6 @@ export default function DataManagement({ correctedText }) {
       || 'municipio'
     const adminMunicipios = [...new Set(usuarias.map(u => u[adminMunicipioKey]).filter(Boolean))].sort()
     const filtered = usuarias.filter(u => {
-      if (mesFiltro && u.mes !== mesFiltro) return false
       if (municipioFilter && u[adminMunicipioKey] !== municipioFilter) return false
       if (!search) return true
       const q = search.toLowerCase()
@@ -586,12 +582,6 @@ export default function DataManagement({ correctedText }) {
               )}
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            <input type="month" value={mesFiltro}
-              onChange={(e) => { setMesFiltro(e.target.value); setPage(1) }}
-              className="input" style={{ fontSize: '0.8rem', maxWidth: 170 }} title="Filtrar por periodo (mes de cargue)" />
-          </div>
           {search && (
             <button onClick={() => { setSearch(''); setPage(1) }} className="btn-ghost text-xs px-2 py-1" style={{ color: 'var(--text-secondary)' }}>
               Limpiar
@@ -760,12 +750,6 @@ export default function DataManagement({ correctedText }) {
               )}
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            <input type="month" value={mesFiltro}
-              onChange={(e) => { setMesFiltro(e.target.value); setPage(1); loadIpsData(e.target.value) }}
-              className="input" style={{ fontSize: '0.8rem', maxWidth: 170 }} title="Filtrar por periodo (mes de cargue)" />
-          </div>
           {search && (
             <button onClick={() => { setSearch(''); setPage(1) }} className="btn-ghost text-xs px-2 py-1" style={{ color: 'var(--text-secondary)' }}>
               Limpiar
