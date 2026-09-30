@@ -1157,6 +1157,10 @@ def _mensaje_esperado(tipo: str, tdef: dict, col: str, val_str: str):
 		return "Fecha valida (ej: 03/04/2000)"
 	if tipo == "TEXT":
 		return "Escriba el dato en texto"
+	if tipo == "NUMERIC":
+		if not val_str:
+			return "Debe ser un numero (valor de la sumatoria), no puede estar vacio"
+		return f"Debe ser un numero (valor de la sumatoria), '{val_str}' no es un numero"
 	return "SIN DATO"
 
 

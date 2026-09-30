@@ -6096,6 +6096,32 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 		raise HTTPException(status_code=500, detail=f"Error al ejecutar el autocompletado: {type(e).__name__}: {e}")
 
 
+@app.post("/data/gestantes/caso-cerrado/limpiar")
+async def limpiar_caso_cerrado(current_user: User = Depends(require_admin)):
+	"""Devuelve todas las gestantes marcadas como Caso Cerrado a la data normal
+	(CASO_CERRADO = FALSE), para poder regenerarlas con auto-fill."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+		# CASO_CERRADO puede ser BOOLEAN o TEXT: se normaliza con CAST a texto.
+		cerrado = "(CASO_CERRADO IS NOT NULL AND LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('true', '1'))"
+		ids = [r[0] for r in db.execute(text(f'SELECT id FROM gestantes WHERE {cerrado}')).fetchall()]
+		if not ids:
+			return {"success": True, "limpiados": 0}
+		for i in range(0, len(ids), 500):
+			lote = ids[i:i + 500]
+			placeholders = ", ".join(f":id{j}" for j in range(len(lote)))
+			params = {f"id{j}": v for j, v in enumerate(lote)}
+			db.execute(text(f'UPDATE gestantes SET CASO_CERRADO = FALSE WHERE id IN ({placeholders})'), params)
+		db.commit()
+		return {"success": True, "limpiados": len(ids)}
+	except Exception as e:
+		db.rollback()
+		print(f"ERROR limpiar_caso_cerrado: {type(e).__name__}: {e}")
+		raise HTTPException(status_code=500, detail=f"Error al limpiar casos cerrados: {type(e).__name__}: {e}")
+
+
 @app.get("/data/gestantes/caso-cerrado/exportar")
 async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
 	"""Genera un Excel con los casos cerrados (fecha real de parto o aborto),

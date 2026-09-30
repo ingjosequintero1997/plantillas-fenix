@@ -396,6 +396,11 @@ export async function autoFillCasoCerrado() {
   return apiFetch(`${API_BASE}/data/gestantes/caso-cerrado/auto-fill`, { method: 'POST' })
 }
 
+// Devuelve las gestantes de Caso Cerrado a la data normal (para regenerar).
+export async function limpiarCasoCerrado() {
+  return apiFetch(`${API_BASE}/data/gestantes/caso-cerrado/limpiar`, { method: 'POST' })
+}
+
 // Descarga el Excel de los casos cerrados (con todas las variables).
 export async function exportarCasoCerrado(filename = 'casos_cerrados.xlsx') {
   const resp = await fetch(`${API_BASE}/data/gestantes/caso-cerrado/exportar`, {

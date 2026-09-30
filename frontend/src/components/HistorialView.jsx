@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import ReactDOM from 'react-dom'
 import * as pako from 'pako'
-import { fetchCargues, fetchCargue, deleteCargue, descargarCargueExcel, descargarCargueTxt, descargarReporteErroresExcel, fetchCasoCerrado, exportarCasoCerrado } from '../api'
+import { fetchCargues, fetchCargue, deleteCargue, descargarCargueExcel, descargarCargueTxt, descargarReporteErroresExcel, fetchCasoCerrado, exportarCasoCerrado, limpiarCasoCerrado } from '../api'
 import ErrorSummaryTable from './ErrorSummaryTable'
 
 const PER_PAGE = 12
@@ -178,6 +178,7 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
   const [page, setPage] = useState(1)
   const [deleting, setDeleting] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [msgCaso, setMsgCaso] = useState('')
 
   const loadRecords = useCallback(async () => {
     setLoading(true); setError('')
@@ -201,6 +202,22 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
     setError('')
     try { await exportarCasoCerrado('caso_cerrado.xlsx') }
     catch (e) { setError(e.message || 'No se pudieron descargar los casos cerrados') }
+  }
+
+  const [cleaningCasos, setCleaningCasos] = useState(false)
+  const handleLimpiarCasosCerrados = async () => {
+    if (!window.confirm('¿Eliminar la data de caso cerrado? Se devolverá a la data normal y podrás regenerarla con el autocompletado.')) return
+    setCleaningCasos(true); setError('')
+    try {
+      const res = await limpiarCasoCerrado()
+      setCasosCerrados(0)
+      setMsgCaso(`Casos cerrados eliminados: ${res?.limpiados ?? 0} registros devueltos a la data normal.`)
+      setTimeout(() => setMsgCaso(''), 6000)
+    } catch (e) {
+      setError(e.message || 'No se pudieron limpiar los casos cerrados')
+    } finally {
+      setCleaningCasos(false)
+    }
   }
 
   const handleDelete = useCallback(async () => {
@@ -273,6 +290,11 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
       {error && <div className="px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid rgba(180,35,24,0.1)' }}>
         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         {error}
+      </div>}
+
+      {msgCaso && <div className="px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--success)', backgroundColor: '#DCFCE7', border: '1px solid rgba(22,163,74,0.15)' }}>
+        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        {msgCaso}
       </div>}
 
       {/* Tarjetas de resumen */}
@@ -353,11 +375,22 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                     <td className="text-center"><span className="badge-success">100%</span></td>
                     <td className="text-center"><span className="badge-error">Caso cerrado</span></td>
                     <td className="text-center">
-                      <button onClick={handleDescargarCasosCerrados} title="Descargar Excel" className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-muted)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#DCFCE7' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={handleDescargarCasosCerrados} title="Descargar Excel" className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#DCFCE7' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        </button>
+                        <button onClick={handleLimpiarCasosCerrados} disabled={cleaningCasos} title="Eliminar caso cerrado (devolver a data normal)" className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--danger)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FBE9E9' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}>
+                          {cleaningCasos ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )}
