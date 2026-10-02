@@ -11,10 +11,10 @@ const MENU_ITEMS = [
 const OPERACIONES_ITEMS = [
   { key: 'subir', label: 'Validar data', roles: ['admin', 'prestador'],
     icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
-  { key: 'data', label: 'Gestion de data', roles: ['admin', 'prestador', 'lider'],
+  { key: 'data', label: 'Gestión de data', roles: ['admin', 'prestador', 'lider'],
     icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
   { key: 'historial', label: 'Verificar data', roles: ['admin', 'lider'],
-    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+    icon: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' },
   { key: 'consolidar', label: 'Consolidar', roles: ['admin', 'lider'],
     icon: 'M4 5a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 0a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4z' },
   { key: 'indicadores', label: 'Indicadores', roles: ['admin', 'prestador', 'lider'],
@@ -24,26 +24,29 @@ const OPERACIONES_ITEMS = [
 const GESTION_ITEMS = [
   { key: 'verificar', label: 'Verificar afiliado', roles: ['admin', 'prestador', 'lider'],
     icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-  { key: 'historias', label: 'Historias clinicas', roles: ['admin', 'prestador', 'lider'],
+  { key: 'historias', label: 'Historias clínicas', roles: ['admin', 'prestador', 'lider'],
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'reportes', label: 'Reportes pendientes', roles: ['admin', 'prestador', 'lider'],
     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+]
+
+const ADMIN_ITEMS = [
   { key: 'prestadores', label: 'Usuarios', roles: ['admin'],
     icon: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4m-5 4.13a4 4 0 01-2.6-3.7' },
   { key: 'bucket', label: 'Gestión de bucket', roles: ['admin'],
     icon: 'M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z' },
-  { key: 'configuracion', label: 'Configuracion', roles: ['admin'],
+  { key: 'configuracion', label: 'Configuración', roles: ['admin'],
     icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
 const IPS_MENU_ITEMS_BASE = [
   { key: 'cargue_masivo', label: 'Cargue masivo', roles: ['ips_user'], configKey: 'cargue_masivo', defaultOff: true,
-    icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
-  { key: 'data', label: 'Gestion de data', roles: ['ips_user'],
+    icon: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm0 4h16M4 14h16M10 4v16M15 4v16' },
+  { key: 'data', label: 'Gestión de data', roles: ['ips_user'],
     icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
   { key: 'verificar', label: 'Verificar afiliado', roles: ['ips_user'],
     icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-  { key: 'historias', label: 'Historias clinicas', roles: ['ips_user'], configKey: 'historias_pdf',
+  { key: 'historias', label: 'Historias clínicas', roles: ['ips_user'], configKey: 'historias_pdf',
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'reportes', label: 'Reportes pendientes', roles: ['ips_user'],
     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
@@ -65,19 +68,19 @@ const META = {
   formulario: { title: 'Cargue mensual', sub: 'Registro de gestante por formulario' },
   historial: { title: 'Verificar data', sub: 'Cargues de los prestadores' },
   consolidar: { title: 'Consolidar', sub: 'Une las datas' },
-  historias: { title: 'Historias clinicas', sub: 'Expedientes clinicos' },
+  historias: { title: 'Historias clínicas', sub: 'Expedientes clínicos' },
   reportes: { title: 'Reportes pendientes', sub: 'Procedimientos y medicamentos pendientes' },
   verificar: { title: 'Verificar afiliado', sub: 'Consulta de datos demograficos por documento' },
   prestadores: { title: 'Usuarios', sub: 'Prestadores y lideres de programa' },
   bucket: { title: 'Gestión de bucket', sub: 'Uso de almacenamiento por IPS' },
-  data: { title: 'Gestion de data', sub: 'Ver y editar registros de gestantes' },
-  indicadores: { title: 'Indicadores', sub: 'Metricas y estadisticas' },
-  configuracion: { title: 'Configuracion', sub: 'Gestion de accesos y modulos' },
+  data: { title: 'Gestión de data', sub: 'Ver y editar registros de gestantes' },
+  indicadores: { title: 'Indicadores', sub: 'Métricas y estadísticas' },
+  configuracion: { title: 'Configuración', sub: 'Gestión de accesos y módulos' },
   cargue_masivo: { title: 'Cargue masivo', sub: 'Subir archivos Excel, TXT o CSV' },
 }
 const ROLE_TITLE = { historial: { admin: 'Verificar data', lider: 'Verificar data', prestador: 'Mis cargues' } }
 
-const SIDEBAR_W = 260
+const SIDEBAR_W = 248
 
 function NavItem({ item, active, onClick }) {
   return (
@@ -108,30 +111,40 @@ function NavItem({ item, active, onClick }) {
 // Modulos que siempre quedan reservados al administrador.
 const ADMIN_ONLY_SECTIONS = ['prestadores', 'configuracion']
 
-function NavSection({ label, items, role, section, onNavigate, onSidebarClose, permissions }) {
-  const visible = items.filter((i) => {
+function filterItems(items, role, permissions) {
+  return items.filter((i) => {
     if (!i.roles.includes(role)) return false
     // Los permisos configurables solo aplican a prestador y lider.
     if (!permissions || (role !== 'prestador' && role !== 'lider')) return true
     if (ADMIN_ONLY_SECTIONS.includes(i.key)) return true
     return permissions[i.key] !== false
   })
+}
+
+function NavList({ items, section, onNavigate, onSidebarClose }) {
+  return (
+    <div className="px-2">
+      {items.map((item, idx) => (
+        <NavItem
+          key={item.key + idx}
+          item={item}
+          active={section === item.key}
+          onClick={() => { onNavigate(item.key); onSidebarClose() }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function NavSection({ label, items, role, section, onNavigate, onSidebarClose, permissions }) {
+  const visible = filterItems(items, role, permissions)
   if (visible.length === 0) return null
   return (
     <div className="mb-1">
-      <div className="px-5 pt-3 pb-1.5">
-        <span className="text-[0.58rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>{label}</span>
+      <div className="px-5 pt-4 pb-1">
+        <span className="text-[0.54rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.09em' }}>{label}</span>
       </div>
-      <div className="px-2">
-        {visible.map((item, idx) => (
-          <NavItem
-            key={item.key + idx}
-            item={item}
-            active={section === item.key}
-            onClick={() => { onNavigate(item.key); onSidebarClose() }}
-          />
-        ))}
-      </div>
+      <NavList items={visible} section={section} onNavigate={onNavigate} onSidebarClose={onSidebarClose} />
     </div>
   )
 }
@@ -300,24 +313,29 @@ export default function DashboardLayout({ section, onNavigate, children, templat
       <nav className="flex-1 overflow-y-auto py-2">
 
         {role === 'ips_user' ? (
-          <NavSection label="Menu" items={getIpsMenuItems(systemConfig)} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
+          <NavSection label="Menú" items={getIpsMenuItems(systemConfig)} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
         ) : (
           <>
-            {/* Menu: siempre visible */}
-            <NavSection label="Menu" items={MENU_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
+            {/* Inicio: sin encabezado, primera opcion del menu */}
+            <div className="mb-1">
+              <NavList
+                items={filterItems(MENU_ITEMS, role, permissions)}
+                section={section}
+                onNavigate={onNavigate}
+                onSidebarClose={closeSidebar}
+              />
+            </div>
 
-            {/* Plantilla activa: indicador */}
+            {/* Plantilla activa: indicador liviano */}
             {hasTemplate && templateMeta && (
               <div className="mb-1">
-                <div className="px-5 pt-3 pb-1.5">
-                  <span className="text-[0.58rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>Plantilla</span>
+                <div className="px-5 pt-4 pb-1">
+                  <span className="text-[0.54rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.09em' }}>Plantilla activa</span>
                 </div>
-                <div className="mx-2 mb-1">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--green-50)', border: '1px solid var(--green-100)' }}>
-                    <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: 'var(--green-600)' }}>
-                      <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    </span>
-                    <span className="truncate text-[0.8rem] font-medium" style={{ color: 'var(--green-700)' }}>{templateMeta.label}</span>
+                <div className="px-2">
+                  <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--green-500)' }} />
+                    <span className="truncate text-[0.78rem] font-medium" style={{ color: 'var(--text-primary)' }}>{templateMeta.label}</span>
                   </div>
                   {templates.length > 1 && (
                     <button
@@ -334,11 +352,12 @@ export default function DashboardLayout({ section, onNavigate, children, templat
               </div>
             )}
 
-            {/* Operaciones y Gestion: solo si hay plantilla activa */}
+            {/* Operaciones, consultas y administracion: solo si hay plantilla activa */}
             {hasTemplate && (
               <>
                 <NavSection label="Operaciones" items={OPERACIONES_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
-                <NavSection label="Gestion" items={GESTION_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
+                <NavSection label="Gestión" items={GESTION_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
+                <NavSection label="Administración" items={ADMIN_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
               </>
             )}
           </>
@@ -356,7 +375,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <svg className="w-[17px] h-[17px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-          <span>Cambiar contrasena</span>
+          <span>Cambiar contraseña</span>
         </button>
         <button
           onClick={logout}
@@ -366,7 +385,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <svg className="w-[17px] h-[17px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-          <span>Cerrar sesion</span>
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </div>

@@ -59,6 +59,7 @@ Aplicación web de **validación y gestión de datos de gestantes** para DUSAKAW
 ## 7. MÓDULOS Y ARCHIVOS CLAVE
 
 - **App.jsx**: shell principal, secciones por `section` (inicio, subir, data, historial, consolidar, indicadores, verificar, historias, reportes, prestadores, configuracion, bucket). `DashboardLayout.jsx` arma el menú (roles + permisos). `DashboardHome.jsx` (tiles).
+  - **Sidebar** (`DashboardLayout.jsx`, rediseño 2026-10-02): ancho 248px. Grupos: **Inicio** sin encabezado (arriba), **Plantilla activa** (indicador liviano con punto verde, no card verde), **Operaciones**, **Gestión** (verificar afiliado, historias clínicas, reportes) y **Administración** (admin-only: Usuarios, Bucket, Configuración). Filtrado centralizado en `filterItems()`; render de lista en `NavList`/`NavSection`. Íconos: `historial` y `cargue_masivo` ya no comparten path con `historias`/`subir`.
 - **Validar data (subir)**: `DragDrop` + `uploadFile` (api.js) → `POST /upload`. Luego `POST /cargues` (saveCargue) guarda el cargue. `revalidate`, `evaluate`, `validate-data`, `validate-affiliation`, `export`, `export-excel`, `reporte-errores-excel-data`.
 - **Validador**: `backend/validators.py` (`validate_and_correct`, `validate_afiliado`). Plantilla gestante en `gestante_config.py` (`get_gestante_template`), registrada en `templates_registry.py`. Columnas tipo: NUMERIC/INT/DECIMAL/DATE/TEXT/SET.
   - Las 4 sumatorias **HISTORIA REPRODUCTVA** (typo en la config, así está), EMBARAZO ACTUAL, RIESGO PSICOSOCIAL, PUNTAJE TOTAL son **NUMERIC obligatorio** — el instructivo dice que deben llevar el valor de la sumatoria (no "SIN DATO"). Si traen "Sin dato" → error en todas las filas (esperado).
@@ -102,6 +103,7 @@ Aplicación web de **validación y gestión de datos de gestantes** para DUSAKAW
 
 - **Commitado por el usuario** (últimos commits): validador masivo, bucket con tope, ajustes de IPS, login IPS, historias, módulo bucket, filtro roles, usuarios IPS, permisos por rol.
 - **Pendiente en working tree**: `backend/validators.py` (mensaje NUMERIC mejorado: "Debe ser un numero (valor de la sumatoria)"). Listo para commit+deploy.
+- **Pendiente en working tree**: `frontend/src/components/DashboardLayout.jsx` (rediseño estético del sidebar: menos encabezados, Administración separada, plantilla liviana, íconos deduplicados, acentos en labels). Build verificado con `npx vite build`. Listo para commit+deploy.
 - Se quitó el sistema de meses/periodo de cargue en todos los módulos (commit `6cd1f9a "ajuste del validador masivo"` y anteriores). El frontend ya no envía `mes`; los params `mes` en el backend quedaron opcionales.
 
 ## 12. COMANDOS ÚTILES
