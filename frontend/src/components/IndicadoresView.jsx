@@ -15,10 +15,10 @@ function formatResult(v) {
 }
 
 function estadoResultado(v) {
-  if (v === null) return { color: '#DC2626', bg: '#FEE2E2', label: 'Sin dato' }
-  if (v >= 95) return { color: '#15803D', bg: '#DCFCE7', label: 'Cumplido' }
-  if (v >= 80) return { color: '#B45309', bg: '#FEF3C7', label: 'En mejora' }
-  return { color: '#B91C1C', bg: '#FEE2E2', label: 'Critico' }
+  if (v === null) return { color: 'var(--danger)', bg: 'var(--danger-bg)', label: 'Sin dato' }
+  if (v >= 95) return { color: 'var(--success)', bg: 'var(--success-bg)', label: 'Cumplido' }
+  if (v >= 80) return { color: 'var(--warning)', bg: 'var(--warning-bg)', label: 'En mejora' }
+  return { color: 'var(--danger)', bg: 'var(--danger-bg)', label: 'Critico' }
 }
 
 // ─── KPI Card estilo dashboard ───
@@ -49,10 +49,10 @@ function ResumenSemaforo({ lista }) {
     else rojos += 1
   })
   const items = [
-    { label: 'Cumplidos', n: verdes, color: '#15803D', bg: '#DCFCE7' },
-    { label: 'En mejora', n: ambar, color: '#B45309', bg: '#FEF3C7' },
-    { label: 'Criticos', n: rojos, color: '#B91C1C', bg: '#FEE2E2' },
-    { label: 'Sin dato', n: sinDato, color: '#6B7280', bg: '#F3F4F6' },
+    { label: 'Cumplidos', n: verdes, color: 'var(--success)', bg: 'var(--success-bg)' },
+    { label: 'En mejora', n: ambar, color: 'var(--warning)', bg: 'var(--warning-bg)' },
+    { label: 'Criticos', n: rojos, color: 'var(--danger)', bg: 'var(--danger-bg)' },
+    { label: 'Sin dato', n: sinDato, color: 'var(--text-muted)', bg: 'var(--bg-subtle)' },
   ]
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -77,7 +77,7 @@ function ChartCard({ title, data, isPie, height }) {
   }))
   if (chartData.length === 0) return null
   return (
-    <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
+    <div className="bg-[var(--bg-surface)] rounded-2xl p-5" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
       <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>{title}</div>
       <div style={{ height: height || 240 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -110,7 +110,7 @@ function ChartCard({ title, data, isPie, height }) {
 function PareTable({ lista, titulo, subTitulo }) {
   if (!lista || !lista.length) return null
   return (
-    <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
+    <div className="bg-[var(--bg-surface)] rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
       <div className="px-5 py-4 border-b flex items-center justify-between flex-wrap gap-2" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
         <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{titulo || 'Cohorte de Gestantes PARE MM'}</div>
         <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{subTitulo || ''}</span>
@@ -173,7 +173,7 @@ function ResultadoChart({ lista }) {
     fill: estadoResultado(ind.resultado).color,
   }))
   return (
-    <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
+    <div className="bg-[var(--bg-surface)] rounded-2xl p-5" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
       <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Resultado de los indicadores (%)</div>
       <div style={{ height: 380 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -343,7 +343,7 @@ export default function IndicadoresView({ templateKey = 'gestante', dataValidada
         <button onClick={handleGenerate} disabled={loading} className="btn-primary">{loading ? 'Generando...' : 'Generar indicadores'}</button>
       </div>
 
-      {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
+      {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>}
 
       {loaded && indicadores && (
         <>

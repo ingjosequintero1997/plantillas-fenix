@@ -188,8 +188,8 @@ export default function App() {
   const hasDataLoaded = Boolean(rawText)
 
   const pct = Number(summary?.quality_percent ?? 0)
-  const pctColor = pct >= 90 ? 'var(--success)' : pct >= 60 ? '#B45309' : '#B91C1C'
-  const pctBg = pct >= 90 ? 'var(--green-50)' : pct >= 60 ? '#FEF3C7' : '#FEE2E2'
+  const pctColor = pct >= 90 ? 'var(--success)' : pct >= 60 ? 'var(--warning)' : 'var(--danger)'
+  const pctBg = pct >= 90 ? 'var(--green-50)' : pct >= 60 ? 'var(--warning-bg)' : 'var(--danger-bg)'
 
   useEffect(() => {
     // Cargar plantillas cuando el usuario esta autenticado (y al montar si ya hay sesion).
@@ -565,7 +565,7 @@ export default function App() {
                     )}
 
                     {error && (
-                      <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+                      <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>
                     )}
                   </>
                 ) : (
@@ -599,12 +599,12 @@ export default function App() {
                       </div>
                       <div className="rounded-xl px-4 py-3.5" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', boxShadow: '0 1px 3px rgba(28,28,26,0.05)' }}>
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ color: (summary.rows_with_errors ?? summary.errors) ? '#B91C1C' : 'var(--green-700)', backgroundColor: (summary.rows_with_errors ?? summary.errors) ? '#FEE2E2' : 'var(--green-50)' }}>
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ color: (summary.rows_with_errors ?? summary.errors) ? 'var(--danger)' : 'var(--green-700)', backgroundColor: (summary.rows_with_errors ?? summary.errors) ? 'var(--danger-bg)' : 'var(--green-50)' }}>
                             <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
                           </div>
                           <div>
                             <div className="text-[0.65rem] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Con errores</div>
-                            <div className="text-xl font-bold leading-tight" style={{ color: (summary.rows_with_errors ?? summary.errors) ? '#B91C1C' : 'var(--success)', fontFamily: 'var(--font-display)' }}>
+                            <div className="text-xl font-bold leading-tight" style={{ color: (summary.rows_with_errors ?? summary.errors) ? 'var(--danger)' : 'var(--success)', fontFamily: 'var(--font-display)' }}>
                               {summary.rows_with_errors ?? 0} <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>de {summary.total}</span>
                             </div>
                           </div>
@@ -643,7 +643,7 @@ export default function App() {
                     {(summary.rows_with_errors ?? summary.errors) > 0 && logs.length > 0 && (
                       <div className="panel">
                         <div className="flex items-center gap-2 mb-3">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="#B45309" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" style={{ stroke: 'var(--warning)' }} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                           <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Errores por variable</div>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -657,9 +657,9 @@ export default function App() {
                               .sort((a, b) => b[1] - a[1])
                               .slice(0, 15)
                               .map(([col, count]) => (
-                                <span key={col} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg" style={{ color: '#92400E', backgroundColor: '#FEF3C7', border: '1px solid #FDE68A' }}>
+                                <span key={col} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg" style={{ color: 'var(--warning)', backgroundColor: 'var(--warning-bg)', border: '1px solid var(--warning)' }}>
                                   {col}
-                                  <span className="font-bold px-1.5 py-0.5 rounded-md" style={{ backgroundColor: '#FDE68A', color: '#78350F' }}>{count}</span>
+                                  <span className="font-bold px-1.5 py-0.5 rounded-md" style={{ backgroundColor: 'var(--warning)', color: 'var(--bg-canvas)' }}>{count}</span>
                                 </span>
                               ))
                           })()}
@@ -671,7 +671,7 @@ export default function App() {
                     {processingMode === 'validador' && logs.length > 0 && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="#B91C1C" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" style={{ stroke: 'var(--danger)' }} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                           <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Detalle de errores</div>
                         </div>
                         <ValidationLogTable logs={logs} />

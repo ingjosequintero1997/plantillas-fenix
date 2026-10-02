@@ -64,7 +64,7 @@ function PermissionToggles({ perms, onChange, isIps }) {
                         type="button"
                         onClick={() => toggle(key)}
                         className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                        style={{ backgroundColor: perms[key] ? 'var(--green-500)' : '#D1D5DB' }}
+                        style={{ backgroundColor: perms[key] ? 'var(--green-500)' : 'var(--border-strong)' }}
                         aria-label={perms[key] ? 'Deshabilitar ' + label : 'Habilitar ' + label}
                       >
                         <span
@@ -161,7 +161,7 @@ function NewPrestadorForm({ onClose, onCreated, roleDefaults }) {
         </div>
 
         {error && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>
         )}
 
         <div className="space-y-3">
@@ -198,7 +198,7 @@ function NewPrestadorForm({ onClose, onCreated, roleDefaults }) {
               <label className="form-label">Contraseña *</label>
               <div className="relative">
                 <input name="password" value={form.password} onChange={handleChange} required type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
-                <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
                   {showPass ? (
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
                   ) : (
@@ -324,7 +324,7 @@ function EditIpsForm({ prestador, onClose, onSaved }) {
         </div>
 
         {error && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>
         )}
 
         <div className="space-y-3">
@@ -400,7 +400,7 @@ function EditPrestadorForm({ prestador, onClose, onSaved, roleDefaults }) {
         </div>
 
         {error && (
-          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>
         )}
 
         <div className="space-y-3">
@@ -526,7 +526,7 @@ export default function PrestadoresView() {
       </div>
 
       {error && (
-        <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+        <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>
       )}
 
       {prestadores.length === 0 && !loading ? (

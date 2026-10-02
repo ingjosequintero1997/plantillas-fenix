@@ -86,24 +86,60 @@ function NavItem({ item, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-all relative"
+      className="group w-full flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 text-left rounded-xl transition-all"
       style={{
-        fontSize: '0.8rem',
-        fontWeight: active ? '500' : '400',
-        color: active ? 'var(--green-700)' : 'var(--text-secondary)',
         backgroundColor: active ? 'var(--green-50)' : 'transparent',
         transitionDuration: '150ms',
       }}
-      onMouseEnter={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
-      onMouseLeave={(e) => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = 'transparent' }}
     >
-      {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full" style={{ backgroundColor: 'var(--green-500)' }} />
-      )}
-      <span className="flex items-center justify-center w-5 h-5 shrink-0" style={{ color: active ? 'var(--green-600)' : 'var(--text-muted)' }}>
-        <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? '2' : '1.5'}><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
+      <span
+        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all"
+        style={{
+          backgroundColor: active ? 'var(--green-500)' : 'var(--bg-subtle)',
+          color: active ? '#ffffff' : 'var(--text-muted)',
+          boxShadow: active ? '0 3px 10px rgba(90,174,90,0.30)' : 'none',
+          transitionDuration: '150ms',
+        }}
+      >
+        <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? '2.1' : '1.7'}><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
       </span>
-      <span className="truncate">{item.label}</span>
+      <span
+        className="truncate text-[0.82rem]"
+        style={{ fontWeight: active ? '600' : '500', color: active ? 'var(--green-700)' : 'var(--text-secondary)' }}
+      >
+        {item.label}
+      </span>
+    </button>
+  )
+}
+
+const ICON_SUN = 'M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05L5.636 5.636m12.728 0l-1.414 1.414M7.05 16.95l-1.414 1.414M16 12a4 4 0 11-8 0 4 4 0 018 0z'
+const ICON_MOON = 'M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z'
+
+function ThemeSwitch({ dark, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      role="switch"
+      aria-checked={dark}
+      title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+      className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-all"
+      style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', transitionDuration: '150ms' }}
+      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
+      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+    >
+      <span className="w-[17px] h-[17px] shrink-0 flex items-center justify-center">
+        <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d={dark ? ICON_MOON : ICON_SUN} />
+        </svg>
+      </span>
+      <span className="flex-1">Modo oscuro</span>
+      <span className="relative inline-flex h-[18px] w-[32px] shrink-0 items-center rounded-full transition-colors" style={{ backgroundColor: dark ? 'var(--green-500)' : 'var(--border-strong)' }}>
+        <span className="inline-block h-[14px] w-[14px] rounded-full shadow" style={{ backgroundColor: '#fff', transform: dark ? 'translateX(16px)' : 'translateX(2px)', transition: 'transform 150ms var(--ease-out)' }} />
+      </span>
     </button>
   )
 }
@@ -123,7 +159,7 @@ function filterItems(items, role, permissions) {
 
 function NavList({ items, section, onNavigate, onSidebarClose }) {
   return (
-    <div className="px-2">
+    <div className="space-y-0.5">
       {items.map((item, idx) => (
         <NavItem
           key={item.key + idx}
@@ -140,9 +176,9 @@ function NavSection({ label, items, role, section, onNavigate, onSidebarClose, p
   const visible = filterItems(items, role, permissions)
   if (visible.length === 0) return null
   return (
-    <div className="mb-1">
-      <div className="px-5 pt-4 pb-1">
-        <span className="text-[0.54rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.09em' }}>{label}</span>
+    <div className="mt-3">
+      <div className="px-2 pb-1.5">
+        <span className="text-[0.56rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>{label}</span>
       </div>
       <NavList items={visible} section={section} onNavigate={onNavigate} onSidebarClose={onSidebarClose} />
     </div>
@@ -269,11 +305,16 @@ function ChangePasswordModal({ onClose }) {
 
 export default function DashboardLayout({ section, onNavigate, children, templates = [], activeTemplate = null, onSelectTemplate, systemConfig = {}, onRefreshConfig }) {
   const { user, logout, permissions } = useAuth()
-  const [dark, setDark] = useState(false)
-  const [open, setOpen] = useState(false)
+  // Se inicializa desde la clase que dejo el script pre-paint de index.html.
+  const [dark, setDark] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'))
+  // En escritorio el menu arranca visible; en mobile, cerrado.
+  const [open, setOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024)
   const [pwdOpen, setPwdOpen] = useState(false)
 
-  useEffect(() => { document.documentElement.classList.toggle('dark', dark) }, [dark])
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    try { localStorage.setItem('datas-theme', dark ? 'dark' : 'light') } catch (e) { /* storage no disponible */ }
+  }, [dark])
 
   useEffect(() => {
     if (user?.role !== 'ips_user' || !onRefreshConfig) return
@@ -294,65 +335,57 @@ export default function DashboardLayout({ section, onNavigate, children, templat
   const sidebarContent = (
     <div className="flex flex-col h-full" style={{ width: SIDEBAR_W }}>
 
-      {/* User */}
-      <div className="px-5 pt-5 pb-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center text-[0.8rem] font-bold shrink-0" style={{ backgroundColor: 'var(--green-500)', color: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+      {/* Usuario */}
+      <div className="px-3 pt-4 pb-3 shrink-0">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)' }}>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-[0.8rem] font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #2E7D32, #43A047)', color: '#fff' }}>
             {(user?.name || '?').slice(0, 1).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <div className="text-[0.8rem] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{user?.name}</div>
-            <div className="text-[0.65rem] font-medium" style={{ color: 'var(--green-600)' }}>{roleLabel}</div>
+            <div className="text-[0.82rem] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{user?.name}</div>
+            <div className="text-[0.63rem] font-medium truncate" style={{ color: 'var(--green-600)' }}>{roleLabel}</div>
           </div>
         </div>
       </div>
 
-      <div className="mx-4" style={{ borderTop: '1px solid var(--border-subtle)' }} />
-
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-2">
+      <nav className="flex-1 overflow-y-auto px-3 pb-2">
 
         {role === 'ips_user' ? (
           <NavSection label="Menú" items={getIpsMenuItems(systemConfig)} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
         ) : (
           <>
-            {/* Inicio: sin encabezado, primera opcion del menu */}
-            <div className="mb-1">
-              <NavList
-                items={filterItems(MENU_ITEMS, role, permissions)}
-                section={section}
-                onNavigate={onNavigate}
-                onSidebarClose={closeSidebar}
-              />
-            </div>
+            <NavList
+              items={filterItems(MENU_ITEMS, role, permissions)}
+              section={section}
+              onNavigate={onNavigate}
+              onSidebarClose={closeSidebar}
+            />
 
-            {/* Plantilla activa: indicador liviano */}
+            {/* Plantilla activa */}
             {hasTemplate && templateMeta && (
-              <div className="mb-1">
-                <div className="px-5 pt-4 pb-1">
-                  <span className="text-[0.54rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.09em' }}>Plantilla activa</span>
+              <div className="mt-3">
+                <div className="px-2 pb-1.5">
+                  <span className="text-[0.56rem] font-bold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>Plantilla activa</span>
                 </div>
-                <div className="px-2">
-                  <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--green-500)' }} />
-                    <span className="truncate text-[0.78rem] font-medium" style={{ color: 'var(--text-primary)' }}>{templateMeta.label}</span>
-                  </div>
-                  {templates.length > 1 && (
-                    <button
-                      onClick={() => { if (onSelectTemplate) onSelectTemplate(''); onNavigate('inicio') }}
-                      className="w-full text-left px-3 py-1.5 mt-0.5 text-[0.7rem] rounded-lg transition-all"
-                      style={{ color: 'var(--text-muted)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}
-                    >
-                      Cambiar plantilla
-                    </button>
-                  )}
+                <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--green-500)' }} />
+                  <span className="truncate text-[0.78rem] font-medium" style={{ color: 'var(--text-primary)' }}>{templateMeta.label}</span>
                 </div>
+                {templates.length > 1 && (
+                  <button
+                    onClick={() => { if (onSelectTemplate) onSelectTemplate(''); onNavigate('inicio') }}
+                    className="w-full text-left px-3 py-1.5 mt-0.5 text-[0.7rem] rounded-lg transition-all"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}
+                  >
+                    Cambiar plantilla
+                  </button>
+                )}
               </div>
             )}
 
-            {/* Operaciones, consultas y administracion: solo si hay plantilla activa */}
             {hasTemplate && (
               <>
                 <NavSection label="Operaciones" items={OPERACIONES_ITEMS} role={role} section={section} onNavigate={onNavigate} onSidebarClose={closeSidebar} permissions={permissions} />
@@ -364,27 +397,27 @@ export default function DashboardLayout({ section, onNavigate, children, templat
         )}
       </nav>
 
-      {/* Logout */}
-      <div className="shrink-0 px-2 pb-3">
-        <div className="mx-3 mb-2" style={{ borderTop: '1px solid var(--border-subtle)' }} />
+      {/* Pie */}
+      <div className="shrink-0 px-3 pb-3 pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+        <ThemeSwitch dark={dark} onToggle={() => setDark((v) => !v)} />
         <button
           onClick={() => setPwdOpen(true)}
-          className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-xl transition-all"
           style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', transitionDuration: '150ms' }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          <svg className="w-[17px] h-[17px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          <svg className="w-[17px] h-[17px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
           <span>Cambiar contraseña</span>
         </button>
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-xl transition-all"
           style={{ fontSize: '0.8rem', color: 'var(--danger)', transitionDuration: '150ms' }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--danger-bg)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          <svg className="w-[17px] h-[17px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+          <svg className="w-[17px] h-[17px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
           <span>Cerrar sesión</span>
         </button>
       </div>
@@ -416,6 +449,7 @@ export default function DashboardLayout({ section, onNavigate, children, templat
           style={{
             width: open ? SIDEBAR_W : 0,
             backgroundColor: 'var(--bg-surface)',
+            borderRight: '1px solid var(--border-subtle)',
             boxShadow: open ? '2px 0 16px rgba(0,0,0,0.06)' : 'none',
           }}
         >

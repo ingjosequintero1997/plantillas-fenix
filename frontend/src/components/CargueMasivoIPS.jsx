@@ -135,22 +135,22 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
         </div>
       </div>
 
-      {error && <div className="px-4 py-2 rounded-lg text-sm font-medium" style={{ color: '#991B1B', backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>{error}</div>}
+      {error && <div className="px-4 py-2 rounded-lg text-sm font-medium" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}>{error}</div>}
 
       {step === 'select' && (
-        <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
+        <div className="bg-[var(--bg-surface)] rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
           <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Selecciona el archivo a subir</h2>
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
             onClick={() => document.getElementById('file-input-ips').click()}
-            className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors hover:border-green-400 hover:bg-green-50/30"
-            style={{ borderColor: file ? '#15803d' : '#D1D5DB', backgroundColor: file ? '#F0FDF4' : 'transparent' }}
+            className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors hover:border-green-400 hover:bg-[var(--success-bg)]"
+            style={{ borderColor: file ? 'var(--success)' : 'var(--border-subtle)', backgroundColor: file ? 'var(--success-bg)' : 'transparent' }}
           >
             <input id="file-input-ips" type="file" accept=".txt,.csv,.xlsx,.xls" onChange={(e) => handleFile(e.target.files?.[0])} className="hidden" />
             {file ? (
               <div className="flex items-center justify-center gap-3">
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="#15803d" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" style={{ stroke: 'var(--success)' }} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 <div className="text-left">
                   <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{file.name}</div>
                   <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</div>
@@ -173,15 +173,15 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
       )}
 
       {step === 'validating' && (
-        <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
+        <div className="bg-[var(--bg-surface)] rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
           <div className="text-center py-8">
-            <svg className="animate-spin w-10 h-10 mx-auto mb-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="#15803d" strokeWidth="4" /><path className="opacity-75" fill="#15803d" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+            <svg className="animate-spin w-10 h-10 mx-auto mb-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" style={{ stroke: 'var(--success)' }} strokeWidth="4" /><path className="opacity-75" style={{ fill: 'var(--success)' }} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
             <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Validando archivo...</div>
             <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Aplicando reglas del instructivo y validando columnas</div>
             {progress > 0 && (
               <div className="mt-3 mx-auto" style={{ maxWidth: 300 }}>
-                <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#E5E7EB' }}>
-                  <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, backgroundColor: '#15803d' }} />
+                <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-subtle)' }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, backgroundColor: 'var(--success)' }} />
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{progress}%</div>
               </div>
@@ -192,33 +192,33 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
 
       {step === 'review' && validated && (
         <>
-          <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
+          <div className="bg-[var(--bg-surface)] rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Resultado de la validacion</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-canvas)' }}>
                 <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Registros</div>
                 <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{summary.total || 0}</div>
               </div>
-              <div className="p-3 rounded-xl" style={{ backgroundColor: '#DCFCE7' }}>
-                <div className="text-xs" style={{ color: '#15803d' }}>Sin errores</div>
-                <div className="text-lg font-bold" style={{ color: '#166534' }}>{(summary.total || 0) - (summary.rows_with_errors || 0)}</div>
+              <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--success-bg)' }}>
+                <div className="text-xs" style={{ color: 'var(--success)' }}>Sin errores</div>
+                <div className="text-lg font-bold" style={{ color: 'var(--success)' }}>{(summary.total || 0) - (summary.rows_with_errors || 0)}</div>
               </div>
-              <div className="p-3 rounded-xl" style={{ backgroundColor: hasErrors ? '#FEE2E2' : 'var(--bg-canvas)' }}>
-                <div className="text-xs" style={{ color: hasErrors ? '#991B1B' : 'var(--text-muted)' }}>Con errores</div>
-                <div className="text-lg font-bold" style={{ color: hasErrors ? '#991B1B' : 'var(--text-primary)' }}>{summary.rows_with_errors || 0}</div>
+              <div className="p-3 rounded-xl" style={{ backgroundColor: hasErrors ? 'var(--danger-bg)' : 'var(--bg-canvas)' }}>
+                <div className="text-xs" style={{ color: hasErrors ? 'var(--danger)' : 'var(--text-muted)' }}>Con errores</div>
+                <div className="text-lg font-bold" style={{ color: hasErrors ? 'var(--danger)' : 'var(--text-primary)' }}>{summary.rows_with_errors || 0}</div>
               </div>
               <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-canvas)' }}>
                 <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Calidad</div>
-                <div className="text-lg font-bold" style={{ color: (summary.quality_percent || 0) >= 90 ? '#15803d' : (summary.quality_percent || 0) >= 60 ? '#B45309' : '#B91C1C' }}>{summary.quality_percent || 0}%</div>
+                <div className="text-lg font-bold" style={{ color: (summary.quality_percent || 0) >= 90 ? 'var(--success)' : (summary.quality_percent || 0) >= 60 ? 'var(--warning)' : 'var(--danger)' }}>{summary.quality_percent || 0}%</div>
               </div>
             </div>
 
             {logsSample.length > 0 && (
               <div className="mt-4">
                 <div className="text-xs font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Muestra de errores (primeros 10):</div>
-                <div className="max-h-40 overflow-y-auto rounded-lg p-3 text-xs font-mono" style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+                <div className="max-h-40 overflow-y-auto rounded-lg p-3 text-xs font-mono" style={{ backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}>
                   {logsSample.slice(0, 10).map((log, i) => (
-                    <div key={i} className="py-1" style={{ color: '#991B1B' }}>{typeof log === 'string' ? log : JSON.stringify(log)}</div>
+                    <div key={i} className="py-1" style={{ color: 'var(--danger)' }}>{typeof log === 'string' ? log : JSON.stringify(log)}</div>
                   ))}
                 </div>
               </div>
@@ -253,7 +253,7 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
+          <div className="bg-[var(--bg-surface)] rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
             <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Validar afiliaciones en tabla af_afiliado</h3>
             <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Verifica que los documentos de identidad de las gestantes existan en la base de datos corporativa.</p>
             <button onClick={handleValidateAffiliation} disabled={validatingAffiliation} className="btn-secondary text-xs" style={{ opacity: validatingAffiliation ? 0.5 : 1 }}>
@@ -265,12 +265,12 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
               ) : 'Validar afiliaciones'}
             </button>
             {affiliation && (
-              <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD' }}>
-                <div className="font-semibold mb-1" style={{ color: '#0369A1' }}>Resultado de afiliaciones:</div>
-                <div style={{ color: '#0C4A6E' }}>
+              <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--surface-brand-weak)', border: '1px solid var(--green-300)' }}>
+                <div className="font-semibold mb-1" style={{ color: 'var(--green-700)' }}>Resultado de afiliaciones:</div>
+                <div style={{ color: 'var(--text-secondary)' }}>
                   Encontrados: <strong>{affiliation.encontrados || 0}</strong> | No encontrados: <strong>{affiliation.no_encontrados || 0}</strong>
                 </div>
-                {affiliation.info && <div className="mt-1" style={{ color: '#0C4A6E' }}>{affiliation.info}</div>}
+                {affiliation.info && <div className="mt-1" style={{ color: 'var(--text-secondary)' }}>{affiliation.info}</div>}
               </div>
             )}
           </div>
@@ -290,24 +290,24 @@ export default function CargueMasivoIPS({ onCargueComplete }) {
       )}
 
       {step === 'saved' && saved && (
-        <div className="px-4 py-3 rounded-lg text-sm" style={{ color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0' }}>
+        <div className="px-4 py-3 rounded-lg text-sm" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
           <div className="font-semibold mb-1">Cargue guardado exitosamente</div>
-          <div className="text-xs" style={{ color: '#15803D' }}>
+          <div className="text-xs" style={{ color: 'var(--success)' }}>
             ID: {saved.id} — {saved.rows} registros — {saved.quality}% calidad
           </div>
-          <button onClick={reset} className="mt-3 text-xs font-medium underline" style={{ color: '#15803d' }}>Subir otro archivo</button>
+          <button onClick={reset} className="mt-3 text-xs font-medium underline" style={{ color: 'var(--success)' }}>Subir otro archivo</button>
         </div>
       )}
 
       {step !== 'validating' && (
-        <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
+        <div className="bg-[var(--bg-surface)] rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)' }}>
           <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Recomendaciones</h3>
           <ul className="text-xs space-y-2" style={{ color: 'var(--text-secondary)' }}>
-            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />El archivo debe ser un Excel (.xlsx) o TXT con 200 columnas separadas por pipe (|)</li>
-            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />La primera fila debe contener los encabezados de las variables</li>
-            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />Todos los registros deben pertenecer a tu IPS</li>
-            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />El sistema validara automaticamente la calidad de la data</li>
-            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: '#15803d' }} />Se verificara la afiliacion de cada gestante en la tabla af_afiliado</li>
+            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: 'var(--success)' }} />El archivo debe ser un Excel (.xlsx) o TXT con 200 columnas separadas por pipe (|)</li>
+            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: 'var(--success)' }} />La primera fila debe contener los encabezados de las variables</li>
+            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: 'var(--success)' }} />Todos los registros deben pertenecer a tu IPS</li>
+            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: 'var(--success)' }} />El sistema validara automaticamente la calidad de la data</li>
+            <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: 'var(--success)' }} />Se verificara la afiliacion de cada gestante en la tabla af_afiliado</li>
           </ul>
         </div>
       )}

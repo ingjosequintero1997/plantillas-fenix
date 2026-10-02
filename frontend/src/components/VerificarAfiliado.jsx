@@ -67,9 +67,9 @@ function fmtFecha(s) {
 
 function ResultadoNoEncontrado({ resultado }) {
   return (
-    <div className="panel flex items-center gap-4" style={{ border: '1px solid #FECACA' }}>
-      <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#FEE2E2' }}>
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth="2">
+    <div className="panel flex items-center gap-4" style={{ border: '1px solid var(--danger)' }}>
+      <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--danger-bg)' }}>
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" style={{ stroke: 'var(--danger)' }} strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
         </svg>
       </div>
@@ -163,8 +163,8 @@ export default function VerificarAfiliado() {
         <div className="space-y-5">
           {/* Advertencia si IPS no coincide */}
           {resultado.restriction === 'ips_no_coincide' && (
-            <div className="px-4 py-3 rounded-lg text-sm flex items-start gap-3" style={{ color: '#92400E', backgroundColor: '#FEF3C7', border: '1px solid #FCD34D' }}>
-              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <div className="px-4 py-3 rounded-lg text-sm flex items-start gap-3" style={{ color: 'var(--warning)', backgroundColor: 'var(--warning-bg)', border: '1px solid var(--warning)' }}>
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" style={{ stroke: 'var(--warning)' }} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
               <div>
                 <div className="font-semibold">IPS no coincide</div>
                 <div className="mt-0.5">{resultado.message}</div>

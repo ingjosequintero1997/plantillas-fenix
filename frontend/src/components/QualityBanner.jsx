@@ -14,8 +14,8 @@ export default function QualityBanner({ summary, mode }) {
 
   const colores = {
     bien: { barra: 'var(--green-400)', fondo: 'var(--green-50)', texto: 'var(--green-800)', borde: 'var(--green-300)' },
-    medio: { barra: '#F59E0B', fondo: '#FFFBEB', texto: '#92400E', borde: '#FCD34D' },
-    mal: { barra: '#EF4444', fondo: '#FEF2F2', texto: '#991B1B', borde: '#FCA5A5' },
+    medio: { barra: 'var(--warning)', fondo: 'var(--warning-bg)', texto: 'var(--warning)', borde: 'var(--warning)' },
+    mal: { barra: 'var(--danger)', fondo: 'var(--danger-bg)', texto: 'var(--danger)', borde: 'var(--danger)' },
   }
   const c = colores[nivel]
 
@@ -41,7 +41,7 @@ export default function QualityBanner({ summary, mode }) {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-          style={{ backgroundColor: nivel === 'bien' ? '#DCF1DF' : nivel === 'medio' ? '#FEF3C7' : '#FEE2E2' }}
+          style={{ backgroundColor: nivel === 'bien' ? 'var(--success-bg)' : nivel === 'medio' ? 'var(--warning-bg)' : 'var(--danger-bg)' }}
         >
           {nivel === 'bien' ? (
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--green-700)' }}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -54,7 +54,7 @@ export default function QualityBanner({ summary, mode }) {
             <div className="text-sm font-semibold" style={{ color: c.texto }}>{mensaje}</div>
             <div className="text-2xl font-bold shrink-0" style={{ color: c.texto }}>{pct}%</div>
           </div>
-          <div className="mt-2 h-2.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: nivel === 'bien' ? '#DCF1DF' : nivel === 'medio' ? '#FDE68A' : '#FECACA' }}>
+          <div className="mt-2 h-2.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-subtle)' }}>
             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: c.barra }} />
           </div>
           <div className="mt-1.5 text-xs" style={{ color: c.texto, opacity: 0.85 }}>{subtexto}</div>

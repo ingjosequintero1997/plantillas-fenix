@@ -615,9 +615,9 @@ function validateCrossFields(formData, tab) {
 function GlobalToast({ toast }) {
   if (!toast) return null
   const colors = {
-    success: { bg:'#f0fdf4', fg:'#15803d', border:'#86efac' },
-    warning: { bg:'#fffbeb', fg:'#b45309', border:'#fcd34d' },
-    error: { bg:'#fef2f2', fg:'#b91c1c', border:'#fca5a5' },
+    success: { bg:'var(--success-bg)', fg:'var(--success)', border:'var(--success)' },
+    warning: { bg:'var(--warning-bg)', fg:'var(--warning)', border:'var(--warning)' },
+    error: { bg:'var(--danger-bg)', fg:'var(--danger)', border:'var(--danger)' },
   }
   const c = colors[toast.type] || colors.success
   return (

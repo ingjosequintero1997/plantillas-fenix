@@ -9,7 +9,7 @@ function ToggleSwitch({ checked, onChange, disabled }) {
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
-      style={{ backgroundColor: checked ? '#15803D' : '#D1D5DB' }}
+      style={{ backgroundColor: checked ? 'var(--success)' : 'var(--border-strong)' }}
     >
       <span
         className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
@@ -126,11 +126,11 @@ export default function ConfiguracionView() {
         </div>
       </div>
 
-      {error && <div className="px-4 py-2 rounded-md text-sm" style={{ color: '#DC2626', backgroundColor: '#FEE2E2' }}>{error}</div>}
-      {success && <div className="px-4 py-2 rounded-md text-sm" style={{ color: '#15803D', backgroundColor: '#DCFCE7' }}>{success}</div>}
+      {error && <div className="px-4 py-2 rounded-md text-sm" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>}
+      {success && <div className="px-4 py-2 rounded-md text-sm" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)' }}>{success}</div>}
 
       {/* Modulos */}
-      <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
+      <div className="bg-[var(--bg-surface)] rounded-2xl p-6" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
         <div className="flex items-center gap-2 mb-5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: AZUL }}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -156,7 +156,7 @@ export default function ConfiguracionView() {
       </div>
 
       {/* Lista de IPS */}
-      <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
+      <div className="bg-[var(--bg-surface)] rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 2px 8px rgba(28,28,26,0.04)' }}>
         <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: AZUL }}>
@@ -191,7 +191,7 @@ export default function ConfiguracionView() {
               </thead>
               <tbody>
                 {ipsList.map((ips, idx) => (
-                  <tr key={ips.id} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#FAFBFC' }}>
+                  <tr key={ips.id} style={{ backgroundColor: idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-canvas)' }}>
                     <td className="text-xs" style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
                     <td>
                       <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{ips.ips_name}</div>
@@ -201,8 +201,8 @@ export default function ConfiguracionView() {
                       <span
                         className="inline-block text-[0.62rem] font-medium px-2 py-0.5 rounded-md"
                         style={{
-                          color: ips.active ? '#15803D' : '#DC2626',
-                          backgroundColor: ips.active ? '#DCFCE7' : '#FEE2E2',
+                          color: ips.active ? 'var(--success)' : 'var(--danger)',
+                          backgroundColor: ips.active ? 'var(--success-bg)' : 'var(--danger-bg)',
                         }}
                       >
                         {ips.active ? 'Activa' : 'Inactiva'}

@@ -46,13 +46,13 @@ function DeleteConfirmModal({ filename, onConfirm, onCancel, loading }) {
       onMouseDown={onCancel}
     >
       <div
-        className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl"
+        className="bg-[var(--bg-surface)] rounded-xl p-6 w-full max-w-md shadow-2xl"
         style={{ border: '1px solid var(--border-subtle)' }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#FEE2E2' }}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--danger-bg)' }}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ stroke: 'var(--danger)' }} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
           </div>
           <div>
             <div className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Eliminar cargue</div>
@@ -64,7 +64,7 @@ function DeleteConfirmModal({ filename, onConfirm, onCancel, loading }) {
         </p>
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="btn-secondary text-sm px-4 py-2" disabled={loading}>Cancelar</button>
-          <button onClick={onConfirm} disabled={loading} className="text-sm px-4 py-2 rounded-lg font-medium text-white transition-all" style={{ backgroundColor: loading ? '#F87171' : '#DC2626' }} onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = '#B91C1C' }} onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = '#DC2626' }}>
+          <button onClick={onConfirm} disabled={loading} className="text-sm px-4 py-2 rounded-lg font-medium text-white transition-all" style={{ backgroundColor: loading ? '#F87171' : 'var(--danger)' }} onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = 'var(--danger)' }} onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = 'var(--danger)' }}>
             {loading ? 'Eliminando...' : 'Eliminar'}
           </button>
         </div>
@@ -115,7 +115,7 @@ function CargueDetail({ cargue, onBack }) {
         Volver a la lista
       </button>
 
-      {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>}
+      {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>}
 
       {loading ? (
         <div className="space-y-3">
@@ -292,7 +292,7 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
         {error}
       </div>}
 
-      {msgCaso && <div className="px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--success)', backgroundColor: '#DCFCE7', border: '1px solid rgba(22,163,74,0.15)' }}>
+      {msgCaso && <div className="px-4 py-2.5 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid rgba(22,163,74,0.15)' }}>
         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         {msgCaso}
       </div>}
@@ -370,19 +370,19 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                     <td><span className="badge-neutral">—</span></td>
                     <td className="text-center font-semibold text-sm">{casosCerrados}</td>
                     <td className="text-center">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style={{ color: 'var(--success)', backgroundColor: '#DCFCE7' }}>0</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)' }}>0</span>
                     </td>
                     <td className="text-center"><span className="badge-success">100%</span></td>
                     <td className="text-center"><span className="badge-error">Caso cerrado</span></td>
                     <td className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={handleDescargarCasosCerrados} title="Descargar Excel" className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#DCFCE7' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = 'var(--success-bg)' }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         </button>
                         <button onClick={handleLimpiarCasosCerrados} disabled={cleaningCasos} title="Eliminar caso cerrado (devolver a data normal)" className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--danger)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FBE9E9' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--danger-bg)' }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}>
                           {cleaningCasos ? (
                             <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
@@ -413,13 +413,13 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                     <td className="table-row-click text-center font-semibold text-sm" onClick={() => setSelected(r)}>{r.row_count ?? 0}</td>
                     <td className="table-row-click text-center" onClick={() => setSelected(r)}>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={{ color: r.errors_count ? '#B91C1C' : 'var(--success)', backgroundColor: r.errors_count ? '#FEE2E2' : '#DCFCE7' }}>
+                        style={{ color: r.errors_count ? 'var(--danger)' : 'var(--success)', backgroundColor: r.errors_count ? 'var(--danger-bg)' : 'var(--success-bg)' }}>
                         {r.errors_count ?? 0}
                       </span>
                     </td>
                     <td className="table-row-click text-center" onClick={() => setSelected(r)}><CalidadBadge value={r.quality_percent ?? 0} /></td>
                     <td className="text-center">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: '#DCFCE7', color: '#15803D' }}>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)' }}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#22C55E' }} />
                         Validado
                       </span>
@@ -431,7 +431,7 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                           title="Ver detalle"
                           className="p-1.5 rounded-lg transition-all"
                           style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#DCFCE7' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = 'var(--success-bg)' }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                         </button>
@@ -440,7 +440,7 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                           title="Descargar Excel"
                           className="p-1.5 rounded-lg transition-all"
                           style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = '#DCFCE7' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--green-600)'; e.currentTarget.style.backgroundColor = 'var(--success-bg)' }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}>
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         </button>
@@ -448,7 +448,7 @@ export default function HistorialView({ onNavigate, templateKey = '' }) {
                           onClick={(e) => { e.stopPropagation(); setDeleting(r) }}
                           className="p-1.5 rounded-lg transition-all"
                           style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.backgroundColor = '#FEE2E2' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.backgroundColor = 'var(--danger-bg)' }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent' }}
                           title="Eliminar cargue"
                         >

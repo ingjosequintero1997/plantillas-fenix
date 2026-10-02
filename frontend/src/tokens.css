@@ -77,6 +77,14 @@
   --success: #4A9A4A;
   --success-bg: #ECFDF3;
 
+  /* Alias heredados que algunos componentes ya referencian */
+  --error: #B42318;
+  --error-bg: #FEF3F2;
+  --primary: #4A9A4A;
+  --primary-light: #F0F9F1;
+
+  color-scheme: light;
+
   /* ── Tipografía ───────────────────────────────────────────── */
   --font-display: 'Sora', 'Manrope', sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -133,34 +141,57 @@
 
 /* ── Dark ────────────────────────────────────────────────────── */
 .dark {
-  --bg-canvas: #12120F;
-  --bg-surface: #1C1C1A;
-  --bg-surface-hover: #242420;
-  --bg-subtle: #2E2E2A;
-  --bg-inset: #181816;
+  color-scheme: dark;
 
-  --text-primary: #ECECE7;
-  --text-secondary: #B0B0A6;
-  --text-muted: #8A8A80;
+  /* Fondos — carbon neutro con tinte verde, coherente con el tema claro */
+  --bg-canvas: #0E1211;
+  --bg-surface: #161B19;
+  --bg-surface-hover: #1E2421;
+  --bg-subtle: #232A26;
+  --bg-inset: #0A0D0C;
+
+  --text-primary: #ECEFEA;
+  --text-secondary: #AEB5AE;
+  --text-muted: #828A82;
   --text-on-brand: #FFFFFF;
 
-  --border-subtle: #333330;
-  --border-strong: #404038;
+  --border-subtle: #2A312C;
+  --border-strong: #3A423C;
 
-  --focus-ring: rgba(44, 74, 111, 0.45);
+  --focus-ring: rgba(111, 203, 118, 0.35);
 
+  /* Rampa verde completa: se usa tanto en fondos como en textos */
+  --green-50: #14241A;
+  --green-100: #1B3324;
+  --green-200: #24452F;
+  --green-300: #356B42;
   --green-400: #5AB84D;
-  --green-500: #4AA84A;
-  --green-600: #3E9840;
+  --green-500: #57B85A;
+  --green-600: #6FCB76;
+  --green-700: #8AD998;
+  --green-800: #A9E5B2;
+  --green-900: #C8F0CE;
+
   --brand-strong: #5AB84D;
   --brand-stronger: #4AA84A;
-  --surface-brand-weak: #162416;
+  --surface-brand-weak: #16281A;
 
-  --action-primary: #E6F0FA;
-  --action-primary-hover: #D4E4F5;
-  --action-primary-text: #2C4A6F;
-  --action-secondary-border: #C4D8EC;
-  --action-secondary-hover: #EAF2FB;
+  /* Acento calido (badges de advertencia) */
+  --accent-50: #2A1D13;
+  --accent-100: #3A2718;
+  --accent-200: #4E3521;
+  --accent-300: #6B4A2E;
+  --accent-400: #E0A184;
+  --accent-500: #D98E68;
+  --accent-600: #EDC6B3;
+  --accent-700: #F3DACB;
+
+  /* Acciones */
+  --action-primary: #2F8A38;
+  --action-primary-hover: #3E9840;
+  --action-primary-text: #FFFFFF;
+  --action-secondary-border: #3E3E37;
+  --action-secondary-hover: #24241F;
 
   --danger: #F97066;
   --danger-bg: #2A1212;
@@ -168,6 +199,11 @@
   --warning-bg: #2A200B;
   --success: #5ECB84;
   --success-bg: #0F2A1A;
+
+  --error: #F97066;
+  --error-bg: #2A1212;
+  --primary: #6FCB76;
+  --primary-light: #14241A;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);

@@ -116,7 +116,7 @@ export default function PlantillasView({ templates, selectedTemplate, onSelect, 
           const accent = ACCENTS[idx] || ACCENTS[0]
           const short = SHORT[item.key] || item.key.toUpperCase()
           return (
-            <div key={item.key} className={`relative transition-all duration-300 rounded-2xl bg-white dark:bg-[#131920] border ${
+            <div key={item.key} className={`relative transition-all duration-300 rounded-2xl bg-[var(--bg-surface)] border ${
               isSelected
                 ? 'ring-2 ring-[#5EBA65]/40 shadow-[0_10px_30px_rgba(94,186,101,0.18)] border-[#5EBA65]/60 dark:border-[#5EBA65]/50'
                 : 'border-[#5EBA65]/25 dark:border-[#5EBA65]/20 shadow-[0_1px_3px_rgba(15,23,42,0.05)] dark:shadow-black/30 hover:shadow-[0_10px_30px_rgba(94,186,101,0.15)] dark:hover:shadow-black/50 hover:-translate-y-1 hover:border-[#5EBA65]/50 dark:hover:border-[#5EBA65]/40'

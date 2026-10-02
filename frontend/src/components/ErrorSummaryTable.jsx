@@ -26,7 +26,7 @@ function Correccion({ value }) {
           <span
             key={i}
             className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0' }}
+            style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}
           >
             {op}
           </span>
@@ -35,7 +35,7 @@ function Correccion({ value }) {
     )
   }
   if (s) {
-    return <span className="text-sm" style={{ color: '#166534' }}>{s}</span>
+    return <span className="text-sm" style={{ color: 'var(--success)' }}>{s}</span>
   }
   return <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Revisa el valor</span>
 }
@@ -130,7 +130,7 @@ export default function ErrorSummaryTable({ logs }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)' }}>
             {errors.length} error{errors.length !== 1 ? 'es' : ''}
           </span>
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)' }}>
@@ -175,7 +175,7 @@ export default function ErrorSummaryTable({ logs }) {
           <div key={g.column + '-' + i} className="panel overflow-hidden">
             <div className="flex items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
+                <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)' }}>
                   {g.count}
                 </span>
                 <span className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{g.column}</span>
@@ -192,7 +192,7 @@ export default function ErrorSummaryTable({ logs }) {
                     <span
                       key={j}
                       className="text-xs font-medium px-2.5 py-1 rounded-md"
-                      style={{ color: '#B91C1C', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}
+                      style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}
                     >
                       {mostrarValor(o)}
                     </span>

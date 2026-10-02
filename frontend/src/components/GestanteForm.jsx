@@ -594,7 +594,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
           <button type="button" onClick={onClose}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FEE2E2'; e.currentTarget.style.color = '#B91C1C'; e.currentTarget.style.borderColor = '#FECACA' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.borderColor = 'var(--danger)' }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-canvas)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-subtle)' }}>
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             Cerrar
@@ -605,13 +605,13 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       <form onSubmit={handleSubmit}>
         {/* Errores / Mensajes */}
         {error && (
-          <div className="mx-5 mt-4 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>
+          <div className="mx-5 mt-4 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}>
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             {error}
           </div>
         )}
         {msg && (
-          <div className="mx-5 mt-4 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style={{ color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0' }}>
+          <div className="mx-5 mt-4 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             {msg}
           </div>
@@ -660,7 +660,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
 
               {pdfMsg && (
                 <div className="px-3 py-2 rounded-lg text-xs flex items-center gap-2"
-                  style={{ color: pdfMsg.includes('Error') ? '#B91C1C' : '#166534', backgroundColor: pdfMsg.includes('Error') ? '#FEE2E2' : '#DCFCE7', border: `1px solid ${pdfMsg.includes('Error') ? '#FECACA' : '#BBF7D0'}` }}>
+                  style={{ color: pdfMsg.includes('Error') ? 'var(--danger)' : 'var(--success)', backgroundColor: pdfMsg.includes('Error') ? 'var(--danger-bg)' : 'var(--success-bg)', border: `1px solid ${pdfMsg.includes('Error') ? 'var(--danger)' : 'var(--success)'}` }}>
                   {pdfMsg}
                 </div>
               )}
@@ -679,7 +679,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
                         onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--green-300)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(90,174,90,0.08)' }}
                         onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.boxShadow = '' }}>
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                          style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -716,9 +716,9 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
                           </button>
                           <button type="button" onClick={() => handleDeletePdf(pdf.id, pdf.filename)} disabled={deletingId === pdf.id}
                             className="px-2.5 py-1.5 rounded-lg text-[0.65rem] font-medium flex items-center gap-1 transition-all"
-                            style={{ color: '#B91C1C', border: '1px solid #FECACA', backgroundColor: '#FEE2E2' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#DC2626'; e.currentTarget.style.color = '#fff' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FEE2E2'; e.currentTarget.style.color = '#B91C1C' }}>
+                            style={{ color: 'var(--danger)', border: '1px solid var(--danger)', backgroundColor: 'var(--danger-bg)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--danger)'; e.currentTarget.style.color = '#fff' }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)' }}>
                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             {deletingId === pdf.id ? '...' : 'Eliminar'}
                           </button>
@@ -818,13 +818,13 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         <div className="px-5 py-3" style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
           {/* Mensajes inline cerca del boton */}
           {error && (
-            <div className="mb-2 px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>
+            <div className="mb-2 px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}>
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
               {error}
             </div>
           )}
           {msg && (
-            <div className="mb-2 px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5" style={{ color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0' }}>
+            <div className="mb-2 px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               {msg}
             </div>

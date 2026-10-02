@@ -182,8 +182,8 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
                       const isAccepted = wasEdited && !hasError
                       const val = row[col] || ''
                       let bg = 'transparent'
-                      if (isAccepted) bg = '#ECFDF5'
-                      if (hasError) bg = '#FEF2F2'
+                      if (isAccepted) bg = 'var(--success-bg)'
+                      if (hasError) bg = 'var(--danger-bg)'
                       return (
                         <td
                           key={col}
@@ -205,13 +205,13 @@ export default function EditableDataTable({ logs, rawText, templateNames, onReva
                               style={{ borderColor: 'var(--green-400)', outline: 'none' }}
                             />
                           ) : (
-                            <span className="text-xs block truncate" style={{ color: hasError ? '#B91C1C' : isAccepted ? '#047857' : 'var(--text-primary)' }}>
+                            <span className="text-xs block truncate" style={{ color: hasError ? 'var(--danger)' : isAccepted ? 'var(--success)' : 'var(--text-primary)' }}>
                               {val || <span style={{ color: 'var(--text-muted)' }}>vac&iacute;o</span>}
-                              {isAccepted && <span className="ml-1" style={{ color: '#059669' }}>&#10003;</span>}
+                              {isAccepted && <span className="ml-1" style={{ color: 'var(--success)' }}>&#10003;</span>}
                             </span>
                           )}
                           {hasError && !isEditing && (
-                            <span className="text-[0.6rem] block mt-0.5" style={{ color: '#DC2626' }}>{errorCells[cellKey]}</span>
+                            <span className="text-[0.6rem] block mt-0.5" style={{ color: 'var(--danger)' }}>{errorCells[cellKey]}</span>
                           )}
                         </td>
                       )

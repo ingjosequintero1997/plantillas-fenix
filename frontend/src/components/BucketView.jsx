@@ -27,7 +27,7 @@ export default function BucketView() {
       </div>
 
       {error && (
-        <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{error}</div>
+        <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>
       )}
 
       {loading && !data && <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Cargando...</div>}

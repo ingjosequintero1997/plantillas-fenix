@@ -66,12 +66,12 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
     const status = (logMap[rowIndex + 1] && logMap[rowIndex + 1][columnName]) || 'ok'
     if (status === 'error') return { cls: 'border-red-200 dark:border-red-800/50 bg-red-50/30 dark:bg-red-950/30 text-red-600 dark:text-red-400', label: 'Error' }
     if (status === 'corrected') return { cls: 'border-brand-200 dark:border-brand-700/40 bg-brand-50/40 dark:bg-brand-900/30 text-ink', label: 'Corregido' }
-    return { cls: 'border-ink-line/40 dark:border-[#666669]/40 bg-white dark:bg-[#333337] text-ink', label: 'Ok' }
+    return { cls: 'border-[var(--border-subtle)] bg-[var(--bg-surface)] text-ink', label: 'Ok' }
   }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 rounded-xl border border-ink-line/50 dark:border-[#666669]/50 bg-[#F8F7F4] dark:bg-[#28282B] p-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-3 md:flex-row md:items-center md:justify-between">
           <div className="text-sm font-bold text-ink">
             Registros: <span className="text-ink-muted font-semibold">{truncated ? `${MAX_PREVIEW_ROWS}+` : rows.length}</span>
             <span className="mx-2 text-ink-line">·</span>
@@ -91,7 +91,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 dark:border-[#666669]/50 bg-white dark:bg-[#333337] p-2 scroll-thin shadow-sm dark:shadow-black/30">
+        <div className="max-h-[620px] overflow-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 scroll-thin shadow-sm dark:shadow-black/30">
           {filteredIndexes.length === 0 && (
             <div className="p-4 text-sm text-ink-muted text-center">Sin resultados para este filtro</div>
           )}
@@ -105,7 +105,7 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
                   className={`w-full rounded-xl border p-3 text-left transition-all duration-150 ${
                     safeSelected === idx
                       ? 'ring-2 ring-brand-800/15 dark:ring-brand-500/20 shadow-md dark:shadow-black/40 border-brand-800/30 dark:border-brand-500/30'
-                      : 'border-ink-line/50 dark:border-[#666669]/50 bg-white dark:bg-[#333337] hover:border-ink-line/70 dark:hover:border-[#666669] hover:shadow-sm'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)] hover:shadow-sm'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -119,8 +119,8 @@ export default function DataGridTable({ corrected_text, templateColumns, logs })
           </div>
         </div>
 
-        <div className="max-h-[620px] overflow-auto rounded-xl border border-ink-line/50 dark:border-[#666669]/50 bg-white dark:bg-[#333337] p-3 md:p-4 scroll-thin shadow-sm dark:shadow-black/30">
-          <div className="mb-3 flex items-center justify-between gap-3 sticky top-0 bg-white dark:bg-[#333337] pb-2 border-b border-ink-line/50 dark:border-[#666669]/50">
+        <div className="max-h-[620px] overflow-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 md:p-4 scroll-thin shadow-sm dark:shadow-black/30">
+          <div className="mb-3 flex items-center justify-between gap-3 sticky top-0 bg-[var(--bg-surface)] pb-2 border-b border-[var(--border-subtle)]">
             <h3 className="text-sm font-bold text-ink">Registro {safeSelected + 1}</h3>
             <span className={`text-[0.45rem] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 ${rowStatus(safeSelected).cls}`}>
               {rowStatus(safeSelected).label}

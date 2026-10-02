@@ -49,7 +49,7 @@ export default function TemplateSelector({ templates, onSelect, activeTemplate, 
           <p className="page-subtitle mt-1">Cargando módulos de datos...</p>
         </div>
         {error && (
-          <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ color: '#B91C1C', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}>
             {error}
           </div>
         )}

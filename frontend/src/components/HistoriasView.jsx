@@ -626,7 +626,7 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
               {/* PDF iframe */}
               <div style={{
                 flex: 1, minWidth: 0,
-                backgroundColor: '#f5f5f5',
+                backgroundColor: 'var(--bg-subtle)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-lg)',
                 overflow: 'hidden',

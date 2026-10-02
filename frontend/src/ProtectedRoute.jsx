@@ -10,24 +10,24 @@ function WakingUpScreen() {
     }}>
       <div style={{ textAlign: 'center', maxWidth: '320px' }}>
         <div style={{
-          width: 56, height: 56, borderRadius: 16, backgroundColor: '#DCFCE7', display: 'flex',
+          width: 56, height: 56, borderRadius: 16, backgroundColor: 'var(--success-bg)', display: 'flex',
           alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
         }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--success)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
         </div>
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>
+        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
           DATAS PYM
         </div>
-        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: 16 }}>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
           Conectando con el servidor...
         </div>
         <div style={{
-          width: '100%', height: 3, borderRadius: 99, overflow: 'hidden', backgroundColor: '#e5e7eb',
+          width: '100%', height: 3, borderRadius: 99, overflow: 'hidden', backgroundColor: 'var(--border-subtle)',
         }}>
           <div style={{
-            width: '40%', height: '100%', borderRadius: 99, backgroundColor: '#16A34A',
+            width: '40%', height: '100%', borderRadius: 99, backgroundColor: 'var(--success)',
             animation: 'waking-slide 1.2s ease-in-out infinite',
           }} />
         </div>

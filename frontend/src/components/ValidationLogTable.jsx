@@ -19,7 +19,7 @@ function CorreccionCelda({ value }) {
     return (
       <div className="flex flex-wrap gap-1">
         {opciones.slice(0, 4).map((op, i) => (
-          <span key={i} className="text-[0.7rem] font-medium px-2 py-0.5 rounded-md" style={{ color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0' }}>
+          <span key={i} className="text-[0.7rem] font-medium px-2 py-0.5 rounded-md" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
             {op}
           </span>
         ))}
@@ -31,7 +31,7 @@ function CorreccionCelda({ value }) {
       </div>
     )
   }
-  return <span className="text-sm" style={{ color: '#166534' }}>{s}</span>
+  return <span className="text-sm" style={{ color: 'var(--success)' }}>{s}</span>
 }
 
 export default function ValidationLogTable({ logs }) {
@@ -80,10 +80,10 @@ export default function ValidationLogTable({ logs }) {
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)' }}>
               {filasConError} fila{filasConError !== 1 ? 's' : ''} con error
             </span>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: '#92400E', backgroundColor: '#FEF3C7' }}>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--warning)', backgroundColor: 'var(--warning-bg)' }}>
               {errors.length} celda{errors.length !== 1 ? 's' : ''}
             </span>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)' }}>
@@ -124,7 +124,7 @@ export default function ValidationLogTable({ logs }) {
                 }}
               >
                 <td className="px-4 py-2.5">
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold" style={{ color: '#B91C1C', backgroundColor: '#FEE2E2' }}>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)' }}>
                     {l.row}
                   </span>
                 </td>
@@ -132,7 +132,7 @@ export default function ValidationLogTable({ logs }) {
                   <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{l.column}</div>
                 </td>
                 <td className="px-4 py-2.5">
-                  <span className="inline-block text-xs font-medium px-2 py-1 rounded-md" style={{ color: '#B91C1C', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+                  <span className="inline-block text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}>
                     {mostrarValor(l.original)}
                   </span>
                 </td>

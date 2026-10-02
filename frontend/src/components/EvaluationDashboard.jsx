@@ -13,7 +13,7 @@ const ChartTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
   return (
-    <div className="bg-white dark:bg-[#333337] border border-ink-line/50 dark:border-[#666669]/50 rounded-xl px-3 py-2 shadow-lg dark:shadow-black/40 text-xs">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 shadow-lg dark:shadow-black/40 text-xs">
       <p className="font-bold text-ink">{d.fullName}</p>
       <p className="text-ink-muted">{payload[0].value?.toFixed(1)}% ({d.numerador}/{d.denominador})</p>
     </div>
@@ -216,7 +216,7 @@ export default function EvaluationDashboard({
               {downloading ? 'Descargando…' : 'Excel'}
             </button>
             <button onClick={onClose}
-              className="btn bg-white dark:bg-[#333337] text-ink border border-ink-line/70 dark:border-[#666669] hover:bg-surface-50 dark:hover:bg-[#3D3D40] shadow-button dark:shadow-black/20">
+              className="btn bg-[var(--bg-surface)] text-ink border border-[var(--border-subtle)] hover:bg-surface-50 shadow-button dark:shadow-black/20">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -317,7 +317,7 @@ export default function EvaluationDashboard({
                 neutral: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700/50',
               }
               return (
-                <div key={ind.INDICADOR} className="rounded-lg border border-ink-line/60 dark:border-[#666669]/60 bg-surface-50/70 dark:bg-[#2C2C2F]/70 p-3">
+                <div key={ind.INDICADOR} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <span className="text-[0.5rem] font-bold uppercase tracking-wider text-ink-muted leading-tight">
                       {ind.INDICADOR}
@@ -368,10 +368,10 @@ export default function EvaluationDashboard({
           </div>
         </div>
 
-        <div className="overflow-auto rounded-xl border border-ink-line/60 dark:border-[#666669]/60 bg-white dark:bg-[#333337] scroll-thin max-h-[500px]">
+        <div className="overflow-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] scroll-thin max-h-[500px]">
           <table className="min-w-full text-xs">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-surface-50 dark:bg-[#2C2C2F] border-b border-ink-line dark:border-[#666669]">
+              <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-subtle)]">
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">#</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Documento</th>
                 <th className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-ink-muted">Nombre</th>
@@ -390,7 +390,7 @@ export default function EvaluationDashboard({
             </thead>
             <tbody>
               {paginatedPatients.map((p) => (
-                <tr key={p._index} className="border-b border-surface-100 dark:border-[#666669]/50 hover:bg-brand-50/20 dark:hover:bg-brand-900/20 transition-colors">
+                <tr key={p._index} className="border-b border-[var(--border-subtle)] hover:bg-brand-50/20 dark:hover:bg-brand-900/20 transition-colors">
                   <td className="px-3 py-2 font-semibold text-ink-muted">{p._index}</td>
                   <td className="px-3 py-2 font-mono text-ink font-semibold">{p._documento || '—'}</td>
                   <td className="px-3 py-2 text-ink font-medium whitespace-nowrap">{p._nombreCompleto}</td>

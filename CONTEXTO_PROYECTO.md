@@ -102,8 +102,9 @@ Aplicación web de **validación y gestión de datos de gestantes** para DUSAKAW
 ## 11. ESTADO ACTUAL (verificado)
 
 - **Commitado por el usuario** (últimos commits): validador masivo, bucket con tope, ajustes de IPS, login IPS, historias, módulo bucket, filtro roles, usuarios IPS, permisos por rol.
-- **Pendiente en working tree**: `backend/validators.py` (mensaje NUMERIC mejorado: "Debe ser un numero (valor de la sumatoria)"). Listo para commit+deploy.
-- **Pendiente en working tree**: `frontend/src/components/DashboardLayout.jsx` (rediseño estético del sidebar: menos encabezados, Administración separada, plantilla liviana, íconos deduplicados, acentos en labels). Build verificado con `npx vite build`. Listo para commit+deploy.
+- **Commitado**: `backend/validators.py` — mensaje NUMERIC `"Debe ser un numero (valor de la sumatoria)"` en `_mensaje_esperado()` (líneas 1160-1163), commit `eba3bda` (30-sep-2026).
+- **Commitado**: `frontend/src/components/DashboardLayout.jsx` — rediseño estético del sidebar, commit `97c18ce` ("ajustes en el sidebar").
+- **Pendiente en working tree**: modo oscuro con interruptor (ver §14) + rediseño del `Login.jsx` (tarjeta centrada tipo SaaS, fondo de marca, logo `logo.png` con transparencia arriba, botón con gradiente, interruptor de tema propio). Build verificado con `npx vite build`. Listo para commit+deploy.
 - Se quitó el sistema de meses/periodo de cargue en todos los módulos (commit `6cd1f9a "ajuste del validador masivo"` y anteriores). El frontend ya no envía `mes`; los params `mes` en el backend quedaron opcionales.
 
 ## 12. COMANDOS ÚTILES
@@ -120,3 +121,11 @@ Aplicación web de **validación y gestión de datos de gestantes** para DUSAKAW
 - El usuario confirmó que las contraseñas en la BD están OK (no migrar hashes de `usuarios_ips`).
 - Acceso a BD de producción (read-only para consultas): `postgres://postgres:qazwsx12A.@129.80.159.38:5436/base_sie_dusakawi` (prefijo `postgresql://` para SQLAlchemy).
 - No exponer credenciales en respuestas/logs. `_health_error`/`_redact` redactan `user:pass@`.
+
+## 14. TEMA / MODO OSCURO
+
+- **Fuente de verdad**: `frontend/src/tokens.css`. Define `:root` (claro) y `.dark` (oscuro). El modo oscuro recolorea **todos** los tokens: fondos (carbón cálido), texto, bordes, la rampa verde completa (`--green-50..900`, para que los chips/activos no queden casi blancos), acento cálido, acciones y semánticos.
+- **Interruptor**: en `DashboardLayout.jsx` hay un `ThemeSwitch` (switch etiquetado "Modo oscuro") en el pie del sidebar y un botón sol/luna rápido en el header. El estado se inicializa desde la clase `dark` del `<html>` y se persiste en `localStorage` con la clave **`datas-theme`** (`'dark'`/`'light'`).
+- **Sin flash**: `frontend/index.html` tiene un script inline pre-paint que añade `.dark` a `<html>` según `localStorage` o `prefers-color-scheme`, más `<meta name="color-scheme">`.
+- **Regla para nuevos componentes**: usar tokens (`var(--bg-surface)`, `var(--text-primary)`, `var(--border-subtle)`, `var(--success-bg)`, etc.) o clases `bg-[var(--...)]`. NO hardcodear `bg-white`/hex claros para superficies, ni chips `#FEE2E2`/`#DCFCE7`/`#FEF3C7`: en oscuro se ven como parches claros. Excepciones válidas: overlays translúcidos (`bg-white/15`) y knobs de toggles sobre heroes de color.
+- Aliases semánticos heredados ya definidos en tokens: `--error`, `--error-bg`, `--primary`, `--primary-light` (antes se usaban sin existir).

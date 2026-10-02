@@ -148,6 +148,18 @@
     border-color: var(--green-500);
     box-shadow: 0 0 0 3px var(--focus-ring);
   }
+  /* Normaliza el fondo que Chrome pinta en campos autocompletados (azul claro)
+     para que respete el tema claro/oscuro. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--text-primary);
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-surface) inset;
+    box-shadow: 0 0 0 1000px var(--bg-surface) inset;
+    transition: background-color 9999s ease-in-out 0s;
+    caret-color: var(--text-primary);
+  }
 
   .select {
     font-family: var(--font-body);

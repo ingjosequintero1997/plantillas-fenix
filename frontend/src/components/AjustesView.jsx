@@ -76,11 +76,11 @@ export default function AjustesView({ logs }) {
           const isOpen = !!expanded[name]
           const sample = items.slice(0, 3)
           return (
-            <div key={name} className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-              <button onClick={() => toggle(name)} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50">
+            <div key={name} className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border-subtle)' }}>
+              <button onClick={() => toggle(name)} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[var(--bg-surface-hover)]">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="flex items-center justify-center w-7 h-7 rounded-md shrink-0"
-                    style={{ color: errors > 0 ? 'var(--error)' : 'var(--primary)', backgroundColor: errors > 0 ? '#FBE9E9' : 'var(--primary-light)' }}>
+                    style={{ color: errors > 0 ? 'var(--error)' : 'var(--primary)', backgroundColor: errors > 0 ? 'var(--danger-bg)' : 'var(--primary-light)' }}>
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                   </span>
                   <div className="min-w-0">
@@ -103,7 +103,7 @@ export default function AjustesView({ logs }) {
                       <div className="flex-1 grid gap-1 sm:grid-cols-2">
                         <div className="min-w-0">
                           <div className="text-[0.6rem] font-medium mb-0.5" style={{ color: 'var(--text-secondary)' }}>Original</div>
-                          <div className="text-xs px-2.5 py-1.5 rounded-md break-words" style={{ color: 'var(--error)', backgroundColor: '#FBE9E9' }}>{String(l.original ?? '—') || '—'}</div>
+                          <div className="text-xs px-2.5 py-1.5 rounded-md break-words" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{String(l.original ?? '—') || '—'}</div>
                         </div>
                         <div className="min-w-0">
                           <div className="text-[0.6rem] font-medium mb-0.5" style={{ color: 'var(--text-secondary)' }}>Ajustado</div>
