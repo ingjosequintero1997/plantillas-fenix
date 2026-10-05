@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../AuthContext'
-import { updateGestante, createGestante, autoFillCasoCerrado, exportarCasoCerrado, exportarIpsExcel, fetchCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns, fetchMisGestantes } from '../api'
+import { updateGestante, createGestante, autoFillCasoCerrado, exportarCasoCerrado, exportarIpsExcel, fetchCasoCerrado, cleanAndRepopulate, validateAffiliation, fetchGestante, fetchGestanteByNumId, fetchGestanteColumns, fetchMisGestantes, recalcularFormulas } from '../api'
 import GestanteForm from './GestanteForm'
 import ExcelJS from 'exceljs'
 
@@ -78,6 +78,7 @@ export default function DataManagement({ correctedText }) {
   const [ipsSearch, setIpsSearch] = useState('')
   const [municipioFilter, setMunicipioFilter] = useState('')
   const [casosCerradosTotal, setCasosCerradosTotal] = useState(0)
+  const [recalcMsg, setRecalcMsg] = useState('')
 
   const [ipsRows, setIpsRows] = useState([])
   const [ipsColumns, setIpsColumns] = useState([])
@@ -329,6 +330,16 @@ export default function DataManagement({ correctedText }) {
     finally { setPopulating(false) }
   }
 
+  const handleRecalcularFormulas = async () => {
+    setRecalcMsg('Recalculando fórmulas sobre la data validada...')
+    try {
+      const data = await recalcularFormulas()
+      await runAffiliationValidation(true)
+      setRecalcMsg(`Fórmulas aplicadas: ${data.filas} filas en ${data.cargues} cargue(s).`)
+      setTimeout(() => setRecalcMsg(''), 6000)
+    } catch (e) { setRecalcMsg('Error: ' + (e.message || '')) }
+  }
+
   if (view === 'editing' && editing) {
     return <GestanteForm mode="edit" initialData={editing} onSave={handleSaveEdit}
       onClose={() => { setEditing(null); setView('ips_detail') }} ipsList={ipsNames} />
@@ -359,16 +370,9 @@ export default function DataManagement({ correctedText }) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <button onClick={handleGenerarCasosCerrados} className="btn-secondary text-sm">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Generar casos cerrados
-              </button>
-            )}
-          </div>
         </div>
         {autoFillMsg && <div className="px-3 py-2 rounded-md text-sm" style={{ color: autoFillMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: autoFillMsg.includes('Error') ? 'var(--danger-bg)' : 'var(--surface-brand-weak)' }}>{autoFillMsg}</div>}
+        {recalcMsg && <div className="px-3 py-2 rounded-md text-sm" style={{ color: recalcMsg.includes('Error') ? 'var(--error)' : 'var(--primary)', backgroundColor: recalcMsg.includes('Error') ? 'var(--danger-bg)' : 'var(--surface-brand-weak)' }}>{recalcMsg}</div>}
         {populateMsg && <div className="px-3 py-2 rounded-md text-sm" style={{ color: populateMsg.includes('Error') ? 'var(--error)' : 'var(--text-secondary)', backgroundColor: populateMsg.includes('Error') ? 'var(--danger-bg)' : 'var(--bg-subtle)', whiteSpace: 'pre-wrap' }}>{populateMsg}</div>}
         {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>}
         {noEncontrados > 0 && (

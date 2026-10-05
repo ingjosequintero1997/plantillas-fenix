@@ -27,6 +27,7 @@ const PERMISSION_GROUPS = [
       { key: 'verificar', label: 'Verificar afiliado', desc: 'Consulta de datos por documento' },
       { key: 'historias', label: 'Historias clínicas', desc: 'Expedientes PDF' },
       { key: 'reportes', label: 'Reportes pendientes', desc: 'Procedimientos y medicamentos' },
+      { key: 'caso_cerrado', label: 'Caso cerrado', desc: 'Gestantes con caso cerrado por IPS' },
     ],
   },
 ]

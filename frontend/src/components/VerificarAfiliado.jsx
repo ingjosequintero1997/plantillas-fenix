@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
-import { verificarAfiliado } from '../api'
+import { verificarAfiliado, verificarAfiliadoMasivo } from '../api'
+import Pagination from './Pagination'
+
+const MASIVO_PAGE_SIZE = 50
 
 function Campo({ label, value, icon }) {
   return (
@@ -93,6 +96,13 @@ export default function VerificarAfiliado() {
   const [resultado, setResultado] = useState(null)
   const [error, setError] = useState('')
 
+  // Verificacion masiva
+  const [masivoFile, setMasivoFile] = useState(null)
+  const [masivoLoading, setMasivoLoading] = useState(false)
+  const [masivo, setMasivo] = useState(null)
+  const [masivoError, setMasivoError] = useState('')
+  const [masivoPage, setMasivoPage] = useState(1)
+
   const buscar = async () => {
     const doc = documento.trim()
     if (!doc) { setError('Ingresa el n\u00famero de documento de la usuaria'); return }
@@ -109,6 +119,33 @@ export default function VerificarAfiliado() {
     }
   }
 
+  const verificarMasivo = async () => {
+    if (!masivoFile) { setMasivoError('Selecciona un archivo TXT o CSV (TIPO,NUMERO por linea)'); return }
+    setMasivoError(''); setMasivo(null); setMasivoPage(1); setMasivoLoading(true)
+    try {
+      const data = await verificarAfiliadoMasivo(masivoFile)
+      setMasivo(data)
+    } catch (e) {
+      setMasivoError(e.message || 'No se pudo realizar la verificacion masiva')
+    } finally {
+      setMasivoLoading(false)
+    }
+  }
+
+  const descargarMasivo = () => {
+    if (!masivo?.resultados?.length) return
+    const filas = [['Tipo de identificacion', 'Numero de identificacion', 'Estado', 'IPS primaria']]
+    for (const r of masivo.resultados) filas.push([r.tipo, r.numero, r.estado, r.ips || ''])
+    const csv = filas.map((r) => r.map((c) => `"${String(c == null ? '' : c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'verificacion_afiliado_masiva.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const afiliado = resultado?.afiliado || {}
   const nombreCompleto = [
     afiliado.primer_nombre,
@@ -121,14 +158,14 @@ export default function VerificarAfiliado() {
     <div className="space-y-5 fade-in">
       <div>
         <div className="page-title">Verificar afiliado</div>
-        <div className="page-subtitle">Consulta los datos demogr\u00e1ficos de una usuaria por n\u00famero de documento.</div>
+        <div className="page-subtitle">Consulta los datos demográficos de una usuaria por número de documento.</div>
       </div>
 
       {/* Buscador */}
       <div className="panel">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-[220px]">
-            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>N\u00famero de documento</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Número de documento</label>
             <input
               value={documento}
               onChange={(e) => setDocumento(e.target.value)}
@@ -146,6 +183,91 @@ export default function VerificarAfiliado() {
             {buscando ? 'Consultando...' : 'Verificar'}
           </button>
         </div>
+      </div>
+
+      {/* Verificacion masiva */}
+      <div className="panel space-y-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--green-100)', color: 'var(--green-800)' }}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+          </div>
+          <div>
+            <div className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Verificación masiva</div>
+            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Sube un TXT/CSV con una línea por usuaria: <b>TIPO,NUMERO</b> (ej. <code>CC,1045678901</code>).
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <input id="masivo-file" type="file" accept=".txt,.csv" className="hidden"
+            onChange={(e) => { setMasivoFile(e.target.files?.[0] || null); setMasivo(null); setMasivoError('') }} />
+          <label htmlFor="masivo-file" className="btn-secondary text-sm cursor-pointer">
+            {masivoFile ? masivoFile.name : 'Seleccionar archivo'}
+          </label>
+          <button onClick={verificarMasivo} disabled={masivoLoading || !masivoFile} className="btn-primary text-sm">
+            {masivoLoading ? 'Verificando...' : 'Verificar masivo'}
+          </button>
+          {masivo?.resultados?.length > 0 && (
+            <button onClick={descargarMasivo} className="btn-secondary text-sm ml-auto">Descargar CSV</button>
+          )}
+        </div>
+
+        {masivoError && (
+          <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)' }}>{masivoError}</div>
+        )}
+
+        {masivo && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <span className="badge-neutral">Total: {masivo.total}</span>
+              <span className="badge-success">Encontrados: {masivo.encontrados}</span>
+              <span className="badge-warning">Tipo no coincide: {masivo.tipo_no_coincide}</span>
+              <span className="badge-error">No encontrados: {masivo.no_encontrados}</span>
+            </div>
+            {masivo.error_db && <div className="text-xs" style={{ color: 'var(--warning)' }}>{masivo.error_db}</div>}
+            {masivo.errores_formato?.length > 0 && (
+              <div className="text-xs" style={{ color: 'var(--warning)' }}>
+                {masivo.errores_formato.length} línea(s) con formato inválido (se omitieron).
+              </div>
+            )}
+            {masivo.resultados?.length > 0 ? (
+              <div>
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr><th>Tipo de identificación</th><th>Número de identificación</th><th>Estado</th><th>IPS primaria</th></tr>
+                    </thead>
+                    <tbody>
+                      {masivo.resultados.slice((masivoPage - 1) * MASIVO_PAGE_SIZE, masivoPage * MASIVO_PAGE_SIZE).map((r, i) => (
+                        <tr key={i}>
+                          <td>{r.tipo}</td>
+                          <td>{r.numero}</td>
+                          <td>
+                            <span className={r.estado === 'ENCONTRADO' ? 'badge-success' : r.estado === 'TIPO_NO_COINCIDE' ? 'badge-warning' : 'badge-error'}>
+                              {r.estado === 'ENCONTRADO' ? 'Encontrado' : r.estado === 'TIPO_NO_COINCIDE' ? 'Tipo no coincide' : 'No encontrado'}
+                            </span>
+                            {r.estado === 'TIPO_NO_COINCIDE' && r.tipo_bd && (
+                              <span className="ml-1.5 text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>(BD: {r.tipo_bd})</span>
+                            )}
+                          </td>
+                          <td>{r.ips || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  page={masivoPage}
+                  totalPages={Math.max(1, Math.ceil(masivo.resultados.length / MASIVO_PAGE_SIZE))}
+                  onChange={setMasivoPage}
+                />
+              </div>
+            ) : (
+              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>No se procesaron filas.</div>
+            )}
+          </div>
+        )}
       </div>
 
       {error && (

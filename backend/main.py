@@ -1828,6 +1828,18 @@ async def create_cargue(payload: CarguePayload, current_user: User = Depends(get
 			except Exception as e_parse:
 				gestantes_errores.append("Error general al procesar los registros.")
 
+		# Automatizacion post-cargue: SOLO si la data quedo LIMPIA (sin errores),
+		# para que la data descargable cumpla instructivo + validacion + formulas.
+		_sum = payload.summary or {}
+		_errores = int(_sum.get("rows_with_errors", payload.errors_count) or 0)
+		if (cargue.template_key or "gestante") == "gestante" and _errores == 0:
+			try:
+				_recalcular_formulas_cargue(cargue)
+				db.commit()
+				_marcar_casos_cerrados(db)
+			except Exception as _e_auto:
+				print(f"auto post-cargue: {type(_e_auto).__name__}: {_e_auto}")
+
 		return {
 			"id": cargue.id,
 			"mes": cargue.mes,
@@ -1943,6 +1955,49 @@ def _guardar_filas(db, cargue: Cargue, filas: list[str]):
 	cargue.quality_percent = 100.0
 	cargue.status = "validado"
 	db.commit()
+
+
+def _recalcular_formulas_cargue(cargue) -> int:
+	"""Re-aplica las formulas de la plantilla gestante a un cargue y actualiza su
+	texto (forzando el recalculo). Devuelve el numero de filas (0 si no aplica)."""
+	if (cargue.template_key or "gestante") != "gestante":
+		return 0
+	try:
+		from .formulas import aplicar_formulas
+	except ImportError:
+		from formulas import aplicar_formulas
+	try:
+		meta = get_template_by_key("gestante")
+	except Exception:
+		return 0
+	tmpl = meta["template"]
+	names = [t["name"] for t in tmpl]
+	n = len(names)
+	formula_names = [t["name"] for t in tmpl if str(t.get("type", "")).upper() == "FORMULA"]
+	formula_names.append('Relación entre Anemia vs tratamiento')
+	filas = _filas_cargue(cargue)
+	if not filas:
+		return 0
+	nuevas = []
+	for linea in filas:
+		cols = linea.split("|")
+		w = len(cols)
+		fila = {names[i]: cols[i] for i in range(min(n, w))}
+		for fn in formula_names:
+			fila[fn] = ""
+		fila = aplicar_formulas(fila)
+		out = []
+		for i in range(w):
+			if i < n:
+				v = fila.get(names[i])
+				out.append("" if v is None else str(v))
+			else:
+				out.append(cols[i])
+		nuevas.append("|".join(out))
+	cargue.corrected_text = "\n".join(nuevas)
+	cargue.raw_text = cargue.corrected_text
+	cargue.compressed = False
+	return len(nuevas)
 
 
 @app.get("/cargue-unificado")
@@ -2764,7 +2819,7 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 # El admin siempre tiene todo habilitado. "Usuarios" y "Configuracion" no son
 # configurables: son exclusivos del admin.
 MODULE_KEYS = (
-	"inicio", "subir", "data", "historial", "consolidar",
+	"inicio", "subir", "data", "caso_cerrado", "historial", "consolidar",
 	"indicadores", "verificar", "historias", "reportes",
 )
 
@@ -2772,6 +2827,7 @@ MODULE_LABELS = {
 	"inicio": "Inicio",
 	"subir": "Validar data",
 	"data": "Gestion de data",
+	"caso_cerrado": "Caso cerrado",
 	"historial": "Verificar data",
 	"consolidar": "Consolidar",
 	"indicadores": "Indicadores",
@@ -2782,8 +2838,8 @@ MODULE_LABELS = {
 
 # Modulos visibles por defecto segun el rol (mantiene el comportamiento actual).
 ROLE_DEFAULT_MODULES = {
-	"prestador": {"inicio", "subir", "data", "indicadores", "verificar", "historias", "reportes"},
-	"lider": {"inicio", "data", "historial", "consolidar", "indicadores", "verificar", "historias", "reportes"},
+	"prestador": {"inicio", "subir", "data", "caso_cerrado", "indicadores", "verificar", "historias", "reportes"},
+	"lider": {"inicio", "data", "caso_cerrado", "historial", "consolidar", "indicadores", "verificar", "historias", "reportes"},
 }
 
 # Ruta del backend -> modulo que la habilita. Solo se listan endpoints que
@@ -2795,6 +2851,8 @@ MODULE_PATH_RULES = (
 	("historias", ("/historias",)),
 	("verificar", ("/verificar-afiliado",)),
 	("subir", ("/upload", "/revalidate", "/evaluate", "/validate-data", "/export")),
+	# Debe ir ANTES de "data": las rutas /data/gestantes/caso-cerrado pertenecen a este modulo.
+	("caso_cerrado", ("/data/gestantes/caso-cerrado",)),
 	("data", ("/data/", "/setup-gestantes")),
 )
 
@@ -4384,6 +4442,93 @@ async def verificar_afiliado(documento: str, current_user: User = Depends(get_cu
 	return {"encontrado": True, "documento": documento, "afiliado": afiliado, **extra}
 
 
+@app.post("/verificar-afiliado-masivo")
+async def verificar_afiliado_masivo(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+	"""Verificacion MASIVA de afiliacion: recibe un TXT/CSV con lineas
+	'TIPO,NUMERO' (separadas por coma) y valida tipo + numero contra
+	administrativo.af_afiliado. Devuelve el estado por fila."""
+	import re as _re
+	try:
+		import corporate_db as _cdb
+	except ImportError:
+		from . import corporate_db as _cdb
+
+	raw = await file.read()
+	text = None
+	for enc in ("utf-8-sig", "utf-8", "latin-1"):
+		try:
+			text = raw.decode(enc)
+			break
+		except Exception:
+			continue
+	if text is None:
+		raise HTTPException(status_code=400, detail="No se pudo leer el archivo (codificacion no soportada).")
+
+	filas = [l for l in text.replace("\r\n", "\n").replace("\r", "\n").split("\n") if l.strip()]
+	usuarios = []
+	errores_formato = []
+	for i, line in enumerate(filas):
+		parts = [p.strip() for p in line.split(",")]
+		if len(parts) < 2:
+			parts = [p.strip() for p in _re.split(r"[;\t]", line)]
+		if len(parts) < 2 or not parts[1]:
+			if i == 0:
+				continue  # encabezado
+			errores_formato.append({"linea": i + 1, "texto": line[:120]})
+			continue
+		tipo = parts[0].strip().upper().replace(".", "")
+		numero = parts[1].strip()
+		if i == 0 and not any(ch.isdigit() for ch in numero):
+			continue  # encabezado (la 2a columna no es numero)
+		usuarios.append({"tipo_id": tipo, "numero_id": numero})
+
+	if not usuarios:
+		return {"success": True, "total": 0, "encontrados": 0, "tipo_no_coincide": 0,
+				"no_encontrados": 0, "errores_formato": errores_formato[:50],
+				"resultados": [], "error_db": None}
+
+	res = _cdb.validar_afiliados_lote(usuarios)
+	enc_por_num = {}
+	for e in res.get("encontrados", []):
+		enc_por_num[str(e.get("numero_id", "")).strip()] = e
+
+	# Resolver el NOMBRE de la IPS (no el codigo) desde ct_ips
+	try:
+		_codes = [e.get("ips") for e in res.get("encontrados", []) if e.get("ips")]
+		nombres_ips = _cdb.obtener_nombres_ips(_codes) if _codes else {}
+	except Exception:
+		nombres_ips = {}
+
+	resultados = []
+	n_ok = n_tipo = n_no = 0
+	for u in usuarios:
+		num, tipo = u["numero_id"], u["tipo_id"]
+		e = enc_por_num.get(num)
+		if e:
+			tipo_bd = str(e.get("tipo_id", "")).strip().upper()
+			if tipo and tipo_bd and tipo != tipo_bd:
+				estado = "TIPO_NO_COINCIDE"; n_tipo += 1
+			else:
+				estado = "ENCONTRADO"; n_ok += 1
+			_cod = str(e.get("ips") or "").strip()
+			_nombre_ips = nombres_ips.get(_cod, _cod) if _cod else None
+			resultados.append({"tipo": tipo, "numero": num, "estado": estado, "tipo_bd": tipo_bd, "ips": _nombre_ips})
+		else:
+			n_no += 1
+			resultados.append({"tipo": tipo, "numero": num, "estado": "NO_ENCONTRADO", "tipo_bd": "", "ips": None})
+
+	return {
+		"success": True,
+		"total": len(resultados),
+		"encontrados": n_ok,
+		"tipo_no_coincide": n_tipo,
+		"no_encontrados": n_no,
+		"errores_formato": errores_formato[:50],
+		"error_db": res.get("error"),
+		"resultados": resultados,
+	}
+
+
 @app.post("/validate-affiliation")
 async def validate_affiliation(payload: dict, current_user: User = Depends(get_current_user)):
 	"""Valida afiliación institucional: tipo+numero vs administrativo.af_afiliado.
@@ -4869,9 +5014,10 @@ async def clean_gestantes(current_user: User = Depends(get_current_user)):
 
 
 @app.get("/data/gestantes/ips-grupos")
-async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
+async def listar_ips_grupos(current_user: User = Depends(get_current_user), closed: bool = False):
 	"""Devuelve lista de IPS primarias con conteo de registros.
-	Admin ve todas; prestador solo ve su IPS."""
+	Admin ve todas; prestador solo ve su IPS. Con ?closed=true cuenta solo
+	las gestantes en Caso Cerrado."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
@@ -4895,26 +5041,28 @@ async def listar_ips_grupos(current_user: User = Depends(get_current_user)):
 		# Valores de IPS que son claramente invalidos (confundidos con otra columna)
 		IPS_INVALIDOS = {"NO", "SI", "N/A", "NA", "SIN IPS", "S/N", "-", "0", "NO APLICA"}
 
-		sql = '''SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
-				 FROM gestantes
-				 WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL
-				   AND "NOMBRE_DE_LA_IPS_PRIMARIA" != ''
-				   AND UPPER(TRIM("NOMBRE_DE_LA_IPS_PRIMARIA")) NOT IN :invalidos
-				 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
-				 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
-		
-		if ips_filtro:
-			# Prestador/IPS: filtrar por nombre de IPS (case-insensitive)
-			sql = '''SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total
-					 FROM gestantes
-					 WHERE UPPER(TRIM("NOMBRE_DE_LA_IPS_PRIMARIA")) = :ips
-					   AND "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL
-					   AND "NOMBRE_DE_LA_IPS_PRIMARIA" != ''
-					 GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA"
-					 ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'''
+		# Filtro opcional: solo gestantes en Caso Cerrado.
+		cerrado_cond = ""
+		if closed:
+			cerrado_cond = " AND (CASO_CERRADO IS NOT NULL AND LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('true','1'))"
+
+		ips_cond = 'UPPER(TRIM("NOMBRE_DE_LA_IPS_PRIMARIA")) = :ips' if ips_filtro else '1=1'
+		invalidos_cond = "" if ips_filtro else ' AND UPPER(TRIM("NOMBRE_DE_LA_IPS_PRIMARIA")) NOT IN :invalidos'
+
+		sql = (
+			'SELECT "NOMBRE_DE_LA_IPS_PRIMARIA", COUNT(*) as total '
+			'FROM gestantes '
+			'WHERE "NOMBRE_DE_LA_IPS_PRIMARIA" IS NOT NULL '
+			'AND "NOMBRE_DE_LA_IPS_PRIMARIA" != \'\' '
+			'AND ' + ips_cond + invalidos_cond + cerrado_cond +
+			' GROUP BY "NOMBRE_DE_LA_IPS_PRIMARIA" '
+			'ORDER BY "NOMBRE_DE_LA_IPS_PRIMARIA"'
+		)
 
 		from sqlalchemy import text as sa_text
-		params = {"ips": ips_filtro, "invalidos": tuple(IPS_INVALIDOS)} if ips_filtro else {"invalidos": tuple(IPS_INVALIDOS)}
+		params = {"invalidos": tuple(IPS_INVALIDOS)}
+		if ips_filtro:
+			params["ips"] = ips_filtro
 		rows = db.execute(sa_text(sql), params).fetchall()
 		ips_list = [{"nombre": str(r[0]).strip(), "total": int(r[1])} for r in rows]
 		return {"ips": ips_list}
@@ -5792,18 +5940,60 @@ async def exportar_ips(
 		db.close()
 
 
+@app.post("/data/gestantes/recalcular-formulas")
+async def recalcular_formulas(current_user: User = Depends(require_admin)):
+	"""Re-aplica las formulas del instructivo sobre la data YA validada (cargues
+	de gestante) y guarda el texto actualizado."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").all()
+		cargues_tocados = 0
+		filas_totales = 0
+		for c in cargues:
+			filas = _recalcular_formulas_cargue(c)
+			if filas:
+				cargues_tocados += 1
+				filas_totales += filas
+		db.commit()
+		return {"success": True, "cargues": cargues_tocados, "filas": filas_totales}
+	except Exception as e:
+		db.rollback()
+		raise HTTPException(status_code=500, detail=f"Error al recalcular formulas: {type(e).__name__}: {e}")
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/caso-cerrado")
 async def listar_caso_cerrado(
 	current_user: User = Depends(get_current_user),
 	page: int = 1,
 	page_size: int = 50,
 	search: str = "",
+	ips: str = "",
 ):
-	"""Lista gestantes marcadas como Caso Cerrado."""
+	"""Lista gestantes marcadas como Caso Cerrado. Admin ve todos (o filtra por
+	IPS con ?ips=); prestador/lider/ips_user solo los de su IPS."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
 		from sqlalchemy import text
+
+		# IPS del usuario (mismo criterio que el listado normal "Gestion de data").
+		ips_filtro = None
+		if current_user.role != "admin":
+			prestador = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			if prestador and prestador.ips:
+				ips_filtro = str(prestador.ips).strip().upper()
+			if not ips_filtro:
+				try:
+					row_ips = db.execute(text('SELECT ips_name FROM usuarios_ips WHERE username = :u AND active = TRUE'), {"u": current_user.username}).fetchone()
+					if row_ips and row_ips[0]:
+						ips_filtro = str(row_ips[0]).strip().upper()
+				except Exception:
+					pass
+		if ips and current_user.role == "admin":
+			ips_filtro = str(ips).strip().upper()
 
 		offset = (max(1, page) - 1) * page_size
 		params = {"limit": page_size, "offset": offset}
@@ -5812,6 +6002,11 @@ async def listar_caso_cerrado(
 		cerrado = "(CASO_CERRADO IS NOT NULL AND LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('true', '1'))"
 		count_sql = f'SELECT COUNT(*) FROM gestantes WHERE {cerrado} AND 1=1'
 		query_sql = f'SELECT * FROM gestantes WHERE {cerrado} AND 1=1'
+
+		if ips_filtro:
+			count_sql += ' AND UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips'
+			query_sql += ' AND UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips'
+			params["ips"] = ips_filtro
 
 		if search:
 			search_cond = (' AND (LOWER("NO_DE_IDENTIFICACION") LIKE LOWER(:q) '
@@ -6133,62 +6328,49 @@ def _es_cerrado(valor):
     return str(valor).strip().lower() in ("true", "1")
 
 
+def _marcar_casos_cerrados(db) -> int:
+	"""Marca como CASO_CERRADO las gestantes que cumplen la regla. Devuelve cuantas."""
+	from sqlalchemy import text
+	no_cerrado = "(CASO_CERRADO IS NULL OR LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('false', '0', ''))"
+	all_cols = {c.name.upper() for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description}
+	fecha_cols = [c for c in ["FECHA_DE_PARTO", "FECHA_DE_ABORTO"] if c in all_cols]
+	if "FUM" not in all_cols or not fecha_cols:
+		return 0
+	select_cols = ", ".join(f'"{c}"' for c in (["FUM"] + fecha_cols))
+	candidatos = db.execute(text(f'SELECT id, {select_cols} FROM gestantes WHERE {no_cerrado}')).fetchall()
+	ids_cerrar = []
+	for row in candidatos:
+		m = dict(row._mapping)
+		if cumple_caso_cerrado(m.get("FUM"), m.get("FECHA_DE_PARTO"), m.get("FECHA_DE_ABORTO")):
+			ids_cerrar.append(m["id"])
+	for i in range(0, len(ids_cerrar), 500):
+		lote = ids_cerrar[i:i + 500]
+		placeholders = ", ".join(f":id{j}" for j in range(len(lote)))
+		params = {f"id{j}": v for j, v in enumerate(lote)}
+		db.execute(text(f"UPDATE gestantes SET CASO_CERRADO = TRUE WHERE id IN ({placeholders})"), params)
+	if ids_cerrar:
+		db.commit()
+	return len(ids_cerrar)
+
+
 @app.post("/data/gestantes/caso-cerrado/auto-fill")
 async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 	"""Auto-llena el campo CASO_CERRADO para gestantes que cumplen los criterios."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
-		from sqlalchemy import text
-		import re
-
-		# CASO_CERRADO puede ser BOOLEAN o TEXT: se normaliza para funcionar en ambos casos.
-		no_cerrado = "(CASO_CERRADO IS NULL OR LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('false', '0', ''))"
-
-		# Usar solo las columnas que existan en la tabla real.
-		all_cols = {c.name.upper() for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description}
-		fecha_cols = [c for c in ["FECHA_DE_PARTO", "FECHA_DE_ABORTO"] if c in all_cols]
-		if "FUM" not in all_cols:
-			return {"success": True, "total_caso_cerrado": 0, "criterios": {"regla": "No existe la columna FUM"}}
-		if not fecha_cols:
-			return {"success": True, "total_caso_cerrado": 0, "criterios": {"regla": "No se encontraron columnas de fecha de parto/aborto"}}
-
-		select_cols = ", ".join(f'"{c}"' for c in (["FUM"] + fecha_cols))
-		candidatos = db.execute(text(f'''
-			SELECT id, {select_cols}
-			FROM gestantes
-			WHERE {no_cerrado}
-		''')).fetchall()
-
-		ids_cerrar = []
-		for row in candidatos:
-			m = dict(row._mapping)
-			if cumple_caso_cerrado(m.get("FUM"), m.get("FECHA_DE_PARTO"), m.get("FECHA_DE_ABORTO")):
-				ids_cerrar.append(m["id"])
-
-		# Actualizar en lotes para evitar límites de parámetros
-		for i in range(0, len(ids_cerrar), 500):
-			lote = ids_cerrar[i:i + 500]
-			placeholders = ", ".join(f":id{j}" for j in range(len(lote)))
-			params = {f"id{j}": v for j, v in enumerate(lote)}
-			db.execute(text(f"UPDATE gestantes SET CASO_CERRADO = TRUE WHERE id IN ({placeholders})"), params)
-		if ids_cerrar:
-			db.commit()
-
-		rows = len(ids_cerrar)
-
+		rows = _marcar_casos_cerrados(db)
 		return {
 			"success": True,
 			"total_caso_cerrado": rows,
-			"criterios": {
-				"regla": "Caso Cerrado cuando (FUM + 10 meses calendario) y existe fecha real de parto o aborto (el comodín es 1845-01-01)",
-				"columnas_evaluadas": ["FUM"] + fecha_cols,
-			}
+			"criterios": {"regla": "Caso Cerrado cuando (FUM + 10 meses calendario) y existe fecha real de parto o aborto (el comodín es 1845-01-01)"},
 		}
 	except Exception as e:
 		db.rollback()
 		print(f"ERROR auto_fill_caso_cerrado: {type(e).__name__}: {e}")
 		raise HTTPException(status_code=500, detail=f"Error al ejecutar el autocompletado: {type(e).__name__}: {e}")
+	finally:
+		db.close()
 
 
 @app.post("/data/gestantes/caso-cerrado/limpiar")
@@ -6218,13 +6400,39 @@ async def limpiar_caso_cerrado(current_user: User = Depends(require_admin)):
 
 
 @app.get("/data/gestantes/caso-cerrado/exportar")
-async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
-	"""Genera un Excel con los casos cerrados (fecha real de parto o aborto),
-	con TODAS las variables del instructivo, leyendo los cargues."""
+async def exportar_caso_cerrado(current_user: User = Depends(get_current_user), ips: str = ""):
+	"""Genera un Excel con los casos cerrados (regla FUM + 10 meses y fecha real
+	de parto o aborto), leyendo los cargues. Admin exporta todo o filtra por
+	?ips=; prestador/lider/ips_user solo su IPS."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
 		import re as _re
+
+		# IPS a exportar (no-admin queda limitado a la suya).
+		ips_filtro = None
+		if current_user.role != "admin":
+			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
+			if _prest and _prest.ips:
+				ips_filtro = str(_prest.ips).strip()
+			if not ips_filtro:
+				try:
+					from sqlalchemy import text as _t_ips
+					_row_ips = db.execute(_t_ips('SELECT ips_name FROM usuarios_ips WHERE username = :u AND active = TRUE'), {"u": current_user.username}).fetchone()
+					if _row_ips and _row_ips[0]:
+						ips_filtro = str(_row_ips[0]).strip()
+				except Exception:
+					pass
+			if not ips_filtro:
+				raise HTTPException(status_code=403, detail="No se pudo determinar tu IPS para exportar.")
+		elif ips:
+			ips_filtro = str(ips).strip()
+
+		def _nips(s):
+			import unicodedata as _ud
+			s = str(s or '').strip().upper()
+			return ''.join(c for c in _ud.normalize('NFD', s) if _ud.category(c) != 'Mn')
+		_f_ips = _nips(ips_filtro) if ips_filtro else ''
 		try:
 			from .excel_export import build_data_excel
 		except ImportError:
@@ -6242,6 +6450,7 @@ async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
 
 		i_parto = _idx(["FECHA DE PARTO"])
 		i_aborto = _idx(["FECHA DE ABORTO"])
+		i_fum = _idx(["FUM"])
 		i_fecha = next((i for i, n in enumerate(names) if n.strip().upper() == "FECHA"), None)
 
 		_fr = _re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
@@ -6278,10 +6487,14 @@ async def exportar_caso_cerrado(current_user: User = Depends(require_admin)):
 				doc = cols[2].strip()
 				if not doc or doc.upper() == "NO_DE_IDENTIFICACION" or doc in vistos:
 					continue
+				if _f_ips:
+					_val_ips = _nips(cols[28]) if len(cols) > 28 else ""
+					if not _val_ips or (_f_ips not in _val_ips and _val_ips not in _f_ips):
+						continue
 				parto = cols[i_parto] if (i_parto is not None and i_parto < len(cols)) else ""
 				aborto = cols[i_aborto] if (i_aborto is not None and i_aborto < len(cols)) else ""
-				fecha = cols[i_fecha] if (i_fecha is not None and i_fecha < len(cols)) else ""
-				if _real(parto) or _real(aborto) or _real(fecha):
+				fum = cols[i_fum] if (i_fum is not None and i_fum < len(cols)) else ""
+				if cumple_caso_cerrado(fum, parto, aborto):
 					vistos.add(doc)
 					rows_out.append(line)
 

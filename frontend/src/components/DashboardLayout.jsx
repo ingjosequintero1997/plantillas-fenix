@@ -28,6 +28,8 @@ const GESTION_ITEMS = [
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'reportes', label: 'Reportes pendientes', roles: ['admin', 'prestador', 'lider'],
     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+  { key: 'caso_cerrado', label: 'Caso cerrado', roles: ['admin', 'prestador', 'lider'],
+    icon: 'M5 8h14M5 8a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
 ]
 
 const ADMIN_ITEMS = [
@@ -50,6 +52,8 @@ const IPS_MENU_ITEMS_BASE = [
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'reportes', label: 'Reportes pendientes', roles: ['ips_user'],
     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+  { key: 'caso_cerrado', label: 'Caso cerrado', roles: ['ips_user'],
+    icon: 'M5 8h14M5 8a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
   { key: 'indicadores', label: 'Indicadores', roles: ['ips_user'],
     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
 ]
@@ -74,6 +78,7 @@ const META = {
   prestadores: { title: 'Usuarios', sub: 'Prestadores y lideres de programa' },
   bucket: { title: 'Gestión de bucket', sub: 'Uso de almacenamiento por IPS' },
   data: { title: 'Gestión de data', sub: 'Ver y editar registros de gestantes' },
+  caso_cerrado: { title: 'Caso cerrado', sub: 'Gestantes con caso cerrado por IPS' },
   indicadores: { title: 'Indicadores', sub: 'Métricas y estadísticas' },
   configuracion: { title: 'Configuración', sub: 'Gestión de accesos y módulos' },
   cargue_masivo: { title: 'Cargue masivo', sub: 'Subir archivos Excel, TXT o CSV' },

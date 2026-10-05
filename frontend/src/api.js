@@ -401,9 +401,22 @@ export async function limpiarCasoCerrado() {
   return apiFetch(`${API_BASE}/data/gestantes/caso-cerrado/limpiar`, { method: 'POST' })
 }
 
-// Descarga el Excel de los casos cerrados (con todas las variables).
-export async function exportarCasoCerrado(filename = 'casos_cerrados.xlsx') {
-  const resp = await fetch(`${API_BASE}/data/gestantes/caso-cerrado/exportar`, {
+// Re-aplica las formulas del instructivo sobre la data ya validada (cargues).
+export async function recalcularFormulas() {
+  return apiFetch(`${API_BASE}/data/gestantes/recalcular-formulas`, { method: 'POST', signal: AbortSignal.timeout(180000) })
+}
+
+// Lista las IPS con conteo de casos cerrados (solo casos cerrados).
+export async function fetchIpsGruposCasoCerrado() {
+  return apiFetch(`${API_BASE}/data/gestantes/ips-grupos?closed=true`)
+}
+
+// Descarga el Excel de los casos cerrados; si se pasa una IPS, solo esa IPS.
+export async function exportarCasoCerrado(filename = 'casos_cerrados.xlsx', ips = '') {
+  const params = new URLSearchParams()
+  if (ips) params.set('ips', ips)
+  const qs = params.toString()
+  const resp = await fetch(`${API_BASE}/data/gestantes/caso-cerrado/exportar${qs ? `?${qs}` : ''}`, {
     headers: authHeaders(),
   })
   if (!resp.ok) {
@@ -448,9 +461,10 @@ export async function exportarIpsExcel(ips, mes = '', filename = 'ips.xlsx') {
   }, 200)
 }
 
-export async function fetchCasoCerrado(page = 1, pageSize = 50, search = '') {
+export async function fetchCasoCerrado(page = 1, pageSize = 50, search = '', ips = '') {
   const params = new URLSearchParams({ page, page_size: pageSize })
   if (search) params.set('search', search)
+  if (ips) params.set('ips', ips)
   return apiFetch(`${API_BASE}/data/gestantes/caso-cerrado?${params}`)
 }
 
@@ -495,6 +509,13 @@ export async function eliminarRegistroUnificado(indice, templateKey = 'gestante'
 
 export async function verificarAfiliado(documento) {
   return apiFetch(`${API_BASE}/verificar-afiliado/${encodeURIComponent(documento)}`)
+}
+
+// Verificacion masiva: TXT/CSV con lineas 'TIPO,NUMERO'.
+export async function verificarAfiliadoMasivo(file) {
+  const form = new FormData()
+  form.append('file', file)
+  return apiFetch(`${API_BASE}/verificar-afiliado-masivo`, { method: 'POST', body: form, signal: AbortSignal.timeout(180000) })
 }
 
 export async function validateAffiliation(corrected_text, templateKey = 'gestante', mes = '') {

@@ -72,6 +72,7 @@ const ConsolidacionView = lazy(() => import('./components/ConsolidacionView'))
 const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
 const DataManagement = lazy(() => import('./components/DataManagement'))
+const CasoCerradoView = lazy(() => import('./components/CasoCerradoView'))
 const ReportesView = lazy(() => import('./components/ReportesView'))
 import { fetchTemplates, uploadFile, saveCargue, descargarReporteErroresExcelData, descargarReporteErroresExcel } from './api'
 import { guardarUltimaData } from './dataStore'
@@ -160,7 +161,7 @@ export default function App() {
   }, [user])
 
   useEffect(() => {
-    const ipsSections = ['data', 'verificar', 'indicadores', 'reportes']
+    const ipsSections = ['data', 'caso_cerrado', 'verificar', 'indicadores', 'reportes']
     if (systemConfig.cargue_masivo === true) ipsSections.push('cargue_masivo')
     if (systemConfig.historias_pdf !== false) ipsSections.push('historias')
     if (user?.role === 'ips_user' && !ipsSections.includes(section)) {
@@ -772,6 +773,15 @@ export default function App() {
               <SectionErrorBoundary>
                 <Suspense fallback={<ModuleSkeleton />}>
                   <DataManagement correctedText={correctedText} />
+                </Suspense>
+              </SectionErrorBoundary>
+            )}
+
+            {/* ─── CASO CERRADO ─── */}
+            {section === 'caso_cerrado' && (
+              <SectionErrorBoundary>
+                <Suspense fallback={<ModuleSkeleton />}>
+                  <CasoCerradoView />
                 </Suspense>
               </SectionErrorBoundary>
             )}

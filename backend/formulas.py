@@ -105,6 +105,34 @@ def _alarma(dias):
     return 'PENDIENTE'
 
 
+def _relacion_anemia(fila: dict) -> str:
+    """Semaforo de la relacion anemia vs tratamiento (formula del instructivo).
+
+    Toma la hemoglobina de la fecha de tamizaje mas reciente y la compara con
+    el tratamiento suministrado: 1=oral, 2=parenteral, 3=transfusion.
+    """
+    if not str(fila.get(DOCUMENTO) or '').strip():
+        return ''
+    # Orden invertido (hb3, hb2, hb1) para que en empates gane la mas reciente,
+    # igual que la formula de Excel (td -> sd -> de).
+    pares = [
+        (_fecha(fila.get(FECHA_HB3)), _num(fila.get(RES_HB3))),
+        (_fecha(fila.get(FECHA_HB2)), _num(fila.get(RES_HB2))),
+        (_fecha(fila.get(FECHA_HB1)), _num(fila.get(RES_HB1))),
+    ]
+    validos = [(f, v) for (f, v) in pares if f is not None]
+    if not validos:
+        return '🟡 SIN TAMIZAJE'
+    latest = max(f for f, _ in validos)
+    hv = next((v for (f, v) in validos if f == latest), None)
+    if hv is None:
+        return '🟡 SIN TAMIZAJE'
+    requerido = 3 if hv < 7 else (2 if hv < 10 else 1)
+    trat_raw = str(fila.get(TRATAMIENTO_ANEMIA) or '').strip()
+    trat = int(trat_raw[0]) if trat_raw and trat_raw[0].isdigit() else 0
+    return '🟢 ADECUADO' if trat == requerido else '🔴 NO ADECUADO'
+
+
 # Nombre de las columnas calculadas en la plantilla gestante
 FECHA_NACIMIENTO = 'Fecha de Nacimiento'
 EDAD = 'Edad (años)'
@@ -125,15 +153,27 @@ CONTROL_FECHAS = ['Fecha 1er Control', 'Fecha 2do Control', 'Fecha 3er Control',
                    'Fecha 7mo Control', 'fecha 8vo Control', 'Fecha 9no Control']
 NUM_CONTROLES = 'Número Total de Controles Prenatales'
 ULTIMO_CONTROL = 'Ultimo Control Prenatal'
-EDAD_GEST_ACTUAL = 'Edad Gestacional actual'
-PESO_ACTUAL = 'Peso Actual'
-TALLA_ACTUAL = 'Talla actual'
+EDAD_GEST_ACTUAL = 'edad gestacional actual'
+PESO_ACTUAL = 'peso actual'
+TALLA_ACTUAL = 'talla actual'
 IMC_ACTUAL = 'IMC ACTUAL'
+CLASIF_IMC_ACTUAL = 'Clasificación del IMC ACTUAL'
+
+# Anemia vs tratamiento (hemoglobinas + tratamiento suministrado)
+DOCUMENTO = 'No. De Identificación'
+FECHA_HB1 = 'Fecha 1ra Realizacion Hemoglobina'
+RES_HB1 = 'Resultado 1ra Hemoglobina'
+FECHA_HB2 = 'Fecha 2da Realizacion Hemoglobina'
+RES_HB2 = 'Resultado 2da Hemoglobina'
+FECHA_HB3 = 'Fecha 3ra Realizacion Hemoglobina'
+RES_HB3 = 'Resultado 3ra Hemoglobina'
+TRATAMIENTO_ANEMIA = 'Tipo de tratamiento suminitrado para anemia'
+RELACION_ANEMIA = 'Relación entre Anemia vs tratamiento'
 
 # Trimestres de tamizajes (FUM + fecha de prueba)
 TRIMESTRE_ASESORIA_VIH = 'Trimestre Asesoria VIH'
 TRIMESTRE_VIH_1 = 'Trimestre Toma Prueba VIH Primer Tamizaje'
-TRIMESTRE_VIH_2 = 'Trimestre Toma  Prueba VIH Segundo Tamizaje'
+TRIMESTRE_VIH_2 = 'Trimestre Toma Prueba VIH Segundo Tamizaje'
 TRIMESTRE_VIH_3 = 'Trimestre Toma Prueba VIH Tercer Tamizaje'
 TRIMESTRE_SIFILIS_1 = 'Trimestre Primera Prueba Treponemica Rapida Sifilis'
 TRIMESTRE_SIFILIS_2 = 'Trimestre Segunda Prueba Treponemica Rapida Sifilis'
@@ -142,14 +182,14 @@ TRIMESTRE_VIH_SEGUNDA = 'Trimestre Toma segunda Prueba VIH'
 TRIMESTRE_CONFIRMATORIO = 'Trimestre Prueba confirmatoria Según Algoritmo'
 
 # Fechas de cada prueba
-FECHA_ASESORIA_VIH = 'Fecha Toma Prueba VIH Primer Tamizaje'
+FECHA_ASESORIA_VIH = 'Asesoria Prueba VIH'
 FECHA_VIH_1 = 'Fecha Toma Prueba VIH Primer Tamizaje'
 FECHA_VIH_2 = 'Fecha Toma Prueba VIH Segundo Tamizaje'
 FECHA_VIH_3 = 'Fecha Toma Prueba VIH Tercer Tamizaje'
 FECHA_SIFILIS_1 = 'Fecha Primera Prueba Treponemica Rapida Sifilis'
 FECHA_SIFILIS_2 = 'Fecha Segunda Prueba Treponemica Rapida Sifilis'
 FECHA_SIFILIS_3 = 'Fecha Tercera Prueba Treponemica Rapida Sifilis'
-FECHA_VIH_SEGUNDA = 'Fecha Toma Prueba VIH Segundo Tamizaje'
+FECHA_VIH_SEGUNDA = 'Fecha toma Segunda Prueba VIH'
 FECHA_CONFIRMATORIA = 'Fecha prueba confirmatoria Según Algoritmo'
 
 
@@ -176,13 +216,8 @@ def aplicar_formulas(fila: dict) -> dict:
         # 4. Alarma segun dias
         fila[ALARMA] = _alarma((fpp - hoy).days)
 
-    # 5. Edad gestacional al inicio = (ingreso - FUM) en semanas
-    ingreso = _fecha(fila.get(INGRESO))
-    sem_ingreso = _semanas(fum, ingreso)
-    if sem_ingreso is not None and not _num(fila.get(EDAD_GEST_INICIO)):
-        fila[EDAD_GEST_INICIO] = _fmt_num(round(sem_ingreso, 1))
-        # 6. Trimestre de inicio segun semanas
-        fila[TRIMESTRE_INICIO] = _trimestre(sem_ingreso)
+    # NOTA: "Edad Gest Inicio Control" y "Trimestre inicio control" quedan
+    # FUERA de la lista de formulas requeridas (se omiten a proposito).
 
     # 7. IMC inicial = peso / talla^2
     peso = _num(fila.get(PESO_INICIAL))
@@ -209,9 +244,10 @@ def aplicar_formulas(fila: dict) -> dict:
     # 10. IMC actual = peso actual / talla actual^2
     peso_act = _num(fila.get(PESO_ACTUAL))
     talla_act = _num(fila.get(TALLA_ACTUAL))
-    if peso_act and talla_act and talla_act > 0 and not _num(fila.get(IMC_ACTUAL)):
+    if peso_act and talla_act and talla_act > 0:
         imc_act = peso_act / (talla_act * talla_act)
         fila[IMC_ACTUAL] = _fmt_num(round(imc_act, 2))
+        fila[CLASIF_IMC_ACTUAL] = _clasif_imc(imc_act)
 
     # 11. Trimestres de tamizajes VIH / Sifilis: FUM + fecha de la prueba
     #     (1 <14 sem, 2 <28 sem, 3 >=28). Numerico obligatorio: si no hay
@@ -232,7 +268,22 @@ def aplicar_formulas(fila: dict) -> dict:
     _calc_trimestre(FECHA_SIFILIS_2, TRIMESTRE_SIFILIS_2)
     _calc_trimestre(FECHA_SIFILIS_3, TRIMESTRE_SIFILIS_3)
     _calc_trimestre(FECHA_VIH_SEGUNDA, TRIMESTRE_VIH_SEGUNDA)
-    _calc_trimestre(FECHA_CONFIRMATORIA, TRIMESTRE_CONFIRMATORIO, confirmatorio=True)
+    # Confirmatoria: base = fecha de INGRESO (AE en el Excel), con limites propios:
+    # 1 Trim [0.1, 13), 2 Trim [13, 26.1), 3 Trim >= 26.1. Si no hay fecha -> 0.
+    _sem_conf = _semanas(_fecha(fila.get(INGRESO)), _fecha(fila.get(FECHA_CONFIRMATORIA)))
+    if _sem_conf is None:
+        fila[TRIMESTRE_CONFIRMATORIO] = 0
+    elif _sem_conf >= 26.1:
+        fila[TRIMESTRE_CONFIRMATORIO] = 3
+    elif _sem_conf >= 13:
+        fila[TRIMESTRE_CONFIRMATORIO] = 2
+    elif _sem_conf >= 0.1:
+        fila[TRIMESTRE_CONFIRMATORIO] = 1
+    else:
+        fila[TRIMESTRE_CONFIRMATORIO] = 0
+
+    # 12. Relacion Anemia vs tratamiento (semaforo)
+    fila[RELACION_ANEMIA] = _relacion_anemia(fila)
 
     return fila
 

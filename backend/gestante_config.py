@@ -264,7 +264,7 @@ ALLOWED_BY_NAME = {
     "Tipo": ["NA", "IVE", "Expontáneo", "Provocado"],
     "TIPO": ["DIU", "Inyeccion mensual", "Inyeccion trimestral", "Pildoras", "Condon", "Pomeroy", "Ninguno", "NA", "SIN DATO"],
     "Tipo de tratamiento suminitrado para anemia": ["NA", "1. Hierro oral", "2. Hierro parenteral", "3. transfusion sanguinea"],
-    "Relación entre Anemia vs tratamiento": ["1. tratamiento para anemia indicado y suministrado", "2. tratamiento para anemia indicado y no suministrado", "3. tratamiento para anemia no indicada ni suministrada", "4. NO requiere tratamiento hemoglobina adecuada"],
+    "Relación entre Anemia vs tratamiento": ["1. tratamiento para anemia indicado y suministrado", "2. tratamiento para anemia indicado y no suministrado", "3. tratamiento para anemia no indicada ni suministrada", "4. NO requiere tratamiento hemoglobina adecuada", "🟢 ADECUADO", "🔴 NO ADECUADO", "🟡 SIN TAMIZAJE"],
     "Complicaciones": ["NA", "Si", "No"],
     "Caracteristicas del parto": ["NA", "Parto Vaginal", "Cesarea"],
     "Parto atendido por": ["NA", "IPS baja complejidad", "IPS mediana o alta", "Partera", "Medico Tradicional", "Otro"],

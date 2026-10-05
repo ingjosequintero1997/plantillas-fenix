@@ -24,18 +24,6 @@ def col_letter(n: int) -> str:
     return result
 
 
-def _trimestre_formula(fum_col: int, date_col: int, default: str, limite2: int = 28, limite3: int = 60) -> str:
-    """Genera la fórmula de trimestre basada en FUM y una fecha de prueba.
-    Usa nombres de función en inglés (formato interno de .xlsx) y comas.
-    `default` es la expresión de valor seguro si no se puede calcular."""
-    fum = col_letter(fum_col)
-    fec = col_letter(date_col)
-    return (
-        f'=IFERROR(IF(DATEDIF({fum}{{r}},{fec}{{r}},"D")/7<14,"1 Trim",'
-        f'IF(DATEDIF({fum}{{r}},{fec}{{r}},"D")/7<{limite2},"2 Trim","3 Trim")),{default})'
-    )
-
-
 def _default_for_type(ttype: str) -> str:
     # Excel no soporta fechas reales antes de 1900; el campo 1845-01-01 se
     # entrega como texto para que quede visible exactamente como se requiere.
@@ -46,73 +34,146 @@ def _default_for_type(ttype: str) -> str:
     return '"SIN DATO"'
 
 
-# Columnas calculadas: índice (1-based) → generador de fórmula (recibe fila)
-def build_formulas(types_by_col: dict[int, str] | None = None) -> dict[int, callable]:
-    types_by_col = types_by_col or {}
-    t = lambda c: types_by_col.get(c, "TEXT")
-    d = lambda c: _default_for_type(t(c))
-    f = {}
+# Formato de numero/celda por columna calculada (por nombre).
+FORMULA_FORMATS = {
+    "FPP": "yyyy-mm-dd",
+    "Ultimo Control Prenatal": "yyyy-mm-dd",
+    "Edad (años)": "0",
+    "Dias para el parto": "0",
+    "Indice de Masa Corporal (IMC)": "0.00",
+    "IMC ACTUAL": "0.00",
+    "Número Total de Controles Prenatales": "0",
+    "edad gestacional actual": "0",
+}
 
-    # 1. EDAD (H) = DATEDIF(G=FechaNac; HOY(); "Y")
-    f[8] = lambda r, _d=d(8): f'=IFERROR(IF(G{r}="",{_d},DATEDIF(G{r},TODAY(),"Y")),{_d})'
 
-    # 2. FPP (AF) = FUM(AE) + 280
-    f[32] = lambda r, _d=d(32): f'=IFERROR(IF(AE{r}="",{_d},AE{r}+280),{_d})'
+def build_formulas(template: list[dict]) -> dict[int, callable]:
+    """Columnas calculadas del instructivo, resueltas POR NOMBRE (no por indice
+    fijo), para que cada formula caiga en la columna correcta. Devuelve
+    {columna_1based: fn(r) -> formula}. Solo las formulas requeridas."""
+    idx = {t["name"]: i + 1 for i, t in enumerate(template)}
+    typ = {t["name"]: t["type"] for t in template}
 
-    # 3. Días para el parto (AG) = FPP(AF) - HOY()
-    f[33] = lambda r, _d=d(33): f'=IFERROR(IF(AF{r}="",{_d},AF{r}-TODAY()),{_d})'
+    def C(name: str) -> str:
+        i = idx.get(name)
+        if i is None:
+            raise KeyError(f"build_formulas: columna de la plantilla no encontrada: {name!r}")
+        return col_letter(i)
 
-    # 4. Alarma (AH) según días (AG)
-    f[34] = lambda r, _d=d(34): (
-        f'=IFERROR(IF(AG{r}="",{_d},IF(AG{r}<0,"Nacido",'
-        f'IF(AG{r}<=7,"Semana de parto",IF(AG{r}<=28,"Menos 4 sem","Pendiente")))),{_d})'
-    )
+    def D(name: str) -> str:
+        return _default_for_type(typ.get(name, "TEXT"))
 
-    # 5. Edad gestacional al ingreso (AI) = (Ingreso(AD) - FUM(AE)) en semanas
-    f[35] = lambda r, _d=d(35): f'=IFERROR(IF(OR(AE{r}="",AD{r}=""),{_d},DATEDIF(AE{r},AD{r},"D")/7),{_d})'
+    f: dict[int, callable] = {}
 
-    # 6. Trimestre de inicio (AJ) según semanas (AI)
-    f[36] = lambda r, _d=d(36): f'=IFERROR(IF(AI{r}="",{_d},IF(AI{r}<14,"1 Trim",IF(AI{r}<28,"2 Trim","3 Trim"))),{_d})'
+    def put(name: str, fn):
+        f[idx[name]] = fn
 
-    # 7. IMC inicial (BB) = peso(AZ) / talla(BA)^2
-    f[54] = lambda r, _d=d(54): f'=IFERROR(IF(OR(AZ{r}="",BA{r}=""),{_d},AZ{r}/BA{r}^2),{_d})'
+    # 1. Edad
+    def edad(r):
+        a, dd = C("Fecha de Nacimiento"), D("Edad (años)")
+        return f'=IFERROR(IF({a}{r}="",{dd},DATEDIF({a}{r},TODAY(),"Y")),{dd})'
+    put("Edad (años)", edad)
 
-    # 8. Clasificación IMC (BC) según IMC (BB)
-    f[55] = lambda r, _d=d(55): (
-        f'=IFERROR(IF(BB{r}="",{_d},IF(BB{r}<18.5,"Bajo peso",'
-        f'IF(BB{r}<25,"Peso normal",IF(BB{r}<30,"Sobrepeso",'
-        f'IF(BB{r}<35,"Obesidad grado 1",IF(BB{r}<40,"Obesidad grado 2","Obesidad grado 3")))))),{_d})'
-    )
+    # 2. FPP = FUM + 280
+    def fpp(r):
+        fum, dd = C("FUM"), D("FPP")
+        return f'=IFERROR(IF({fum}{r}="",{dd},{fum}{r}+280),{dd})'
+    put("FPP", fpp)
 
-    # 9. Trimestres de tamizajes VIH / Sífilis (FUM=AE + fecha de la prueba)
-    f[68] = _trimestre_formula(31, 67, d(68))    # BP Asesoría VIH  ← BO
-    f[71] = _trimestre_formula(31, 69, d(71))    # BS Tamizaje VIH 1 ← BQ
-    f[74] = _trimestre_formula(31, 72, d(74))    # BV Tamizaje VIH 2 ← BT
-    f[77] = _trimestre_formula(31, 75, d(77))    # BY Tamizaje VIH 3 ← BW
-    f[80] = _trimestre_formula(31, 78, d(80))    # CB Sífilis 1 ← BZ
-    f[83] = _trimestre_formula(31, 81, d(83))    # CE Sífilis 2 ← CC
-    f[86] = _trimestre_formula(31, 84, d(86))    # CH Sífilis 3 ← CF
-    f[89] = _trimestre_formula(31, 87, d(89))    # CK Segunda prueba VIH ← CI
+    # 3. Dias para el parto = FPP - HOY
+    def dias(r):
+        fppc, dd = C("FPP"), D("Dias para el parto")
+        return f'=IFERROR(IF({fppc}{r}="",{dd},{fppc}{r}-TODAY()),{dd})'
+    put("Dias para el parto", dias)
 
-    # 10. Trimestre confirmatorio (CM) con límites 13/26 ← CL
-    f[91] = _trimestre_formula(31, 90, d(91), limite2=27, limite3=60)
+    # 4. Alarma
+    def alarma(r):
+        dcol, dd = C("Dias para el parto"), D("Alarma")
+        return (f'=IFERROR(IF({dcol}{r}="",{dd},IF({dcol}{r}<0,"Nacido",'
+                f'IF({dcol}{r}<=7,"Semana de parto",IF({dcol}{r}<=28,"Menos 4 sem","Pendiente")))),{dd})')
+    put("Alarma", alarma)
 
-    # 11. Número total de controles (ET) = contar fechas > 0
-    controls = [132, 134, 136, 138, 140, 142, 144, 146, 148]
-    count = "+".join(f'COUNTIF({col_letter(c)}{{r}},">0")' for c in controls)
-    f[150] = lambda r, _count=count, _d=d(150): f"=IFERROR({_count.format(r=r)},{_d})"
+    # 5. IMC inicial = peso / talla^2
+    def imc(r):
+        p, t, dd = C("Peso Inicial (kg)"), C("Talla (metros)"), D("Indice de Masa Corporal (IMC)")
+        return f'=IFERROR(IF(OR({p}{r}="",{t}{r}=""),{dd},{p}{r}/{t}{r}^2),{dd})'
+    put("Indice de Masa Corporal (IMC)", imc)
 
-    # 12. Último control (EU) = MAX de las fechas de control
-    max_refs = ",".join(f"{col_letter(c)}{{r}}" for c in controls)
-    f[151] = lambda r, _refs=max_refs, _d=d(151): f'=IF(MAX({_refs.format(r=r)})=0,{_d},MAX({_refs.format(r=r)}))'
+    def clasif_imc(base_name: str, target_name: str):
+        def fn(r):
+            b, dd = C(base_name), D(target_name)
+            return (f'=IFERROR(IF({b}{r}="",{dd},IF({b}{r}<18.5,"Bajo peso",'
+                    f'IF({b}{r}<25,"Peso normal",IF({b}{r}<30,"Sobrepeso",'
+                    f'IF({b}{r}<35,"Obesidad grado 1",IF({b}{r}<40,"Obesidad grado 2","Obesidad grado 3")))))),{dd})')
+        return fn
+    put("Clasificación del IMC", clasif_imc("Indice de Masa Corporal (IMC)", "Clasificación del IMC"))
 
-    # 13. Edad gestacional actual (EV) = (Último control(EU) - FUM(AE)) en semanas
-    f[152] = lambda r, _d=d(152): (
-        f'=IF(OR(AE{r}="",EU{r}="1845-01-01"),{_d},IFERROR(DATEDIF(AE{r},EU{r},"D")/7,{_d}))'
-    )
+    # 6. IMC actual = peso actual / talla actual^2
+    def imc_act(r):
+        p, t, dd = C("peso actual"), C("talla actual"), D("IMC ACTUAL")
+        return f'=IFERROR(IF(OR({p}{r}="",{t}{r}=""),{dd},{p}{r}/{t}{r}^2),{dd})'
+    put("IMC ACTUAL", imc_act)
+    put("Clasificación del IMC ACTUAL", clasif_imc("IMC ACTUAL", "Clasificación del IMC ACTUAL"))
 
-    # 14. IMC actual (EY) = peso(EW) / talla(EX)^2
-    f[155] = lambda r, _d=d(155): f'=IFERROR(IF(OR(EW{r}="",EX{r}=""),{_d},EW{r}/EX{r}^2),{_d})'
+    # 7. Trimestres (semanas desde la FUM o desde el ingreso, segun corresponda)
+    def trimestre(f1: str, f2: str, l2: int = 28) -> str:
+        def fn(r):
+            a, b = C(f1), C(f2)
+            return (f'=IFERROR(IF(OR({a}{r}="",{b}{r}=""),0,'
+                    f'IF(DATEDIF({a}{r},{b}{r},"D")/7<14,"1 Trim",'
+                    f'IF(DATEDIF({a}{r},{b}{r},"D")/7<{l2},"2 Trim","3 Trim"))),0)')
+        return fn
+    put("Trimestre Asesoria VIH", trimestre("FUM", "Asesoria Prueba VIH"))
+    put("Trimestre Toma Prueba VIH Primer Tamizaje", trimestre("FUM", "Fecha Toma Prueba VIH Primer Tamizaje"))
+    put("Trimestre Toma Prueba VIH Segundo Tamizaje", trimestre("FUM", "Fecha Toma Prueba VIH Segundo Tamizaje"))
+    put("Trimestre Toma Prueba VIH Tercer Tamizaje", trimestre("FUM", "Fecha Toma Prueba VIH Tercer Tamizaje"))
+    put("Trimestre Primera Prueba Treponemica Rapida Sifilis", trimestre("FUM", "Fecha Primera Prueba Treponemica Rapida Sifilis"))
+    put("Trimestre Segunda Prueba Treponemica Rapida Sifilis", trimestre("FUM", "Fecha Segunda Prueba Treponemica Rapida Sifilis"))
+    put("Trimestre Tercera Prueba Treponemica Rapida Sifilis", trimestre("FUM", "Fecha Tercera Prueba Treponemica Rapida Sifilis"))
+    put("Trimestre Toma segunda Prueba VIH", trimestre("FUM", "Fecha toma Segunda Prueba VIH"))
+    # Confirmatoria: base = fecha de INGRESO, limites 13 / 26
+    put("Trimestre Prueba confirmatoria Según Algoritmo",
+        trimestre("Fecha de Ingreso al Control Prenatal", "Fecha prueba confirmatoria Según Algoritmo", l2=13))
+
+    # 8. Controles prenatales
+    controles = ['Fecha 1er Control', 'Fecha 2do Control', 'Fecha 3er Control',
+                 'Fecha 4to Control', 'Fecha 5to Control', 'Fecha 6to Control',
+                 'Fecha 7mo Control', 'fecha 8vo Control', 'Fecha 9no Control']
+    ctrl = [C(c) for c in controles]
+
+    def num_controles(r):
+        s = "+".join(f'COUNTIF({c}{r},">0")' for c in ctrl)
+        return f'=IFERROR({s},0)'
+    put("Número Total de Controles Prenatales", num_controles)
+
+    def ultimo_control(r):
+        refs = ",".join(f'{c}{r}' for c in ctrl)
+        return f'=IFERROR(IF(MAX({refs})=0,"",MAX({refs})),"")'
+    put("Ultimo Control Prenatal", ultimo_control)
+
+    def edad_gest_actual(r):
+        fum, uc = C("FUM"), C("Ultimo Control Prenatal")
+        return (f'=IFERROR(IF(OR({fum}{r}="",{uc}{r}="",{uc}{r}="1845-01-01"),0,'
+                f'DATEDIF({fum}{r},{uc}{r},"D")/7),0)')
+    put("edad gestacional actual", edad_gest_actual)
+
+    # 9. Relacion anemia vs tratamiento (semaforo)
+    def anemia(r):
+        doc = C("No. De Identificación")
+        f1, f2, f3 = C("Fecha 1ra Realizacion Hemoglobina"), C("Fecha 2da Realizacion Hemoglobina"), C("Fecha 3ra Realizacion Hemoglobina")
+        r1, r2, r3 = C("Resultado 1ra Hemoglobina"), C("Resultado 2da Hemoglobina"), C("Resultado 3ra Hemoglobina")
+        tr = C("Tipo de tratamiento suminitrado para anemia")
+        return (f'=IF({doc}{r}="","",LET('
+                f'fd,IFERROR(IF(ISNUMBER({f1}{r}),{f1}{r},DATEVALUE({f1}{r})),0),'
+                f'sd,IFERROR(IF(ISNUMBER({f2}{r}),{f2}{r},DATEVALUE({f2}{r})),0),'
+                f'td,IFERROR(IF(ISNUMBER({f3}{r}),{f3}{r},DATEVALUE({f3}{r})),0),'
+                f'latest,MAX(fd,sd,td),'
+                f'h,IF(latest=0,"",IF(latest=td,{r3}{r},IF(latest=sd,{r2}{r},{r1}{r}))),'
+                f'hv,IFERROR(VALUE(h),""),'
+                f'req,IF(hv<7,3,IF(hv<10,2,1)),'
+                f'trat,IFERROR(VALUE(LEFT(TRIM({tr}{r}),1)),0),'
+                f'IF(OR(latest=0,hv=""),"🟡 SIN TAMIZAJE",IF(trat=req,"🟢 ADECUADO","🔴 NO ADECUADO"))))')
+    put("Relación entre Anemia vs tratamiento", anemia)
 
     return f
 
@@ -130,8 +191,7 @@ def parse_corrected(corrected_text: str) -> list[list[str]]:
 def build_data_excel(corrected_text: str, template: list[dict]) -> io.BytesIO:
     headers = [t["name"] for t in template]
     types = [t["type"] for t in template]
-    types_by_col = {i + 1: t["type"] for i, t in enumerate(template)}
-    formulas = build_formulas(types_by_col)
+    formulas = build_formulas(template)
     rows = parse_corrected(corrected_text)
 
     wb = Workbook()
@@ -153,19 +213,12 @@ def build_data_excel(corrected_text: str, template: list[dict]) -> io.BytesIO:
     for ridx, row in enumerate(rows, start=2):
         for c, (ttype, val) in enumerate(zip(types, row), start=1):
             if c in formulas:
-                fdef = formulas[c]
-                formula = fdef(ridx) if callable(fdef) else fdef.format(r=ridx)
-                cell = ws.cell(row=ridx, column=c, value=formula)
+                cell = ws.cell(row=ridx, column=c, value=formulas[c](ridx))
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin
-                # Las columnas calculadas de tipo fecha/número deben mostrar
-                # formato correcto (si no, Excel muestra el número serial).
-                if ttype == "DATE":
-                    cell.number_format = "yyyy-mm-dd"
-                elif ttype == "INT":
-                    cell.number_format = "0"
-                elif ttype == "DECIMAL":
-                    cell.number_format = "0.00"
+                fmt = FORMULA_FORMATS.get(headers[c - 1])
+                if fmt:
+                    cell.number_format = fmt
                 continue
             val = (val or "").strip()
             if ttype == "DATE":
