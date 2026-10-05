@@ -766,10 +766,22 @@ export async function deleteHistoria(id) {
 }
 
 export async function downloadHistoriaPdf(historiaId) {
-  const resp = await fetch(`${API_BASE}/historias/${historiaId}`, {
-    headers: authHeaders(),
-  })
-  if (!resp.ok) throw new Error('No se pudo descargar el PDF')
+  const url = `${API_BASE}/historias/${historiaId}`
+  const resp = await fetch(url, { headers: authHeaders() })
+  if (resp.status === 401) {
+    // Este fetch no pasa por apiFetch: replicamos el cierre de sesion.
+    notifyAuthExpired(url)
+    throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.')
+  }
+  if (!resp.ok) {
+    let msg = 'No se pudo descargar el PDF'
+    try {
+      const t = await resp.text()
+      const j = JSON.parse(t)
+      if (j && j.detail) msg = j.detail
+    } catch { /* respuesta sin JSON */ }
+    throw new Error(msg)
+  }
   const blob = await resp.blob()
   return URL.createObjectURL(blob)
 }

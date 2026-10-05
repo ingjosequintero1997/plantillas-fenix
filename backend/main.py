@@ -2625,7 +2625,12 @@ async def get_historia(request: Request, historia_id: int, current_user: User = 
                     raise HTTPException(status_code=404, detail="No hay almacenamiento configurado")
             except HTTPException:
                 raise
-            except Exception:
+            except Exception as _e:
+                # Antes se tragaba el error: dejamos rastro en los logs del servidor.
+                import logging
+                logging.getLogger("uvicorn.error").warning(
+                    f"No se pudo leer PDF del almacenamiento (historia {historia_id}, path={h.pdf_path}): {type(_e).__name__}: {_e}"
+                )
                 raise HTTPException(status_code=502, detail="No se pudo leer el PDF desde el almacenamiento.")
         elif h.pdf_data:
             data = bytes(h.pdf_data)
