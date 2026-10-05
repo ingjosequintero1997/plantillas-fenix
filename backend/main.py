@@ -5318,8 +5318,8 @@ async def listar_gestantes(
 		offset = (max(1, page) - 1) * page_size
 		from sqlalchemy import text
 
-		# Contar total
-		count_sql = 'SELECT COUNT(*) FROM gestantes WHERE 1=1'
+		# Contar total (excluye Casos Cerrados: esos viven en su propia data)
+		count_sql = "SELECT COUNT(*) FROM gestantes WHERE 1=1 AND NOT (CASO_CERRADO IS NOT NULL AND LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('true', '1'))"
 		count_params = {}
 		if ips_filtro:
 			count_sql += ' AND UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips'
@@ -5333,8 +5333,8 @@ async def listar_gestantes(
 
 		total = db.execute(text(count_sql), count_params).scalar() or 0
 
-		# Obtener registros
-		query_sql = 'SELECT * FROM gestantes WHERE 1=1'
+		# Obtener registros (excluye Casos Cerrados)
+		query_sql = "SELECT * FROM gestantes WHERE 1=1 AND NOT (CASO_CERRADO IS NOT NULL AND LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('true', '1'))"
 		if ips_filtro:
 			query_sql += ' AND UPPER("NOMBRE_DE_LA_IPS_PRIMARIA") = :ips'
 		if search:
@@ -5536,6 +5536,16 @@ async def mis_gestantes(request: Request, current_user: User = Depends(get_curre
 		ips_col_idx = 28
 		norm_ips_user = _norm(ips_nombre)
 
+		# Documentos con Caso Cerrado: se excluyen de la data de la IPS.
+		try:
+			_cerrados_rows = db.execute(sa_text(
+				"SELECT UPPER(TRIM(\"NO_DE_IDENTIFICACION\")) FROM gestantes "
+				"WHERE CASO_CERRADO IS NOT NULL AND LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('true','1')"
+			)).fetchall()
+			docs_cerrados = {str(r[0]).strip() for r in _cerrados_rows if r[0]}
+		except Exception:
+			docs_cerrados = set()
+
 		result_rows = []
 		seen = set()
 		norm_names = []
@@ -5565,6 +5575,8 @@ async def mis_gestantes(request: Request, current_user: User = Depends(get_curre
 				if not match:
 					continue
 				doc = str(row_data.iloc[2]).strip() if n_cols > 2 else ""
+				if doc and doc.strip().upper() in docs_cerrados:
+					continue
 				if doc and doc in seen:
 					continue
 				if doc:
@@ -5927,6 +5939,17 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 
 			db.commit()
 
+			# Regla automatica: si tras el ajuste el registro cumple, pasa a Caso Cerrado.
+			try:
+				_chk = db.execute(text(
+					'SELECT "FUM", "FECHA_DE_PARTO", "FECHA_DE_ABORTO", CASO_CERRADO FROM gestantes WHERE id = :id'
+				), {"id": registro_id}).fetchone()
+				if _chk is not None and not _es_cerrado(_chk[3]) and cumple_caso_cerrado(_chk[0], _chk[1], _chk[2]):
+					db.execute(text('UPDATE gestantes SET CASO_CERRADO = TRUE WHERE id = :id'), {"id": registro_id})
+					db.commit()
+			except Exception:
+				pass
+
 		return {"success": True, "audit_count": len(audit_entries)}
 	except HTTPException:
 		raise
@@ -5987,6 +6010,21 @@ async def crear_gestante(payload: dict, current_user: User = Depends(get_current
 		insert_sql = f'INSERT INTO gestantes ({col_names}) VALUES ({placeholders})'
 		db.execute(text(insert_sql), params)
 		db.commit()
+
+		# Regla automatica: si el nuevo registro cumple, pasa a Caso Cerrado.
+		try:
+			_doc = str(payload.get("NO_DE_IDENTIFICACION", "")).strip()
+			if _doc:
+				_new_row = db.execute(text(
+					'SELECT id, "FUM", "FECHA_DE_PARTO", "FECHA_DE_ABORTO", CASO_CERRADO FROM gestantes '
+					'WHERE "NO_DE_IDENTIFICACION" = :d ORDER BY id DESC LIMIT 1'
+				), {"d": _doc}).fetchone()
+				if _new_row is not None and not _es_cerrado(_new_row[4]) and cumple_caso_cerrado(_new_row[1], _new_row[2], _new_row[3]):
+					db.execute(text('UPDATE gestantes SET CASO_CERRADO = TRUE WHERE id = :id'), {"id": _new_row[0]})
+					db.commit()
+		except Exception:
+			pass
+
 		return {"success": True}
 	except HTTPException:
 		raise
@@ -6034,6 +6072,67 @@ async def obtener_auditoria(registro_id: int, current_user: User = Depends(get_c
 		db.close()
 
 
+# ─── Regla automatica de Caso Cerrado ────────────────────────────────────
+# Un registro pasa a Caso Cerrado cuando (FUM + 10 meses calendario) ya
+# ocurrio Y existe una fecha real de parto o de aborto. Se ignora el comodin
+# 1845-01-01 (y cualquier anio < 1900), igual que el auto-fill historico.
+
+def _fecha_real_caso(valor):
+    """Devuelve un datetime.date si el valor es una fecha real; si no, None."""
+    import re as _re
+    from datetime import date as _date
+    if valor is None:
+        return None
+    s = str(valor).strip()
+    if not s:
+        return None
+    m = _re.match(r"^(\d{4})-(\d{2})-(\d{2})", s)
+    if m:
+        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if y < 1900:
+            return None
+        try:
+            return _date(y, mo, d)
+        except ValueError:
+            return None
+    m = _re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$", s)
+    if m:
+        d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if y < 1900:
+            return None
+        try:
+            return _date(y, mo, d)
+        except ValueError:
+            return None
+    return None
+
+
+def _sumar_meses(fecha, meses):
+    import calendar as _cal
+    from datetime import date as _date
+    m = fecha.month - 1 + meses
+    y = fecha.year + m // 12
+    m = m % 12 + 1
+    ultimo = _cal.monthrange(y, m)[1]
+    return _date(y, m, min(fecha.day, ultimo))
+
+
+def cumple_caso_cerrado(fum, fecha_parto, fecha_aborto, hoy=None):
+    """True si el registro cumple la regla de Caso Cerrado."""
+    from datetime import date as _date
+    f = _fecha_real_caso(fum)
+    if not f:
+        return False
+    hoy = hoy or _date.today()
+    if hoy < _sumar_meses(f, 10):
+        return False
+    return bool(_fecha_real_caso(fecha_parto) or _fecha_real_caso(fecha_aborto))
+
+
+def _es_cerrado(valor):
+    return str(valor).strip().lower() in ("true", "1")
+
+
 @app.post("/data/gestantes/caso-cerrado/auto-fill")
 async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 	"""Auto-llena el campo CASO_CERRADO para gestantes que cumplen los criterios."""
@@ -6046,34 +6145,25 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 		# CASO_CERRADO puede ser BOOLEAN o TEXT: se normaliza para funcionar en ambos casos.
 		no_cerrado = "(CASO_CERRADO IS NULL OR LOWER(CAST(CASO_CERRADO AS TEXT)) IN ('false', '0', ''))"
 
-		# Usar solo las columnas de fecha que existan en la tabla real.
+		# Usar solo las columnas que existan en la tabla real.
 		all_cols = {c.name.upper() for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description}
-		fecha_cols = [c for c in ["FECHA_DE_PARTO", "FECHA_DE_ABORTO", "FECHA"] if c in all_cols]
+		fecha_cols = [c for c in ["FECHA_DE_PARTO", "FECHA_DE_ABORTO"] if c in all_cols]
+		if "FUM" not in all_cols:
+			return {"success": True, "total_caso_cerrado": 0, "criterios": {"regla": "No existe la columna FUM"}}
 		if not fecha_cols:
 			return {"success": True, "total_caso_cerrado": 0, "criterios": {"regla": "No se encontraron columnas de fecha de parto/aborto"}}
 
-		select_cols = ", ".join(f'"{c}"' for c in fecha_cols)
+		select_cols = ", ".join(f'"{c}"' for c in (["FUM"] + fecha_cols))
 		candidatos = db.execute(text(f'''
 			SELECT id, {select_cols}
 			FROM gestantes
 			WHERE {no_cerrado}
 		''')).fetchall()
 
-		# Fecha real = tiene formato AAAA-MM-DD y no es el comodín (año < 1900, ej. 1845-01-01).
-		_fecha_re = re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
-
-		def _fecha_real(valor):
-			if valor is None:
-				return None
-			m = _fecha_re.match(str(valor).strip())
-			if not m or int(m.group(1)) < 1900:
-				return None
-			return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
-
 		ids_cerrar = []
 		for row in candidatos:
-			m = row._mapping
-			if any(_fecha_real(m[c]) for c in fecha_cols):
+			m = dict(row._mapping)
+			if cumple_caso_cerrado(m.get("FUM"), m.get("FECHA_DE_PARTO"), m.get("FECHA_DE_ABORTO")):
 				ids_cerrar.append(m["id"])
 
 		# Actualizar en lotes para evitar límites de parámetros
@@ -6091,8 +6181,8 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 			"success": True,
 			"total_caso_cerrado": rows,
 			"criterios": {
-				"regla": "Se marca Caso Cerrado cuando existe fecha real de parto o aborto (el comodín es 1845-01-01)",
-				"columnas_evaluadas": fecha_cols,
+				"regla": "Caso Cerrado cuando (FUM + 10 meses calendario) y existe fecha real de parto o aborto (el comodín es 1845-01-01)",
+				"columnas_evaluadas": ["FUM"] + fecha_cols,
 			}
 		}
 	except Exception as e:

@@ -124,8 +124,15 @@ Aplicación web de **validación y gestión de datos de gestantes** para DUSAKAW
 
 ## 14. TEMA / MODO OSCURO
 
-- **Fuente de verdad**: `frontend/src/tokens.css`. Define `:root` (claro) y `.dark` (oscuro). El modo oscuro recolorea **todos** los tokens: fondos (carbón cálido), texto, bordes, la rampa verde completa (`--green-50..900`, para que los chips/activos no queden casi blancos), acento cálido, acciones y semánticos.
-- **Interruptor**: en `DashboardLayout.jsx` hay un `ThemeSwitch` (switch etiquetado "Modo oscuro") en el pie del sidebar y un botón sol/luna rápido en el header. El estado se inicializa desde la clase `dark` del `<html>` y se persiste en `localStorage` con la clave **`datas-theme`** (`'dark'`/`'light'`).
+- **Fuente de verdad**: `frontend/src/tokens.css`. Define `:root` (claro) y `.dark` (oscuro). El modo oscuro recolorea **todos** los tokens: fondos (carbón neutro con tinte verde, coherente con el claro), texto, bordes, la rampa verde completa (`--green-50..900`, para que los chips/activos no queden casi blancos), acento cálido, acciones y semánticos.
+- **Interruptor**: en `DashboardLayout.jsx` hay un `ThemeSwitch` (switch etiquetado "Modo oscuro") en el pie del sidebar; es el **único** punto de activación (se quitó el botón sol/luna del header). En el `Login.jsx` hay otro interruptor (sol/luna) propio. El estado se inicializa desde la clase `dark` del `<html>` y se persiste en `localStorage` con la clave **`datas-theme`** (`'dark'`/`'light'`).
 - **Sin flash**: `frontend/index.html` tiene un script inline pre-paint que añade `.dark` a `<html>` según `localStorage` o `prefers-color-scheme`, más `<meta name="color-scheme">`.
 - **Regla para nuevos componentes**: usar tokens (`var(--bg-surface)`, `var(--text-primary)`, `var(--border-subtle)`, `var(--success-bg)`, etc.) o clases `bg-[var(--...)]`. NO hardcodear `bg-white`/hex claros para superficies, ni chips `#FEE2E2`/`#DCFCE7`/`#FEF3C7`: en oscuro se ven como parches claros. Excepciones válidas: overlays translúcidos (`bg-white/15`) y knobs de toggles sobre heroes de color.
 - Aliases semánticos heredados ya definidos en tokens: `--error`, `--error-bg`, `--primary`, `--primary-light` (antes se usaban sin existir).
+
+## 15. CASO CERRADO AUTOMÁTICO
+
+- **Regla** (`backend/main.py`, helper `cumple_caso_cerrado`): un registro pasa a `CASO_CERRADO` cuando **(FUM + 10 meses calendario) ya ocurrió** **Y** existe **fecha real de parto O de aborto**. Se ignora el comodín `1845-01-01` (año < 1900).
+- **Dónde se dispara**: (1) botón admin `POST /data/gestantes/caso-cerrado/auto-fill` (tras el cargue); (2) **automático** al **crear** (`POST /data/gestantes`) y al **editar** (`PUT /data/gestantes/{id}`): si tras el ajuste cumple, se marca. Forward-only: solo marca TRUE, nunca desmarca solo (`/caso-cerrado/limpiar` sigue existiendo).
+- **La quita de la data**: `GET /data/gestantes` y `GET /data/gestantes/mis-gestantes` **excluyen** los `CASO_CERRADO=true`. Los cerrados se consultan en `GET /data/gestantes/caso-cerrado`.
+- Verificado por simulación sobre las 1607 filas reales: da 15 cierres, que coinciden con los 15 ya cerrados.
