@@ -119,7 +119,7 @@ Aplicación web de **validación y gestión de datos de gestantes** para DUSAKAW
 
 - Credenciales reales **solo en Coolify/Vercel (env vars)**; el repo no debe contener secretos.
 - El usuario confirmó que las contraseñas en la BD están OK (no migrar hashes de `usuarios_ips`).
-- Acceso a BD de producción (read-only para consultas): `postgres://postgres:qazwsx12A.@129.80.159.38:5436/base_sie_dusakawi` (prefijo `postgresql://` para SQLAlchemy).
+- **Credenciales: SOLO en variables de entorno.** Ninguna contraseña, cadena de conexión ni token debe ir en código, consultas, docs, `.md`, commits ni chat. En local viven en `backend/.env` (ignorado por git); en prod, en Coolify/Vercel. Para conectar la BD usa `DATABASE_URL` y `CORP_DB_*` desde el entorno.
 - No exponer credenciales en respuestas/logs. `_health_error`/`_redact` redactan `user:pass@`.
 
 ## 14. TEMA / MODO OSCURO

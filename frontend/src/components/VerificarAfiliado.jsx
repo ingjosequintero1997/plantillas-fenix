@@ -102,6 +102,7 @@ export default function VerificarAfiliado() {
   const [masivo, setMasivo] = useState(null)
   const [masivoError, setMasivoError] = useState('')
   const [masivoPage, setMasivoPage] = useState(1)
+  const [masivoFilter, setMasivoFilter] = useState('TODOS')
 
   const buscar = async () => {
     const doc = documento.trim()
@@ -121,7 +122,7 @@ export default function VerificarAfiliado() {
 
   const verificarMasivo = async () => {
     if (!masivoFile) { setMasivoError('Selecciona un archivo TXT o CSV (TIPO,NUMERO por linea)'); return }
-    setMasivoError(''); setMasivo(null); setMasivoPage(1); setMasivoLoading(true)
+    setMasivoError(''); setMasivo(null); setMasivoPage(1); setMasivoFilter('TODOS'); setMasivoLoading(true)
     try {
       const data = await verificarAfiliadoMasivo(masivoFile)
       setMasivo(data)
@@ -134,8 +135,8 @@ export default function VerificarAfiliado() {
 
   const descargarMasivo = () => {
     if (!masivo?.resultados?.length) return
-    const filas = [['Tipo de identificacion', 'Numero de identificacion', 'Estado', 'IPS primaria']]
-    for (const r of masivo.resultados) filas.push([r.tipo, r.numero, r.estado, r.ips || ''])
+    const filas = [['Tipo de identificacion', 'Numero de identificacion', 'Estado', 'Tipo real', 'Numero real', 'IPS primaria']]
+    for (const r of masivo.resultados) filas.push([r.tipo, r.numero, r.estado, r.tipo_bd || '', r.numero_bd || '', r.ips || ''])
     const csv = filas.map((r) => r.map((c) => `"${String(c == null ? '' : c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -153,6 +154,11 @@ export default function VerificarAfiliado() {
     afiliado.primer_apellido,
     afiliado.segundo_apellido,
   ].filter(Boolean).join(' ') || 'Afiliada'
+
+  const masivoResultados = masivo?.resultados || []
+  const masivoFiltrados = masivoFilter === 'TODOS'
+    ? masivoResultados
+    : masivoResultados.filter((r) => r.estado === masivoFilter)
 
   return (
     <div className="space-y-5 fade-in">
@@ -219,8 +225,20 @@ export default function VerificarAfiliado() {
 
         {masivo && (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <span className="badge-neutral">Total: {masivo.total}</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Filtrar por estado:</span>
+                <select
+                  value={masivoFilter}
+                  onChange={(e) => { setMasivoFilter(e.target.value); setMasivoPage(1) }}
+                  className="select text-sm"
+                >
+                  <option value="TODOS">Todos ({masivo.total})</option>
+                  <option value="ENCONTRADO">Encontrados ({masivo.encontrados})</option>
+                  <option value="TIPO_NO_COINCIDE">Tipo no coincide ({masivo.tipo_no_coincide})</option>
+                  <option value="NO_ENCONTRADO">No encontrados ({masivo.no_encontrados})</option>
+                </select>
+              </div>
               <span className="badge-success">Encontrados: {masivo.encontrados}</span>
               <span className="badge-warning">Tipo no coincide: {masivo.tipo_no_coincide}</span>
               <span className="badge-error">No encontrados: {masivo.no_encontrados}</span>
@@ -231,7 +249,7 @@ export default function VerificarAfiliado() {
                 {masivo.errores_formato.length} línea(s) con formato inválido (se omitieron).
               </div>
             )}
-            {masivo.resultados?.length > 0 ? (
+            {masivoResultados.length > 0 ? (
               <div>
                 <div className="table-wrap">
                   <table className="table">
@@ -239,7 +257,7 @@ export default function VerificarAfiliado() {
                       <tr><th>Tipo de identificación</th><th>Número de identificación</th><th>Estado</th><th>IPS primaria</th></tr>
                     </thead>
                     <tbody>
-                      {masivo.resultados.slice((masivoPage - 1) * MASIVO_PAGE_SIZE, masivoPage * MASIVO_PAGE_SIZE).map((r, i) => (
+                      {masivoFiltrados.slice((masivoPage - 1) * MASIVO_PAGE_SIZE, masivoPage * MASIVO_PAGE_SIZE).map((r, i) => (
                         <tr key={i}>
                           <td>{r.tipo}</td>
                           <td>{r.numero}</td>
@@ -247,8 +265,10 @@ export default function VerificarAfiliado() {
                             <span className={r.estado === 'ENCONTRADO' ? 'badge-success' : r.estado === 'TIPO_NO_COINCIDE' ? 'badge-warning' : 'badge-error'}>
                               {r.estado === 'ENCONTRADO' ? 'Encontrado' : r.estado === 'TIPO_NO_COINCIDE' ? 'Tipo no coincide' : 'No encontrado'}
                             </span>
-                            {r.estado === 'TIPO_NO_COINCIDE' && r.tipo_bd && (
-                              <span className="ml-1.5 text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>(BD: {r.tipo_bd})</span>
+                            {r.estado === 'TIPO_NO_COINCIDE' && (
+                              <span className="ml-1.5 text-[0.7rem]" style={{ color: 'var(--text-muted)' }}>
+                                (real: {r.tipo_bd || '—'}{r.numero_bd ? ` ${r.numero_bd}` : ''})
+                              </span>
                             )}
                           </td>
                           <td>{r.ips || '—'}</td>
@@ -257,14 +277,20 @@ export default function VerificarAfiliado() {
                     </tbody>
                   </table>
                 </div>
-                <Pagination
-                  page={masivoPage}
-                  totalPages={Math.max(1, Math.ceil(masivo.resultados.length / MASIVO_PAGE_SIZE))}
-                  onChange={setMasivoPage}
-                />
+                {masivoFiltrados.length === 0 ? (
+                  <div className="text-sm py-3" style={{ color: 'var(--text-muted)' }}>No hay filas con ese estado.</div>
+                ) : (
+                  <Pagination
+                    page={masivoPage}
+                    totalPages={Math.max(1, Math.ceil(masivoFiltrados.length / MASIVO_PAGE_SIZE))}
+                    onChange={setMasivoPage}
+                  />
+                )}
               </div>
             ) : (
-              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>No se procesaron filas.</div>
+              <div className="text-sm py-2" style={{ color: 'var(--warning)' }}>
+                No se procesaron filas. Verificá que el archivo tenga una línea por usuaria con el formato <b>TIPO,NUMERO</b> (ej. <code>CC,1045678901</code>).
+              </div>
             )}
           </div>
         )}

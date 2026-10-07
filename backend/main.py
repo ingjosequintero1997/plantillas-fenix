@@ -1,3 +1,12 @@
+# Cargar variables de entorno del .env ANTES de cualquier import que las use,
+# asi el comando local no necesita credenciales (viven en backend/.env).
+try:
+	from pathlib import Path as _Path
+	from dotenv import load_dotenv as _load_dotenv
+	_load_dotenv(_Path(__file__).resolve().parent / ".env")
+except Exception:
+	pass
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Query, Depends, Request, Body
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -4477,9 +4486,14 @@ async def verificar_afiliado_masivo(file: UploadFile = File(...), current_user: 
 			errores_formato.append({"linea": i + 1, "texto": line[:120]})
 			continue
 		tipo = parts[0].strip().upper().replace(".", "")
-		numero = parts[1].strip()
-		if i == 0 and not any(ch.isdigit() for ch in numero):
-			continue  # encabezado (la 2a columna no es numero)
+		numero = parts[1].strip().replace(" ", "")
+		# Formato esperado por linea: TIPO (letras) + NUMERO (solo digitos).
+		# Si no cumple, se reporta como formato invalido (no se procesa).
+		if not _re.fullmatch(r"[A-Za-z0-9]{1,5}", tipo) or not _re.fullmatch(r"[0-9]{3,}", numero):
+			if i == 0:
+				continue  # encabezado
+			errores_formato.append({"linea": i + 1, "texto": line[:120]})
+			continue
 		usuarios.append({"tipo_id": tipo, "numero_id": numero})
 
 	if not usuarios:
@@ -4512,10 +4526,20 @@ async def verificar_afiliado_masivo(file: UploadFile = File(...), current_user: 
 				estado = "ENCONTRADO"; n_ok += 1
 			_cod = str(e.get("ips") or "").strip()
 			_nombre_ips = nombres_ips.get(_cod, _cod) if _cod else None
-			resultados.append({"tipo": tipo, "numero": num, "estado": estado, "tipo_bd": tipo_bd, "ips": _nombre_ips})
+			resultados.append({
+				"tipo": tipo, "numero": num, "estado": estado,
+				"tipo_bd": tipo_bd, "numero_bd": str(e.get("numero_id") or "").strip(),
+				"ips": _nombre_ips,
+			})
 		else:
 			n_no += 1
-			resultados.append({"tipo": tipo, "numero": num, "estado": "NO_ENCONTRADO", "tipo_bd": "", "ips": None})
+			resultados.append({"tipo": tipo, "numero": num, "estado": "NO_ENCONTRADO", "tipo_bd": "", "numero_bd": "", "ips": None})
+
+	_error_db = res.get("error")
+	if _error_db:
+		_faltan = [k for k in ("CORP_DB_HOST", "CORP_DB_PORT", "CORP_DB_NAME", "CORP_DB_USER", "CORP_DB_PASSWORD") if not os.environ.get(k)]
+		if _faltan:
+			_error_db = f"{_error_db} (faltan variables: {', '.join(_faltan)})"
 
 	return {
 		"success": True,
@@ -4524,7 +4548,7 @@ async def verificar_afiliado_masivo(file: UploadFile = File(...), current_user: 
 		"tipo_no_coincide": n_tipo,
 		"no_encontrados": n_no,
 		"errores_formato": errores_formato[:50],
-		"error_db": res.get("error"),
+		"error_db": _error_db,
 		"resultados": resultados,
 	}
 

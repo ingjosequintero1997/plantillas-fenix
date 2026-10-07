@@ -40,14 +40,25 @@ TIPO_DOC_REVERSE = {v: k for k, v in TIPO_DOC_MAP.items()}
 
 def _build_corporate_url() -> str:
     """Construye la URL de conexion a BD corporativa desde variables de entorno."""
-    host = os.environ.get("CORP_DB_HOST", "")
-    port = os.environ.get("CORP_DB_PORT", "5435")
-    name = os.environ.get("CORP_DB_NAME", "")
-    user = os.environ.get("CORP_DB_USER", "")
-    password = os.environ.get("CORP_DB_PASSWORD", "")
+    host = (os.environ.get("CORP_DB_HOST") or "").strip()
+    port = (os.environ.get("CORP_DB_PORT") or "5435").strip()
+    name = (os.environ.get("CORP_DB_NAME") or "").strip()
+    user = (os.environ.get("CORP_DB_USER") or "").strip()
+    password = os.environ.get("CORP_DB_PASSWORD") or ""
     if host and name and user:
         return f"postgresql://{user}:{password}@{host}:{port}/{name}"
     return ""
+
+
+def _reload_env():
+    """Relee backend/.env forzando override (respaldo si el proceso arranco sin
+    las variables cargadas)."""
+    try:
+        from pathlib import Path
+        from dotenv import load_dotenv
+        load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
+    except Exception:
+        pass
 
 
 CORPORATE_DB_URL = _build_corporate_url()
@@ -60,6 +71,10 @@ def get_corporate_connection():
     Reconstruye la URL en cada llamada para capturar variables de entorno.
     """
     url = _build_corporate_url()
+    if not url:
+        # Respaldo: recargar el .env (por si el proceso arranco sin las variables).
+        _reload_env()
+        url = _build_corporate_url()
     if not url:
         print("[corporate_db] CORP_DB_HOST/CORP_DB_NAME/CORP_DB_USER no configurados")
         return None
