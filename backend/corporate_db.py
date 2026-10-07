@@ -76,8 +76,8 @@ def get_corporate_connection():
         _reload_env()
         url = _build_corporate_url()
     if not url:
-        print("[corporate_db] CORP_DB_HOST/CORP_DB_NAME/CORP_DB_USER no configurados")
-        return None
+        print("[corporate_db] CORP_DB_* no configurados; se usa la BD de la app (esquema administrativo)")
+        return _fallback_engine()
     try:
         if url.startswith("postgres://"):
             url = "postgresql://" + url[len("postgres://"):]
@@ -86,6 +86,22 @@ def get_corporate_connection():
         return engine
     except Exception as e:
         print(f"Error al conectar con BD corporativa: {str(e)[:200]}")
+        return _fallback_engine()
+
+
+def _fallback_engine():
+    """Engine de la MISMA BD de la app: el esquema administrativo (af_afiliado,
+    ct_ips) vive en la misma base, asi que sirve de respaldo si la conexion
+    corporativa (CORP_DB_*) no esta configurada o no es alcanzable."""
+    try:
+        from database import engine
+        return engine
+    except Exception:
+        pass
+    try:
+        from .database import engine
+        return engine
+    except Exception:
         return None
 
 
@@ -306,62 +322,64 @@ def validar_afiliados_lote(usuarios: list) -> dict:
         engine = get_corporate_connection()
         if not engine:
             return {"encontrados": [], "no_encontrados": usuarios, "error": "No se pudo conectar con BD corporativa"}
-        
-        from sqlalchemy import text
-        conn = engine.connect()
-        
         try:
-            encontrados = []
-            no_encontrados = []
-            
-            BATCH_SIZE = 200
-            for i in range(0, len(usuarios), BATCH_SIZE):
-                batch = usuarios[i:i + BATCH_SIZE]
-                
-                params = {}
-                placeholders = []
-                for idx, u in enumerate(batch):
-                    key = f"num_{idx}"
-                    params[key] = str(u["numero_id"]).strip()
-                    placeholders.append(f":{key}")
-                
-                in_clause = ", ".join(placeholders)
-                query = text(f'''
-                    SELECT a."numero_identificacion", a."tipo_identificacion", a."ips"
-                    FROM administrativo."af_afiliado" a
-                    WHERE a."numero_identificacion" IN ({in_clause})
-                ''')
-                
-                result = conn.execute(query, params).fetchall()
-                
-                # Indexar resultados encontrados por numero_id
-                encontrados_set = set()
-                for row in result:
-                    num = str(row[0]).strip()
-                    tipo_raw = str(row[1]).strip()
-                    ips_code = str(row[2]).strip() if row[2] else None
-                    tipo_int = 0
-                    try:
-                        tipo_int = int(float(tipo_raw))
-                    except (ValueError, TypeError):
-                        pass
-                    tipo_str = TIPO_DOC_REVERSE.get(tipo_int, tipo_raw)
-                    encontrados_set.add(num)
-                    encontrados.append({"tipo_id": tipo_str, "numero_id": num, "ips": ips_code})
-                
-                # Marcar no encontrados
-                for u in batch:
-                    num = str(u["numero_id"]).strip()
-                    if num not in encontrados_set:
-                        no_encontrados.append({"tipo_id": str(u["tipo_id"]).strip().upper(), "numero_id": num})
-            
-            return {"encontrados": encontrados, "no_encontrados": no_encontrados, "error": None}
-        
-        finally:
-            conn.close()
-    
+            return _validar_lote_con_engine(engine, usuarios)
+        except Exception as e_primary:
+            # Respaldo: la BD de la app (tiene el mismo esquema administrativo).
+            fb = _fallback_engine()
+            if fb is not None and fb is not engine:
+                try:
+                    return _validar_lote_con_engine(fb, usuarios)
+                except Exception:
+                    pass
+            raise e_primary
     except Exception as e:
         return {"encontrados": [], "no_encontrados": usuarios, "error": f"Error en lote: {str(e)[:200]}"}
+
+
+def _validar_lote_con_engine(engine, usuarios: list) -> dict:
+    """Valida el lote usando el engine dado (corporativo o el de la app)."""
+    from sqlalchemy import text
+    conn = engine.connect()
+    try:
+        encontrados = []
+        no_encontrados = []
+        BATCH_SIZE = 200
+        for i in range(0, len(usuarios), BATCH_SIZE):
+            batch = usuarios[i:i + BATCH_SIZE]
+            params = {}
+            placeholders = []
+            for idx, u in enumerate(batch):
+                key = f"num_{idx}"
+                params[key] = str(u["numero_id"]).strip()
+                placeholders.append(f":{key}")
+            in_clause = ", ".join(placeholders)
+            query = text(f'''
+                SELECT a."numero_identificacion", a."tipo_identificacion", a."ips"
+                FROM administrativo."af_afiliado" a
+                WHERE a."numero_identificacion" IN ({in_clause})
+            ''')
+            result = conn.execute(query, params).fetchall()
+            encontrados_set = set()
+            for row in result:
+                num = str(row[0]).strip()
+                tipo_raw = str(row[1]).strip()
+                ips_code = str(row[2]).strip() if row[2] else None
+                tipo_int = 0
+                try:
+                    tipo_int = int(float(tipo_raw))
+                except (ValueError, TypeError):
+                    pass
+                tipo_str = TIPO_DOC_REVERSE.get(tipo_int, tipo_raw)
+                encontrados_set.add(num)
+                encontrados.append({"tipo_id": tipo_str, "numero_id": num, "ips": ips_code})
+            for u in batch:
+                num = str(u["numero_id"]).strip()
+                if num not in encontrados_set:
+                    no_encontrados.append({"tipo_id": str(u["tipo_id"]).strip().upper(), "numero_id": num})
+        return {"encontrados": encontrados, "no_encontrados": no_encontrados, "error": None}
+    finally:
+        conn.close()
 
 
 def obtener_nombres_ips(ips_codes: list) -> dict:
