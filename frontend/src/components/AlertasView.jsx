@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { fetchAlertas, fetchAlertaDetalle, fetchBandeja, fetchFicha, crearSeguimiento } from '../api'
+import { fetchAlertas, fetchAlertaDetalle, fetchBandeja, fetchFicha, crearSeguimiento, exportarAlertas } from '../api'
 import Pagination from './Pagination'
 
 const PAGE_SIZE = 50
@@ -352,6 +352,12 @@ function PorAlertaView({ onOpenFicha }) {
   const [loadingDetalle, setLoadingDetalle] = useState(false)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [downloading, setDownloading] = useState(false)
+
+  const descargar = async () => {
+    setDownloading(true); setError('')
+    try { await exportarAlertas() } catch (e) { setError(e.message || 'No se pudo exportar') } finally { setDownloading(false) }
+  }
 
   const loadAlertas = useCallback(async () => {
     setLoading(true); setError('')
@@ -444,38 +450,61 @@ function PorAlertaView({ onOpenFicha }) {
   return (
     <div className="space-y-5">
       {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>}
+
+      {/* Total (estilo SISPRO) */}
+      <div className="flex justify-center">
+        <div className="rounded-2xl px-12 py-5 text-center" style={{ background: 'linear-gradient(160deg, #3A863A, #5AAE5A)', color: '#fff', minWidth: 280, boxShadow: '0 6px 20px rgba(90,174,90,0.28)' }}>
+          <div className="text-4xl font-bold" style={{ lineHeight: 1 }}>{totalGeneral}</div>
+          <div className="text-xs mt-2" style={{ opacity: 0.92 }}>Total de coincidencias de alertas</div>
+        </div>
+      </div>
+
+      <div className="text-center">
+        <div className="page-title">Distribución de alertas</div>
+        <div className="page-subtitle">Haga clic en "Hacer seguimiento" para conocer las personas gestantes registradas.</div>
+      </div>
+
+      <div className="flex justify-center">
+        <button onClick={descargar} disabled={downloading} className="btn-secondary text-sm">
+          {downloading ? 'Generando Excel...' : 'Exportar a Excel'}
+        </button>
+      </div>
+
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"><div className="skeleton h-20 w-full rounded-xl" /><div className="skeleton h-20 w-full rounded-xl" /><div className="skeleton h-20 w-full rounded-xl" /></div>
+        <div className="space-y-3"><div className="skeleton h-12 w-full rounded-xl" /><div className="skeleton h-12 w-full rounded-xl" /><div className="skeleton h-12 w-full rounded-xl" /></div>
       ) : (
-        <>
-          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{alertas.length} alertas · {totalGeneral} coincidencias</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {alertas.map((a) => {
-              const tieneCasos = Number(a.total) > 0
-              const c = a.criticidad <= 2 ? 'rojo' : a.criticidad === 3 ? 'amarillo' : 'verde'
-              const m = SEM[c]
-              return (
-                <button
-                  key={a.key}
-                  onClick={() => tieneCasos && openAlerta(a)}
-                  className="panel text-left transition-all"
-                  style={{ borderLeft: `3px solid ${tieneCasos ? m.dot : 'var(--border-strong)'}`, opacity: tieneCasos ? 1 : 0.55, cursor: tieneCasos ? 'pointer' : 'default' }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{a.label}</div>
-                      {tieneCasos && <div className="mt-1.5"><SemBadge color={c} /></div>}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-2xl font-bold" style={{ color: tieneCasos ? m.color : 'var(--text-muted)' }}>{a.total}</div>
-                      <div className="text-[0.66rem] uppercase" style={{ color: 'var(--text-muted)' }}>casos</div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </>
+        <div className="table-wrap" style={{ maxWidth: 940, margin: '0 auto' }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Alerta</th>
+                <th style={{ width: 200 }}>Cantidad personas gestantes</th>
+                <th className="text-center" style={{ width: 180 }}>Seguimiento</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alertas.map((a) => {
+                const total = Number(a.total) || 0
+                return (
+                  <tr key={a.key}>
+                    <td style={{ fontWeight: 500 }}>{a.label}</td>
+                    <td>{total}</td>
+                    <td className="text-center">
+                      <button
+                        onClick={() => total > 0 && openAlerta(a)}
+                        disabled={total === 0}
+                        className="btn-primary text-xs px-4 py-1.5"
+                        style={{ whiteSpace: 'nowrap', opacity: total === 0 ? 0.5 : 1, cursor: total === 0 ? 'default' : 'pointer' }}
+                      >
+                        Hacer seguimiento
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

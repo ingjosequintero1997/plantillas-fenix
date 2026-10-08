@@ -4892,6 +4892,97 @@ async def ficha_gestante(numero_id: str, current_user: User = Depends(get_curren
         db.close()
 
 
+_ALERTA_COLS = [
+    ("nombre", "Nombre y apellido"),
+    ("tipo_id", "Tipo doc."),
+    ("numero_id", "Número identificación"),
+    ("departamento", "Departamento"),
+    ("municipio", "Municipio"),
+    ("nombre_ips", "Nombre IPS"),
+    ("aseguradora", "Aseguradora"),
+    ("edad", "Edad"),
+    ("edad_gestacional", "Edad gestacional"),
+]
+
+
+def _fila_alerta(r, afi, ips_names, eps_names):
+    doc = str(r.get("No. De Identificación", "")).strip()
+    a = afi.get(doc, {})
+    ips_code = a.get("ips", "")
+    eps_code = a.get("codigo_entidad", "")
+    nombre = " ".join(
+        x for x in [r.get("Nombre_1,"), r.get("Nombre_2"), r.get("Apellido_1,"), r.get("Apellido_2")]
+        if str(x).strip()
+    ).strip()
+    edad_val = str(r.get("Edad (años)", "")).strip()
+    if not edad_val:
+        try:
+            from .alertas import _edad as _ce
+        except ImportError:
+            from alertas import _edad as _ce
+        _e = _ce(r)
+        edad_val = "" if _e is None else str(int(_e))
+    return {
+        "nombre": nombre,
+        "tipo_id": r.get("Tipo de documento de identidad", ""),
+        "numero_id": doc,
+        "departamento": r.get("Departamento Residencia", ""),
+        "municipio": r.get("Municipio de Residencia", ""),
+        "nombre_ips": ips_names.get(ips_code) or r.get("Nombre de la IPS Primaria", ""),
+        "aseguradora": eps_names.get(eps_code, ""),
+        "edad": edad_val,
+        "edad_gestacional": r.get("edad gestacional actual", ""),
+    }
+
+
+@app.get("/alertas/exportar")
+async def exportar_alertas(current_user: User = Depends(get_current_user)):
+    """Excel con UNA HOJA por alerta y las usuarias que la cumplen."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        try:
+            from .alertas import ALERTAS, evaluar
+        except ImportError:
+            from alertas import ALERTAS, evaluar
+        import corporate_db as _cdb
+
+        const = _constantes_gestantes(db)
+        rows = _filas_gestantes_validadas(db)
+        docs = [str(r.get("No. De Identificación", "")).strip() for r in rows]
+        try:
+            afi = _cdb.datos_afiliados_lote(docs)
+            ips_names = _cdb.obtener_nombres_ips([v.get("ips") for v in afi.values() if v.get("ips")])
+            eps_names = _cdb.obtener_nombres_eps([v.get("codigo_entidad") for v in afi.values() if v.get("codigo_entidad")])
+        except Exception:
+            afi, ips_names, eps_names = {}, {}, {}
+
+        import openpyxl
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+        for a in ALERTAS:
+            title = a["label"][:31].replace("/", "-").replace("\\", "-").replace("*", "").replace("?", "").replace("[", "").replace("]", "").replace(":", "")
+            ws = wb.create_sheet(title=title or a["key"])
+            ws.append([h for _, h in _ALERTA_COLS])
+            for r in rows:
+                if a["key"] not in evaluar(r, const):
+                    continue
+                d = _fila_alerta(r, afi, ips_names, eps_names)
+                ws.append([d.get(k, "") for k, _ in _ALERTA_COLS])
+        import io
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=alertas.xlsx"},
+        )
+    finally:
+        db.close()
+
+
 @app.get("/alertas/{key}")
 async def detalle_alerta(key: str, current_user: User = Depends(get_current_user)):
     """Usuarias que cumplen una alerta (enriquecidas con af_afiliado)."""

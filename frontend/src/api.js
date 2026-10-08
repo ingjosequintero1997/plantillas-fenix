@@ -422,6 +422,24 @@ export async function crearSeguimiento(payload) {
   })
 }
 
+// Descarga el Excel de alertas: una hoja por alerta con sus usuarias.
+export async function exportarAlertas(filename = 'alertas.xlsx') {
+  const resp = await fetch(`${API_BASE}/alertas/exportar`, { headers: authHeaders() })
+  if (!resp.ok) {
+    let msg = 'No se pudieron exportar las alertas'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
+}
+
 // Bandeja de alertas (semaforo estilo SIRENAGEST). Filtros opcionales q y color.
 export async function fetchBandeja(q = '', color = '') {
   const params = new URLSearchParams()
