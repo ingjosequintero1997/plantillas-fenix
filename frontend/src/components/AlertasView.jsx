@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { fetchAlertas, fetchAlertaDetalle, fetchBandeja, fetchFicha, crearSeguimiento, exportarAlertas } from '../api'
+import { fetchAlertas, fetchAlertaDetalle, fetchBandeja, fetchFicha, crearSeguimiento, exportarAlertas, fetchAlertasFiltros } from '../api'
+
+const REGIMEN_LABEL = { S: 'Subsidiado', C: 'Contributivo' }
 import Pagination from './Pagination'
 
 const PAGE_SIZE = 50
@@ -377,6 +379,13 @@ function PorAlertaView({ onOpenFicha }) {
 
   useEffect(() => { loadAlertas({}) }, [loadAlertas])
 
+  const [opciones, setOpciones] = useState({ departamentos: [], municipios: [], regimenes: [] })
+  useEffect(() => {
+    fetchAlertasFiltros()
+      .then((o) => setOpciones({ departamentos: o?.departamentos || [], municipios: o?.municipios || [], regimenes: o?.regimenes || [] }))
+      .catch(() => {})
+  }, [])
+
   const openAlerta = async (alerta) => {
     setSelected(alerta); setDetalle([]); setSearch(''); setPage(1)
     setLoadingDetalle(true); setError('')
@@ -469,16 +478,22 @@ function PorAlertaView({ onOpenFicha }) {
             <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Departamento</span>
             <select value={fDepto} onChange={(e) => setFDepto(e.target.value)} className="input" style={{ minWidth: 170 }}>
               <option value="">Seleccione</option>
-              {['Cesar', 'La Guajira', 'Magdalena'].map((d) => <option key={d} value={d}>{d}</option>)}
+              {opciones.departamentos.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </label>
           <label className="block">
             <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Municipio</span>
-            <input value={fMunicipio} onChange={(e) => setFMunicipio(e.target.value)} placeholder="Seleccione" className="input" style={{ minWidth: 170 }} />
+            <select value={fMunicipio} onChange={(e) => setFMunicipio(e.target.value)} className="input" style={{ minWidth: 170 }}>
+              <option value="">Seleccione</option>
+              {opciones.municipios.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
           </label>
           <label className="block">
             <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Régimen</span>
-            <input value={fRegimen} onChange={(e) => setFRegimen(e.target.value)} placeholder="Seleccione" className="input" style={{ minWidth: 170 }} />
+            <select value={fRegimen} onChange={(e) => setFRegimen(e.target.value)} className="input" style={{ minWidth: 170 }}>
+              <option value="">Seleccione</option>
+              {opciones.regimenes.map((g) => <option key={g} value={g}>{REGIMEN_LABEL[g] || g}</option>)}
+            </select>
           </label>
           <button type="button" onClick={() => loadAlertas({ departamento: fDepto, municipio: fMunicipio, regimen: fRegimen })} className="btn-primary text-sm px-5 py-2">Filtrar</button>
           <div className="flex-1" />
@@ -511,7 +526,11 @@ function PorAlertaView({ onOpenFicha }) {
                 const total = Number(a.total) || 0
                 return (
                   <tr key={a.key}>
-                    <td><SemBadge color={a.criticidad <= 2 ? 'rojo' : a.criticidad === 3 ? 'amarillo' : 'verde'} /></td>
+                    <td>
+                      {total > 0
+                        ? <SemBadge color={a.criticidad <= 2 ? 'rojo' : a.criticidad === 3 ? 'amarillo' : 'verde'} />
+                        : <span className="text-[0.68rem]" style={{ color: 'var(--text-muted)' }}>Sin casos</span>}
+                    </td>
                     <td style={{ fontWeight: 500 }}>{a.label}</td>
                     <td>{total}</td>
                     <td className="text-center">

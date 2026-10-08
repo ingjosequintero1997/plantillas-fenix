@@ -427,6 +427,11 @@ export async function crearSeguimiento(payload) {
   })
 }
 
+// Opciones de filtro (calculadas de la data): departamento, municipio, regimen.
+export async function fetchAlertasFiltros() {
+  return apiFetch(`${API_BASE}/alertas/filtros`)
+}
+
 // Descarga el Excel de alertas: una hoja por alerta con sus usuarias.
 export async function exportarAlertas(filtros = {}, filename = 'alertas.xlsx') {
   const params = new URLSearchParams()

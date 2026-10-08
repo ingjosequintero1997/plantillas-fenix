@@ -4948,6 +4948,32 @@ def _fila_alerta(r, afi, ips_names, eps_names):
     }
 
 
+@app.get("/alertas/filtros")
+async def filtros_alertas(current_user: User = Depends(get_current_user)):
+    """Opciones de filtro (calculadas de la data): departamento, municipio, regimen."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        deptos, municipios, regimenes = set(), set(), set()
+        for r in _filas_gestantes_validadas(db):
+            d = str(r.get("Departamento Residencia", "")).strip()
+            m = str(r.get("Municipio de Residencia", "")).strip()
+            g = str(r.get("Regimen Afiliacion", "")).strip()
+            if d:
+                deptos.add(d.title())
+            if m:
+                municipios.add(m.title())
+            if g:
+                regimenes.add(g.upper())
+        return {
+            "departamentos": sorted(deptos),
+            "municipios": sorted(municipios),
+            "regimenes": sorted(regimenes),
+        }
+    finally:
+        db.close()
+
+
 @app.get("/alertas/exportar")
 async def exportar_alertas(current_user: User = Depends(get_current_user), departamento: str = "", municipio: str = "", regimen: str = ""):
     """Excel con UNA HOJA por alerta y las usuarias que la cumplen."""
