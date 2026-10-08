@@ -355,6 +355,7 @@ function PorAlertaView({ onOpenFicha }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [downloading, setDownloading] = useState(false)
+  const [pageAlertas, setPageAlertas] = useState(1)
   const [fDepto, setFDepto] = useState('')
   const [fMunicipio, setFMunicipio] = useState('')
   const [fRegimen, setFRegimen] = useState('')
@@ -459,6 +460,9 @@ function PorAlertaView({ onOpenFicha }) {
   }
 
   const totalGeneral = alertas.reduce((acc, a) => acc + (Number(a.total) || 0), 0)
+  const ALERTAS_PAGE = 10
+  const alertasTotalPages = Math.max(1, Math.ceil(alertas.length / ALERTAS_PAGE))
+  const alertasPag = alertas.slice((pageAlertas - 1) * ALERTAS_PAGE, pageAlertas * ALERTAS_PAGE)
   return (
     <div className="space-y-5">
       {error && <div className="px-3 py-2 rounded-md text-sm" style={{ color: 'var(--error)', backgroundColor: 'var(--danger-bg)' }}>{error}</div>}
@@ -522,7 +526,7 @@ function PorAlertaView({ onOpenFicha }) {
               </tr>
             </thead>
             <tbody>
-              {alertas.map((a) => {
+              {alertasPag.map((a) => {
                 const total = Number(a.total) || 0
                 return (
                   <tr key={a.key}>
@@ -548,6 +552,11 @@ function PorAlertaView({ onOpenFicha }) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+      {!loading && alertasTotalPages > 1 && (
+        <div style={{ maxWidth: 940, margin: '0 auto' }}>
+          <Pagination page={pageAlertas} totalPages={alertasTotalPages} onChange={setPageAlertas} />
         </div>
       )}
     </div>
