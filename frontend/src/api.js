@@ -393,8 +393,13 @@ export async function deleteGestante(id) {
 
 // ─── Alertas ────────────────────────────────────────────────────
 // Lista las alertas con su conteo (data validada).
-export async function fetchAlertas() {
-  const data = await apiFetch(`${API_BASE}/alertas`)
+export async function fetchAlertas(filtros = {}) {
+  const params = new URLSearchParams()
+  if (filtros.departamento) params.set('departamento', filtros.departamento)
+  if (filtros.municipio) params.set('municipio', filtros.municipio)
+  if (filtros.regimen) params.set('regimen', filtros.regimen)
+  const qs = params.toString()
+  const data = await apiFetch(`${API_BASE}/alertas${qs ? `?${qs}` : ''}`)
   return data.alertas || []
 }
 
@@ -423,8 +428,13 @@ export async function crearSeguimiento(payload) {
 }
 
 // Descarga el Excel de alertas: una hoja por alerta con sus usuarias.
-export async function exportarAlertas(filename = 'alertas.xlsx') {
-  const resp = await fetch(`${API_BASE}/alertas/exportar`, { headers: authHeaders() })
+export async function exportarAlertas(filtros = {}, filename = 'alertas.xlsx') {
+  const params = new URLSearchParams()
+  if (filtros.departamento) params.set('departamento', filtros.departamento)
+  if (filtros.municipio) params.set('municipio', filtros.municipio)
+  if (filtros.regimen) params.set('regimen', filtros.regimen)
+  const qs = params.toString()
+  const resp = await fetch(`${API_BASE}/alertas/exportar${qs ? `?${qs}` : ''}`, { headers: authHeaders() })
   if (!resp.ok) {
     let msg = 'No se pudieron exportar las alertas'
     try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }

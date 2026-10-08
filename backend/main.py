@@ -4615,8 +4615,8 @@ def _constantes_gestantes(db):
 
 
 @app.get("/alertas")
-async def listar_alertas(current_user: User = Depends(get_current_user)):
-    """Alertas con su conteo sobre la data validada."""
+async def listar_alertas(current_user: User = Depends(get_current_user), departamento: str = "", municipio: str = "", regimen: str = ""):
+    """Alertas con su conteo sobre la data validada (filtros opcionales)."""
     ensure_db_ready()
     db = SessionLocal()
     try:
@@ -4627,6 +4627,8 @@ async def listar_alertas(current_user: User = Depends(get_current_user)):
         const = _constantes_gestantes(db)
         counts = {a["key"]: 0 for a in ALERTAS}
         for row in _filas_gestantes_validadas(db):
+            if not _pasa_filtros(row, departamento, municipio, regimen):
+                continue
             for k in evaluar(row, const):
                 if k in counts:
                     counts[k] += 1
@@ -4905,6 +4907,17 @@ _ALERTA_COLS = [
 ]
 
 
+def _pasa_filtros(r, departamento="", municipio="", regimen=""):
+    """Filtra filas de gestante por departamento / municipio / regimen (contiene)."""
+    if departamento and departamento.strip().upper() not in str(r.get("Departamento Residencia", "")).strip().upper():
+        return False
+    if municipio and municipio.strip().upper() not in str(r.get("Municipio de Residencia", "")).strip().upper():
+        return False
+    if regimen and regimen.strip().upper() not in str(r.get("Regimen Afiliacion", "")).strip().upper():
+        return False
+    return True
+
+
 def _fila_alerta(r, afi, ips_names, eps_names):
     doc = str(r.get("No. De Identificación", "")).strip()
     a = afi.get(doc, {})
@@ -4936,7 +4949,7 @@ def _fila_alerta(r, afi, ips_names, eps_names):
 
 
 @app.get("/alertas/exportar")
-async def exportar_alertas(current_user: User = Depends(get_current_user)):
+async def exportar_alertas(current_user: User = Depends(get_current_user), departamento: str = "", municipio: str = "", regimen: str = ""):
     """Excel con UNA HOJA por alerta y las usuarias que la cumplen."""
     ensure_db_ready()
     db = SessionLocal()
@@ -4965,6 +4978,8 @@ async def exportar_alertas(current_user: User = Depends(get_current_user)):
             ws = wb.create_sheet(title=title or a["key"])
             ws.append([h for _, h in _ALERTA_COLS])
             for r in rows:
+                if not _pasa_filtros(r, departamento, municipio, regimen):
+                    continue
                 if a["key"] not in evaluar(r, const):
                     continue
                 d = _fila_alerta(r, afi, ips_names, eps_names)

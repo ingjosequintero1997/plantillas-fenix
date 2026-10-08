@@ -353,16 +353,19 @@ function PorAlertaView({ onOpenFicha }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [downloading, setDownloading] = useState(false)
+  const [fDepto, setFDepto] = useState('')
+  const [fMunicipio, setFMunicipio] = useState('')
+  const [fRegimen, setFRegimen] = useState('')
 
   const descargar = async () => {
     setDownloading(true); setError('')
-    try { await exportarAlertas() } catch (e) { setError(e.message || 'No se pudo exportar') } finally { setDownloading(false) }
+    try { await exportarAlertas({ departamento: fDepto, municipio: fMunicipio, regimen: fRegimen }) } catch (e) { setError(e.message || 'No se pudo exportar') } finally { setDownloading(false) }
   }
 
-  const loadAlertas = useCallback(async () => {
+  const loadAlertas = useCallback(async (f = {}) => {
     setLoading(true); setError('')
     try {
-      const data = await fetchAlertas()
+      const data = await fetchAlertas(f)
       setAlertas(Array.isArray(data) ? data : [])
     } catch (e) {
       setError(e.message || 'Error cargando las alertas')
@@ -372,7 +375,7 @@ function PorAlertaView({ onOpenFicha }) {
     }
   }, [])
 
-  useEffect(() => { loadAlertas() }, [loadAlertas])
+  useEffect(() => { loadAlertas({}) }, [loadAlertas])
 
   const openAlerta = async (alerta) => {
     setSelected(alerta); setDetalle([]); setSearch(''); setPage(1)
@@ -459,15 +462,35 @@ function PorAlertaView({ onOpenFicha }) {
         </div>
       </div>
 
+      {/* Filtros + Exportar */}
+      <div className="panel">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="block">
+            <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Departamento</span>
+            <select value={fDepto} onChange={(e) => setFDepto(e.target.value)} className="input" style={{ minWidth: 170 }}>
+              <option value="">Seleccione</option>
+              {['Cesar', 'La Guajira', 'Magdalena'].map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Municipio</span>
+            <input value={fMunicipio} onChange={(e) => setFMunicipio(e.target.value)} placeholder="Seleccione" className="input" style={{ minWidth: 170 }} />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-secondary)' }}>Régimen</span>
+            <input value={fRegimen} onChange={(e) => setFRegimen(e.target.value)} placeholder="Seleccione" className="input" style={{ minWidth: 170 }} />
+          </label>
+          <button type="button" onClick={() => loadAlertas({ departamento: fDepto, municipio: fMunicipio, regimen: fRegimen })} className="btn-primary text-sm px-5 py-2">Filtrar</button>
+          <div className="flex-1" />
+          <button type="button" onClick={descargar} disabled={downloading} className="btn-secondary text-sm px-4 py-2">
+            {downloading ? 'Generando Excel...' : 'Exportar a Excel'}
+          </button>
+        </div>
+      </div>
+
       <div className="text-center">
         <div className="page-title">Distribución de alertas</div>
         <div className="page-subtitle">Haga clic en "Hacer seguimiento" para conocer las personas gestantes registradas.</div>
-      </div>
-
-      <div className="flex justify-center">
-        <button onClick={descargar} disabled={downloading} className="btn-secondary text-sm">
-          {downloading ? 'Generando Excel...' : 'Exportar a Excel'}
-        </button>
       </div>
 
       {loading ? (
@@ -477,6 +500,7 @@ function PorAlertaView({ onOpenFicha }) {
           <table className="table">
             <thead>
               <tr>
+                <th style={{ width: 70 }}>Semáforo</th>
                 <th>Alerta</th>
                 <th style={{ width: 200 }}>Cantidad personas gestantes</th>
                 <th className="text-center" style={{ width: 180 }}>Seguimiento</th>
@@ -487,6 +511,7 @@ function PorAlertaView({ onOpenFicha }) {
                 const total = Number(a.total) || 0
                 return (
                   <tr key={a.key}>
+                    <td><SemBadge color={a.criticidad <= 2 ? 'rojo' : a.criticidad === 3 ? 'amarillo' : 'verde'} /></td>
                     <td style={{ fontWeight: 500 }}>{a.label}</td>
                     <td>{total}</td>
                     <td className="text-center">
