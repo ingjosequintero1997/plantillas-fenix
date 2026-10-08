@@ -244,12 +244,38 @@ class UsuarioIPS(Base):
     permissions = Column(JSON, nullable=True)
 
 
+class Seguimiento(Base):
+    """Bitacora de seguimiento de una gestante (modulo Alertas).
+
+    Se registra manualmente desde el modulo (Opcion B). Si en el futuro el
+    cargue/API trae seguimientos en el payload, se mergean por documento."""
+    __tablename__ = "seguimientos"
+
+    id = Column(Integer, primary_key=True)
+    paciente_documento = Column(String(60), nullable=False, index=True)
+    paciente_nombre = Column(String(255), nullable=True)
+    tipo_alerta = Column(String(120), nullable=True)
+    fecha_alerta = Column(String(20), nullable=True)
+    fecha_seguimiento = Column(String(20), nullable=True)
+    tipo_seguimiento = Column(String(120), nullable=True)
+    resultado = Column(String(120), nullable=True)
+    observacion = Column(Text, nullable=True)
+    compromiso_fecha = Column(String(20), nullable=True)
+    usuario = Column(String(120), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=_utcnow)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     # Migraciones ligeras para tablas creadas con esquemas anteriores
     try:
         with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE cargues ADD COLUMN compressed BOOLEAN"))
+            conn.execute(text("ALTER TABLE cargues ADD COLUMN IF NOT EXISTS compressed BOOLEAN"))
+    except Exception:
+        pass
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE seguimientos ADD COLUMN IF NOT EXISTS compromiso_fecha VARCHAR(20)"))
     except Exception:
         pass
     try:

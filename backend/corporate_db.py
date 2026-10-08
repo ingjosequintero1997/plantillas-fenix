@@ -382,6 +382,71 @@ def _validar_lote_con_engine(engine, usuarios: list) -> dict:
         conn.close()
 
 
+def datos_afiliados_lote(numeros: list) -> dict:
+    """Devuelve {numero_id: {ips, departamento, municipio, codigo_entidad}} de
+    administrativo.af_afiliado (codigos). Sirve para el modulo de alertas."""
+    engine = get_corporate_connection()
+    if not engine:
+        return {}
+    clean = list({str(n).strip() for n in numeros if n and str(n).strip()})
+    if not clean:
+        return {}
+    from sqlalchemy import text
+    out = {}
+    conn = engine.connect()
+    try:
+        BATCH = 500
+        for i in range(0, len(clean), BATCH):
+            batch = clean[i:i + BATCH]
+            params = {f"n{j}": v for j, v in enumerate(batch)}
+            in_clause = ", ".join(f":n{j}" for j in range(len(batch)))
+            rows = conn.execute(text(f'''
+                SELECT a."numero_identificacion", a."ips", a."departamento",
+                       a."municipio", a."codigo_entidad"
+                FROM administrativo."af_afiliado" a
+                WHERE a."numero_identificacion" IN ({in_clause})
+            '''), params).fetchall()
+            for r in rows:
+                out[str(r[0]).strip()] = {
+                    "ips": str(r[1]).strip() if r[1] is not None else "",
+                    "departamento": str(r[2]).strip() if r[2] else "",
+                    "municipio": str(r[3]).strip() if r[3] else "",
+                    "codigo_entidad": str(r[4]).strip() if r[4] else "",
+                }
+    finally:
+        conn.close()
+    return out
+
+
+def obtener_nombres_eps(codigos: list) -> dict:
+    """Mapea codigo_entidad -> razon_social (tb_eps)."""
+    engine = get_corporate_connection()
+    if not engine:
+        return {}
+    clean = list({str(c).strip() for c in codigos if c and str(c).strip()})
+    if not clean:
+        return {}
+    from sqlalchemy import text
+    out = {}
+    conn = engine.connect()
+    try:
+        BATCH = 500
+        for i in range(0, len(clean), BATCH):
+            batch = clean[i:i + BATCH]
+            params = {f"c{j}": v for j, v in enumerate(batch)}
+            in_clause = ", ".join(f":c{j}" for j in range(len(batch)))
+            rows = conn.execute(text(f'''
+                SELECT "codigo_entidad", "razon_social"
+                FROM administrativo."tb_eps"
+                WHERE "codigo_entidad" IN ({in_clause})
+            '''), params).fetchall()
+            for r in rows:
+                out[str(r[0]).strip()] = str(r[1]).strip() if r[1] else ""
+    finally:
+        conn.close()
+    return out
+
+
 def obtener_nombres_ips(ips_codes: list) -> dict:
     """
     Obtiene los nombres de IPS desde ct_ips para una lista de códigos.

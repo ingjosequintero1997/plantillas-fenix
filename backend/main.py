@@ -59,6 +59,9 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allow_origins,
+    # Acepta tambien cualquier origen de red local (192.168.x.x / 10.x.x.x) en
+    # cualquier puerto, para probar desde otro dispositivo de la LAN.
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -80,7 +83,7 @@ try:
         verify_token,
         TOKEN_SECRET,
     )
-    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
+    from .database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, PrestadorPlantilla, UsuarioIPS, Seguimiento, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
     from . import gcs_storage
     from . import oci_storage
     from . import corporate_db
@@ -99,7 +102,7 @@ except ImportError:
         verify_token,
         TOKEN_SECRET,
     )
-    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, HistoriaClinicaAudit, PrestadorPlantilla, UsuarioIPS, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
+    from database import init_db as db_init_db, SessionLocal, Prestador, User, Cargue, HistoriaClinica, HistoriaClinicaAudit, PrestadorPlantilla, UsuarioIPS, Seguimiento, crear_tabla_gestantes, GESTANTE_COLUMNS, engine as db_engine
     import gcs_storage
     import oci_storage
     import corporate_db
@@ -2828,7 +2831,7 @@ async def create_prestador(payload: PrestadorPayload, admin: User = Depends(requ
 # El admin siempre tiene todo habilitado. "Usuarios" y "Configuracion" no son
 # configurables: son exclusivos del admin.
 MODULE_KEYS = (
-	"inicio", "subir", "data", "caso_cerrado", "historial", "consolidar",
+	"inicio", "subir", "data", "caso_cerrado", "alertas", "historial", "consolidar",
 	"indicadores", "verificar", "historias", "reportes",
 )
 
@@ -2837,6 +2840,7 @@ MODULE_LABELS = {
 	"subir": "Validar data",
 	"data": "Gestion de data",
 	"caso_cerrado": "Caso cerrado",
+	"alertas": "Alertas",
 	"historial": "Verificar data",
 	"consolidar": "Consolidar",
 	"indicadores": "Indicadores",
@@ -2847,8 +2851,8 @@ MODULE_LABELS = {
 
 # Modulos visibles por defecto segun el rol (mantiene el comportamiento actual).
 ROLE_DEFAULT_MODULES = {
-	"prestador": {"inicio", "subir", "data", "caso_cerrado", "indicadores", "verificar", "historias", "reportes"},
-	"lider": {"inicio", "data", "caso_cerrado", "historial", "consolidar", "indicadores", "verificar", "historias", "reportes"},
+	"prestador": {"inicio", "subir", "data", "caso_cerrado", "alertas", "indicadores", "verificar", "historias", "reportes"},
+	"lider": {"inicio", "data", "caso_cerrado", "alertas", "historial", "consolidar", "indicadores", "verificar", "historias", "reportes"},
 }
 
 # Ruta del backend -> modulo que la habilita. Solo se listan endpoints que
@@ -2860,6 +2864,7 @@ MODULE_PATH_RULES = (
 	("historias", ("/historias",)),
 	("verificar", ("/verificar-afiliado",)),
 	("subir", ("/upload", "/revalidate", "/evaluate", "/validate-data", "/export")),
+	("alertas", ("/alertas",)),
 	# Debe ir ANTES de "data": las rutas /data/gestantes/caso-cerrado pertenecen a este modulo.
 	("caso_cerrado", ("/data/gestantes/caso-cerrado",)),
 	("data", ("/data/", "/setup-gestantes")),
@@ -4553,6 +4558,407 @@ async def verificar_afiliado_masivo(file: UploadFile = File(...), current_user: 
 	}
 
 
+# ─── Alertas (analisis de la data validada) ──────────────────────────────
+_FILAS_CACHE = {"sig": None, "rows": None}
+
+
+def _filas_gestantes_validadas(db):
+    """Filas (dict con nombres del template) de los cargues gestante.
+
+    El parseo (descomprimir + split de 1595x200) es costoso: se cachea por
+    firma de los cargues y se invalida cuando cambian."""
+    # Firma liviana: solo metadatos (NO traer el texto comprimido gigante).
+    meta_rows = (db.query(Cargue.id, Cargue.row_count, Cargue.created_at)
+                 .filter(Cargue.template_key == "gestante").all())
+    sig = tuple(sorted(
+        (r[0], r[1] or 0, r[2].isoformat() if r[2] else "")
+        for r in meta_rows
+    ))
+    if _FILAS_CACHE["sig"] == sig and _FILAS_CACHE["rows"] is not None:
+        return _FILAS_CACHE["rows"]
+
+    try:
+        meta = get_template_by_key("gestante")
+        names = [t["name"] for t in meta["template"]]
+    except Exception:
+        return []
+    n = len(names)
+    out = []
+    cargues = db.query(Cargue).filter(Cargue.template_key == "gestante").all()
+    for c in cargues:
+        for linea in _filas_cargue(c):
+            cols = linea.split("|")
+            if len(cols) < 3:
+                continue
+            doc = cols[2].strip()
+            if not doc.isdigit():
+                continue  # encabezado o fila invalida
+            out.append({names[i]: cols[i] for i in range(min(n, len(cols)))})
+
+    _FILAS_CACHE["sig"] = sig
+    _FILAS_CACHE["rows"] = out
+    try:
+        from .alertas import campos_constantes
+    except ImportError:
+        from alertas import campos_constantes
+    try:
+        _FILAS_CACHE["constantes"] = campos_constantes(out)
+    except Exception:
+        _FILAS_CACHE["constantes"] = frozenset()
+    return out
+
+
+def _constantes_gestantes(db):
+    """Campos de relleno (mismo valor en todas las filas) cacheados."""
+    _filas_gestantes_validadas(db)
+    return _FILAS_CACHE.get("constantes") or frozenset()
+
+
+@app.get("/alertas")
+async def listar_alertas(current_user: User = Depends(get_current_user)):
+    """Alertas con su conteo sobre la data validada."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        try:
+            from .alertas import ALERTAS, evaluar
+        except ImportError:
+            from alertas import ALERTAS, evaluar
+        const = _constantes_gestantes(db)
+        counts = {a["key"]: 0 for a in ALERTAS}
+        for row in _filas_gestantes_validadas(db):
+            for k in evaluar(row, const):
+                if k in counts:
+                    counts[k] += 1
+        return {"alertas": [{**a, "total": counts.get(a["key"], 0)} for a in ALERTAS]}
+    finally:
+        db.close()
+
+
+# Campos del cargue que forman el historial de atenciones.
+_ATENCIONES_CONTROLES = [
+    ("Fecha 1er Control", "Quien Realizó el Control", "Control prenatal 1"),
+    ("Fecha 2do Control", "Quien Realizó el Control_2", "Control prenatal 2"),
+    ("Fecha 3er Control", "Quien Realizó el Control_3", "Control prenatal 3"),
+    ("Fecha 4to Control", "Quien Realizó el Control_4", "Control prenatal 4"),
+    ("Fecha 5to Control", "Quien Realizó el Control_5", "Control prenatal 5"),
+    ("Fecha 6to Control", "Quien Realizó el Control_6", "Control prenatal 6"),
+    ("Fecha 7mo Control", "Quien Realizó el Control_7", "Control prenatal 7"),
+    ("fecha 8vo Control", "Quien Realizó el Control_8", "Control prenatal 8"),
+    ("Fecha 9no Control", "Quien Realizó el Control_9", "Control prenatal 9"),
+]
+_ATENCIONES_CONSULTAS = [
+    ("Fecha Primera Consulta Ginecología", "Consulta Ginecología"),
+    ("Fecha Segunda Consulta Ginecología", "Consulta Ginecología"),
+    ("Fecha Tercera Consulta Ginecología", "Consulta Ginecología"),
+    ("Fecha Consulta Nutrición", "Consulta Nutrición"),
+    ("Fecha Consulta Psicología", "Consulta Psicología"),
+    ("Fecha de Atención Otro Especialista", "Consulta Otro Especialista"),
+]
+
+
+def _fecha_valida_str(v):
+    """Devuelve la fecha si es real (descarta centinelas tipo 1845-01-01 / 1900-01-0X)."""
+    f = str(v or "").strip()
+    if not f or not f[:4].isdigit() or int(f[:4]) < 2000:
+        return ""
+    return f
+
+
+def _nombre_completo(row):
+    return " ".join(
+        x for x in [row.get("Nombre_1,"), row.get("Nombre_2"), row.get("Apellido_1,"), row.get("Apellido_2")]
+        if str(x).strip()
+    ).strip()
+
+
+def _buscar_fila_gestante(db, numero_id: str):
+    """Devuelve el dict (nombres del template) de la gestante por documento."""
+    doc = str(numero_id or "").strip()
+    if not doc:
+        return None
+    for r in _filas_gestantes_validadas(db):
+        if str(r.get("No. De Identificación", "")).strip() == doc:
+            return r
+    return None
+
+
+@app.get("/alertas/atenciones/{numero_id}")
+async def atenciones_gestante(numero_id: str, current_user: User = Depends(get_current_user)):
+    """Historial de atenciones derivado del cargue (controles + consultas)."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        row = _buscar_fila_gestante(db, numero_id)
+        if not row:
+            return {"atenciones": [], "encontrada": False}
+        atenciones = []
+        for fecha_k, prof_k, label in _ATENCIONES_CONTROLES:
+            f = _fecha_valida_str(row.get(fecha_k))
+            if f:
+                atenciones.append({"tipo": label, "fecha": f, "profesional": str(row.get(prof_k, "")).strip()})
+        for fecha_k, label in _ATENCIONES_CONSULTAS:
+            f = _fecha_valida_str(row.get(fecha_k))
+            if f:
+                atenciones.append({"tipo": label, "fecha": f, "profesional": ""})
+        return {"atenciones": atenciones, "encontrada": True}
+    finally:
+        db.close()
+
+
+@app.get("/alertas/seguimientos/{numero_id}")
+async def listar_seguimientos(numero_id: str, current_user: User = Depends(get_current_user)):
+    """Bitacora de seguimientos registrados manualmente para una gestante."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        rows = (db.query(Seguimiento)
+                .filter(Seguimiento.paciente_documento == str(numero_id or "").strip())
+                .order_by(Seguimiento.id.desc()).all())
+        return {"seguimientos": [{
+            "id": r.id,
+            "fecha": r.fecha_seguimiento or "",
+            "tipo": r.tipo_seguimiento or "",
+            "resultado": r.resultado or "",
+            "observacion": r.observacion or "",
+            "compromiso": r.compromiso_fecha or "",
+            "tipo_alerta": r.tipo_alerta or "",
+            "usuario": r.usuario or "",
+            "created_at": r.created_at.isoformat() if r.created_at else "",
+        } for r in rows]}
+    finally:
+        db.close()
+
+
+@app.post("/alertas/seguimientos")
+async def crear_seguimiento(payload: dict, current_user: User = Depends(get_current_user)):
+    """Registra un seguimiento manual (Opcion B) para una gestante."""
+    ensure_db_ready()
+    doc = str(payload.get("paciente_documento", "")).strip()
+    if not doc:
+        raise HTTPException(status_code=400, detail="Falta el documento de la gestante")
+    db = SessionLocal()
+    try:
+        s = Seguimiento(
+            paciente_documento=doc,
+            paciente_nombre=str(payload.get("paciente_nombre", "")).strip(),
+            tipo_alerta=str(payload.get("tipo_alerta", "")).strip(),
+            fecha_alerta=str(payload.get("fecha_alerta", "")).strip(),
+            fecha_seguimiento=str(payload.get("fecha_seguimiento", "")).strip(),
+            tipo_seguimiento=str(payload.get("tipo_seguimiento", "")).strip(),
+            resultado=str(payload.get("resultado", "")).strip(),
+            observacion=str(payload.get("observacion", "")).strip(),
+            compromiso_fecha=str(payload.get("compromiso", "")).strip(),
+            usuario=current_user.username,
+        )
+        db.add(s)
+        db.commit()
+        db.refresh(s)
+        return {"ok": True, "id": s.id}
+    finally:
+        db.close()
+
+
+@app.get("/alertas/bandeja")
+async def bandeja_alertas(current_user: User = Depends(get_current_user), q: str = "", color: str = ""):
+    """Bandeja de alertas (estilo SIRENAGEST): gestantes con su semaforo,
+    ordenadas por prioridad de riesgo (rojo -> amarillo -> verde)."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        try:
+            from .alertas import semaforo, dias_sin_control, SEMAFORO_ORDEN, ALERTAS_BY_KEY
+        except ImportError:
+            from alertas import semaforo, dias_sin_control, SEMAFORO_ORDEN, ALERTAS_BY_KEY
+
+        def _info_alertas(keys):
+            out = []
+            for k in keys:
+                a = ALERTAS_BY_KEY.get(k)
+                if a:
+                    out.append({"key": k, "label": a["label"], "criticidad": a["criticidad"]})
+                else:
+                    out.append({"key": k, "label": k, "criticidad": 5})
+            out.sort(key=lambda x: x["criticidad"])
+            return out
+
+        segs_por_doc = {}
+        for s in db.query(Seguimiento).all():
+            segs_por_doc.setdefault(str(s.paciente_documento or "").strip(), []).append({
+                "resultado": s.resultado or "", "fecha": s.fecha_seguimiento or "",
+            })
+
+        ql = (q or "").strip().upper()
+        const = _constantes_gestantes(db)
+        out = []
+        for r in _filas_gestantes_validadas(db):
+            doc = str(r.get("No. De Identificación", "")).strip()
+            nombre = _nombre_completo(r)
+            if ql and ql not in doc.upper() and ql not in nombre.upper():
+                continue
+            sem = semaforo(r, segs_por_doc.get(doc, []), const)
+            if color and sem["color"] != color:
+                continue
+            # La bandeja lista solo gestantes CON alertas (a quien salir a buscar);
+            # asi el payload baja de ~1595 a unas pocas decenas y responde rapido.
+            if not sem["alertas"] and not ql:
+                continue
+            out.append({
+                "nombre": nombre,
+                "numero_id": doc,
+                "tipo_id": r.get("Tipo de documento de identidad", ""),
+                "departamento": r.get("Departamento Residencia", ""),
+                "municipio": r.get("Municipio de Residencia", ""),
+                "nombre_ips": r.get("Nombre de la IPS Primaria", ""),
+                "color": sem["color"],
+                "motivo": sem["motivo"],
+                "alertas": _info_alertas(sem["alertas"]),
+                "dias_sin_control": dias_sin_control(r),
+            })
+        out.sort(key=lambda x: (SEMAFORO_ORDEN.get(x["color"], 9), x["nombre"]))
+        conteo = {"rojo": 0, "amarillo": 0, "verde": 0}
+        for x in out:
+            conteo[x["color"]] = conteo.get(x["color"], 0) + 1
+        return {"gestantes": out, "conteo": conteo, "total": len(out)}
+    finally:
+        db.close()
+
+
+@app.get("/alertas/ficha/{numero_id}")
+async def ficha_gestante(numero_id: str, current_user: User = Depends(get_current_user)):
+    """Expediente nominal: datos + semaforo + timeline (atenciones + seguimientos)."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        try:
+            from .alertas import semaforo
+        except ImportError:
+            from alertas import semaforo
+
+        row = _buscar_fila_gestante(db, numero_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Gestante no encontrada")
+        doc = str(row.get("No. De Identificación", "")).strip()
+
+        segs = (db.query(Seguimiento)
+                .filter(Seguimiento.paciente_documento == doc)
+                .order_by(Seguimiento.id.desc()).all())
+        seg_dicts = [{
+            "id": s.id,
+            "fecha": s.fecha_seguimiento or "",
+            "tipo": s.tipo_seguimiento or "",
+            "resultado": s.resultado or "",
+            "observacion": s.observacion or "",
+            "compromiso": s.compromiso_fecha or "",
+            "usuario": s.usuario or "",
+            "created_at": s.created_at.isoformat() if s.created_at else "",
+        } for s in segs]
+
+        sem = semaforo(row, seg_dicts, _constantes_gestantes(db))
+
+        eventos = []
+        for fecha_k, prof_k, label in _ATENCIONES_CONTROLES:
+            f = _fecha_valida_str(row.get(fecha_k))
+            if f:
+                eventos.append({"fecha": f, "tipo": "atencion", "titulo": label,
+                                "detalle": str(row.get(prof_k, "")).strip(), "origen": "Cargado por IPS"})
+        for fecha_k, label in _ATENCIONES_CONSULTAS:
+            f = _fecha_valida_str(row.get(fecha_k))
+            if f:
+                eventos.append({"fecha": f, "tipo": "atencion", "titulo": label, "detalle": "", "origen": "Cargado por IPS"})
+        for s in seg_dicts:
+            eventos.append({"fecha": s["fecha"], "tipo": "seguimiento", "titulo": s["tipo"],
+                            "detalle": s["observacion"], "origen": f"Registrado por {s['usuario']}"})
+        eventos.sort(key=lambda e: e["fecha"] or "", reverse=True)
+
+        return {
+            "gestante": {
+                "nombre": _nombre_completo(row),
+                "numero_id": doc,
+                "tipo_id": row.get("Tipo de documento de identidad", ""),
+                "departamento": row.get("Departamento Residencia", ""),
+                "municipio": row.get("Municipio de Residencia", ""),
+                "nombre_ips": row.get("Nombre de la IPS Primaria", ""),
+                "edad_gestacional": row.get("edad gestacional actual", ""),
+                "fum": row.get("FUM", ""),
+                "ultimo_control": row.get("Ultimo Control Prenatal", ""),
+                "total_controles": row.get("Número Total de Controles Prenatales", ""),
+            },
+            "semaforo": sem,
+            "timeline": eventos,
+            "seguimientos": seg_dicts,
+        }
+    finally:
+        db.close()
+
+
+@app.get("/alertas/{key}")
+async def detalle_alerta(key: str, current_user: User = Depends(get_current_user)):
+    """Usuarias que cumplen una alerta (enriquecidas con af_afiliado)."""
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        try:
+            from .alertas import ALERTAS_BY_KEY, evaluar
+        except ImportError:
+            from alertas import ALERTAS_BY_KEY, evaluar
+        alerta = ALERTAS_BY_KEY.get(key)
+        if not alerta:
+            raise HTTPException(status_code=404, detail="Alerta no encontrada")
+        _const = _constantes_gestantes(db)
+        matches = [r for r in _filas_gestantes_validadas(db) if key in evaluar(r, _const)]
+
+        try:
+            import corporate_db as _cdb
+        except ImportError:
+            from . import corporate_db as _cdb
+        docs = [str(r.get("No. De Identificación", "")).strip() for r in matches]
+        try:
+            afi = _cdb.datos_afiliados_lote(docs)
+            ips_names = _cdb.obtener_nombres_ips([v.get("ips") for v in afi.values() if v.get("ips")])
+            eps_names = _cdb.obtener_nombres_eps([v.get("codigo_entidad") for v in afi.values() if v.get("codigo_entidad")])
+        except Exception:
+            afi, ips_names, eps_names = {}, {}, {}
+
+        try:
+            from alertas import _edad as _calc_edad
+        except ImportError:
+            from .alertas import _edad as _calc_edad
+
+        out = []
+        for r in matches:
+            doc = str(r.get("No. De Identificación", "")).strip()
+            a = afi.get(doc, {})
+            ips_code = a.get("ips", "")
+            eps_code = a.get("codigo_entidad", "")
+            nombre = " ".join(
+                x for x in [r.get("Nombre_1,"), r.get("Nombre_2"), r.get("Apellido_1,"), r.get("Apellido_2")]
+                if str(x).strip()
+            ).strip()
+            edad_val = str(r.get("Edad (años)", "")).strip()
+            if not edad_val:
+                try:
+                    _e = _calc_edad(r)
+                    edad_val = "" if _e is None else str(int(_e))
+                except Exception:
+                    edad_val = ""
+            out.append({
+                "criticidad": alerta["criticidad"],
+                "nombre": nombre,
+                "departamento": r.get("Departamento Residencia", ""),
+                "municipio": r.get("Municipio de Residencia", ""),
+                "tipo_id": r.get("Tipo de documento de identidad", ""),
+                "numero_id": doc,
+                "nombre_ips": ips_names.get(ips_code) or r.get("Nombre de la IPS Primaria", ""),
+                "aseguradora": eps_names.get(eps_code, ""),
+                "edad": edad_val,
+                "edad_gestacional": r.get("edad gestacional actual", ""),
+            })
+        return {"key": key, "label": alerta["label"], "criticidad": alerta["criticidad"], "total": len(out), "usuarias": out}
+    finally:
+        db.close()
+
+
 @app.post("/validate-affiliation")
 async def validate_affiliation(payload: dict, current_user: User = Depends(get_current_user)):
 	"""Valida afiliación institucional: tipo+numero vs administrativo.af_afiliado.
@@ -5764,6 +6170,8 @@ async def mis_gestantes(request: Request, current_user: User = Depends(get_curre
 		raise
 	except Exception as e:
 		raise HTTPException(status_code=500, detail="Error al cargar las gestantes. Intenta de nuevo.")
+	finally:
+		db.close()
 
 @app.get("/data/gestantes/by-numid/{numero_id}")
 async def obtener_gestante_por_numid(numero_id: str, current_user: User = Depends(get_current_user)):
@@ -7011,6 +7419,29 @@ def _row_to_dict(row):
 			v = v.isoformat()
 		d[c.name] = v
 	return d
+
+
+@app.on_event("startup")
+def _warmup_alertas():
+	"""Precalienta la BD y el parseo de gestantes en segundo plano para que la
+	primera peticion del modulo Alertas no pague el cold start."""
+	import threading
+
+	def _run():
+		try:
+			ensure_db_ready()
+		except Exception:
+			pass
+		try:
+			db = SessionLocal()
+			try:
+				_filas_gestantes_validadas(db)
+			finally:
+				db.close()
+		except Exception:
+			pass
+
+	threading.Thread(target=_run, daemon=True).start()
 
 
 if __name__ == "__main__":

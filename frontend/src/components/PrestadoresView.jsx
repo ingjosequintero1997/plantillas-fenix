@@ -28,6 +28,7 @@ const PERMISSION_GROUPS = [
       { key: 'historias', label: 'Historias clínicas', desc: 'Expedientes PDF' },
       { key: 'reportes', label: 'Reportes pendientes', desc: 'Procedimientos y medicamentos' },
       { key: 'caso_cerrado', label: 'Caso cerrado', desc: 'Gestantes con caso cerrado por IPS' },
+      { key: 'alertas', label: 'Alertas', desc: 'Gestantes que cumplen cada alerta clínica' },
     ],
   },
 ]

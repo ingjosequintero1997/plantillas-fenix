@@ -73,6 +73,7 @@ const HistoriasView = lazy(() => import('./components/HistoriasView'))
 const EvaluationDashboard = lazy(() => import('./components/EvaluationDashboard'))
 const DataManagement = lazy(() => import('./components/DataManagement'))
 const CasoCerradoView = lazy(() => import('./components/CasoCerradoView'))
+const AlertasView = lazy(() => import('./components/AlertasView'))
 const ReportesView = lazy(() => import('./components/ReportesView'))
 import { fetchTemplates, uploadFile, saveCargue, descargarReporteErroresExcelData, descargarReporteErroresExcel } from './api'
 import { guardarUltimaData } from './dataStore'
@@ -161,7 +162,7 @@ export default function App() {
   }, [user])
 
   useEffect(() => {
-    const ipsSections = ['data', 'caso_cerrado', 'verificar', 'indicadores', 'reportes']
+    const ipsSections = ['data', 'caso_cerrado', 'alertas', 'verificar', 'indicadores', 'reportes']
     if (systemConfig.cargue_masivo === true) ipsSections.push('cargue_masivo')
     if (systemConfig.historias_pdf !== false) ipsSections.push('historias')
     if (user?.role === 'ips_user' && !ipsSections.includes(section)) {
@@ -782,6 +783,15 @@ export default function App() {
               <SectionErrorBoundary>
                 <Suspense fallback={<ModuleSkeleton />}>
                   <CasoCerradoView />
+                </Suspense>
+              </SectionErrorBoundary>
+            )}
+
+            {/* ─── ALERTAS ─── */}
+            {section === 'alertas' && (
+              <SectionErrorBoundary>
+                <Suspense fallback={<ModuleSkeleton />}>
+                  <AlertasView />
                 </Suspense>
               </SectionErrorBoundary>
             )}

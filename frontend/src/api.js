@@ -391,6 +391,51 @@ export async function deleteGestante(id) {
   return apiFetch(`${API_BASE}/data/gestantes/${id}`, { method: 'DELETE' })
 }
 
+// ─── Alertas ────────────────────────────────────────────────────
+// Lista las alertas con su conteo (data validada).
+export async function fetchAlertas() {
+  const data = await apiFetch(`${API_BASE}/alertas`)
+  return data.alertas || []
+}
+
+// Detalle de una alerta: usuarias que la cumplen (con datos de af_afiliado).
+export async function fetchAlertaDetalle(key) {
+  return apiFetch(`${API_BASE}/alertas/${encodeURIComponent(key)}`)
+}
+
+// Historial de atenciones derivado del cargue (controles + consultas).
+export async function fetchAtenciones(numeroId) {
+  return apiFetch(`${API_BASE}/alertas/atenciones/${encodeURIComponent(numeroId)}`)
+}
+
+// Bitacora de seguimientos registrados manualmente para una gestante.
+export async function fetchSeguimientos(numeroId) {
+  return apiFetch(`${API_BASE}/alertas/seguimientos/${encodeURIComponent(numeroId)}`)
+}
+
+// Registra un seguimiento manual (Opcion B).
+export async function crearSeguimiento(payload) {
+  return apiFetch(`${API_BASE}/alertas/seguimientos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+// Bandeja de alertas (semaforo estilo SIRENAGEST). Filtros opcionales q y color.
+export async function fetchBandeja(q = '', color = '') {
+  const params = new URLSearchParams()
+  if (q) params.set('q', q)
+  if (color) params.set('color', color)
+  const qs = params.toString()
+  return apiFetch(`${API_BASE}/alertas/bandeja${qs ? `?${qs}` : ''}`)
+}
+
+// Expediente nominal: datos + semaforo + timeline (atenciones + seguimientos).
+export async function fetchFicha(numeroId) {
+  return apiFetch(`${API_BASE}/alertas/ficha/${encodeURIComponent(numeroId)}`)
+}
+
 // ─── Caso Cerrado ───────────────────────────────────────────────
 export async function autoFillCasoCerrado() {
   return apiFetch(`${API_BASE}/data/gestantes/caso-cerrado/auto-fill`, { method: 'POST' })
