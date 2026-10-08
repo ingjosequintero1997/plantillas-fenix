@@ -207,7 +207,7 @@ export default function AlertasView() {
         </div>
       </div>
 
-      <BandejaView onOpenFicha={setFichaId} />
+      <PorAlertaView onOpenFicha={setFichaId} />
     </div>
   )
 }
