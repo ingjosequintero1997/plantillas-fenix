@@ -33,6 +33,7 @@ except ImportError:
 	from evaluator import evaluate, build_evaluation_excel
 
 import os
+import unicodedata
 
 API_ROOT_PATH = os.environ.get("API_ROOT_PATH", "")
 app = FastAPI(title="Validador IPS", root_path=API_ROOT_PATH)
@@ -4614,6 +4615,68 @@ def _constantes_gestantes(db):
     return _FILAS_CACHE.get("constantes") or frozenset()
 
 
+def _sin_acentos(v) -> str:
+    """Mayusculas sin diacriticos (comparaciones de texto de reportes)."""
+    s = str(v or "").strip().upper()
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+
+def _medicamentos_por_doc(db) -> dict:
+    """Mapa documento -> set de ATC/nombres de medicamentos activos.
+
+    Una sola consulta batched (evita N+1). Los documentos sin data de
+    medicamentos no aparecen en el mapa, de modo que evaluar() recibe None y la
+    regla ASA-por-medicamentos no se dispara sin evidencia."""
+    out: dict = {}
+    try:
+        try:
+            from .database import ReporteMedicamento
+        except ImportError:
+            from database import ReporteMedicamento
+        rows = (db.query(ReporteMedicamento.documento,
+                         ReporteMedicamento.medicamento_atc,
+                         ReporteMedicamento.medicamento_nombre)
+                .filter(ReporteMedicamento.activo == True).all())
+    except Exception:
+        return out
+    for doc, atc, nombre in rows:
+        d = str(doc or "").strip()
+        if not d:
+            continue
+        bucket = out.setdefault(d, set())
+        if atc:
+            bucket.add(str(atc))
+        if nombre:
+            bucket.add(str(nombre))
+    return out
+
+
+def _docs_urgencias(db) -> set:
+    """Documentos con atencion de urgencias.
+
+    Cuenta como urgencias un procedimiento/consulta que contenga 'URGENCIAS'
+    (sin distinguir mayusculas/acentos) o un CUPS que empiece por 8902."""
+    docs: set = set()
+    try:
+        try:
+            from .database import ReporteConsulta
+        except ImportError:
+            from database import ReporteConsulta
+        rows = (db.query(ReporteConsulta.documento,
+                         ReporteConsulta.procedimiento_consulta,
+                         ReporteConsulta.cups)
+                .filter(ReporteConsulta.activo == True).all())
+    except Exception:
+        return docs
+    for doc, proc, cups in rows:
+        d = str(doc or "").strip()
+        if not d:
+            continue
+        if "URGENCIAS" in _sin_acentos(proc) or str(cups or "").strip().startswith("8902"):
+            docs.add(d)
+    return docs
+
+
 @app.get("/alertas")
 async def listar_alertas(current_user: User = Depends(get_current_user), departamento: str = "", municipio: str = "", regimen: str = ""):
     """Alertas con su conteo sobre la data validada (filtros opcionales)."""
@@ -4625,11 +4688,14 @@ async def listar_alertas(current_user: User = Depends(get_current_user), departa
         except ImportError:
             from alertas import ALERTAS, evaluar
         const = _constantes_gestantes(db)
+        meds = _medicamentos_por_doc(db)
+        urgs = _docs_urgencias(db)
         counts = {a["key"]: 0 for a in ALERTAS}
         for row in _filas_gestantes_validadas(db):
             if not _pasa_filtros(row, departamento, municipio, regimen):
                 continue
-            for k in evaluar(row, const):
+            doc = str(row.get("No. De Identificación", "")).strip()
+            for k in evaluar(row, const, medicamentos=meds.get(doc), urgencias=(doc in urgs)):
                 if k in counts:
                     counts[k] += 1
         return {"alertas": [{**a, "total": counts.get(a["key"], 0)} for a in ALERTAS]}
@@ -4792,13 +4858,16 @@ async def bandeja_alertas(current_user: User = Depends(get_current_user), q: str
 
         ql = (q or "").strip().upper()
         const = _constantes_gestantes(db)
+        meds = _medicamentos_por_doc(db)
+        urgs = _docs_urgencias(db)
         out = []
         for r in _filas_gestantes_validadas(db):
             doc = str(r.get("No. De Identificación", "")).strip()
             nombre = _nombre_completo(r)
             if ql and ql not in doc.upper() and ql not in nombre.upper():
                 continue
-            sem = semaforo(r, segs_por_doc.get(doc, []), const)
+            sem = semaforo(r, segs_por_doc.get(doc, []), const,
+                           medicamentos=meds.get(doc), urgencias=(doc in urgs))
             if color and sem["color"] != color:
                 continue
             # La bandeja lista solo gestantes CON alertas (a quien salir a buscar);
@@ -4856,7 +4925,9 @@ async def ficha_gestante(numero_id: str, current_user: User = Depends(get_curren
             "created_at": s.created_at.isoformat() if s.created_at else "",
         } for s in segs]
 
-        sem = semaforo(row, seg_dicts, _constantes_gestantes(db))
+        sem = semaforo(row, seg_dicts, _constantes_gestantes(db),
+                       medicamentos=_medicamentos_por_doc(db).get(doc),
+                       urgencias=(doc in _docs_urgencias(db)))
 
         eventos = []
         for fecha_k, prof_k, label in _ATENCIONES_CONTROLES:
@@ -4988,6 +5059,8 @@ async def exportar_alertas(current_user: User = Depends(get_current_user), depar
 
         const = _constantes_gestantes(db)
         rows = _filas_gestantes_validadas(db)
+        meds = _medicamentos_por_doc(db)
+        urgs = _docs_urgencias(db)
         docs = [str(r.get("No. De Identificación", "")).strip() for r in rows]
         try:
             afi = _cdb.datos_afiliados_lote(docs)
@@ -5006,7 +5079,8 @@ async def exportar_alertas(current_user: User = Depends(get_current_user), depar
             for r in rows:
                 if not _pasa_filtros(r, departamento, municipio, regimen):
                     continue
-                if a["key"] not in evaluar(r, const):
+                doc_r = str(r.get("No. De Identificación", "")).strip()
+                if a["key"] not in evaluar(r, const, medicamentos=meds.get(doc_r), urgencias=(doc_r in urgs)):
                     continue
                 d = _fila_alerta(r, afi, ips_names, eps_names)
                 ws.append([d.get(k, "") for k, _ in _ALERTA_COLS])
@@ -5038,7 +5112,13 @@ async def detalle_alerta(key: str, current_user: User = Depends(get_current_user
         if not alerta:
             raise HTTPException(status_code=404, detail="Alerta no encontrada")
         _const = _constantes_gestantes(db)
-        matches = [r for r in _filas_gestantes_validadas(db) if key in evaluar(r, _const)]
+        _meds = _medicamentos_por_doc(db)
+        _urgs = _docs_urgencias(db)
+        matches = []
+        for r in _filas_gestantes_validadas(db):
+            _d = str(r.get("No. De Identificación", "")).strip()
+            if key in evaluar(r, _const, medicamentos=_meds.get(_d), urgencias=(_d in _urgs)):
+                matches.append(r)
 
         try:
             import corporate_db as _cdb
