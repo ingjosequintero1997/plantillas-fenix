@@ -471,6 +471,13 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     setForm((f) => (f.EDAD_ANOS === edad ? f : { ...f, EDAD_ANOS: edad }))
   }, [form.FECHA_DE_NACIMIENTO])
 
+  // Si la pertenencia es Indígena, la etnia deja de admitir "NA" (no aplica).
+  useEffect(() => {
+    if (form.PERTENECIA_ETNICA === 'Indígena' && String(form.ETNIA || '').trim().toUpperCase() === 'NA') {
+      setForm((f) => ({ ...f, ETNIA: '' }))
+    }
+  }, [form.PERTENECIA_ETNICA, form.ETNIA])
+
   const handlePdfUpload = async () => {
     const doc = form.NO_DE_IDENTIFICACION
     if (!doc) { setPdfMsg('Guarda el registro primero para asociar la historia.'); return }
@@ -559,6 +566,12 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
     if (form.PERTENECIA_ETNICA === 'Indígena' && (!sanitizeFieldValue(form.ETNIA) || form.ETNIA === 'NA')) {
       errors.push('Si la pertenencia étnica es Indígena, debe seleccionar una etnia')
+    }
+    // La fecha de diagnostico del embarazo no puede ser posterior al ingreso al control prenatal.
+    const fDx = sanitizeFieldValue(form.FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO)
+    const fIng = sanitizeFieldValue(form.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fDx) && /^\d{4}-\d{2}-\d{2}$/.test(fIng) && fDx > fIng) {
+      errors.push('Fecha Diagnostico Embarazo no puede ser posterior a la Fecha de Ingreso al Control Prenatal')
     }
     return errors
   }
@@ -656,17 +669,22 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
 
     if (resolved === 'set') {
-      const options = (meta && meta.allowed) || []
+      // Si la pertenencia es Indígena, la etnia es obligatoria: no se ofrece "NA".
+      const esEtniaIndigena = fieldDef.key === 'ETNIA' && form.PERTENECIA_ETNICA === 'Indígena'
+      const options = ((meta && meta.allowed) || []).filter(
+        (o) => !(esEtniaIndigena && String(o).trim().toUpperCase() === 'NA')
+      )
+      const valEsNaIndigena = esEtniaIndigena && String(val).trim().toUpperCase() === 'NA'
       return (
         <div key={fieldDef.key}>
           {label}
           <select
-            value={val}
+            value={valEsNaIndigena ? '' : val}
             onChange={(e) => handleChange(fieldDef.key, e.target.value)}
             className="input text-sm"
           >
-            <option value="">Seleccionar</option>
-            {val && !options.includes(val) && <option value={val}>{val}</option>}
+            <option value="">{esEtniaIndigena ? 'Seleccionar etnia' : 'Seleccionar'}</option>
+            {val && !options.includes(val) && !valEsNaIndigena && <option value={val}>{val}</option>}
             {options.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}

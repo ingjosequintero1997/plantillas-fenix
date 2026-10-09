@@ -421,6 +421,14 @@ def validate_gestante_payload(payload: dict) -> tuple[list[str], dict]:
         if not etnia or etnia == "NA":
             errors.append("Si la pertenencia étnica es Indígena, debe seleccionar una etnia")
 
+    # Cross-field: the pregnancy diagnosis date cannot be after the prenatal-care entry date.
+    f_dx = _parse_date(cleaned.get("FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO"))
+    f_ing = _parse_date(cleaned.get("FECHA_DE_INGRESO_AL_CONTROL_PRENATAL"))
+    if f_dx and f_ing and f_dx > f_ing:
+        errors.append(
+            "Fecha Diagnostico Embarazo no puede ser posterior a la Fecha de Ingreso al Control Prenatal"
+        )
+
     cleaned["EDAD_ANOS"] = compute_edad(cleaned.get("FECHA_DE_NACIMIENTO"))
 
     return errors, cleaned
