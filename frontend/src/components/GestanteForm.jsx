@@ -646,6 +646,29 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     return ''
   }
 
+  const sectionFieldErrors = (i) => {
+    const sec = SECCIONES[i]
+    if (!sec) return []
+    const out = []
+    const seen = new Set()
+    for (const f of sec.fields) {
+      if (seen.has(f.key)) continue
+      seen.add(f.key)
+      const e = fieldErrorFor(f.key)
+      if (e) out.push(`${f.label}: ${e}`)
+    }
+    return out
+  }
+
+  const goToSection = (i) => {
+    if (i > activeSection) {
+      const errs = sectionFieldErrors(activeSection)
+      if (errs.length) { setError(errs.slice(0, 5).join(' · ')); return }
+    }
+    setError('')
+    setActiveSection(i)
+  }
+
   const renderField = (fieldDef) => {
     const val = sanitizeFieldValue(form[fieldDef.key])
     const meta = templateMeta[fieldDef.key]
@@ -867,7 +890,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
               <button
                 key={i}
                 type="button"
-                onClick={() => setActiveSection(i)}
+                onClick={() => goToSection(i)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all"
                 style={{
                   backgroundColor: activeSection === i ? 'var(--green-500)' : 'transparent',
@@ -1075,7 +1098,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
           <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {SECCIONES.map((_, i) => (
-              <button key={i} type="button" onClick={() => setActiveSection(i)}
+              <button key={i} type="button" onClick={() => goToSection(i)}
                 className="rounded-full transition-all"
                 style={{
                   width: activeSection === i ? '20px' : '8px', height: '8px',
@@ -1092,11 +1115,22 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
                 &larr; Anterior
               </button>
             )}
-            {activeSection < SECCIONES.length - 1 && (
-              <button type="button" onClick={() => setActiveSection(activeSection + 1)} className="px-4 py-1.5 rounded-lg text-xs font-medium" style={{ color: '#fff', backgroundColor: 'var(--green-500)', border: '1px solid var(--green-500)' }}>
-                Siguiente &rarr;
-              </button>
-            )}
+            {activeSection < SECCIONES.length - 1 && (() => {
+              const errs = sectionFieldErrors(activeSection)
+              const blocked = errs.length > 0
+              return (
+                <button type="button"
+                  onClick={() => {
+                    if (blocked) { setError(errs.slice(0, 5).join(' · ')); return }
+                    setError(''); setActiveSection(activeSection + 1)
+                  }}
+                  className="px-4 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ color: '#fff', backgroundColor: blocked ? 'var(--text-muted)' : 'var(--green-500)', border: `1px solid ${blocked ? 'var(--text-muted)' : 'var(--green-500)'}`, cursor: blocked ? 'not-allowed' : 'pointer' }}
+                  title={blocked ? 'Corrige los errores de esta seccion para continuar' : ''}>
+                  Siguiente &rarr;
+                </button>
+              )
+            })()}
             <button type="submit" className="px-4 py-1.5 rounded-lg text-xs font-semibold" disabled={saving}
               style={{ color: '#fff', backgroundColor: saving ? 'var(--text-muted)' : 'var(--green-600)', border: '1px solid var(--green-600)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               {saving ? (
