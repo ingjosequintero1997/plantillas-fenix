@@ -362,6 +362,34 @@ function computeAgeFromBirthDate(value) {
   return String(age)
 }
 
+// Campos derivados de la FUM: se recalculan solos y no se editan a mano.
+const CAMPOS_CALCULADOS = ['FPP', 'DIAS_PARA_EL_PARTO', 'ALARMA']
+
+// Deriva FPP (FUM + 280 dias), DIAS_PARA_EL_PARTO y ALARMA desde la FUM
+// (AAAA-MM-DD), igual que backend/formulas.py::aplicar_formulas. Si la FUM
+// esta vacia o no es valida, los tres campos quedan vacios.
+function deriveFromFum(fum) {
+  const m = String(fum || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return { FPP: '', DIAS_PARA_EL_PARTO: '', ALARMA: '' }
+  const fpp = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  fpp.setDate(fpp.getDate() + 280)
+  const hoy = new Date()
+  const dias = Math.round(
+    (new Date(fpp.getFullYear(), fpp.getMonth(), fpp.getDate()) -
+      new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())) / 86400000
+  )
+  let alarma = 'PENDIENTE'
+  if (dias < 0) alarma = 'NACIDO'
+  else if (dias <= 7) alarma = 'SEMANA DE PARTO'
+  else if (dias <= 28) alarma = 'MENOS 4 SEM'
+  const pad = (n) => String(n).padStart(2, '0')
+  return {
+    FPP: `${fpp.getFullYear()}-${pad(fpp.getMonth() + 1)}-${pad(fpp.getDate())}`,
+    DIAS_PARA_EL_PARTO: String(dias),
+    ALARMA: alarma,
+  }
+}
+
 // Trims a value and collapses a datetime to its date part.
 function sanitizeFieldValue(v) {
   if (v === null || v === undefined) return ''
@@ -369,6 +397,331 @@ function sanitizeFieldValue(v) {
   if (!s) return ''
   if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(s)) return s.split(' ')[0]
   return s
+}
+
+// ---------------------------------------------------------------------------
+// Reglas cruzadas del backend (gestante_config.validate_gestante_payload).
+// Se replican aqui para dar feedback en vivo, bloquear el avance de seccion y
+// detener el envio con los mismos mensajes que emite el backend.
+// ---------------------------------------------------------------------------
+
+// Etiqueta visible de cada campo (la primera aparicion gana: FECHA, TIPO y
+// TRATAMIENTO_INSTAURADO aparecen en mas de una seccion).
+const ETIQUETAS = (() => {
+  const mapa = {}
+  for (const sec of SECCIONES) for (const f of sec.fields) if (!(f.key in mapa)) mapa[f.key] = f.label
+  return mapa
+})()
+
+// Pares (fecha, resultado) por adyacencia, igual que
+// backend::gestante_config._lab_result_pairs: toda fecha de SECCIONES seguida
+// de su campo "Resultado ..." (VIH 1-3 y seguimiento, sifilis 1-3,
+// urocultivo, glicemia, PTOG, hemoglobina 1-3, hepatitis B, toxoplasma,
+// citologia/cuello uterino, rubeola, estreptococo, gota gruesa y chagas).
+const PARES_LAB = (() => {
+  const plano = []
+  for (const sec of SECCIONES) for (const f of sec.fields) plano.push(f)
+  const pares = []
+  for (let i = 0; i < plano.length - 1; i++) {
+    if (plano[i].type === 'date' && plano[i + 1].key.startsWith('RESULTADO_')) {
+      pares.push([plano[i], plano[i + 1]])
+    }
+  }
+  return pares
+})()
+
+// Fechas restantes de tamizajes/laboratorios/vacunacion y demas suministros
+// que entran en R13 (no pueden ser anteriores al ingreso). Replica el
+// backend::_LAB_EXTRA_DATE_NAMES con las claves presentes en SECCIONES; FUM,
+// diagnostico, ingreso, controles, parto/aborto y planificacion quedan fuera
+// a proposito.
+const FECHAS_R13 = [
+  ...PARES_LAB.map(([fecha]) => fecha.key),
+  'ASESORIA_PRUEBA_VIH',
+  'FECHA_PRUEBA_CONFIRMATORIA_SEGUN_ALGORITMO',
+  'FECHA_DE_DIAGNOSTICO_DE_SIFILIS',
+  'FECHA_DE_INICIO_DEL_TRATAMIENTO',
+  'FECHA_DE_SEGUNDA_DOSIS_DEL_TRATAMIENTO',
+  'FECHA_DE_TERCERA_DOSIS_DEL_TRATAMIENTO',
+  'FECHA_DE_APLICACION_INFLUENZA_DESDE_SEMANA_14',
+  'FECHA_DE_APLICACION_TOXOIDE_SEGUN_ANTECEDENTE_VACUNAL',
+  'FECHA_DE_APLICACION_DPT_ACELULAR_SEMANA_26',
+  'FECHA_DE_APLICACION_COVID_19_1_EN_LA_GESTACION',
+  'FECHA_DE_APLICACION_VSR_SEMANA_28___36',
+  'FECHA_CONSULTA_ODONTOLOGICA',
+  'ECOGRAFIA_OBSTETRICA_CON_TRANSLUCENCIA_NUCAL_106___136',
+  'ECOGRAFIA_OBSTETRICA_PARA_LA_DETECCION_DE_ANOMALIAS_ESTRUCTURALES_18___23',
+  'OTRAS_ECOGRAFIAS',
+  'FECHA_SUMINISTRO_ACIDO_FOLICO',
+  'FECHA_SUMINISTRO_CALCIO_SEMANA_14',
+  'FECHA_SUMINISTRO_HIERRO',
+  'FECHA_DE_SUMINISTRO',
+  'FECHA_DESPARASITACION_ANTIHELMINTICA_II_Y_III_TRIMESTRE_ALBENDAZO_400_MG_DOSIS_UNICA',
+]
+
+// Fechas de controles prenatales en orden, igual que backend::_CONTROL_DATE_NAMES.
+const CONTROLES = [
+  'FECHA_1ER_CONTROL',
+  'FECHA_2DO_CONTROL',
+  'FECHA_3ER_CONTROL',
+  'FECHA_4TO_CONTROL',
+  'FECHA_5TO_CONTROL',
+  'FECHA_6TO_CONTROL',
+  'FECHA_7MO_CONTROL',
+  'FECHA_8VO_CONTROL',
+  'FECHA_9NO_CONTROL',
+]
+
+// Controles obstetricos que exigen un valor >= 1 (R7).
+const CLAVES_CONTEO = ['G', 'P', 'C', 'A', 'M', 'V']
+
+// Fecha ISO (AAAA-MM-DD) o '' si esta vacia o mal formada.
+function fechaIso(valor) {
+  const s = sanitizeFieldValue(valor)
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''
+}
+
+// Comodin: cualquier anio <= 1900 (1800/1845/1900 son marcadores).
+function esComodin(fecha) {
+  return !!fecha && Number(fecha.slice(0, 4)) <= 1900
+}
+
+// Fecha real: ISO valida y no comodin ('' en cualquier otro caso).
+function fechaReal(valor) {
+  const fecha = fechaIso(valor)
+  return fecha && !esComodin(fecha) ? fecha : ''
+}
+
+// Igualdad de valores SET sin acentos, espacios ni mayusculas (backend::_coincide).
+function coincide(valor, esperado) {
+  const limpio = (x) =>
+    String(x === null || x === undefined ? '' : x).trim().replace(/\s+/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  return limpio(valor) === limpio(esperado)
+}
+
+// "NA" sin importar mayusculas ni espacios (backend::_es_na).
+function esNa(valor) {
+  return String(valor === null || valor === undefined ? '' : valor).trim().replace(/\s+/g, ' ').toLowerCase() === 'na'
+}
+
+// Clasificacion del IMC con los mismos umbrales que
+// backend/formulas.py::_clasif_imc (se evalua sobre el IMC sin redondear).
+function clasifImc(imc) {
+  if (imc < 18.5) return 'BAJO PESO'
+  if (imc < 25) return 'PESO NORMAL'
+  if (imc < 30) return 'SOBREPESO'
+  if (imc < 35) return 'OBESIDAD GRADO 1'
+  if (imc < 40) return 'OBESIDAD GRADO 2'
+  return 'OBESIDAD GRADO 3'
+}
+
+// Tabla de IMC para la edad gestacional (Atalah/ICBF): por semana de gestacion
+// (6..42) guarda [adecuado_lo, adecuado_hi, sobrepeso_hi] en kg/m^2. Copia
+// exacta de backend/formulas.py::_IMC_EG_TABLE.
+const IMC_EG_TABLE = {
+  6: [20.0, 24.9, 30.0], 7: [20.1, 24.9, 30.0], 8: [20.2, 25.0, 30.1], 9: [20.2, 25.1, 30.2],
+  10: [20.3, 25.2, 30.2], 11: [20.4, 25.3, 30.3], 12: [20.5, 25.4, 30.3], 13: [20.7, 25.6, 30.4],
+  14: [20.8, 25.7, 30.5], 15: [20.9, 25.8, 30.6], 16: [21.1, 25.9, 30.7], 17: [21.2, 26.0, 30.8],
+  18: [21.3, 26.1, 30.9], 19: [21.5, 26.2, 30.9], 20: [21.6, 26.3, 31.0], 21: [21.8, 26.4, 31.1],
+  22: [21.9, 26.6, 31.2], 23: [22.1, 26.7, 31.3], 24: [22.3, 26.9, 31.5], 25: [22.5, 27.0, 31.6],
+  26: [22.7, 27.2, 31.7], 27: [22.8, 27.3, 31.8], 28: [23.0, 27.5, 31.9], 29: [23.2, 27.6, 32.0],
+  30: [23.4, 27.8, 32.1], 31: [23.5, 27.9, 32.2], 32: [23.7, 28.0, 32.3], 33: [23.9, 28.1, 32.4],
+  34: [24.0, 28.3, 32.5], 35: [24.2, 28.4, 32.6], 36: [24.3, 28.5, 32.7], 37: [24.5, 28.7, 32.8],
+  38: [24.6, 28.8, 32.9], 39: [24.8, 28.9, 33.0], 40: [25.0, 29.1, 33.1], 41: [25.1, 29.2, 33.2],
+  42: [25.1, 29.2, 33.2],
+}
+
+// Clasificacion Atalah/ICBF del IMC para la edad gestacional. Espeja
+// backend/formulas.py::clasif_imc_eg: acota la semana a [6,42], la redondea al
+// entero mas cercano y devuelve '' si el IMC o las semanas son invalidos.
+function clasifImcEg(imc, semanas) {
+  if (imc === null || imc === undefined || semanas === null || semanas === undefined) return ''
+  const i = Number(imc)
+  const s = Number(semanas)
+  if (!Number.isFinite(i) || !Number.isFinite(s)) return ''
+  const sem = Math.min(42, Math.max(6, Math.round(s)))
+  const [adecuadoLo, adecuadoHi, sobrepesoHi] = IMC_EG_TABLE[sem]
+  if (i < adecuadoLo) return 'Bajo Peso para la Edad Gestacional'
+  if (i <= adecuadoHi) return 'IMC Adecuado para la Edad Gestacional'
+  if (i <= sobrepesoHi) return 'Sobrepeso para la Edad Gestacional'
+  return 'Obesidad para la Edad Gestacional'
+}
+
+// Formatea un numero igual que backend/formulas.py::_fmt_num(round(v, 2)):
+// dos decimales sin ceros ni punto finales (24.0 -> '24', 4.40 -> '4.4').
+function fmtNum(v) {
+  if (v === null || v === undefined || !Number.isFinite(Number(v))) return ''
+  return Number(v).toFixed(2).replace(/\.?0+$/, '')
+}
+
+// Fecha de hoy en ISO (AAAA-MM-DD) segun el reloj local.
+function hoyIso() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// Semanas transcurridas entre dos fechas ISO ((b - a) / 7); null si falta alguna.
+function semanasEntreIso(aIso, bIso) {
+  if (!aIso || !bIso) return null
+  const [ay, am, ad] = aIso.split('-').map(Number)
+  const [by, bm, bd] = bIso.split('-').map(Number)
+  const dias = (new Date(by, bm - 1, bd) - new Date(ay, am - 1, ad)) / 86400000
+  return dias / 7
+}
+
+// Edad gestacional al inicio del control = (ingreso - FUM) en semanas con su
+// trimestre (<14 -> 1, <28 -> 2, >=28 -> 3), igual que
+// backend/formulas.py::aplicar_formulas. Solo con FUM e ingreso reales; si
+// falta o no es valida alguna fecha, ambos campos quedan vacios.
+function deriveInicioControl(fumRaw, ingresoRaw) {
+  const fum = fechaReal(fumRaw)
+  const ingreso = fechaReal(ingresoRaw)
+  if (!fum || !ingreso) return { EDAD_GEST_INICIO_CONTROL: '', TRIMESTRE_INICIO_CONTROL: '' }
+  const semanas = semanasEntreIso(fum, ingreso)
+  const trimestre = semanas < 14 ? '1' : semanas < 28 ? '2' : '3'
+  return {
+    EDAD_GEST_INICIO_CONTROL: fmtNum(Math.round(semanas * 10) / 10),
+    TRIMESTRE_INICIO_CONTROL: trimestre,
+  }
+}
+
+// IMC actual = peso actual / talla actual^2, con su clasificacion Atalah/ICBF
+// segun la edad gestacional (semanas FUM -> ultimo control real, o FUM -> hoy).
+// Mismo formato que backend/formulas.py::aplicar_formulas. Sin FUM real o con
+// peso/talla invalidos, ambos campos quedan vacios.
+function deriveImcActual(pesoRaw, tallaRaw, fumRaw, ultimoRaw) {
+  const num = (x) => Number(String(x === null || x === undefined ? '' : x).trim().replace(/,/g, '.'))
+  const peso = num(pesoRaw)
+  const talla = num(tallaRaw)
+  const fum = fechaReal(fumRaw)
+  if (!fum || !Number.isFinite(peso) || !Number.isFinite(talla) || !(peso > 0) || !(talla > 0)) {
+    return { IMC_ACTUAL: '', CLASIFICACION_DEL_IMC_ACTUAL: '' }
+  }
+  const ultimo = fechaReal(ultimoRaw)
+  const semanas = semanasEntreIso(fum, ultimo || hoyIso())
+  const imc = peso / (talla * talla)
+  return {
+    IMC_ACTUAL: fmtNum(Math.round(imc * 100) / 100),
+    CLASIFICACION_DEL_IMC_ACTUAL: clasifImcEg(imc, semanas),
+  }
+}
+
+// IMC inicial = peso / talla^2, con el mismo formato que
+// backend/formulas.py::_fmt_num(round(imc, 2)). Sin peso/talla validos los
+// dos campos derivados quedan vacios.
+function deriveImc(pesoRaw, tallaRaw) {
+  const num = (x) => Number(String(x === null || x === undefined ? '' : x).trim().replace(/,/g, '.'))
+  const peso = num(pesoRaw)
+  const talla = num(tallaRaw)
+  if (!Number.isFinite(peso) || !Number.isFinite(talla) || !(peso > 0) || !(talla > 0)) {
+    return { INDICE_DE_MASA_CORPORAL_IMC: '', CLASIFICACION_DEL_IMC: '' }
+  }
+  const imc = peso / (talla * talla)
+  return {
+    INDICE_DE_MASA_CORPORAL_IMC: String(Math.round(imc * 100) / 100),
+    CLASIFICACION_DEL_IMC: clasifImc(imc),
+  }
+}
+
+// Devuelve el mensaje exacto del backend para la regla cruzada que aplica a
+// `key` ('' si no aplica). Se reutiliza en el error en vivo (fieldErrorFor),
+// en el bloqueo de navegacion (sectionFieldErrors) y en el envio (validateForm).
+function errorReglaCruzada(key, form) {
+  const val = (k) => sanitizeFieldValue(form[k])
+  const ingreso = fechaReal(val('FECHA_DE_INGRESO_AL_CONTROL_PRENATAL'))
+
+  // R7: los conteos obstetricos no admiten cero (0 = nunca registrado).
+  if (CLAVES_CONTEO.includes(key)) {
+    const raw = val(key)
+    if (raw !== '' && !Number.isNaN(Number(raw)) && Number(raw) < 1) {
+      return 'debe ser un numero mayor o igual a 1'
+    }
+  }
+
+  // R9: la preeclampsia de alto riesgo solo vive dentro de un riesgo obstetrico alto.
+  if (key === 'CLACIFICACION_DEL_RIESGO_DE_PREECLAMPSIA' || key === 'CLASIFICACION_DEL_RIESGO_OBSTETRICO') {
+    if (
+      coincide(val('CLACIFICACION_DEL_RIESGO_DE_PREECLAMPSIA'), 'Alto riesgo de Preeclampsia') &&
+      !coincide(val('CLASIFICACION_DEL_RIESGO_OBSTETRICO'), 'Alto riesgo obstétrico')
+    ) {
+      return 'Si la Clasificacion del riesgo de preeclampsia es Alto riesgo de Preeclampsia, la Clasificacion del riesgo obstetrico debe ser Alto riesgo obstétrico'
+    }
+  }
+
+  // R10: riesgo tromboembolico alto exige tratamiento instaurado (ni vacio ni NA).
+  if (key === 'CLACIFICACION_DEL_RIESGO_TROMBOEMBOLICO' || key === 'TRATAMIENTO_INSTAURADO') {
+    if (coincide(val('CLACIFICACION_DEL_RIESGO_TROMBOEMBOLICO'), 'Alto riesgo Tromboembolico')) {
+      const trat = val('TRATAMIENTO_INSTAURADO')
+      if (!trat || esNa(trat)) {
+        return 'Si la Clasificacion del riesgo tromboembolico es Alto riesgo Tromboembolico, Tratamiento instaurado es obligatorio (no puede quedar vacio ni NA)'
+      }
+    }
+  }
+
+  // R11: con preeclampsia de alto riesgo la fecha de suministro (ASA) no puede ser comodin.
+  if (key === 'FECHA_DE_SUMINISTRO') {
+    const suministro = fechaIso(val('FECHA_DE_SUMINISTRO'))
+    if (
+      suministro && esComodin(suministro) &&
+      coincide(val('CLACIFICACION_DEL_RIESGO_DE_PREECLAMPSIA'), 'Alto riesgo de Preeclampsia')
+    ) {
+      return 'Si el riesgo de preeclampsia es Alto, la fecha de suministro no puede ser una fecha comodin'
+    }
+  }
+
+  // R12: una fecha real no convive con resultado NA, y un comodin exige NA.
+  const par = PARES_LAB.find(([, res]) => res.key === key)
+  if (par) {
+    const [campoFecha, campoRes] = par
+    const fecha = fechaIso(val(campoFecha.key))
+    const resultado = val(campoRes.key)
+    if (fecha && resultado) {
+      if (esComodin(fecha)) {
+        if (!esNa(resultado)) return `Si ${campoFecha.label} es una fecha comodin, ${campoRes.label} debe ser NA`
+      } else if (esNa(resultado)) {
+        return `Si ${campoFecha.label} tiene una fecha real, ${campoRes.label} no puede ser NA`
+      }
+    }
+  }
+
+  // R13: la fecha de tamizaje/laboratorio/vacunacion no puede ser anterior al ingreso.
+  if (FECHAS_R13.includes(key)) {
+    const fecha = fechaReal(val(key))
+    if (ingreso && fecha && fecha < ingreso) {
+      return `Si ${ETIQUETAS[key]} (${fecha}) debe ser igual o posterior a la Fecha de Ingreso al Control Prenatal (${ingreso})`
+    }
+  }
+
+  // R15: el 1er control coincide con el ingreso y las fechas de control crecen estrictamente.
+  if (key === 'FECHA_DE_INGRESO_AL_CONTROL_PRENATAL' || key === 'FECHA_1ER_CONTROL') {
+    const primera = fechaReal(val('FECHA_1ER_CONTROL'))
+    if (ingreso && primera && primera !== ingreso) {
+      return 'La Fecha 1er Control debe coincidir con la Fecha de Ingreso al Control Prenatal'
+    }
+  }
+  if (CONTROLES.includes(key)) {
+    // Vacias, mal formadas o comodin no entran a la cadena.
+    let previo = ''
+    for (const ctrl of CONTROLES) {
+      const fecha = fechaReal(val(ctrl))
+      if (!fecha) continue
+      if (previo && ctrl === key && fecha <= previo.fecha) {
+        return `Las fechas de controles prenatales deben ser estrictamente crecientes: ${ETIQUETAS[ctrl]} (${fecha}) no es posterior a ${ETIQUETAS[previo.key]} (${previo.fecha})`
+      }
+      previo = { key: ctrl, fecha }
+    }
+  }
+
+  // R17: aborto, parto y planificacion deben ser posteriores al ingreso.
+  if (key === 'FECHA_DE_ABORTO' || key === 'FECHA_DE_PARTO' || key === 'FECHA') {
+    const fecha = fechaReal(val(key))
+    if (ingreso && fecha && fecha <= ingreso) {
+      return `Si ${ETIQUETAS[key]} (${fecha}) debe ser posterior a la Fecha de Ingreso al Control Prenatal (${ingreso})`
+    }
+  }
+
+  return ''
 }
 
 export default function GestanteForm({ mode = 'create', initialData = {}, onSave, onClose, ipsList = [] }) {
@@ -400,7 +753,10 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         } else { val = '' }
         cleaned[k] = val
       }
-      setForm(cleaned)
+      // Recalcula las derivadas desde la FUM cargada; sin FUM valida se
+      // conservan los valores almacenados del registro.
+      const conFum = /^\d{4}-\d{2}-\d{2}$/.test(String(cleaned.FUM || ''))
+      setForm(conFum ? { ...cleaned, ...deriveFromFum(cleaned.FUM) } : cleaned)
     } else {
       setForm({
         TIPO_DE_DOCUMENTO_DE_IDENTIDAD: 'CC',
@@ -435,6 +791,8 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         FECHA_DE_INGRESO_AL_CONTROL_PRENATAL: '',
         FUM: '',
         FPP: '',
+        DIAS_PARA_EL_PARTO: '',
+        ALARMA: '',
       })
     }
   }, [mode, initialData])
@@ -525,7 +883,29 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   }, [form.NO_DE_IDENTIFICACION])
 
   const handleChange = (key, val) => {
-    setForm((f) => ({ ...f, [key]: val }))
+    // Al cambiar la FUM se recalculan en el mismo update FPP, dias para el
+    // parto, alarma, edad gestacional al inicio del control y el IMC actual;
+    // al cambiar peso/talla (inicial o actual) o el ultimo control se recalcula
+    // el IMC correspondiente con la misma formula que el backend. El resto de
+    // los campos no toca derivadas.
+    setForm((f) => {
+      const next = { ...f, [key]: val }
+      if (key === 'FUM') {
+        Object.assign(next, deriveFromFum(val))
+        Object.assign(next, deriveInicioControl(next.FUM, next.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL))
+        Object.assign(next, deriveImcActual(next.PESO_ACTUAL, next.TALLA_ACTUAL, next.FUM, next.ULTIMO_CONTROL_PRENATAL))
+      }
+      if (key === 'FECHA_DE_INGRESO_AL_CONTROL_PRENATAL') {
+        Object.assign(next, deriveInicioControl(next.FUM, next.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL))
+      }
+      if (key === 'PESO_INICIAL_KG' || key === 'TALLA_METROS') {
+        Object.assign(next, deriveImc(next.PESO_INICIAL_KG, next.TALLA_METROS))
+      }
+      if (key === 'PESO_ACTUAL' || key === 'TALLA_ACTUAL' || key === 'ULTIMO_CONTROL_PRENATAL') {
+        Object.assign(next, deriveImcActual(next.PESO_ACTUAL, next.TALLA_ACTUAL, next.FUM, next.ULTIMO_CONTROL_PRENATAL))
+      }
+      return next
+    })
     setMsg('')
   }
 
@@ -572,6 +952,29 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     const fIng = sanitizeFieldValue(form.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL)
     if (/^\d{4}-\d{2}-\d{2}$/.test(fDx) && /^\d{4}-\d{2}-\d{2}$/.test(fIng) && fDx > fIng) {
       errors.push('Fecha Diagnostico Embarazo no puede ser posterior a la Fecha de Ingreso al Control Prenatal')
+    }
+    // La FUM debe ser anterior a la fecha de ingreso al control prenatal (instructivo: "debe ser inferior").
+    const fFum = sanitizeFieldValue(form.FUM)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fFum) && /^\d{4}-\d{2}-\d{2}$/.test(fIng) && fFum >= fIng) {
+      errors.push('La FUM debe ser anterior a la Fecha de Ingreso al Control Prenatal')
+    }
+    // Reglas cruzadas del backend (R7, R9-R13, R15, R17): se reutiliza la
+    // misma logica del error en vivo para no duplicarla. Los mensajes que se
+    // repiten en dos campos (R9, R10, R15) se anotan una sola vez.
+    const clavesReglas = new Set()
+    const mensajesReglas = new Set()
+    for (const sec of SECCIONES) {
+      for (const fieldDef of sec.fields) {
+        if (clavesReglas.has(fieldDef.key)) continue
+        clavesReglas.add(fieldDef.key)
+        const msg = errorReglaCruzada(fieldDef.key, form)
+        if (!msg) continue
+        // Solo R7 lleva la etiqueta adelante; el resto ya son frases completas.
+        const completo = CLAVES_CONTEO.includes(fieldDef.key) ? `${fieldDef.label}: ${msg}` : msg
+        if (mensajesReglas.has(completo)) continue
+        mensajesReglas.add(completo)
+        errors.push(completo)
+      }
     }
     return errors
   }
@@ -643,7 +1046,16 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         return 'El diagnostico no puede ser posterior al ingreso al control prenatal'
       }
     }
-    return ''
+    if (key === 'FUM' || key === 'FECHA_DE_INGRESO_AL_CONTROL_PRENATAL') {
+      const fFum = sanitizeFieldValue(form.FUM)
+      const fIng = sanitizeFieldValue(form.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fFum) && /^\d{4}-\d{2}-\d{2}$/.test(fIng) && fFum >= fIng) {
+        return 'La FUM debe ser anterior al ingreso al control prenatal'
+      }
+    }
+    // Reglas cruzadas del backend (R7, R9-R13, R15, R17): el mismo error se
+    // muestra en vivo, bloquea el avance de seccion y detiene el envio.
+    return errorReglaCruzada(key, form)
   }
 
   const sectionFieldErrors = (i) => {
@@ -708,6 +1120,24 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       )
     }
 
+    // FPP, dias para el parto y alarma se derivan de la FUM: solo lectura,
+    // pero igual viajan en el payload porque participan del estado del form.
+    if (CAMPOS_CALCULADOS.includes(fieldDef.key)) {
+      return (
+        <div key={fieldDef.key}>
+          {label}
+          <div className="text-[0.65rem] mb-1" style={{ color: 'var(--text-muted)' }}>Calculado desde FUM</div>
+          {errNode}
+          <input
+            value={val}
+            readOnly
+            className="input text-sm"
+            style={{ backgroundColor: 'var(--bg-canvas)', cursor: 'not-allowed' }}
+          />
+        </div>
+      )
+    }
+
     const resolved = resolveFieldType(fieldDef, meta)
 
     if (resolved === 'readonly') {
@@ -725,6 +1155,24 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
             />
             <span className="text-[0.7rem] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>años (calculado)</span>
           </div>
+        </div>
+      )
+    }
+
+    // Campos FORMULA del instructivo (IMC, clasificaciones, controles,
+    // trimestres, etc.): solo lectura, los calcula el backend.
+    if (meta && meta.types.has('FORMULA')) {
+      return (
+        <div key={fieldDef.key}>
+          {label}
+          <div className="text-[0.65rem] mb-1" style={{ color: 'var(--text-muted)' }}>Calculado automaticamente</div>
+          {errNode}
+          <input
+            value={val}
+            readOnly
+            className="input text-sm"
+            style={{ backgroundColor: 'var(--bg-canvas)', cursor: 'not-allowed' }}
+          />
         </div>
       )
     }
