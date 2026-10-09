@@ -83,6 +83,12 @@ export async function fetchTemplates() {
   return data.templates || []
 }
 
+// Instructivo/template de un cargue: lista de {name, type, required, allowed?}.
+// Se usa para restringir los campos del formulario de cargue unitario.
+export async function fetchGestanteTemplate(templateKey = 'gestante') {
+  return apiFetch(`${API_BASE}/template?template_key=${encodeURIComponent(templateKey)}`)
+}
+
 function parseApiError(data, fallback) {
   if (!data) return fallback || 'Error inesperado'
   if (typeof data === 'string') return data
@@ -400,7 +406,7 @@ export async function fetchAlertas(filtros = {}) {
   if (filtros.regimen) params.set('regimen', filtros.regimen)
   const qs = params.toString()
   const data = await apiFetch(`${API_BASE}/alertas${qs ? `?${qs}` : ''}`)
-  return data.alertas || []
+  return data || { alertas: [], total_gestantes: 0 }
 }
 
 // Detalle de una alerta: usuarias que la cumplen (con datos de af_afiliado).

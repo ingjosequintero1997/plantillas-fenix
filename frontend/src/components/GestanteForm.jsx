@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { fetchIps, uploadHistoria, deleteHistoria, downloadHistoriaPdf, fetchHistorias, HISTORIA_URL } from '../api'
+import { fetchIps, uploadHistoria, deleteHistoria, downloadHistoriaPdf, fetchHistorias, HISTORIA_URL, fetchGestanteTemplate } from '../api'
 
 const SECCIONES = [
   {
@@ -299,6 +299,78 @@ const SECCIONES = [
   },
 ]
 
+// Maps a backend template field name (Spanish) to its frontend UPPER_SNAKE key.
+// Must mirror backend/_gen_form.py::_norm and gestante_config.normalize_field_key.
+function normalizeFieldKey(name) {
+  let s = String(name == null ? '' : name).trim()
+  s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  s = s
+    .toUpperCase()
+    .replace(/ /g, '_')
+    .replace(/\n/g, '_')
+    .replace(/\(/g, '')
+    .replace(/\)/g, '')
+    .replace(/,/g, '')
+    .replace(/-/g, '_')
+    .replace(/\//g, '_')
+    .replace(/\./g, '')
+    .replace(/\?/g, '')
+    .replace(/:/g, '')
+    .replace(/;/g, '')
+  s = s.split('__').filter(Boolean).join('__')
+  return s.replace(/^_+|_+$/g, '')
+}
+
+// Builds a normalized-key -> { types, allowed, required } map from the instructivo.
+function buildTemplateMeta(template) {
+  const meta = {}
+  for (const f of template || []) {
+    const key = normalizeFieldKey(f.name)
+    const entry = meta[key] || (meta[key] = { types: new Set(), allowed: [], required: false })
+    if (f.type) entry.types.add(f.type)
+    if (Array.isArray(f.allowed)) {
+      for (const a of f.allowed) if (!entry.allowed.includes(a)) entry.allowed.push(a)
+    }
+    entry.required = entry.required || !!f.required
+  }
+  return meta
+}
+
+// Resolves the UI control for a field from its template metadata.
+function resolveFieldType(fieldDef, meta) {
+  if (fieldDef.type === 'ips-dropdown') return 'ips-dropdown'
+  if (fieldDef.key === 'EDAD_ANOS') return 'readonly'
+  if (!meta) return fieldDef.type
+  const t = meta.types
+  if (t.has('SET')) return 'set'
+  if (t.has('DATE')) return 'date'
+  if (t.has('DECIMAL')) return 'decimal'
+  if (t.has('INT') || t.has('NUMERIC')) return 'number'
+  if (t.has('FORMULA')) return 'formula'
+  return 'text'
+}
+
+// Integer years between the birth date (YYYY-MM-DD) and today (month/day aware).
+function computeAgeFromBirthDate(value) {
+  const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return ''
+  const y = Number(m[1]); const mo = Number(m[2]); const d = Number(m[3])
+  const today = new Date()
+  let age = today.getFullYear() - y
+  if (today.getMonth() + 1 < mo || (today.getMonth() + 1 === mo && today.getDate() < d)) age -= 1
+  if (age < 0 || age > 130) return ''
+  return String(age)
+}
+
+// Trims a value and collapses a datetime to its date part.
+function sanitizeFieldValue(v) {
+  if (v === null || v === undefined) return ''
+  const s = String(v).trim()
+  if (!s) return ''
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(s)) return s.split(' ')[0]
+  return s
+}
+
 export default function GestanteForm({ mode = 'create', initialData = {}, onSave, onClose, ipsList = [] }) {
   const [form, setForm] = useState({})
   const [ipsOptions, setIpsOptions] = useState(ipsList)
@@ -313,6 +385,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   const [historiaId, setHistoriaId] = useState(null)
   const [existingPdfs, setExistingPdfs] = useState([])
   const [deletingId, setDeletingId] = useState(null)
+  const [templateMeta, setTemplateMeta] = useState({})
 
   useEffect(() => {
     if (mode === 'edit' && initialData && Object.keys(initialData).length > 0) {
@@ -379,6 +452,25 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
   }, [ipsList])
 
+  // Instructivo del cargue unitario: define el tipo real de cada campo y los
+  // valores permitidos (SET). Se carga una vez y se mapea por nombre al form.
+  useEffect(() => {
+    let alive = true
+    fetchGestanteTemplate('gestante')
+      .then((data) => {
+        if (!alive) return
+        setTemplateMeta(buildTemplateMeta(data && data.template))
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  // La edad NO se edita: siempre se deriva de la fecha de nacimiento.
+  useEffect(() => {
+    const edad = computeAgeFromBirthDate(form.FECHA_DE_NACIMIENTO)
+    setForm((f) => (f.EDAD_ANOS === edad ? f : { ...f, EDAD_ANOS: edad }))
+  }, [form.FECHA_DE_NACIMIENTO])
+
   const handlePdfUpload = async () => {
     const doc = form.NO_DE_IDENTIFICACION
     if (!doc) { setPdfMsg('Guarda el registro primero para asociar la historia.'); return }
@@ -430,6 +522,47 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     setMsg('')
   }
 
+  // Enforce the instructivo on submit: SET within allowed, dates parseable,
+  // numbers numeric, and Etnia mandatory when the pertenencia is "Indígena".
+  const validateForm = () => {
+    const errors = []
+    const seen = new Set()
+    for (const sec of SECCIONES) {
+      for (const fieldDef of sec.fields) {
+        if (seen.has(fieldDef.key)) continue
+        seen.add(fieldDef.key)
+        const meta = templateMeta[fieldDef.key]
+        if (!meta) continue
+        const val = sanitizeFieldValue(form[fieldDef.key])
+        if (!val) continue
+        if (meta.types.has('SET')) {
+          if (val !== 'NA' && !meta.allowed.includes(val)) {
+            errors.push(`${fieldDef.label}: '${val}' no es una opcion valida`)
+          }
+        } else if (meta.types.has('DATE')) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+            errors.push(`${fieldDef.label}: '${val}' no es una fecha valida`)
+          }
+        } else if (meta.types.has('DECIMAL')) {
+          if (Number.isNaN(Number(val))) {
+            errors.push(`${fieldDef.label}: '${val}' debe ser un numero`)
+          }
+        } else if (meta.types.has('INT') || meta.types.has('NUMERIC')) {
+          const n = Number(val)
+          if (Number.isNaN(n)) {
+            errors.push(`${fieldDef.label}: '${val}' debe ser un numero`)
+          } else if (meta.types.has('INT') && !Number.isInteger(n)) {
+            errors.push(`${fieldDef.label}: '${val}' debe ser un numero entero`)
+          }
+        }
+      }
+    }
+    if (form.PERTENECIA_ETNICA === 'Indígena' && (!sanitizeFieldValue(form.ETNIA) || form.ETNIA === 'NA')) {
+      errors.push('Si la pertenencia étnica es Indígena, debe seleccionar una etnia')
+    }
+    return errors
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.NO_DE_IDENTIFICACION) {
@@ -448,11 +581,18 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       setError('La IPS Primaria es obligatoria')
       return
     }
+    const validationErrors = validateForm()
+    if (validationErrors.length > 0) {
+      setError(validationErrors.slice(0, 5).join(' · '))
+      return
+    }
     setSaving(true)
     setError('')
     setMsg('')
     try {
-      await onSave(form)
+      // La edad siempre se envia calculada, nunca la que haya escrito el usuario.
+      const payload = { ...form, EDAD_ANOS: computeAgeFromBirthDate(form.FECHA_DE_NACIMIENTO) }
+      await onSave(payload)
       setMsg(mode === 'create' ? 'Registro creado correctamente' : 'Registro actualizado correctamente')
     } catch (err) {
       setError(err.message || 'No se pudo guardar')
@@ -461,24 +601,22 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
   }
 
-  const sanitizeVal = (v) => {
-    if (v === null || v === undefined) return ''
-    const s = String(v).trim()
-    if (!s) return ''
-    if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(s)) return s.split(' ')[0]
-    return s
-  }
-
   const renderField = (fieldDef) => {
-    const val = sanitizeVal(form[fieldDef.key])
+    const val = sanitizeFieldValue(form[fieldDef.key])
+    const meta = templateMeta[fieldDef.key]
+    const etniaRequired = fieldDef.key === 'ETNIA' && form.PERTENECIA_ETNICA === 'Indígena'
+    const required = fieldDef.required || etniaRequired
+    const label = (
+      <label className="form-label text-xs">
+        {fieldDef.label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+    )
 
     if (fieldDef.type === 'ips-dropdown') {
       return (
         <div key={fieldDef.key}>
-          <label className="form-label text-xs">
-            {fieldDef.label}
-            {fieldDef.required && <span className="text-red-500 ml-1">*</span>}
-          </label>
+          {label}
           <select
             value={val}
             onChange={(e) => handleChange(fieldDef.key, e.target.value)}
@@ -497,20 +635,39 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       )
     }
 
-    if (fieldDef.type === 'select') {
+    const resolved = resolveFieldType(fieldDef, meta)
+
+    if (resolved === 'readonly') {
       return (
         <div key={fieldDef.key}>
-          <label className="form-label text-xs">
-            {fieldDef.label}
-            {fieldDef.required && <span className="text-red-500 ml-1">*</span>}
-          </label>
+          {label}
+          <div className="flex items-center gap-2">
+            <input
+              value={val}
+              readOnly
+              disabled
+              className="input text-sm"
+              title="Calculado a partir de la fecha de nacimiento"
+            />
+            <span className="text-[0.7rem] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>años (calculado)</span>
+          </div>
+        </div>
+      )
+    }
+
+    if (resolved === 'set') {
+      const options = (meta && meta.allowed) || []
+      return (
+        <div key={fieldDef.key}>
+          {label}
           <select
             value={val}
             onChange={(e) => handleChange(fieldDef.key, e.target.value)}
             className="input text-sm"
           >
             <option value="">Seleccionar</option>
-            {fieldDef.options.map((opt) => (
+            {val && !options.includes(val) && <option value={val}>{val}</option>}
+            {options.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
@@ -518,30 +675,10 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       )
     }
 
-    if (fieldDef.type === 'textarea') {
-      return (
-        <div key={fieldDef.key} className="sm:col-span-2 md:col-span-3">
-          <label className="form-label text-xs">
-            {fieldDef.label}
-            {fieldDef.required && <span className="text-red-500 ml-1">*</span>}
-          </label>
-          <textarea
-            value={val}
-            onChange={(e) => handleChange(fieldDef.key, e.target.value)}
-            className="input text-sm"
-            rows={3}
-          />
-        </div>
-      )
-    }
-
-    if (fieldDef.type === 'date') {
+    if (resolved === 'date') {
       return (
         <div key={fieldDef.key}>
-          <label className="form-label text-xs">
-            {fieldDef.label}
-            {fieldDef.required && <span className="text-red-500 ml-1">*</span>}
-          </label>
+          {label}
           <input
             type="date"
             value={val}
@@ -552,12 +689,56 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       )
     }
 
+    if (resolved === 'number' || resolved === 'decimal') {
+      return (
+        <div key={fieldDef.key}>
+          {label}
+          <input
+            type="number"
+            step={resolved === 'decimal' ? 'any' : '1'}
+            value={val}
+            onChange={(e) => handleChange(fieldDef.key, e.target.value)}
+            className="input text-sm"
+          />
+        </div>
+      )
+    }
+
+    if (resolved === 'select') {
+      return (
+        <div key={fieldDef.key}>
+          {label}
+          <select
+            value={val}
+            onChange={(e) => handleChange(fieldDef.key, e.target.value)}
+            className="input text-sm"
+          >
+            <option value="">Seleccionar</option>
+            {(fieldDef.options || []).map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+      )
+    }
+
+    if (resolved === 'textarea') {
+      return (
+        <div key={fieldDef.key} className="sm:col-span-2 md:col-span-3">
+          {label}
+          <textarea
+            value={val}
+            onChange={(e) => handleChange(fieldDef.key, e.target.value)}
+            className="input text-sm"
+            rows={3}
+          />
+        </div>
+      )
+    }
+
     return (
       <div key={fieldDef.key}>
-        <label className="form-label text-xs">
-          {fieldDef.label}
-          {fieldDef.required && <span className="text-red-500 ml-1">*</span>}
-        </label>
+        {label}
         <input
           value={val}
           onChange={(e) => handleChange(fieldDef.key, e.target.value)}

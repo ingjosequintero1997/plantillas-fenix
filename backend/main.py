@@ -4691,14 +4691,21 @@ async def listar_alertas(current_user: User = Depends(get_current_user), departa
         meds = _medicamentos_por_doc(db)
         urgs = _docs_urgencias(db)
         counts = {a["key"]: 0 for a in ALERTAS}
+        total_gestantes = 0
         for row in _filas_gestantes_validadas(db):
             if not _pasa_filtros(row, departamento, municipio, regimen):
                 continue
             doc = str(row.get("No. De Identificación", "")).strip()
-            for k in evaluar(row, const, medicamentos=meds.get(doc), urgencias=(doc in urgs)):
+            keys = evaluar(row, const, medicamentos=meds.get(doc), urgencias=(doc in urgs))
+            if keys:
+                total_gestantes += 1
+            for k in keys:
                 if k in counts:
                     counts[k] += 1
-        return {"alertas": [{**a, "total": counts.get(a["key"], 0)} for a in ALERTAS]}
+        return {
+            "alertas": [{**a, "total": counts.get(a["key"], 0)} for a in ALERTAS],
+            "total_gestantes": total_gestantes,
+        }
     finally:
         db.close()
 
@@ -6714,30 +6721,21 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
 		current_data = dict(zip(columnas, [str(v) if v is not None else "" for v in existing]))
 
-		# Validar campos contra el instructivo
+		# Validar campos contra el instructivo (SET/fechas/numericos, Etnia
+		# condicional y Edad recalculada). Los errores identifican el campo.
 		try:
-			from .gestante_config import RAW_FIELDS
+			from .gestante_config import validate_gestante_payload
 		except ImportError:
-			from gestante_config import RAW_FIELDS
+			from gestante_config import validate_gestante_payload
 
-		errores = []
-		for i, (col_name, col_type) in enumerate(RAW_FIELDS):
-			if col_name in payload:
-				val = str(payload[col_name]).strip()
-				if col_type == "SET" and val and val != "NA":
-					try:
-						from .gestante_config import get_gestante_template
-					except ImportError:
-						from gestante_config import get_gestante_template
-					tmpl = get_gestante_template()
-					for t in tmpl:
-						if t["name"] == col_name and "allowed" in t:
-							if val not in t["allowed"]:
-								errores.append(f"{col_name}: '{val}' no es una opcion valida")
-							break
-
+		errores, payload = validate_gestante_payload(payload)
 		if errores:
 			raise HTTPException(status_code=400, detail="; ".join(errores[:10]))
+
+		# La edad se deriva de la fecha de nacimiento; reflejarla en la columna
+		# real (EDAD) para persistirla sin confiar en el valor enviado.
+		if "EDAD" in columnas:
+			payload["EDAD"] = payload.get("EDAD_ANOS", "")
 
 		# Detectar cambios y registrar auditoria
 		audit_entries = []
@@ -6835,8 +6833,22 @@ async def crear_gestante(payload: dict, current_user: User = Depends(get_current
 			if ips_gestante and ips_gestante != ips_nombre_real:
 				raise HTTPException(status_code=400, detail=f"No se puede crear: la gestante pertenece a otra IPS ({ips_gestante}). Tu IPS es: {ips_nombre_real}")
 
+		# Validar campos contra el instructivo antes de insertar (SET/fechas/
+		# numericos, Etnia condicional y Edad recalculada desde Fecha de Nacimiento).
+		try:
+			from .gestante_config import validate_gestante_payload
+		except ImportError:
+			from gestante_config import validate_gestante_payload
+
+		errores, payload = validate_gestante_payload(payload)
+		if errores:
+			raise HTTPException(status_code=400, detail="; ".join(errores[:10]))
+
 		from sqlalchemy import text
 		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		# Persistir la edad recalculada en su columna real (EDAD).
+		if "EDAD" in columnas:
+			payload["EDAD"] = payload.get("EDAD_ANOS", "")
 		# Solo usar columnas que existen en la tabla y que vienen en el payload
 		cols_validas = [c for c in columnas if c in payload and c not in ("id", "created_at")]
 		if not cols_validas:

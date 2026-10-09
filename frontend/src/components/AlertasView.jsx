@@ -347,6 +347,7 @@ function BandejaView({ onOpenFicha }) {
 // ── Vista "Por alerta" (tarjetas) ───────────────────────────────────
 function PorAlertaView({ onOpenFicha }) {
   const [alertas, setAlertas] = useState([])
+  const [totalGestantes, setTotalGestantes] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
@@ -369,10 +370,12 @@ function PorAlertaView({ onOpenFicha }) {
     setLoading(true); setError('')
     try {
       const data = await fetchAlertas(f)
-      setAlertas(Array.isArray(data) ? data : [])
+      setAlertas(Array.isArray(data?.alertas) ? data.alertas : [])
+      setTotalGestantes(Number(data?.total_gestantes) || 0)
     } catch (e) {
       setError(e.message || 'Error cargando las alertas')
       setAlertas([])
+      setTotalGestantes(0)
     } finally {
       setLoading(false)
     }
@@ -470,8 +473,9 @@ function PorAlertaView({ onOpenFicha }) {
       {/* Total (estilo SISPRO) */}
       <div className="flex justify-center">
         <div className="rounded-2xl px-12 py-5 text-center" style={{ background: 'linear-gradient(160deg, #3A863A, #5AAE5A)', color: '#fff', minWidth: 280, boxShadow: '0 6px 20px rgba(90,174,90,0.28)' }}>
-          <div className="text-4xl font-bold" style={{ lineHeight: 1 }}>{totalGeneral}</div>
-          <div className="text-xs mt-2" style={{ opacity: 0.92 }}>Total de coincidencias de alertas</div>
+          <div className="text-4xl font-bold" style={{ lineHeight: 1 }}>{totalGestantes}</div>
+          <div className="text-xs mt-2" style={{ opacity: 0.92 }}>Gestantes con al menos una alerta</div>
+          <div className="text-[0.68rem] mt-1" style={{ opacity: 0.85 }}>{totalGeneral} coincidencias en total (una gestante puede tener varias)</div>
         </div>
       </div>
 

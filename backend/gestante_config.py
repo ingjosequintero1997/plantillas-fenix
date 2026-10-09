@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import unicodedata
+from datetime import date, datetime
+
 
 def field(name: str, type_: str, required: bool = True, allowed: list[str] | None = None):
     return {
@@ -290,6 +293,137 @@ def allowed_for(field_name: str):
     norm = {normalize_text(k): v for k, v in ALLOWED_BY_NAME.items()}
     cn = normalize_text(field_name)
     return norm.get(cn, ["SIN DATO"])
+
+
+def normalize_field_key(name: str) -> str:
+    """Normalize a template field name into the frontend UPPER_SNAKE key.
+
+    Mirrors backend/_gen_form.py::_norm so frontend keys such as EDAD_ANOS or
+    FECHA_DE_NACIMIENTO map back to their template definition
+    (name -> {type, allowed}). All accent handling stays consistent here.
+    """
+    s = str(name if name is not None else "").strip()
+    s = "".join(
+        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+    )
+    s = (
+        s.upper()
+        .replace(" ", "_")
+        .replace("\n", "_")
+        .replace("(", "")
+        .replace(")", "")
+        .replace(",", "")
+        .replace("-", "_")
+        .replace("/", "_")
+        .replace(".", "")
+        .replace("?", "")
+        .replace(":", "")
+        .replace(";", "")
+    )
+    s = "__".join(filter(None, s.split("__")))
+    return s.strip("_")
+
+
+def field_meta_by_key() -> dict[str, dict]:
+    """Map every normalized frontend key to its template type(s) and allowed values.
+
+    Duplicate template names collapse into one key; their types and allowed
+    values are unioned so validation never rejects a value that is valid for
+    any of the fields sharing that key.
+    """
+    meta: dict[str, dict] = {}
+    for item in get_gestante_template():
+        key = normalize_field_key(item["name"])
+        entry = meta.setdefault(
+            key, {"types": set(), "allowed": set(), "name": item["name"]}
+        )
+        entry["types"].add(item["type"])
+        if item.get("allowed"):
+            entry["allowed"].update(item["allowed"])
+    return meta
+
+
+def _parse_date(value):
+    """Return a date for the accepted formats, else None."""
+    s = str(value if value is not None else "").strip()
+    if not s:
+        return None
+    head = s.split("T")[0].split(" ")[0].strip()
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(head, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def compute_edad(fecha_nacimiento) -> str:
+    """Integer years between the birth date and today (month/day aware).
+
+    Returns "" when the birth date is missing or unparseable.
+    """
+    born = _parse_date(fecha_nacimiento)
+    if born is None:
+        return ""
+    today = date.today()
+    years = today.year - born.year
+    if (today.month, today.day) < (born.month, born.day):
+        years -= 1
+    if years < 0 or years > 130:
+        return ""
+    return str(years)
+
+
+def validate_gestante_payload(payload: dict) -> tuple[list[str], dict]:
+    """Validate a single-record gestante payload against the instructivo.
+
+    Keys are the frontend UPPER_SNAKE keys. Returns (errors, cleaned) where
+    errors names the offending field and cleaned is a copy of the payload with
+    the age always recomputed from the birth date (the incoming age is never
+    trusted).
+    """
+    meta = field_meta_by_key()
+    errors: list[str] = []
+    cleaned = dict(payload or {})
+
+    for key, raw in list(cleaned.items()):
+        entry = meta.get(key)
+        if entry is None:
+            continue
+        val = "" if raw is None else str(raw).strip()
+        if not val:
+            continue
+        label = entry.get("name") or key
+        types = entry["types"]
+        if "SET" in types:
+            if val != "NA" and val not in entry["allowed"]:
+                errors.append(f"{label}: '{val}' no es una opcion valida")
+        elif "DATE" in types:
+            if _parse_date(val) is None:
+                errors.append(f"{label}: '{val}' no es una fecha valida (use AAAA-MM-DD)")
+        elif "DECIMAL" in types:
+            try:
+                float(val)
+            except ValueError:
+                errors.append(f"{label}: '{val}' debe ser un numero")
+        elif "INT" in types or "NUMERIC" in types:
+            try:
+                number = float(val)
+            except ValueError:
+                errors.append(f"{label}: '{val}' debe ser un numero")
+            else:
+                if "INT" in types and not number.is_integer():
+                    errors.append(f"{label}: '{val}' debe ser un numero entero")
+
+    # Conditional requirement: an "Indígena" pertenencia demands a real etnia.
+    if str(cleaned.get("PERTENECIA_ETNICA", "")).strip() == "Indígena":
+        etnia = str(cleaned.get("ETNIA", "")).strip()
+        if not etnia or etnia == "NA":
+            errors.append("Si la pertenencia étnica es Indígena, debe seleccionar una etnia")
+
+    cleaned["EDAD_ANOS"] = compute_edad(cleaned.get("FECHA_DE_NACIMIENTO"))
+
+    return errors, cleaned
 
 
 def build_gestante_template():
