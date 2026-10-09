@@ -614,11 +614,47 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
   }
 
+  const fieldErrorFor = (key) => {
+    const meta = templateMeta[key]
+    if (meta) {
+      const val = sanitizeFieldValue(form[key])
+      if (val) {
+        if (meta.types.has('SET')) {
+          if (val !== 'NA' && !meta.allowed.includes(val)) return 'Opcion no valida'
+        } else if (meta.types.has('DATE')) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return 'Fecha no valida'
+        } else if (meta.types.has('DECIMAL')) {
+          if (Number.isNaN(Number(val))) return 'Debe ser un numero'
+        } else if (meta.types.has('INT') || meta.types.has('NUMERIC')) {
+          const n = Number(val)
+          if (Number.isNaN(n)) return 'Debe ser un numero'
+          else if (meta.types.has('INT') && !Number.isInteger(n)) return 'Debe ser un entero'
+        }
+      }
+    }
+    if (key === 'ETNIA' && form.PERTENECIA_ETNICA === 'Indígena') {
+      const etnia = sanitizeFieldValue(form.ETNIA)
+      if (!etnia || etnia === 'NA') return 'Obligatoria si la pertenencia es Indígena'
+    }
+    if (key === 'FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO' || key === 'FECHA_DE_INGRESO_AL_CONTROL_PRENATAL') {
+      const fDx = sanitizeFieldValue(form.FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO)
+      const fIng = sanitizeFieldValue(form.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fDx) && /^\d{4}-\d{2}-\d{2}$/.test(fIng) && fDx > fIng) {
+        return 'El diagnostico no puede ser posterior al ingreso al control prenatal'
+      }
+    }
+    return ''
+  }
+
   const renderField = (fieldDef) => {
     const val = sanitizeFieldValue(form[fieldDef.key])
     const meta = templateMeta[fieldDef.key]
     const etniaRequired = fieldDef.key === 'ETNIA' && form.PERTENECIA_ETNICA === 'Indígena'
     const required = fieldDef.required || etniaRequired
+    const fieldErr = fieldErrorFor(fieldDef.key)
+    const errNode = fieldErr ? (
+      <div className="text-[0.7rem] mt-0.5" style={{ color: 'var(--danger)' }}>{fieldErr}</div>
+    ) : null
     const label = (
       <label className="form-label text-xs">
         {fieldDef.label}
@@ -630,6 +666,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return (
         <div key={fieldDef.key}>
           {label}
+        {errNode}
           <select
             value={val}
             onChange={(e) => handleChange(fieldDef.key, e.target.value)}
@@ -654,6 +691,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return (
         <div key={fieldDef.key}>
           {label}
+        {errNode}
           <div className="flex items-center gap-2">
             <input
               value={val}
@@ -678,6 +716,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return (
         <div key={fieldDef.key}>
           {label}
+        {errNode}
           <select
             value={valEsNaIndigena ? '' : val}
             onChange={(e) => handleChange(fieldDef.key, e.target.value)}
@@ -697,6 +736,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return (
         <div key={fieldDef.key}>
           {label}
+        {errNode}
           <input
             type="date"
             value={val}
@@ -711,6 +751,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return (
         <div key={fieldDef.key}>
           {label}
+        {errNode}
           <input
             type="number"
             step={resolved === 'decimal' ? 'any' : '1'}
@@ -726,6 +767,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return (
         <div key={fieldDef.key}>
           {label}
+        {errNode}
           <select
             value={val}
             onChange={(e) => handleChange(fieldDef.key, e.target.value)}
@@ -744,6 +786,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return (
         <div key={fieldDef.key} className="sm:col-span-2 md:col-span-3">
           {label}
+        {errNode}
           <textarea
             value={val}
             onChange={(e) => handleChange(fieldDef.key, e.target.value)}
@@ -757,6 +800,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     return (
       <div key={fieldDef.key}>
         {label}
+        {errNode}
         <input
           value={val}
           onChange={(e) => handleChange(fieldDef.key, e.target.value)}
