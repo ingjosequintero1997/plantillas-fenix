@@ -234,8 +234,8 @@ FIELD_SET_ALIASES = {
 	},
 	"RESULTADO TAMIZAJE DE CUELLO UTERINO": {
 		"NA": {"NA", "N/A", "SIN DATO", "NO APLICA"},
-		"POSITIVO": {"POSITIVO", "POSITIVA", "REACTIVO"},
-		"NEGATIVO": {"NEGATIVO", "NEGATIVA", "NO REACTIVO"},
+		"ALTERADO": {"ALTERADO", "ALTERADA", "ANORMAL", "ANORMALIDAD", "ALTERACION"},
+		"NORMAL": {"NORMAL", "NORMALIDAD", "SIN ALTERACION", "SIN ALTERACIONES"},
 	},
 	"RESULTADO RUBEOLA": {
 		"POSITIVO": {"POSITIVO", "POSITIVA", "REACTIVO", "12.5"},
@@ -893,6 +893,122 @@ def _col_exists(df, *patterns) -> bool:
     return False
 
 
+def _norm_col(name) -> str:
+    """Normalized column-name form used for exact header matching."""
+    return re.sub(r"\s+", "", str(name).upper()).translate(_ACENTOS)
+
+
+def _es_comodin_fecha(d) -> bool:
+    """True for placeholder comodin dates (any year <= 1900, e.g. 1800/1845/1900)."""
+    return d is not None and d.year <= 1900
+
+
+def _fecha_o_comodin(val):
+    """Like _safe_date but keeps placeholder comodin dates (year <= 1900).
+
+    _safe_date returns None for the literal comodin strings (1800-01-01 etc.);
+    this variant parses them so rules can tell "empty" from "comodin".
+    """
+    s = str(val if val is not None else "").strip()
+    if not s or s.upper() in ("SIN DATO", "N/A", "NONE"):
+        return None
+    iso = to_date_iso(s)
+    if not iso:
+        return None
+    try:
+        return datetime.strptime(iso, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _es_na_valor(val) -> bool:
+    """True when the value is "NA" (case- and space-insensitive)."""
+    return " ".join(str(val if val is not None else "").split()).lower() == "na"
+
+
+def _cell_exact(row, col_pos: dict, name: str) -> str:
+    """Value of the first column whose normalized name matches name exactly.
+
+    Preferable to _get_col for short or collision-prone names ("G", "Etnia",
+    "FECHA"): _get_col also accepts substring matches, so an earlier column
+    containing the pattern would win (e.g. "Regimen Afiliacion" for "G").
+    Falls back to _get_col when no exact match exists.
+    """
+    positions = col_pos.get(_norm_col(name))
+    if positions:
+        v = row.iloc[positions[0]]
+        return str(v).strip() if pd.notna(v) else ""
+    return _get_col(row, name)
+
+
+def _cells_exact(row, col_pos: dict, name: str) -> list:
+    """Values of every column whose normalized name matches name exactly.
+
+    Used for names that appear more than once in the template with the same
+    normalized form ("Fecha" defuncion / "FECHA" planificacion share one key
+    in the single-record validator).
+    """
+    out = []
+    for pos in col_pos.get(_norm_col(name), []):
+        v = row.iloc[pos]
+        out.append(str(v).strip() if pd.notna(v) else "")
+    return out
+
+
+# (fecha, resultado) display-name pairs for the lab coherence rules (R12),
+# mirroring gestante_config._lab_result_pairs (RAW_FIELDS adjacency: every
+# DATE column immediately followed by its "Resultado ..." column).
+_LAB_RESULT_PAIRS = (
+    ("Fecha Toma Prueba VIH Primer Tamizaje", "Resultado Primer Tamizaje prueba de VIH"),
+    ("Fecha Toma Prueba VIH Segundo Tamizaje", "Resultado Segundo Tamizaje Prueba de VIH"),
+    ("Fecha Toma Prueba VIH Tercer Tamizaje", "Resultado Tercer Tamizaje Prueba de VIH"),
+    ("Fecha Primera Prueba Treponemica Rapida Sifilis", "Resultado Primera Prueba Treponemica Rapida Sifilis"),
+    ("Fecha Segunda Prueba Treponemica Rapida Sifilis", "Resultado Segunda Prueba Treponemica Rapida Sifilis"),
+    ("Fecha Tercera Prueba Treponemica Rapida Sifilis", "Resultado Tercera Prueba Treponemica Rapida Sifilis"),
+    ("Fecha toma Segunda Prueba VIH", "Resultado Toma Segunda Prueba VIH"),
+    ("Fecha de Toma de Urocultivo", "Resultado Urocultivo"),
+    ("Fecha Toma Glicemia", "Resultado Glicemia"),
+    ("Fecha Prueba de Tolerancia Oral Glucosa", "Resultado Prueba de Tolerancia Oral Glucosa"),
+    ("Fecha 1ra Realizacion Hemoglobina", "Resultado 1ra Hemoglobina"),
+    ("Fecha 2da Realizacion Hemoglobina", "Resultado 2da Hemoglobina"),
+    ("Fecha 3ra Realizacion Hemoglobina", "Resultado 3ra Hemoglobina"),
+    ("Fecha de Antigeno Superficie Hepatitis B", "Resultado Antigeno Superficie Hepatitis B"),
+    ("Fecha Tamizaje Toxoplasma", "Resultado Toxoplasma"),
+    ("Fecha Citologia Cervicouterina", "Resultado Tamizaje de cuello uterino"),
+    ("Fecha de la prueba de Rubeola", "Resultado Rubeola"),
+    ("Fecha Prueba de Tamizaje para Estreptococo Grupo B", "Resultado Prueba de Tamizaje para Estreptococo Grupo B"),
+    ("Fecha Toma de Gota Gruesa (Malaria)", "Resultado Gota gruesa (Malaria)"),
+    ("Fecha de Realización Tamizaje Chagas", "Resultado Chagas"),
+)
+
+# Lab/tamizaje/vacunacion dates checked against the entry date (R13): the
+# R12 pair dates plus gestante_config._LAB_EXTRA_DATE_NAMES (control, FUM,
+# ingreso, diagnostico, nacimiento, parto/aborto and planificacion dates are
+# intentionally out of scope for that rule).
+_LAB_EXTRA_DATE_NAMES = (
+    "Asesoria Prueba VIH",
+    "Fecha prueba confirmatoria Según Algoritmo",
+    "Fecha de diagnóstico de sífilis",
+    "Fecha de inicio del tratamiento",
+    "Fecha de segunda dosis del tratamiento",
+    "Fecha de tercera dosis del tratamiento",
+    "FECHA DE APLICACIÓN INFLUENZA (Desde Semana 14)",
+    "FECHA DE APLICACIÓN TOXOIDE Según Antecedente Vacunal",
+    "FECHA DE APLICACIÓN DPT ACELULAR (Semana 26)",
+    "FECHA DE APLICACIÓN COVID-19 (1 En la Gestación)",
+    "FECHA DE APLICACIÓN VSR (Semana 28 - 36)",
+    "FECHA CONSULTA ODONTOLOGICA",
+    "Ecografia obstétrica con translucencia nucal (10,6 - 13,6)",
+    "Ecografia Obstetrica para la detección de anomalias estructurales (18 - 23)",
+    "Otras ecografías?",
+    "Fecha suministro Acido Folico",
+    "Fecha suministro Calcio (Semana 14)",
+    "Fecha suministro Hierro",
+    "fecha de suministro",
+    "Fecha Desparasitación Antihelmintica II y III Trimestre (Albendazo 400 Mg Dosis Unica)",
+)
+
+
 def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
     """
     Validate cross-field relationships for gestante data.
@@ -900,6 +1016,19 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
     """
     errors = []
     today = datetime.now().date()
+
+    # Atalah/ICBF IMC-por-edad-gestacional classifier (local import to avoid
+    # the formulas <-> validators circular import at module load).
+    try:
+        from .formulas import clasif_imc_eg
+    except ImportError:
+        from formulas import clasif_imc_eg
+
+    # Normalized header -> column positions, computed once: the exact-name
+    # lookups below run per row and would otherwise re-normalize every header.
+    col_pos: dict = {}
+    for _i, _c in enumerate(df.columns):
+        col_pos.setdefault(_norm_col(_c), []).append(_i)
 
     for ridx, row in df.iterrows():
         row_num = ridx + 1  # 1-indexed
@@ -934,12 +1063,44 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                     "severity": "error",
                 })
 
+        # R7: G,P,C,A,M,V cannot be less than 1 (parity with the unitary
+        # validator; exact lookup because single-letter _get_col patterns
+        # collide with earlier columns such as "Regimen Afiliacion").
+        for _name in ("G", "P", "C", "A", "M", "V"):
+            _num = _safe_int(_cell_exact(row, col_pos, _name))
+            if _num is not None and _num < 1:
+                errors.append({
+                    "row": row_num, "column": _name,
+                    "message": f"{_name}({_num}) debe ser un numero mayor o igual a 1",
+                    "severity": "error",
+                })
+
         # ── 2. Date logic ──
         fnac = _safe_date(_get_col(row, "Fecha de Nacimiento"))
         fum = _safe_date(_get_col(row, "FUM"))
         fpp = _safe_date(_get_col(row, "FPP"))
         ingreso = _safe_date(_get_col(row, "Fecha de Ingreso al Control Prenatal"))
         diagnostico = _safe_date(_get_col(row, "Fecha de Diagnostico del embarazo"))
+
+        # R4: the pregnancy diagnosis date cannot be after the prenatal-care
+        # entry date (parity with the unitary validator; comodins skipped).
+        if (
+            diagnostico
+            and ingreso
+            and not _es_comodin_fecha(diagnostico)
+            and not _es_comodin_fecha(ingreso)
+            and diagnostico > ingreso
+        ):
+            errors.append({
+                "row": row_num, "column": "Fecha de Diagnostico del embarazo",
+                "message": "Fecha Diagnostico Embarazo no puede ser posterior a la Fecha de Ingreso al Control Prenatal",
+                "severity": "error",
+            })
+
+        # Real entry date for the parity rules below: parsed AND not a
+        # placeholder comodin (same year <= 1900 criterion as the unitary
+        # validator's _es_comodin).
+        ingreso_real = ingreso if ingreso and not _es_comodin_fecha(ingreso) else None
 
         # Fecha nacimiento must be before today
         if fnac and fnac >= today:
@@ -964,22 +1125,24 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                     "severity": "warning",
                 })
 
-        # FUM debe ser ANTERIOR a fecha de diagnostico (instructivo)
+        # FUM debe ser ANTERIOR a fecha de diagnostico (instructivo; R5:
+        # error, not warning — parity with the unitary validator which blocks)
         if fum and diagnostico and fum not in _COMODIN and diagnostico not in _COMODIN:
             if fum >= diagnostico:
                 errors.append({
                     "row": row_num, "column": "FUM",
                     "message": f"FUM ({fum}) debe ser anterior a Fecha de Diagnostico del embarazo ({diagnostico})",
-                    "severity": "warning",
+                    "severity": "error",
                 })
 
-        # FUM debe ser ANTERIOR a fecha de ingreso (instructivo)
+        # FUM debe ser ANTERIOR a fecha de ingreso (instructivo; R5: error,
+        # not warning — parity with the unitary validator which blocks)
         if fum and ingreso and fum not in _COMODIN and ingreso not in _COMODIN:
             if fum >= ingreso:
                 errors.append({
                     "row": row_num, "column": "FUM",
                     "message": f"FUM ({fum}) debe ser anterior a Fecha de Ingreso al Control Prenatal ({ingreso})",
-                    "severity": "warning",
+                    "severity": "error",
                 })
 
         # FUM no puede ser futuro
@@ -1005,6 +1168,146 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                         "message": f"{ctrl_col} ({ctrl_date}) es futuro",
                         "severity": "error",
                     })
+
+        # ── Parity with the single-record validator (gestante_config.py).
+        # All checks below are severity "error" so the bulk upload blocks the
+        # same rows validate_gestante_payload blocks. ──
+
+        # R3: an "Indigena" pertenencia demands a real etnia (not NA/none).
+        if normalize_text(_cell_exact(row, col_pos, "Pertenecia Etnica")) == "INDIGENA":
+            etnia = normalize_text(_cell_exact(row, col_pos, "Etnia"))
+            if etnia in ("", "NA", "NINGUNA", "NINGUNAS DE LAS ANTERIORES", "SIN ETNIA"):
+                errors.append({
+                    "row": row_num, "column": "Etnia",
+                    "message": "Si la pertenencia etnica es Indigena, la Etnia no puede ser NA/Ninguna: seleccione una etnia",
+                    "severity": "error",
+                })
+
+        # R9: a high preeclampsia risk only makes sense inside a high
+        # obstetric risk.
+        preeclampsia = normalize_text(_cell_exact(row, col_pos, "Clacificacion del riesgo de preeclampsia"))
+        riesgo_obst = normalize_text(_cell_exact(row, col_pos, "Clasificación del riesgo obstetrico"))
+        if preeclampsia == "ALTO RIESGO DE PREECLAMPSIA" and riesgo_obst != "ALTO RIESGO OBSTETRICO":
+            errors.append({
+                "row": row_num, "column": "Clasificación del riesgo obstetrico",
+                "message": (
+                    "Si la Clasificacion del riesgo de preeclampsia es Alto riesgo de Preeclampsia, "
+                    "la Clasificacion del riesgo obstetrico debe ser Alto riesgo obstétrico"
+                ),
+                "severity": "error",
+            })
+
+        # R10: high thromboembolic risk requires an established treatment.
+        trombo = normalize_text(_cell_exact(row, col_pos, "Clacificacion del riesgo tromboembolico"))
+        if trombo == "ALTO RIESGO TROMBOEMBOLICO":
+            trat = _cell_exact(row, col_pos, "tratamiento Instaurado")
+            if not trat or _es_na_valor(trat):
+                errors.append({
+                    "row": row_num, "column": "tratamiento Instaurado",
+                    "message": (
+                        "Si la Clasificacion del riesgo tromboembolico es Alto riesgo Tromboembolico, "
+                        "Tratamiento instaurado es obligatorio (no puede quedar vacio ni NA)"
+                    ),
+                    "severity": "error",
+                })
+
+        # R11: with high preeclampsia risk the ASA supply date must be a real
+        # date (exact name "fecha de suministro", not "...de tratamiento").
+        if preeclampsia == "ALTO RIESGO DE PREECLAMPSIA":
+            suministro = _fecha_o_comodin(_cell_exact(row, col_pos, "fecha de suministro"))
+            if suministro is not None and _es_comodin_fecha(suministro):
+                errors.append({
+                    "row": row_num, "column": "fecha de suministro",
+                    "message": "Si el riesgo de preeclampsia es Alto, la fecha de suministro no puede ser una fecha comodin",
+                    "severity": "error",
+                })
+
+        # R12: a real lab date cannot pair with an "NA" result, and a comodin
+        # date only makes sense with an "NA" result (empty fields are skipped;
+        # malformed dates are already reported by the type validator).
+        for fecha_name, resultado_name in _LAB_RESULT_PAIRS:
+            raw_fecha = _cell_exact(row, col_pos, fecha_name)
+            raw_res = _cell_exact(row, col_pos, resultado_name)
+            if not raw_fecha or not raw_res:
+                continue
+            lab_fecha = _fecha_o_comodin(raw_fecha)
+            if lab_fecha is None:
+                continue
+            if _es_comodin_fecha(lab_fecha):
+                if not _es_na_valor(raw_res):
+                    errors.append({
+                        "row": row_num, "column": fecha_name,
+                        "message": f"Si {fecha_name} es una fecha comodin, {resultado_name} debe ser NA",
+                        "severity": "error",
+                    })
+            elif _es_na_valor(raw_res):
+                errors.append({
+                    "row": row_num, "column": fecha_name,
+                    "message": f"Si {fecha_name} tiene una fecha real, {resultado_name} no puede ser NA",
+                    "severity": "error",
+                })
+
+        # R13: lab/tamizaje/vacunacion dates cannot predate the entry date
+        # (empty/comodin/malformed dates are skipped; only real dates count).
+        if ingreso_real is not None:
+            for lab_name in [f for f, _ in _LAB_RESULT_PAIRS] + list(_LAB_EXTRA_DATE_NAMES):
+                lab_fecha = _fecha_o_comodin(_cell_exact(row, col_pos, lab_name))
+                if lab_fecha is None or _es_comodin_fecha(lab_fecha):
+                    continue
+                if lab_fecha < ingreso_real:
+                    errors.append({
+                        "row": row_num, "column": lab_name,
+                        "message": f"Si {lab_name} ({lab_fecha}) debe ser igual o posterior a la Fecha de Ingreso al Control Prenatal ({ingreso_real})",
+                        "severity": "error",
+                    })
+
+        # R15: the first control must equal the entry date, and the real
+        # control dates must be strictly increasing. "Ultimo Control Prenatal"
+        # is a formula (auto-computed as the max) and is not validated.
+        primera_ctrl = _fecha_o_comodin(_cell_exact(row, col_pos, "Fecha 1er Control"))
+        if (
+            ingreso_real is not None
+            and primera_ctrl is not None
+            and not _es_comodin_fecha(primera_ctrl)
+            and primera_ctrl != ingreso_real
+        ):
+            errors.append({
+                "row": row_num, "column": "Fecha 1er Control",
+                "message": "La Fecha 1er Control debe coincidir con la Fecha de Ingreso al Control Prenatal",
+                "severity": "error",
+            })
+        prev_nombre, prev_fecha = "", None
+        for ctrl_col in control_cols:
+            ctrl_fecha = _fecha_o_comodin(_cell_exact(row, col_pos, ctrl_col))
+            if ctrl_fecha is None or _es_comodin_fecha(ctrl_fecha):
+                # Empty, malformed or comodin dates do not join the chain.
+                continue
+            if prev_fecha is not None and ctrl_fecha <= prev_fecha:
+                errors.append({
+                    "row": row_num, "column": ctrl_col,
+                    "message": (
+                        f"Las fechas de controles prenatales deben ser estrictamente crecientes: "
+                        f"{ctrl_col} ({ctrl_fecha}) no es posterior a {prev_nombre} ({prev_fecha})"
+                    ),
+                    "severity": "error",
+                })
+            prev_nombre, prev_fecha = ctrl_col, ctrl_fecha
+
+        # R17: end-of-pregnancy and family-planning dates must postdate the
+        # entry date ("Fecha" defuncion and "FECHA" planificacion collapse into
+        # the same normalized name, so every exact match is checked).
+        if ingreso_real is not None:
+            for finom in ("Fecha de aborto", "Fecha de Parto", "FECHA"):
+                for raw_ffin in _cells_exact(row, col_pos, finom):
+                    ffin = _fecha_o_comodin(raw_ffin)
+                    if ffin is None or _es_comodin_fecha(ffin):
+                        continue
+                    if ffin <= ingreso_real:
+                        errors.append({
+                            "row": row_num, "column": finom,
+                            "message": f"Si {finom} ({ffin}) debe ser posterior a la Fecha de Ingreso al Control Prenatal ({ingreso_real})",
+                            "severity": "error",
+                        })
 
         # ── 3. Calculated field verification ──
         # EDAD should match (today - FECHA_NACIMIENTO)
@@ -1072,6 +1375,26 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                 errors.append({
                     "row": row_num, "column": "Clasificación del IMC",
                     "message": f"IMC ({imc:.2f}) indica '{expected_clasif}', pero dice '{clasif_imc}'",
+                    "severity": "warning",
+                })
+
+        # CLASIF_IMC_ACTUAL should match the Atalah/ICBF classification for the
+        # current gestational age (FUM -> ultimo control cuando exista, si no
+        # FUM -> hoy). Parity with formulas.py::aplicar_formulas.
+        imc_act = _safe_float(_cell_exact(row, col_pos, "IMC ACTUAL"))
+        clasif_act = _cell_exact(row, col_pos, "Clasificación del IMC ACTUAL")
+        if imc_act is not None and clasif_act and clasif_act.upper() not in ("SIN DATO", ""):
+            fum_d = _safe_date(_cell_exact(row, col_pos, "FUM"))
+            ult_d = _safe_date(_cell_exact(row, col_pos, "Ultimo Control Prenatal"))
+            sem_act = None
+            if fum_d is not None:
+                ref = ult_d if ult_d is not None else today
+                sem_act = (ref - fum_d).days / 7.0
+            esperado_act = clasif_imc_eg(imc_act, sem_act) if sem_act is not None else None
+            if esperado_act and normalize_text(clasif_act) != normalize_text(esperado_act):
+                errors.append({
+                    "row": row_num, "column": "Clasificación del IMC ACTUAL",
+                    "message": f"IMC ACTUAL ({imc_act}) a {round(sem_act)} semanas indica '{esperado_act}', pero dice '{clasif_act}'",
                     "severity": "warning",
                 })
 

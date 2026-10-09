@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unicodedata
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 
 def field(name: str, type_: str, required: bool = True, allowed: list[str] | None = None):
@@ -258,7 +258,7 @@ ALLOWED_BY_NAME = {
     "Resultado Realizacion Hemoclasificación (Factor RH)": ["NA", "O+", "O-", "A+", "A-", "AB+", "AB-", "B+", "B-"],
     "Resultado Antigeno Superficie Hepatitis B": ["NA", "POSITIVO", "NEGATIVO"],
     "Resultado Toxoplasma": ["NA", "POSITIVO", "NEGATIVO"],
-    "Resultado Tamizaje de cuello uterino": ["NA", "POSITIVO", "NEGATIVO"],
+    "Resultado Tamizaje de cuello uterino": ["NA", "ALTERADO", "NORMAL"],
     "Resultado Rubeola": ["NA", "POSITIVO", "NEGATIVO"],
     "Resultado Prueba de Tamizaje para Estreptococo Grupo B": ["NA", "POSITIVO", "NEGATIVO"],
     "Resultado Gota gruesa (Malaria)": ["NA", "POSITIVO", "NEGATIVO"],
@@ -357,6 +357,17 @@ def _parse_date(value):
     return None
 
 
+def _parse_int(value) -> int | None:
+    """Return the value as an int, else None ("" and junk count as None)."""
+    s = str(value if value is not None else "").strip()
+    if not s:
+        return None
+    try:
+        return int(float(s))
+    except (TypeError, ValueError):
+        return None
+
+
 def compute_edad(fecha_nacimiento) -> str:
     """Integer years between the birth date and today (month/day aware).
 
@@ -372,6 +383,158 @@ def compute_edad(fecha_nacimiento) -> str:
     if years < 0 or years > 130:
         return ""
     return str(years)
+
+
+def _es_comodin(d) -> bool:
+    """True for placeholder comodin dates (any year <= 1900, e.g. 1800/1845/1900)."""
+    return d is not None and d.year <= 1900
+
+
+def _es_na(valor) -> bool:
+    """True when the value is "NA" (case- and space-insensitive)."""
+    return " ".join(str(valor if valor is not None else "").split()).lower() == "na"
+
+
+def _txt(valor) -> str:
+    """Trimmed string view of a payload value (None becomes ""; 0 stays "0")."""
+    return "" if valor is None else str(valor).strip()
+
+
+def _sin_acentos(s: str) -> str:
+    """Drop combining marks so labels can compare without accents."""
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+
+def _coincide(valor, esperado: str) -> bool:
+    """Case-, space- and accent-insensitive equality for SET labels."""
+    a = _sin_acentos(" ".join(str(valor if valor is not None else "").split())).lower()
+    b = _sin_acentos(" ".join(str(esperado).split())).lower()
+    return a == b
+
+
+def _lab_result_pairs() -> list[tuple[str, str]]:
+    """(fecha, resultado) template names for the lab coherence rules.
+
+    Built from RAW_FIELDS by adjacency: every DATE column immediately
+    followed by its "Resultado ..." column (VIH 1-3, VIH seguimiento,
+    sifilis treponemica 1-3, urocultivo, glicemia, PTOG, hemoglobina 1-3,
+    hepatitis B, toxoplasma, citologia cervicouterina, rubeola,
+    estreptococo, gota gruesa/malaria y chagas).
+    """
+    pairs: list[tuple[str, str]] = []
+    for i in range(len(RAW_FIELDS) - 1):
+        (fecha, fecha_type), (resultado, _) = RAW_FIELDS[i], RAW_FIELDS[i + 1]
+        if fecha_type == "DATE" and resultado.strip().startswith("Resultado"):
+            pairs.append((fecha.strip(), resultado.strip()))
+    return pairs
+
+
+# Remaining lab/tamizaje/vacunacion dates: the RAW_FIELDS block from
+# "Asesoria Prueba VIH" through "Fecha Desparasitacion ..." (the pair dates
+# come from _lab_result_pairs). Control, FUM, ingreso, diagnostico,
+# nacimiento, parto/aborto and planificacion dates are intentionally out of
+# scope for the "lab date >= ingreso" rule.
+_LAB_EXTRA_DATE_NAMES: tuple[str, ...] = (
+    "Asesoria Prueba VIH",
+    "Fecha prueba confirmatoria Según Algoritmo",
+    "Fecha de diagnóstico de sífilis",
+    "Fecha de inicio del tratamiento",
+    "Fecha de segunda dosis del tratamiento",
+    "Fecha de tercera dosis del tratamiento",
+    "FECHA DE APLICACIÓN INFLUENZA (Desde Semana 14)",
+    "FECHA DE APLICACIÓN TOXOIDE Según Antecedente Vacunal",
+    "FECHA DE APLICACIÓN DPT ACELULAR (Semana 26)",
+    "FECHA DE APLICACIÓN COVID-19 (1 En la Gestación)",
+    "FECHA DE APLICACIÓN VSR (Semana 28 - 36)",
+    "FECHA CONSULTA ODONTOLOGICA",
+    "Ecografia obstétrica con translucencia nucal (10,6 - 13,6)",
+    "Ecografia Obstetrica para la detección de anomalias estructurales (18 - 23)",
+    "Otras ecografías?",
+    "Fecha suministro Acido Folico",
+    "Fecha suministro Calcio (Semana 14)",
+    "Fecha suministro Hierro",
+    "fecha de suministro",
+    "Fecha Desparasitación Antihelmintica II y III Trimestre (Albendazo 400 Mg Dosis Unica)",
+)
+
+# Prenatal control dates in template order (mirrors RAW_FIELDS rows
+# "Fecha 1er Control".."Fecha 9no Control").
+_CONTROL_DATE_NAMES: tuple[str, ...] = (
+    "Fecha 1er Control",
+    "Fecha 2do Control",
+    "Fecha 3er Control",
+    "Fecha 4to Control",
+    "Fecha 5to Control",
+    "Fecha 6to Control",
+    "Fecha 7mo Control",
+    "fecha 8vo Control",
+    "Fecha 9no Control",
+)
+
+# Every input formulas.py::aplicar_formulas reads. The single-record
+# auto-formula pass only runs when the payload carries at least one of them,
+# so empty or unrelated payloads do not sprout formula columns.
+_FORMULA_INPUT_NAMES: tuple[str, ...] = (
+    "No. De Identificación",
+    "Fecha de Nacimiento",
+    "Fecha de Ingreso al Control Prenatal",
+    "FUM",
+    "FPP",
+    "Peso Inicial (kg)",
+    "Talla (metros)",
+    "peso actual",
+    "talla actual",
+    "Tipo de tratamiento suminitrado para anemia",
+    "Asesoria Prueba VIH",
+    "Fecha Toma Prueba VIH Primer Tamizaje",
+    "Fecha Toma Prueba VIH Segundo Tamizaje",
+    "Fecha Toma Prueba VIH Tercer Tamizaje",
+    "Fecha Primera Prueba Treponemica Rapida Sifilis",
+    "Fecha Segunda Prueba Treponemica Rapida Sifilis",
+    "Fecha Tercera Prueba Treponemica Rapida Sifilis",
+    "Fecha toma Segunda Prueba VIH",
+    "Fecha prueba confirmatoria Según Algoritmo",
+    "Fecha 1ra Realizacion Hemoglobina",
+    "Resultado 1ra Hemoglobina",
+    "Fecha 2da Realizacion Hemoglobina",
+    "Resultado 2da Hemoglobina",
+    "Fecha 3ra Realizacion Hemoglobina",
+    "Resultado 3ra Hemoglobina",
+) + _CONTROL_DATE_NAMES
+
+
+def aplicar_formulas_unitario(cleaned: dict) -> dict:
+    """Run formulas.py::aplicar_formulas over a single-record payload.
+
+    The bulk path hands the formulas a dict keyed by template display names
+    while this validator works with normalized frontend keys. Build the
+    display-name view (first template occurrence wins on duplicated names),
+    let the shared formulas fill it, then write every mapped field back as a
+    string so IMC, controles, trimestres, relacion anemia, etc. match the
+    bulk results (None becomes "").
+    """
+    name_to_key: dict[str, str] = {}
+    for item in get_gestante_template():
+        name = item["name"]
+        if name not in name_to_key:
+            name_to_key[name] = normalize_field_key(name)
+
+    fila: dict[str, object] = {}
+    for name, key in name_to_key.items():
+        value = cleaned.get(key, "")
+        fila[name] = "" if value is None else value
+
+    try:
+        from .formulas import aplicar_formulas
+    except ImportError:
+        from formulas import aplicar_formulas
+
+    fila = aplicar_formulas(fila)
+
+    for name, key in name_to_key.items():
+        value = fila.get(name)
+        cleaned[key] = "" if value is None else str(value)
+    return cleaned
 
 
 def validate_gestante_payload(payload: dict) -> tuple[list[str], dict]:
@@ -428,6 +591,178 @@ def validate_gestante_payload(payload: dict) -> tuple[list[str], dict]:
         errors.append(
             "Fecha Diagnostico Embarazo no puede ser posterior a la Fecha de Ingreso al Control Prenatal"
         )
+
+    # Cross-field: the last menstrual period must precede both the prenatal-care
+    # entry date and the pregnancy diagnosis date. The bulk validator only warns
+    # about these; here the single record is blocked with an error.
+    fum = _parse_date(cleaned.get("FUM"))
+    if fum and f_ing and fum >= f_ing:
+        errors.append("La FUM debe ser anterior a la Fecha de Ingreso al Control Prenatal")
+    if fum and f_dx and fum >= f_dx:
+        errors.append("La FUM debe ser anterior a la Fecha de Diagnostico del Embarazo")
+
+    # Cross-field: obstetric counts, checked only when every involved value
+    # parses as a number (G >= P+A+M, P >= C, P >= V).
+    g = _parse_int(cleaned.get("G"))
+    p = _parse_int(cleaned.get("P"))
+    c = _parse_int(cleaned.get("C"))
+    a = _parse_int(cleaned.get("A"))
+    m = _parse_int(cleaned.get("M"))
+    v = _parse_int(cleaned.get("V"))
+    if g is not None and p is not None and a is not None and m is not None and g < p + a + m:
+        errors.append(f"G({g}) debe ser >= P({p})+A({a})+M({m})={p + a + m}")
+    if p is not None and c is not None and p < c:
+        errors.append(f"P({p}) debe ser >= C({c})")
+    if p is not None and v is not None and p < v:
+        errors.append(f"P({p}) debe ser >= V({v}) (hijos vivos no puede exceder partos)")
+
+    # R7: obstetric counts cannot be zero (0 would mean "never recorded").
+    for _name, _count in (("G", g), ("P", p), ("C", c), ("A", a), ("M", m), ("V", v)):
+        if _count is not None and _count < 1:
+            errors.append(f"{_name}: debe ser un numero mayor o igual a 1")
+
+    # Real prenatal-care entry date for the rules below: parsed AND not a
+    # placeholder comodin (same < 1900 criterion as main._fecha_real_caso).
+    ingreso = f_ing if not _es_comodin(f_ing) else None
+
+    # R9: a high preeclampsia risk only makes sense inside a high obstetric risk.
+    k_pree = normalize_field_key("Clacificacion del riesgo de preeclampsia")
+    k_obs = normalize_field_key("Clasificación del riesgo obstetrico")
+    if _coincide(cleaned.get(k_pree), "Alto riesgo de Preeclampsia") and not _coincide(
+        cleaned.get(k_obs), "Alto riesgo obstétrico"
+    ):
+        errors.append(
+            "Si la Clasificacion del riesgo de preeclampsia es Alto riesgo de Preeclampsia, "
+            "la Clasificacion del riesgo obstetrico debe ser Alto riesgo obstétrico"
+        )
+
+    # R10: high thromboembolic risk requires an established treatment. The two
+    # template names ("tratamiento Instaurado"/"Tratamiento instaurado") share
+    # one normalized key, so the key is what gets validated.
+    k_trombo = normalize_field_key("Clacificacion del riesgo tromboembolico")
+    k_trat = normalize_field_key("tratamiento Instaurado")
+    if _coincide(cleaned.get(k_trombo), "Alto riesgo Tromboembolico"):
+        trat = _txt(cleaned.get(k_trat))
+        if not trat or _es_na(trat):
+            errors.append(
+                "Si la Clasificacion del riesgo tromboembolico es Alto riesgo Tromboembolico, "
+                "Tratamiento instaurado es obligatorio (no puede quedar vacio ni NA)"
+            )
+
+    # R11: with high preeclampsia risk the supply date must be a real date
+    # (key "fecha de suministro", the ASA row; it does not collide with
+    # "fecha de suministro de tratamiento").
+    if _coincide(cleaned.get(k_pree), "Alto riesgo de Preeclampsia"):
+        k_sum = normalize_field_key("fecha de suministro")
+        raw_sum = _txt(cleaned.get(k_sum))
+        if raw_sum and _es_comodin(_parse_date(raw_sum)):
+            errors.append(
+                "Si el riesgo de preeclampsia es Alto, la fecha de suministro no puede ser una fecha comodin"
+            )
+
+    # R12: a real lab date cannot pair with an "NA" result, and a comodin
+    # date only makes sense with an "NA" result (empty fields are skipped).
+    for fecha_name, resultado_name in _lab_result_pairs():
+        k_fecha = normalize_field_key(fecha_name)
+        k_res = normalize_field_key(resultado_name)
+        if k_fecha not in meta or k_res not in meta:
+            continue
+        raw_fecha = _txt(cleaned.get(k_fecha))
+        raw_res = _txt(cleaned.get(k_res))
+        if not raw_fecha or not raw_res:
+            continue
+        fecha = _parse_date(raw_fecha)
+        if fecha is None:
+            # Malformed dates are already reported by the type pass above.
+            continue
+        if _es_comodin(fecha):
+            if not _es_na(raw_res):
+                errors.append(
+                    f"Si {fecha_name} es una fecha comodin, {resultado_name} debe ser NA"
+                )
+        elif _es_na(raw_res):
+            errors.append(
+                f"Si {fecha_name} tiene una fecha real, {resultado_name} no puede ser NA"
+            )
+
+    # R13: lab/tamizaje/vacunacion dates cannot predate the entry date
+    # (comodin/empty/unparseable dates are skipped; only real dates count).
+    if ingreso is not None:
+        for fecha_name in [f for f, _ in _lab_result_pairs()] + list(_LAB_EXTRA_DATE_NAMES):
+            k_fecha = normalize_field_key(fecha_name)
+            if k_fecha not in meta:
+                continue
+            fecha = _parse_date(cleaned.get(k_fecha))
+            if fecha is None or _es_comodin(fecha):
+                continue
+            if fecha < ingreso:
+                errors.append(
+                    f"Si {fecha_name} ({fecha}) debe ser igual o posterior a la Fecha de Ingreso al Control Prenatal ({ingreso})"
+                )
+
+    # R15: the first control must equal the entry date, and the real control
+    # dates must be strictly increasing. "Ultimo Control Prenatal" is a
+    # formula (auto-computed as the max) and is deliberately not validated.
+    controles = [(nombre, normalize_field_key(nombre)) for nombre in _CONTROL_DATE_NAMES]
+    if ingreso is not None:
+        primera = _parse_date(cleaned.get(controles[0][1]))
+        if primera is not None and not _es_comodin(primera) and primera != ingreso:
+            errors.append(
+                "La Fecha 1er Control debe coincidir con la Fecha de Ingreso al Control Prenatal"
+            )
+    prev_nombre = ""
+    prev_fecha = None
+    for nombre, k_ctrl in controles:
+        fecha = _parse_date(cleaned.get(k_ctrl))
+        if fecha is None or _es_comodin(fecha):
+            # Empty, malformed or comodin dates do not join the chain.
+            continue
+        if prev_fecha is not None and fecha <= prev_fecha:
+            errors.append(
+                f"Las fechas de controles prenatales deben ser estrictamente crecientes: "
+                f"{nombre} ({fecha}) no es posterior a {prev_nombre} ({prev_fecha})"
+            )
+        prev_nombre, prev_fecha = nombre, fecha
+
+    # R17: end-of-pregnancy and family-planning dates must postdate the entry
+    # date. NOTE: the template's "Fecha" (defuncion) and "FECHA" (planificacion)
+    # collapse into the same normalized key FECHA, so both share this check.
+    if ingreso is not None:
+        for nombre in ("Fecha de aborto", "Fecha de Parto", "FECHA"):
+            fecha = _parse_date(cleaned.get(normalize_field_key(nombre)))
+            if fecha is None or _es_comodin(fecha):
+                continue
+            if fecha <= ingreso:
+                errors.append(
+                    f"Si {nombre} ({fecha}) debe ser posterior a la Fecha de Ingreso al Control Prenatal ({ingreso})"
+                )
+
+    # Auto-formula pass (parity with the bulk path): IMC, clasificaciones,
+    # controles, trimestres, relacion anemia, etc. Runs only when the payload
+    # carries at least one input the formulas read.
+    if any(
+        _txt(cleaned.get(normalize_field_key(nombre)))
+        for nombre in _FORMULA_INPUT_NAMES
+    ):
+        cleaned = aplicar_formulas_unitario(cleaned)
+
+    # Derived fields (authoritative, always overwritten from FUM): FPP = FUM + 280
+    # days, days left until the due date and the resulting alert. A missing or
+    # unparseable FUM leaves FPP/DIAS_PARA_EL_PARTO/ALARMA with whatever the
+    # formula pass above derived (incoming values pass through untouched).
+    if fum:
+        fpp = fum + timedelta(days=280)
+        dias = (fpp - date.today()).days
+        cleaned["FPP"] = fpp.strftime("%Y-%m-%d")
+        cleaned["DIAS_PARA_EL_PARTO"] = str(dias)
+        if dias < 0:
+            cleaned["ALARMA"] = "NACIDO"
+        elif dias <= 7:
+            cleaned["ALARMA"] = "SEMANA DE PARTO"
+        elif dias <= 28:
+            cleaned["ALARMA"] = "MENOS 4 SEM"
+        else:
+            cleaned["ALARMA"] = "PENDIENTE"
 
     cleaned["EDAD_ANOS"] = compute_edad(cleaned.get("FECHA_DE_NACIMIENTO"))
 

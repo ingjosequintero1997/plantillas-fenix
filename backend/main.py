@@ -6779,9 +6779,9 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 			# Regla automatica: si tras el ajuste el registro cumple, pasa a Caso Cerrado.
 			try:
 				_chk = db.execute(text(
-					'SELECT "FUM", "FECHA_DE_PARTO", "FECHA_DE_ABORTO", CASO_CERRADO FROM gestantes WHERE id = :id'
+					'SELECT "FUM", "FECHA_DE_PARTO", "FECHA_DE_ABORTO", CASO_CERRADO, "FPP" FROM gestantes WHERE id = :id'
 				), {"id": registro_id}).fetchone()
-				if _chk is not None and not _es_cerrado(_chk[3]) and cumple_caso_cerrado(_chk[0], _chk[1], _chk[2]):
+				if _chk is not None and not _es_cerrado(_chk[3]) and cumple_caso_cerrado(_chk[0], _chk[1], _chk[2], _chk[4]):
 					db.execute(text('UPDATE gestantes SET CASO_CERRADO = TRUE WHERE id = :id'), {"id": registro_id})
 					db.commit()
 			except Exception:
@@ -6867,10 +6867,10 @@ async def crear_gestante(payload: dict, current_user: User = Depends(get_current
 			_doc = str(payload.get("NO_DE_IDENTIFICACION", "")).strip()
 			if _doc:
 				_new_row = db.execute(text(
-					'SELECT id, "FUM", "FECHA_DE_PARTO", "FECHA_DE_ABORTO", CASO_CERRADO FROM gestantes '
+					'SELECT id, "FUM", "FECHA_DE_PARTO", "FECHA_DE_ABORTO", CASO_CERRADO, "FPP" FROM gestantes '
 					'WHERE "NO_DE_IDENTIFICACION" = :d ORDER BY id DESC LIMIT 1'
 				), {"d": _doc}).fetchone()
-				if _new_row is not None and not _es_cerrado(_new_row[4]) and cumple_caso_cerrado(_new_row[1], _new_row[2], _new_row[3]):
+				if _new_row is not None and not _es_cerrado(_new_row[4]) and cumple_caso_cerrado(_new_row[1], _new_row[2], _new_row[3], _new_row[5]):
 					db.execute(text('UPDATE gestantes SET CASO_CERRADO = TRUE WHERE id = :id'), {"id": _new_row[0]})
 					db.commit()
 		except Exception:
@@ -6924,9 +6924,13 @@ async def obtener_auditoria(registro_id: int, current_user: User = Depends(get_c
 
 
 # ─── Regla automatica de Caso Cerrado ────────────────────────────────────
-# Un registro pasa a Caso Cerrado cuando (FUM + 10 meses calendario) ya
-# ocurrio Y existe una fecha real de parto o de aborto. Se ignora el comodin
-# 1845-01-01 (y cualquier anio < 1900), igual que el auto-fill historico.
+# Un registro pasa a Caso Cerrado cuando la FPP (fecha probable de parto) ya
+# ocurrio Y existe una fecha real de parto o de aborto. La FPP de referencia
+# es la columna FPP si es una fecha real; si no, se deriva como FUM + 280 dias.
+# La fecha del evento debe ser real, coherente y del mismo anio calendario que
+# la FPP (regla literal "fechas coherentes y del mismo anio correspondiente").
+# Se ignora el comodin 1845-01-01 (y cualquier anio < 1900), igual que el
+# auto-fill historico.
 
 def _fecha_real_caso(valor):
     """Devuelve un datetime.date si el valor es una fecha real; si no, None."""
@@ -6968,16 +6972,37 @@ def _sumar_meses(fecha, meses):
     return _date(y, m, min(fecha.day, ultimo))
 
 
-def cumple_caso_cerrado(fum, fecha_parto, fecha_aborto, hoy=None):
-    """True si el registro cumple la regla de Caso Cerrado."""
+def cumple_caso_cerrado(fum, fecha_parto, fecha_aborto, fpp=None, hoy=None):
+    """True si el registro cumple la regla de Caso Cerrado (referencia FPP)."""
     from datetime import date as _date
-    f = _fecha_real_caso(fum)
-    if not f:
+    from datetime import timedelta as _timedelta
+    # 1. FPP de referencia: la recibida si es real; si no, FUM real + 280 dias.
+    fpp_ref = _fecha_real_caso(fpp)
+    if not fpp_ref:
+        f = _fecha_real_caso(fum)
+        if not f:
+            return False
+        fpp_ref = f + _timedelta(days=280)
+    # 2. La fecha probable de parto debe haber pasado (hoy >= FPP).
+    if hoy is None:
+        hoy = _date.today()
+    elif not isinstance(hoy, _date):
+        hoy = _fecha_real_caso(hoy)
+        if not hoy:
+            return False
+    if hoy < fpp_ref:
         return False
-    hoy = hoy or _date.today()
-    if hoy < _sumar_meses(f, 10):
+    # 3. Debe existir un evento real (parto o aborto); el comodin se excluye.
+    evento = _fecha_real_caso(fecha_parto) or _fecha_real_caso(fecha_aborto)
+    if not evento:
         return False
-    return bool(_fecha_real_caso(fecha_parto) or _fecha_real_caso(fecha_aborto))
+    # 4. Fechas coherentes y del mismo anio correspondiente: el evento debe
+    #    estar en el mismo anio calendario que la FPP. Regla literal del
+    #    usuario; ajustar aqui si se define una ventana distinta.
+    if evento.year != fpp_ref.year:
+        return False
+    # 5. Cumple la regla.
+    return True
 
 
 def _es_cerrado(valor):
@@ -6992,12 +7017,13 @@ def _marcar_casos_cerrados(db) -> int:
 	fecha_cols = [c for c in ["FECHA_DE_PARTO", "FECHA_DE_ABORTO"] if c in all_cols]
 	if "FUM" not in all_cols or not fecha_cols:
 		return 0
-	select_cols = ", ".join(f'"{c}"' for c in (["FUM"] + fecha_cols))
+	fpp_cols = [c for c in ["FPP"] if c in all_cols]
+	select_cols = ", ".join(f'"{c}"' for c in (["FUM"] + fecha_cols + fpp_cols))
 	candidatos = db.execute(text(f'SELECT id, {select_cols} FROM gestantes WHERE {no_cerrado}')).fetchall()
 	ids_cerrar = []
 	for row in candidatos:
 		m = dict(row._mapping)
-		if cumple_caso_cerrado(m.get("FUM"), m.get("FECHA_DE_PARTO"), m.get("FECHA_DE_ABORTO")):
+		if cumple_caso_cerrado(m.get("FUM"), m.get("FECHA_DE_PARTO"), m.get("FECHA_DE_ABORTO"), m.get("FPP")):
 			ids_cerrar.append(m["id"])
 	for i in range(0, len(ids_cerrar), 500):
 		lote = ids_cerrar[i:i + 500]
@@ -7019,7 +7045,7 @@ async def auto_fill_caso_cerrado(current_user: User = Depends(require_admin)):
 		return {
 			"success": True,
 			"total_caso_cerrado": rows,
-			"criterios": {"regla": "Caso Cerrado cuando (FUM + 10 meses calendario) y existe fecha real de parto o aborto (el comodín es 1845-01-01)"},
+			"criterios": {"regla": "Caso Cerrado cuando la FPP (o FUM + 280 dias) ya ocurrio y existe fecha real de parto o aborto, coherente y del mismo anio que la FPP (el comodín es 1845-01-01)"},
 		}
 	except Exception as e:
 		db.rollback()
@@ -7057,7 +7083,7 @@ async def limpiar_caso_cerrado(current_user: User = Depends(require_admin)):
 
 @app.get("/data/gestantes/caso-cerrado/exportar")
 async def exportar_caso_cerrado(current_user: User = Depends(get_current_user), ips: str = ""):
-	"""Genera un Excel con los casos cerrados (regla FUM + 10 meses y fecha real
+	"""Genera un Excel con los casos cerrados (regla FPP ya ocurrida y fecha real
 	de parto o aborto), leyendo los cargues. Admin exporta todo o filtra por
 	?ips=; prestador/lider/ips_user solo su IPS."""
 	ensure_db_ready()
@@ -7107,6 +7133,7 @@ async def exportar_caso_cerrado(current_user: User = Depends(get_current_user), 
 		i_parto = _idx(["FECHA DE PARTO"])
 		i_aborto = _idx(["FECHA DE ABORTO"])
 		i_fum = _idx(["FUM"])
+		i_fpp = _idx(["FPP"])
 		i_fecha = next((i for i, n in enumerate(names) if n.strip().upper() == "FECHA"), None)
 
 		_fr = _re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
@@ -7150,7 +7177,8 @@ async def exportar_caso_cerrado(current_user: User = Depends(get_current_user), 
 				parto = cols[i_parto] if (i_parto is not None and i_parto < len(cols)) else ""
 				aborto = cols[i_aborto] if (i_aborto is not None and i_aborto < len(cols)) else ""
 				fum = cols[i_fum] if (i_fum is not None and i_fum < len(cols)) else ""
-				if cumple_caso_cerrado(fum, parto, aborto):
+				fpp = cols[i_fpp] if (i_fpp is not None and i_fpp < len(cols)) else None
+				if cumple_caso_cerrado(fum, parto, aborto, fpp):
 					vistos.add(doc)
 					rows_out.append(line)
 

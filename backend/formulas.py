@@ -72,6 +72,43 @@ def _clasif_imc(imc):
     return 'OBESIDAD GRADO 3'
 
 
+# Tabla de IMC para la edad gestacional (Atalah/ICBF): por semana de gestacion
+# (6..42) guarda (adecuado_lo, adecuado_hi, sobrepeso_hi) en kg/m^2.
+_IMC_EG_TABLE = {
+    6: (20.0, 24.9, 30.0), 7: (20.1, 24.9, 30.0), 8: (20.2, 25.0, 30.1), 9: (20.2, 25.1, 30.2),
+    10: (20.3, 25.2, 30.2), 11: (20.4, 25.3, 30.3), 12: (20.5, 25.4, 30.3), 13: (20.7, 25.6, 30.4),
+    14: (20.8, 25.7, 30.5), 15: (20.9, 25.8, 30.6), 16: (21.1, 25.9, 30.7), 17: (21.2, 26.0, 30.8),
+    18: (21.3, 26.1, 30.9), 19: (21.5, 26.2, 30.9), 20: (21.6, 26.3, 31.0), 21: (21.8, 26.4, 31.1),
+    22: (21.9, 26.6, 31.2), 23: (22.1, 26.7, 31.3), 24: (22.3, 26.9, 31.5), 25: (22.5, 27.0, 31.6),
+    26: (22.7, 27.2, 31.7), 27: (22.8, 27.3, 31.8), 28: (23.0, 27.5, 31.9), 29: (23.2, 27.6, 32.0),
+    30: (23.4, 27.8, 32.1), 31: (23.5, 27.9, 32.2), 32: (23.7, 28.0, 32.3), 33: (23.9, 28.1, 32.4),
+    34: (24.0, 28.3, 32.5), 35: (24.2, 28.4, 32.6), 36: (24.3, 28.5, 32.7), 37: (24.5, 28.7, 32.8),
+    38: (24.6, 28.8, 32.9), 39: (24.8, 28.9, 33.0), 40: (25.0, 29.1, 33.1), 41: (25.1, 29.2, 33.2),
+    42: (25.1, 29.2, 33.2),
+}
+
+
+def clasif_imc_eg(imc, semanas):
+    """Clasificación del IMC para la edad gestacional (Atalah/ICBF)."""
+    if imc is None or semanas is None:
+        return None
+    try:
+        imc = float(imc)
+        semanas = float(semanas)
+    except (TypeError, ValueError):
+        return None
+    # Redondear a la semana mas cercana y acotar al rango de la tabla (6..42).
+    sem = min(42, max(6, int(round(semanas))))
+    adecuado_lo, adecuado_hi, sobrepeso_hi = _IMC_EG_TABLE[sem]
+    if imc < adecuado_lo:
+        return 'Bajo Peso para la Edad Gestacional'
+    if imc <= adecuado_hi:
+        return 'IMC Adecuado para la Edad Gestacional'
+    if imc <= sobrepeso_hi:
+        return 'Sobrepeso para la Edad Gestacional'
+    return 'Obesidad para la Edad Gestacional'
+
+
 def _trimestre(semanas):
     if semanas is None:
         return 0
@@ -216,8 +253,15 @@ def aplicar_formulas(fila: dict) -> dict:
         # 4. Alarma segun dias
         fila[ALARMA] = _alarma((fpp - hoy).days)
 
-    # NOTA: "Edad Gest Inicio Control" y "Trimestre inicio control" quedan
-    # FUERA de la lista de formulas requeridas (se omiten a proposito).
+    # 5. Edad gestacional al inicio del control = (ingreso - FUM) en semanas,
+    #    con su trimestre (<14 -> 1, <28 -> 2, >=28 -> 3). Solo se calcula
+    #    cuando FUM e ingreso son fechas reales; si falta alguna se respeta el
+    #    valor entrante (no se borra).
+    ingreso = _fecha(fila.get(INGRESO))
+    sem_inicio = _semanas(fum, ingreso)
+    if sem_inicio is not None:
+        fila[EDAD_GEST_INICIO] = _fmt_num(round(sem_inicio, 1))
+        fila[TRIMESTRE_INICIO] = str(_trimestre(sem_inicio))
 
     # 7. IMC inicial = peso / talla^2
     peso = _num(fila.get(PESO_INICIAL))
@@ -247,7 +291,10 @@ def aplicar_formulas(fila: dict) -> dict:
     if peso_act and talla_act and talla_act > 0:
         imc_act = peso_act / (talla_act * talla_act)
         fila[IMC_ACTUAL] = _fmt_num(round(imc_act, 2))
-        fila[CLASIF_IMC_ACTUAL] = _clasif_imc(imc_act)
+        # Clasificacion Atalah/ICBF: edad gestacional al ultimo control cuando
+        # exista, si no la edad gestacional a hoy; sin FUM cae al corte adulto.
+        semanas_actual = sem_actual if sem_actual is not None else _semanas(fum, hoy)
+        fila[CLASIF_IMC_ACTUAL] = clasif_imc_eg(imc_act, semanas_actual) or _clasif_imc(imc_act)
 
     # 11. Trimestres de tamizajes VIH / Sifilis: FUM + fecha de la prueba
     #     (1 <14 sem, 2 <28 sem, 3 >=28). Numerico obligatorio: si no hay

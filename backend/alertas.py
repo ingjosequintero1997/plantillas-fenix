@@ -188,7 +188,9 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
                 out.add("labs")
                 break
 
-    # Tamizajes con resultado POSITIVO.
+    # Tamizajes con resultado alterado. El tamizaje de cuello uterino usa el
+    # nuevo catalogo (ALTERADO/NORMAL) y mantiene el legado POSITIVO; el resto
+    # de tamizajes sigue disparando solo con POSITIVO.
     _positivos = (
         "Resultado Toxoplasma",
         "Resultado Antigeno Superficie Hepatitis B",
@@ -199,7 +201,12 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
     )
     if not _skip(*_positivos):
         for k in _positivos:
-            if _up(row.get(k)) == "POSITIVO":
+            valor = _up(row.get(k))
+            if k == "Resultado Tamizaje de cuello uterino":
+                if valor in {"ALTERADO", "POSITIVO"}:
+                    out.add("labs")
+                    break
+            elif valor == "POSITIVO":
                 out.add("labs")
                 break
 
@@ -208,12 +215,14 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
         if _up(row.get("Complicaciones durante el parto")) == "SI" or _up(row.get("UCI Materna")) == "SI":
             out.add("mme")
 
-    # Nutricional (Atalah IMC): cualquier clasificacion distinta de PESO NORMAL
-    # (incluye BAJO PESO y los grados de sobrepeso/obesidad).
+    # Nutricional (Atalah IMC): normal incluye PESO NORMAL (corte adulto) y
+    # "IMC Adecuado para la Edad Gestacional"; alerta ante cualquier otra
+    # clasificacion real (bajo peso, sobrepeso u obesidad).
     _imc = ("Clasificación del IMC ACTUAL", "Clasificación del IMC")
+    _imc_normal = {"PESO NORMAL", "IMC ADECUADO PARA LA EDAD GESTACIONAL"}
     if not _skip(*_imc):
         clasif = _up(row.get("Clasificación del IMC ACTUAL")) or _up(row.get("Clasificación del IMC"))
-        if clasif and clasif not in _PLACEHOLDERS and clasif != "PESO NORMAL":
+        if clasif and clasif not in _PLACEHOLDERS and clasif not in _imc_normal:
             out.add("nutricional")
 
     # Sin control en los ultimos 45 dias
