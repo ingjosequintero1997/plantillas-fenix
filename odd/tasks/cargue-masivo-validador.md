@@ -20,9 +20,12 @@ Además, garantizar paridad: **toda restricción del cargue unitario debe existi
 - `frontend/src/api.js`: alinear el reporte TXT local con el formato del backend (opcional).
 
 ## Checklist
-- [ ] T1 Writer A (backend): bugs 1-4 + unificar mensajes + logs_sample completo + paridad.
-- [ ] T2 Writer B (frontend): ValidationLogTable claro (variable/valor/error/corrección) + chips.
-- [ ] T3 Verificación: py_compile + probe de /validate-data (logs con nombre de variable y cruzados) + npm build + spot check.
+- [x] T1 Writer A (backend): bugs 1-4 + unificar mensajes + logs_sample completo + paridad.
+- [x] T2 Writer B (frontend): ValidationLogTable claro (variable/valor/error/corrección) + chips.
+- [x] T3 Verificación: py_compile + probe de /validate-data (logs con nombre de variable y cruzados) + npm build + spot check.
+
+## Progress
+- 2026-10-13: T1-T3 completados. Writer A: corregidos `pciones` y `template_rows`, logs_sample lee df por nombre de columna, incluye vacíos/cruzados/afiliación; checks relacionales con `_cell_exact`; mensajes unificados con `Debe ser uno de:`. Paridad auditada: el masivo ya cubre todas las reglas del unitario (solo es más estricto). Writer B: ValidationLogTable con chips (marker en medio), columna Error/cómo corregirlo, `(vacío)`; TXT local alineado. Parent spot check: validate_data → 21 logs, columnas son nombres. Commits `5af15d3` (backend) y el de frontend.
 
 ## Route
 - Delegated direct: 1 writer backend (main.py + validators.py), 1 writer frontend.
