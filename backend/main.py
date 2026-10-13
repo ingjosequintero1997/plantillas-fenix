@@ -4432,6 +4432,9 @@ AFILIADO_CAMPOS = [
 # Palabras clave para localizar la columna de numero de documento
 AFILIADO_DOC_KEYWORDS = ["NUMERO DE DOCUMENTO", "NUMERODOCUMENTO", "NUMERO DOCUMENTO", "N DOCUMENTO", "NUMERO IDENTIFICACION", "NUMEROIDENTIFICACION", "NO IDENTIFICACION", "IDENTIFICACION", "DOCUMENTO"]
 
+# Palabras clave para localizar la columna de tipo de documento de identidad
+AFILIADO_TIPO_DOC_KEYWORDS = ["TIPO DE DOCUMENTO DE IDENTIDAD", "TIPO DE DOCUMENTO", "TIPODOCUMENTO", "TIPO DOCUMENTO", "TIPO DOC", "TIPO DE IDENTIFICACION", "TIPOIDENTIFICACION", "TIPO IDENTIFICACION"]
+
 
 def _descubrir_columnas_afiliado() -> list[str] | None:
 	"""Devuelve las columnas reales de administrativo.af_afiliado o None si no accesible."""
@@ -4566,6 +4569,26 @@ def _serializar_afiliado(data: dict, mapping: dict) -> dict:
 			if s:
 				return s
 		return None
+
+	def get_tipo_documento():
+		# Primero el mapping (si en el futuro expusiera "tipo_documento");
+		# si no, se deriva de las columnas reales de la fila cuyo nombre
+		# normalizado coincide con una palabra clave de tipo de documento.
+		col_map = mapping.get("tipo_documento")
+		if col_map:
+			v = data.get(col_map)
+			if v is not None and str(v).strip():
+				return str(v).strip()
+		for col in data.keys():
+			nc = _normalizar_columna(col)
+			words = set(nc.split())
+			for kw in AFILIADO_TIPO_DOC_KEYWORDS:
+				kw_words = set(kw.split())
+				if nc == kw or (kw_words and kw_words.issubset(words)):
+					v = data.get(col)
+					if v is not None and str(v).strip():
+						return str(v).strip()
+		return None
 	return {
 		"primer_nombre": get("primer_nombre"),
 		"segundo_nombre": get("segundo_nombre"),
@@ -4578,6 +4601,7 @@ def _serializar_afiliado(data: dict, mapping: dict) -> dict:
 		"categoria": get("categoria"),
 		"estado_afiliado": get("estado_afiliado"),
 		"tipo_afiliado": get("tipo_afiliado"),
+		"tipo_documento": get_tipo_documento(),
 		"fecha_inicio_cobertura": get("fecha_inicio_cobertura"),
 		"municipio_afiliacion": resolver_municipio(get("municipio_afiliacion")),
 		"departamento_afiliacion": resolver_departamento(get("departamento_afiliacion")),
@@ -6857,6 +6881,69 @@ async def listar_caso_cerrado(
 		db.close()
 
 
+def _consecutivo_col(columnas) -> str | None:
+	"""Nombre real de la columna del campo 'No.' (consecutivo) en gestantes.
+
+	La columna real es CONSECUTIVO (el frontend envia la clave "NO"); se
+	devuelve la primera coincidencia exacta presente en la tabla.
+	"""
+	for cand in ("CONSECUTIVO", "NO"):
+		for c in columnas or []:
+			if str(c).strip().upper() == cand:
+				return c
+	return None
+
+
+def _siguiente_no(valor_max) -> int:
+	"""Proximo consecutivo a partir del mayor valor numerico almacenado.
+
+	Devuelve `maximo + 1`; si la columna esta vacia o no tiene valores
+	numericos (todos NULL o no convertibles), devuelve 1.
+	"""
+	try:
+		if valor_max is not None and str(valor_max).strip() != "":
+			return int(float(valor_max)) + 1
+	except (TypeError, ValueError):
+		pass
+	return 1
+
+
+def _calcular_siguiente_no(db, col: str) -> int:
+	"""Calcula el proximo consecutivo de gestantes de forma segura.
+
+	Intenta MAX(CAST(col AS INTEGER)) y delega en _siguiente_no; ante cualquier
+	error usa COUNT(*) + 1 como respaldo.
+	"""
+	from sqlalchemy import text
+	try:
+		valor_max = db.execute(text(f'SELECT MAX(CAST("{col}" AS INTEGER)) FROM gestantes')).scalar()
+		return _siguiente_no(valor_max)
+	except Exception:
+		try:
+			total = db.execute(text('SELECT COUNT(*) FROM gestantes')).scalar()
+			return int(total) + 1
+		except Exception:
+			return 1
+
+
+@app.get("/data/gestantes/siguiente-numero")
+async def siguiente_numero_gestante(current_user: User = Depends(get_current_user)):
+	"""Devuelve el proximo numero consecutivo (campo 'No.') de gestantes."""
+	ensure_db_ready()
+	db = SessionLocal()
+	try:
+		from sqlalchemy import text
+		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
+		col = _consecutivo_col(columnas)
+		if not col:
+			return {"siguiente": 1}
+		return {"siguiente": _calcular_siguiente_no(db, col)}
+	except Exception:
+		return {"siguiente": 1}
+	finally:
+		db.close()
+
+
 @app.get("/data/gestantes/{registro_id}")
 async def obtener_gestante(registro_id: int, current_user: User = Depends(get_current_user)):
 	"""Obtiene un registro de gestante por ID."""
@@ -7049,6 +7136,15 @@ async def crear_gestante(payload: dict, current_user: User = Depends(get_current
 		# Persistir la edad recalculada en su columna real (EDAD).
 		if "EDAD" in columnas:
 			payload["EDAD"] = payload.get("EDAD_ANOS", "")
+		# Auto-asignar el campo "No." (consecutivo) en el alta cuando no viene o
+		# viene vacio. La columna real es CONSECUTIVO (el frontend envia "NO");
+		# se escribe en la columna real para que se persista.
+		_col_no = _consecutivo_col(columnas)
+		if _col_no:
+			_no_real = str(payload.get(_col_no, "") or "").strip()
+			_no_front = str(payload.get("NO", "") or "").strip()
+			if not _no_real and not _no_front:
+				payload[_col_no] = str(_calcular_siguiente_no(db, _col_no))
 		# Solo usar columnas que existen en la tabla y que vienen en el payload
 		cols_validas = [c for c in columnas if c in payload and c not in ("id", "created_at")]
 		if not cols_validas:
