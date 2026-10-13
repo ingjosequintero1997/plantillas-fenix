@@ -3346,6 +3346,46 @@ async def delete_cargue(cargue_id: int, current_user: User = Depends(get_current
 
 # ─── Validacion sin correccion (validador estricto) ──────────────────────
 
+def _opciones_texto(allowed, cap: int = 12) -> str:
+	"""Allowed SET values as a comma-separated string, capped at `cap` options."""
+	opts = [str(a).strip() for a in (allowed or []) if str(a).strip()]
+	if not opts:
+		return "los valores del instructivo"
+	if len(opts) > cap:
+		return ", ".join(opts[:cap]) + ", ..."
+	return ", ".join(opts)
+
+
+def _mensaje_canonico(tipo: str, orig: str, allowed, corrected: str = "") -> str:
+	"""Prefix-free correction message shared by /validate-data and _errores_rapidos.
+
+	SET messages carry the "Debe ser uno de:" marker the frontend uses to render
+	option chips; the offending variable travels separately in the log "column".
+	"""
+	orig = str(orig if orig is not None else "")
+	es_vacio = orig.strip() == ""
+	if tipo == "SET":
+		opciones = _opciones_texto(allowed)
+		if es_vacio:
+			return f"Campo obligatorio. Debe ser uno de: {opciones}"
+		return f"El valor '{orig}' no es valido. Debe ser uno de: {opciones}"
+	if tipo == "INT":
+		if es_vacio:
+			return "Campo obligatorio. Use solo numeros enteros (ej: 25)."
+		return f"El valor '{orig}' no es un numero entero valido. Use solo numeros (ej: 25)."
+	if tipo == "DECIMAL":
+		if es_vacio:
+			return "Campo obligatorio. Use un numero (ej: 60.5)."
+		return f"El valor '{orig}' no es un numero valido. Use un numero (ej: 60.5)."
+	if tipo == "DATE":
+		if es_vacio:
+			return "Campo obligatorio. Use una fecha AAAA-MM-DD (ej: 2025-10-10)."
+		return f"El valor '{orig}' no es una fecha valida. Use el formato AAAA-MM-DD (ej: 2025-10-10)."
+	if tipo == "TEXT":
+		return corrected or "Escriba el dato en texto, o 'SIN DATO' si no lo tiene."
+	return corrected or "Dato invalido"
+
+
 @app.post("/validate-data")
 async def validate_data(payload: dict, current_user: User = Depends(get_current_user)):
 	template_key = payload.get("template_key", "gestante")
@@ -3402,33 +3442,12 @@ async def validate_data(payload: dict, current_user: User = Depends(get_current_
 		if ridx not in row_errors:
 			row_errors[ridx] = []
 
-		if tipo == "SET":
-			allowed = [str(a).strip() for a in (tdef.get("allowed") or [])]
-			opciones = ", ".join(allowed[:8]) if allowed else "los valores del instructivo"
-			if not orig.strip():
-				msg = f"[{col}] Campo vacio. Opciones: {pciones}"
-			else:
-				msg = f"[{col}] Valor '{orig}' no valido. Opciones: {pciones}"
-		elif tipo == "INT":
-			if not orig.strip():
-				msg = f"[{col}] Campo vacio. Solo enteros (ej: 25)"
-			else:
-				msg = f"[{col}] '{orig}' no es entero valido (ej: 25)"
-		elif tipo == "DECIMAL":
-			if not orig.strip():
-				msg = f"[{col}] Campo vacio. Numero decimal (ej: 60.5)"
-			else:
-				msg = f"[{col}] '{orig}' no es decimal valido (ej: 60.5)"
-		elif tipo == "DATE":
-			if not orig.strip():
-				msg = f"[{col}] Campo vacio. Fecha (AAAA-MM-DD)"
-			else:
-				msg = f"[{col}] '{orig}' no es fecha valida (AAAA-MM-DD)"
-		else:
-			msg = f"[{col}] {log_entry.get('corrected', 'Dato invalido')}"
-
-		row_errors[ridx].append(msg)
-		errors_by_cell[(ridx, col)] = log_entry.get("corrected", "Dato invalido")
+		allowed_vals = tdef.get("allowed") if tdef else None
+		clean_msg = _mensaje_canonico(tipo, orig, allowed_vals, log_entry.get("corrected") or "")
+		# El reporte TXT conserva el prefijo [col]; el log visible (logs_sample)
+		# viaja sin prefijo porque la variable se muestra en su propia columna.
+		row_errors[ridx].append(f"[{col}] {clean_msg}")
+		errors_by_cell[(ridx, col)] = clean_msg
 		stats["total_error_cells"] += 1
 
 	# Contar errores por columna
@@ -3456,6 +3475,8 @@ async def validate_data(payload: dict, current_user: User = Depends(get_current_
 				if ridx not in row_errors:
 					row_errors[ridx] = []
 				row_errors[ridx].append(f"[{e['column']}] {e['message']}")
+				# Tambien al log visible: hoy solo llegaban al TXT (row_errors).
+				errors_by_cell[(ridx, e["column"])] = e["message"]
 				stats["total_error_cells"] += 1
 		except Exception:
 			pass
@@ -3474,6 +3495,8 @@ async def validate_data(payload: dict, current_user: User = Depends(get_current_
 					if ridx not in row_errors:
 						row_errors[ridx] = []
 					row_errors[ridx].append(f"[{e['column']}] {e['message']}")
+					# Tambien al log visible: hoy solo llegaban al TXT (row_errors).
+					errors_by_cell[(ridx, e["column"])] = e["message"]
 					stats["total_error_cells"] += 1
 					cross_field_errors.append(e)
 		except Exception:
@@ -3509,18 +3532,20 @@ async def validate_data(payload: dict, current_user: User = Depends(get_current_
 
 	logs_sample = []
 	for (r, c), msg in errors_by_cell.items():
+		# Formula markers must never reach the visible log.
+		if "<CALCULAR:" in str(msg).upper():
+			continue
+		# `column` is the real column NAME (errors_by_cell is keyed by name);
+		# read the current value straight from df by name + row index.
 		val = ""
-		if r < len(template_rows) and c < len(template_cols):
-			val = str(template_rows[r][c]) if c < len(template_rows[r]) else ""
-		# Skip false-positive entries: empty, SIN DATO, or formula markers
-		val_norm = val.upper().replace(" ", "").strip()
-		if not val or val_norm in ("", "SINDATO", "N/A", "NA"):
-			continue
-		if msg == "OBLIGATORIO":
-			continue
-		# Check for formula marker that may leak into corrector output
-		if "<CALCULAR:" in msg.upper() or "_CALCULADO" in val_norm:
-			continue
+		if c in df.columns and 0 <= r < n:
+			try:
+				raw_val = df[c].iloc[r]
+				if raw_val is not None and not (isinstance(raw_val, float) and pd.isna(raw_val)):
+					val = str(raw_val)
+			except Exception:
+				val = ""
+		# Empty-value errors (required cells) are real and are kept with original "".
 		logs_sample.append({
 			"row": r + 1,
 			"column": c,
@@ -3987,39 +4012,12 @@ def _errores_rapidos(corrected_text: str, template_key: str) -> dict:
 		if l.get("kind") == "cross":
 			errors[(row, col)] = corr
 			continue
-		es_vacio = orig.strip() == ""
-		# Comentario explicito: que se encontro y que debe ingresar
+		# Comentario explicito: que se encontro y que debe ingresar. Se comparte
+		# el mismo texto canonico de /validate-data para que la pantalla de
+		# validacion y el Excel coincidan (SET con marca "Debe ser uno de:").
 		tdef2 = tmap2.get(col)
 		tipo2 = tdef2.get("type") if tdef2 else None
-		if tipo2 == "SET":
-			allowed = [str(a).strip() for a in (tdef2.get("allowed") or [])]
-			opciones = ", ".join(allowed) if allowed else "los valores del instructivo"
-			if es_vacio:
-				msg = f"Este campo esta VACIO. Debe escribir uno de estos valores: {opciones}."
-			else:
-				msg = f"El valor '{orig}' no es valido. Debe escribir uno de estos valores: {opciones}."
-		elif tipo2 == "INT":
-			if es_vacio:
-				msg = f"Este campo esta VACIO y debe llevar SOLO NUMEROS (entero). Ej: 25, 1103567890."
-			else:
-				msg = f"El valor '{orig}' no es un numero entero valido. En este campo solo van NUMEROS (ej: 25, 1103567890)."
-		elif tipo2 == "DECIMAL":
-			if es_vacio:
-				msg = f"Este campo esta VACIO y debe llevar UN NUMERO (puede tener decimales). Ej: 60.5, 1.60."
-			else:
-				msg = f"El valor '{orig}' no es un numero valido. En este campo va un NUMERO (ej: 60.5, 1.60)."
-		elif tipo2 == "DATE":
-			if es_vacio:
-				msg = f"Este campo esta VACIO y debe llevar UNA FECHA en formato AAAA-MM-DD. Ej: 2025-10-10."
-			else:
-				msg = f"El valor '{orig}' no es una fecha valida. Debe escribir la fecha como AAAA-MM-DD (ej: 2025-10-10)."
-		elif tipo2 == "TEXT":
-			if es_vacio:
-				msg = f"Este campo esta VACIO. Debe escribir el dato en TEXTO, o 'SIN DATO' si no lo tiene."
-			else:
-				msg = f"El valor '{orig}' no es valido. Este campo va en TEXTO (letras), o 'SIN DATO' si no tiene el dato."
-		else:
-			msg = f"El dato '{orig}' no es valido. {corr}"
+		msg = _mensaje_canonico(tipo2, orig, (tdef2 or {}).get("allowed"), corr)
 		errors[(row, col)] = msg
 	return errors
 

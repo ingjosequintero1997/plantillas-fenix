@@ -1034,12 +1034,15 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
         row_num = ridx + 1  # 1-indexed
 
         # ── 1. G,P,C,A,M,V relationships ──
-        g = _safe_int(_get_col(row, "G"))
-        p = _safe_int(_get_col(row, "P"))
-        c = _safe_int(_get_col(row, "C"))
-        a = _safe_int(_get_col(row, "A"))
-        m = _safe_int(_get_col(row, "M"))
-        v = _safe_int(_get_col(row, "V"))
+        # Exact lookup: _get_col's substring match made "G" win the earlier
+        # column "Regimen Afiliacion" (and "P"/"C"/"A"/"M"/"V" win unrelated
+        # columns), so the relational checks read the wrong cells.
+        g = _safe_int(_cell_exact(row, col_pos, "G"))
+        p = _safe_int(_cell_exact(row, col_pos, "P"))
+        c = _safe_int(_cell_exact(row, col_pos, "C"))
+        a = _safe_int(_cell_exact(row, col_pos, "A"))
+        m = _safe_int(_cell_exact(row, col_pos, "M"))
+        v = _safe_int(_cell_exact(row, col_pos, "V"))
 
         if g is not None and p is not None and a is not None and m is not None:
             if g < p + a + m:
