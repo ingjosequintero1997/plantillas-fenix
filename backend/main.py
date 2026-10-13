@@ -2431,15 +2431,16 @@ def _contar_controles_gestante(db, documento: str) -> int:
     doc = (documento or "").strip()
     if not doc:
         return 0
-    try:
-        from sqlalchemy import text as _t
-        cols = ", ".join(f'"{k}"' for k in CONTROL_DATE_KEYS)
-        row = db.execute(
-            _t(f'SELECT {cols} FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :d LIMIT 1'),
-            {"d": doc},
-        ).fetchone()
-    except Exception:
-        return 0
+    # Sin try/except amplio: un fallo real de BD debe propagarse al
+    # `except OperationalError` del endpoint (503) y no publicar 0 controles
+    # como si la gestante no tuviera fechas. Los unicos 0 legitimos son
+    # documento vacio o ausencia de fila.
+    from sqlalchemy import text as _t
+    cols = ", ".join(f'"{k}"' for k in CONTROL_DATE_KEYS)
+    row = db.execute(
+        _t(f'SELECT {cols} FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :d LIMIT 1'),
+        {"d": doc},
+    ).fetchone()
     if not row:
         return 0
     valores = [str(v) if v is not None else "" for v in list(row)]
@@ -2456,6 +2457,7 @@ def _historias_faltantes(db, documento: str, template_key: str, payload: dict) -
     n_controles = _contar_controles_payload(payload or {})
     doc = (documento or "").strip()
     ingreso_subido = False
+    ingreso_sin_tipo = False
     controles_subidos = set()
     if doc:
         q = db.query(HistoriaClinica).filter(HistoriaClinica.paciente_documento == doc)
@@ -2467,6 +2469,12 @@ def _historias_faltantes(db, documento: str, template_key: str, payload: dict) -
                 ingreso_subido = True
             elif tipo == "control" and h.control_numero is not None:
                 controles_subidos.add(int(h.control_numero))
+            elif not tipo:
+                ingreso_sin_tipo = True
+    # Regla legacy (alineada con el cliente pdfDeSlot): una fila antigua sin
+    # tipo_historia cuenta como ingreso solo si no existe un ingreso tipado.
+    if not ingreso_subido and ingreso_sin_tipo:
+        ingreso_subido = True
     faltan_controles = [n for n in range(1, n_controles + 1) if n not in controles_subidos]
     return {
         "ingreso": not ingreso_subido,
@@ -2563,6 +2571,10 @@ async def upload_historia(
             control_numero=nro,
         )
         db.add(historia)
+        # Asigna el id de la fila aun sin commit: lo necesitan el nombre de
+        # respaldo en OCI (evita historia_None.pdf y pisar otra historia) y el
+        # blob_path de GCS.
+        db.flush()
         # Determinar donde almacenar: OCI > GCS > DB (con fallback)
         storage_used = "db"
         if oci_storage.oci_enabled():
@@ -2713,6 +2725,7 @@ async def historias_requeridas(
         if template_key:
             q = q.filter(HistoriaClinica.template_key == template_key)
         ingreso_subido = False
+        ingreso_sin_tipo = False
         controles_subidos = set()
         for h in q.all():
             tipo = (h.tipo_historia or "").strip().lower()
@@ -2720,6 +2733,12 @@ async def historias_requeridas(
                 ingreso_subido = True
             elif tipo == "control" and h.control_numero is not None:
                 controles_subidos.add(int(h.control_numero))
+            elif not tipo:
+                ingreso_sin_tipo = True
+        # Regla legacy (alineada con el cliente pdfDeSlot): una fila antigua sin
+        # tipo_historia cuenta como ingreso solo si no existe un ingreso tipado.
+        if not ingreso_subido and ingreso_sin_tipo:
+            ingreso_subido = True
         faltan_controles = [n for n in range(1, n_controles + 1) if n not in controles_subidos]
         return {
             "requeridas": {"ingreso": True, "controles": n_controles},

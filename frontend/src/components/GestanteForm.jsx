@@ -944,9 +944,9 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       setExistingPdfs(filtradas)
       return filtradas
     } catch {
-      // Si la consulta falla no se puede afirmar que falten historias: se
-      // devuelve null para que el submit no bloquee (fail-open en el cliente;
-      // el backend sigue validando).
+      // Si la consulta falla no se puede afirmar que falten historias ni que
+      // esten completas. Se devuelve null y el submit lo interpreta como
+      // bloqueo (fail-closed) con un mensaje de reintento.
       return null
     }
   }
@@ -1096,15 +1096,18 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     if (historiasHabilitadas && !esAdmin) {
       // existingPdfs se carga async al cambiar el documento: se refresca y se
       // reevalua antes de decidir para no bloquear por un estado aun no
-      // resuelto. Si la consulta falla (null) no se bloquea: el backend sigue
-      // validando (fail-open en el cliente).
+      // resuelto. Si la consulta falla (null) NO se puede afirmar que faltan
+      // historias ni que estan completas: se bloquea el guardado y se pide
+      // reintentar (fail-closed), en vez de permitir guardar sin verificar.
       const pdfs = await loadExistingPdfs()
-      if (pdfs !== null) {
-        const faltan = slotsFaltantes(pdfs, slots)
-        if (faltan.length > 0) {
-          setError(`Debes subir ${unirLista(faltan.map(etiquetaSlot))} antes de guardar.`)
-          return
-        }
+      if (pdfs === null) {
+        setError('No se pudieron verificar las historias clínicas requeridas. Revisa la conexión e intenta de nuevo.')
+        return
+      }
+      const faltan = slotsFaltantes(pdfs, slots)
+      if (faltan.length > 0) {
+        setError(`Debes subir ${unirLista(faltan.map(etiquetaSlot))} antes de guardar.`)
+        return
       }
     }
     setSaving(true)

@@ -24,10 +24,13 @@ Permitir adjuntar **varias** historias clínicas por gestante, distinguiendo la 
 - `HistoriasView.jsx`: acciones de **subir** por paciente (ingreso y control N) y mostrar el tipo de cada historia.
 
 ## Checklist
-- [ ] T1 Writer A (backend): DB + modelo + POST/GET + endpoint requeridas + bloqueo en crear/actualizar.
-- [ ] T2 Writer B (frontend): api.js + GestanteForm (slots + bloqueo).
-- [ ] T3 Writer C (frontend): HistoriasView (subir + tipo).
-- [ ] T4 Verificación: py_compile + probes (requeridas/bloqueo) + npm build + spot check.
+- [x] T1 Writer A (backend): DB + modelo + POST/GET + endpoint requeridas + bloqueo en crear/actualizar.
+- [x] T2 Writer B (frontend): api.js + GestanteForm (slots + bloqueo).
+- [x] T3 Writer C (frontend): HistoriasView (subir + tipo) + hardening del form.
+- [x] T4 Verificación: py_compile + probe (`_contar_controles_payload`=2) + npm build + spot check.
+
+## Progress
+- 2026-10-13: T1-T4 completados. Backend: columnas `tipo_historia`/`control_numero` + migraciones; POST /historias con tipo y nombre de objeto único; GET /historias con tipo; `GET /historias/requeridas`; bloqueo 400 en crear/actualizar (no admin, módulo activo, fail-open). Frontend: slots ingreso + control 1..N con subir/borrar y bloqueo del guardado (espera carga, admin exento); HistoriasView con subida por tipo y etiqueta. Commits `11749b1` (backend) y `96bc060` (frontend).
 
 ## Route
 - Delegated direct: 1 writer backend, 2 writers frontend (archivos distintos).
