@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { fetchIps, uploadHistoria, deleteHistoria, downloadHistoriaPdf, fetchHistorias, HISTORIA_URL, fetchGestanteTemplate } from '../api'
+import { useAuth } from '../AuthContext'
 
 const SECCIONES = [
   {
@@ -492,6 +493,62 @@ function fechaReal(valor) {
   return fecha && !esComodin(fecha) ? fecha : ''
 }
 
+// ---------------------------------------------------------------------------
+// Historias clinicas por tipo (ingreso + controles). Replica la regla de
+// negocio: se requiere 1 historia de ingreso + N de control, donde N es la
+// cantidad de fechas de control prenatal REALES cargadas (comodin/`SIN DATO`/
+// vacio no cuentan).
+// ---------------------------------------------------------------------------
+
+// Cantidad de controles prenatales requeridos segun las fechas reales del form.
+function controlesRequeridosDe(form) {
+  return CONTROLES.filter((key) => !!fechaReal(form ? form[key] : '')).length
+}
+
+// Slots de historias: siempre la de ingreso + una de control por cada control.
+function slotsHistorias(controlesRequeridos) {
+  const slots = [{ tipo: 'ingreso', nro: null }]
+  for (let n = 1; n <= controlesRequeridos; n++) slots.push({ tipo: 'control', nro: n })
+  return slots
+}
+
+// Clave estable de un slot (para el estado de subida por slot).
+function slotKey(slot) {
+  return slot.tipo === 'ingreso' ? 'ingreso' : `control:${slot.nro}`
+}
+
+// Historia ya subida que corresponde a un slot. Las filas antiguas (sin
+// tipo_historia) cuentan como ingreso solo si no existe un ingreso tipado.
+function pdfDeSlot(pdfs, slot) {
+  const lista = Array.isArray(pdfs) ? pdfs : []
+  if (slot.tipo === 'ingreso') {
+    return lista.find((p) => p.tipo_historia === 'ingreso') || lista.find((p) => !p.tipo_historia) || null
+  }
+  return lista.find((p) => p.tipo_historia === 'control' && Number(p.control_numero) === slot.nro) || null
+}
+
+// Slots sin historia subida.
+function slotsFaltantes(pdfs, slots) {
+  return slots.filter((slot) => !pdfDeSlot(pdfs, slot))
+}
+
+// Etiqueta corta de un slot para la interfaz.
+function nombreSlot(slot) {
+  return slot.tipo === 'ingreso' ? 'Historia de ingreso' : `Historia de control ${slot.nro}`
+}
+
+// Etiqueta con articulo para los mensajes ("la historia de control 2").
+function etiquetaSlot(slot) {
+  return slot.tipo === 'ingreso' ? 'la historia de ingreso' : `la historia de control ${slot.nro}`
+}
+
+// Une una lista de elementos en lenguaje natural: "a", "a y b", "a, b y c".
+function unirLista(items) {
+  if (items.length === 0) return ''
+  if (items.length === 1) return items[0]
+  return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`
+}
+
 // Igualdad de valores SET sin acentos, espacios ni mayusculas (backend::_coincide).
 function coincide(valor, esperado) {
   const limpio = (x) =>
@@ -724,7 +781,7 @@ function errorReglaCruzada(key, form) {
   return ''
 }
 
-export default function GestanteForm({ mode = 'create', initialData = {}, onSave, onClose, ipsList = [] }) {
+export default function GestanteForm({ mode = 'create', initialData = {}, onSave, onClose, ipsList = [], historiasPdf }) {
   const [form, setForm] = useState({})
   const [ipsOptions, setIpsOptions] = useState(ipsList)
   const [loadingIps, setLoadingIps] = useState(false)
@@ -732,13 +789,24 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
   const [activeSection, setActiveSection] = useState(0)
-  const [pdfFile, setPdfFile] = useState(null)
-  const [uploadingPdf, setUploadingPdf] = useState(false)
+  const [uploadingSlot, setUploadingSlot] = useState(null)
   const [pdfMsg, setPdfMsg] = useState('')
   const [historiaId, setHistoriaId] = useState(null)
   const [existingPdfs, setExistingPdfs] = useState([])
   const [deletingId, setDeletingId] = useState(null)
   const [templateMeta, setTemplateMeta] = useState({})
+
+  // El bloqueo por historias aplica solo cuando el modulo historias_pdf esta
+  // habilitado. Se puede forzar con la prop `historiasPdf`; cuando no se pasa,
+  // se lee la configuracion del sistema (que ya carga AuthContext). El rol
+  // admin queda exento del bloqueo, igual que en el backend.
+  const { user, systemConfig } = useAuth()
+  const esAdmin = user?.role === 'admin'
+  const historiasHabilitadas = historiasPdf !== undefined ? historiasPdf : systemConfig?.historias_pdf !== false
+
+  // Historias exigidas segun los controles prenatales reales del formulario.
+  const controlesRequeridos = controlesRequeridosDe(form)
+  const slots = slotsHistorias(controlesRequeridos)
 
   useEffect(() => {
     if (mode === 'edit' && initialData && Object.keys(initialData).length > 0) {
@@ -836,31 +904,50 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
   }, [form.PERTENECIA_ETNICA, form.ETNIA])
 
-  const handlePdfUpload = async () => {
+  const handleSlotUpload = async (slot, file) => {
+    if (!file) return
     const doc = form.NO_DE_IDENTIFICACION
-    if (!doc) { setPdfMsg('Guarda el registro primero para asociar la historia.'); return }
-    if (!pdfFile) { setPdfMsg('Selecciona un archivo PDF.'); return }
-    setUploadingPdf(true); setPdfMsg('')
+    if (!doc) { setPdfMsg('Ingresa el numero de documento antes de subir la historia.'); return }
+    setUploadingSlot(slotKey(slot)); setPdfMsg('')
     try {
-      await uploadHistoria(pdfFile, { documento: doc, nombre: `${form.APELLIDO_1 || ''} ${form.NOMBRE_1 || ''}`.trim(), tipoDocumento: form.TIPO_DE_DOCUMENTO_DE_IDENTIDAD || '' }, 'gestante')
-      setPdfMsg('Historia clinica subida correctamente.')
-      setPdfFile(null)
-      loadExistingPdfs()
+      await uploadHistoria(
+        file,
+        {
+          documento: doc,
+          nombre: `${form.APELLIDO_1 || ''} ${form.NOMBRE_1 || ''}`.trim(),
+          tipoDocumento: form.TIPO_DE_DOCUMENTO_DE_IDENTIDAD || '',
+        },
+        'gestante',
+        slot.tipo,
+        slot.tipo === 'control' ? slot.nro : null,
+      )
+      setPdfMsg(slot.tipo === 'ingreso'
+        ? 'Historia de ingreso subida correctamente.'
+        : `Historia de control ${slot.nro} subida correctamente.`)
+      await loadExistingPdfs()
     } catch (e) {
       setPdfMsg('Error: ' + (e.message || 'No se pudo subir'))
     } finally {
-      setUploadingPdf(false)
+      setUploadingSlot(null)
     }
   }
 
   const loadExistingPdfs = async () => {
     const doc = form.NO_DE_IDENTIFICACION
-    if (!doc) { setExistingPdfs([]); return }
+    if (!doc) { setExistingPdfs([]); return [] }
     try {
       const historias = await fetchHistorias(doc, 'gestante')
-      setExistingPdfs(historias.filter(h => h.paciente_documento === doc))
+      // Cada historia trae tipo_historia y control_numero, necesarios para
+      // ubicarla en su slot (ingreso / control N). Se devuelve la lista para
+      // poder reevaluar los slots en el submit sin depender del estado async.
+      const filtradas = historias.filter(h => h.paciente_documento === doc)
+      setExistingPdfs(filtradas)
+      return filtradas
     } catch {
-      setExistingPdfs([])
+      // Si la consulta falla no se puede afirmar que falten historias: se
+      // devuelve null para que el submit no bloquee (fail-open en el cliente;
+      // el backend sigue validando).
+      return null
     }
   }
 
@@ -1001,6 +1088,24 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     if (validationErrors.length > 0) {
       setError(validationErrors.slice(0, 5).join(' · '))
       return
+    }
+    // Bloqueo por historias clinicas: con el modulo activo y rol no-admin no se
+    // guarda hasta subir la historia de ingreso y todas las de control
+    // requeridas. El admin queda exento, igual que en el backend
+    // (crear_gestante / actualizar_gestante).
+    if (historiasHabilitadas && !esAdmin) {
+      // existingPdfs se carga async al cambiar el documento: se refresca y se
+      // reevalua antes de decidir para no bloquear por un estado aun no
+      // resuelto. Si la consulta falla (null) no se bloquea: el backend sigue
+      // validando (fail-open en el cliente).
+      const pdfs = await loadExistingPdfs()
+      if (pdfs !== null) {
+        const faltan = slotsFaltantes(pdfs, slots)
+        if (faltan.length > 0) {
+          setError(`Debes subir ${unirLista(faltan.map(etiquetaSlot))} antes de guardar.`)
+          return
+        }
+      }
     }
     setSaving(true)
     setError('')
@@ -1379,138 +1484,93 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
                 </div>
               )}
 
-              {/* PDFs existentes */}
-              {existingPdfs.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Archivos subidos ({existingPdfs.length})</span>
-                  </div>
-                  <div className="space-y-2">
-                    {existingPdfs.map((pdf) => (
-                      <div key={pdf.id} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
-                        style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--green-300)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(90,174,90,0.08)' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.boxShadow = '' }}>
+              {/* Historias requeridas: ingreso + control 1..N */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Historias requeridas ({slots.length})</span>
+                </div>
+                <div className="space-y-2">
+                  {slots.map((slot) => {
+                    const pdf = pdfDeSlot(existingPdfs, slot)
+                    const subiendo = uploadingSlot === slotKey(slot)
+                    return (
+                      <div key={slotKey(slot)} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                        style={{
+                          backgroundColor: pdf ? 'var(--green-50)' : 'var(--bg-surface)',
+                          border: `1px solid ${pdf ? 'var(--green-200)' : 'var(--danger-bg)'}`,
+                        }}>
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                          style={{ backgroundColor: pdf ? 'var(--green-100)' : 'var(--bg-subtle)', color: pdf ? 'var(--green-600)' : 'var(--text-muted)' }}>
+                          {pdf ? (
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{pdf.filename}</div>
+                          <div className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{nombreSlot(slot)}</div>
                           <div className="flex items-center gap-2 mt-0.5">
-                            {pdf.file_size && (
-                              <span className="text-[0.65rem] px-1.5 py-0.5 rounded"
-                                style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
-                                {(pdf.file_size / 1024 / 1024).toFixed(2)} MB
-                              </span>
-                            )}
-                            {pdf.created_at && (
-                              <span className="text-[0.65rem]" style={{ color: 'var(--text-muted)' }}>
-                                {new Date(pdf.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
-                              </span>
+                            {pdf ? (
+                              <>
+                                <span className="text-[0.65rem] truncate" style={{ color: 'var(--text-muted)' }}>{pdf.filename}</span>
+                                {pdf.file_size && (
+                                  <span className="text-[0.65rem] px-1.5 py-0.5 rounded"
+                                    style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
+                                    {(pdf.file_size / 1024 / 1024).toFixed(2)} MB
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-[0.65rem] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>Falta subir</span>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <button type="button" onClick={async () => {
-                            try {
-                              const url = await downloadHistoriaPdf(pdf.id)
-                              window.open(url, '_blank')
-                            } catch (e) {
-                              setPdfMsg('Error: ' + e.message)
-                            }
-                          }}
-                            className="px-2.5 py-1.5 rounded-lg text-[0.65rem] font-medium flex items-center gap-1 transition-all"
-                            style={{ color: 'var(--green-700)', border: '1px solid var(--green-200)', backgroundColor: 'var(--green-50)' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-500)'; e.currentTarget.style.color = '#fff' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-700)' }}>
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            Ver
-                          </button>
-                          <button type="button" onClick={() => handleDeletePdf(pdf.id, pdf.filename)} disabled={deletingId === pdf.id}
-                            className="px-2.5 py-1.5 rounded-lg text-[0.65rem] font-medium flex items-center gap-1 transition-all"
-                            style={{ color: 'var(--danger)', border: '1px solid var(--danger)', backgroundColor: 'var(--danger-bg)' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--danger)'; e.currentTarget.style.color = '#fff' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)' }}>
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            {deletingId === pdf.id ? '...' : 'Eliminar'}
-                          </button>
+                          {pdf ? (
+                            <>
+                              <button type="button" onClick={async () => {
+                                try {
+                                  const url = await downloadHistoriaPdf(pdf.id)
+                                  window.open(url, '_blank')
+                                } catch (e) {
+                                  setPdfMsg('Error: ' + e.message)
+                                }
+                              }}
+                                className="px-2.5 py-1.5 rounded-lg text-[0.65rem] font-medium flex items-center gap-1 transition-all"
+                                style={{ color: 'var(--green-700)', border: '1px solid var(--green-200)', backgroundColor: 'var(--green-50)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-500)'; e.currentTarget.style.color = '#fff' }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--green-50)'; e.currentTarget.style.color = 'var(--green-700)' }}>
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                Ver
+                              </button>
+                              <button type="button" onClick={() => handleDeletePdf(pdf.id, pdf.filename)} disabled={deletingId === pdf.id}
+                                className="px-2.5 py-1.5 rounded-lg text-[0.65rem] font-medium flex items-center gap-1 transition-all"
+                                style={{ color: 'var(--danger)', border: '1px solid var(--danger)', backgroundColor: 'var(--danger-bg)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--danger)'; e.currentTarget.style.color = '#fff' }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)' }}>
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                {deletingId === pdf.id ? '...' : 'Eliminar'}
+                              </button>
+                            </>
+                          ) : (
+                            <label className="px-3 py-1.5 rounded-lg text-[0.65rem] font-medium flex items-center gap-1 cursor-pointer transition-all"
+                              style={{ color: '#fff', backgroundColor: subiendo ? 'var(--text-muted)' : 'var(--green-500)', cursor: subiendo ? 'not-allowed' : 'pointer' }}>
+                              {subiendo ? (
+                                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                              ) : (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                              )}
+                              {subiendo ? 'Subiendo...' : 'Subir PDF'}
+                              <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={subiendo}
+                                onChange={(e) => { const f = e.target.files?.[0] || null; e.target.value = ''; handleSlotUpload(slot, f) }} />
+                            </label>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    )
+                  })}
                 </div>
-              )}
-
-              {/* Zona de carga */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Subir nuevo archivo</span>
-                </div>
-                <label className="flex items-center gap-4 px-5 py-5 rounded-xl cursor-pointer transition-all"
-                  style={{
-                    border: `2px dashed ${pdfFile ? 'var(--green-400)' : 'var(--border-strong)'}`,
-                    backgroundColor: pdfFile ? 'var(--green-50)' : 'var(--bg-canvas)',
-                  }}
-                  onMouseEnter={(e) => { if (!pdfFile) { e.currentTarget.style.borderColor = 'var(--green-300)'; e.currentTarget.style.backgroundColor = 'var(--green-50)' } }}
-                  onMouseLeave={(e) => { if (!pdfFile) { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.backgroundColor = 'var(--bg-canvas)' } }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: pdfFile ? 'var(--green-100)' : 'var(--bg-subtle)', color: pdfFile ? 'var(--green-600)' : 'var(--text-muted)' }}>
-                    {pdfFile ? (
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    ) : (
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium" style={{ color: pdfFile ? 'var(--green-700)' : 'var(--text-primary)' }}>
-                      {pdfFile ? pdfFile.name : 'Arrastra o haz clic para seleccionar un PDF'}
-                    </div>
-                    <div className="text-[0.7rem] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      {pdfFile
-                        ? `${(pdfFile.size / 1024 / 1024).toFixed(2)} MB listo para subir`
-                        : 'Solo archivos PDF, maximo ~4.5 MB'}
-                    </div>
-                  </div>
-                  <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} />
-                </label>
-              </div>
-
-              {/* Botones de accion */}
-              <div className="flex items-center gap-3 pt-1">
-                {pdfFile && (
-                  <button type="button" onClick={handlePdfUpload} disabled={uploadingPdf}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
-                    style={{
-                      color: '#fff',
-                      backgroundColor: uploadingPdf ? 'var(--text-muted)' : '#5aae5a',
-                      border: 'none',
-                      opacity: uploadingPdf ? 0.6 : 1,
-                      cursor: uploadingPdf ? 'not-allowed' : 'pointer',
-                      boxShadow: uploadingPdf ? 'none' : '0 2px 8px rgba(90,174,90,0.25)',
-                    }}>
-                    {uploadingPdf ? (
-                      <>
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                        Subiendo...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                        Subir PDF
-                      </>
-                    )}
-                  </button>
-                )}
-                {pdfFile && (
-                  <button type="button" onClick={() => setPdfFile(null)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-medium transition-all"
-                    style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-canvas)' }}>
-                    Cancelar
-                  </button>
-                )}
               </div>
 
               {/* Info */}

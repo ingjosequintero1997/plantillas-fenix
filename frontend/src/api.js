@@ -850,13 +850,19 @@ export async function descargarReporteErroresExcelData(correctedText, templateKe
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
 }
 
-export async function uploadHistoria(file, paciente, templateKey = 'gestante') {
+export async function uploadHistoria(file, paciente, templateKey = 'gestante', tipoHistoria = '', controlNumero = null) {
   const form = new FormData()
   form.append('file', file)
   if (paciente.documento) form.append('paciente_documento', paciente.documento)
   if (paciente.nombre) form.append('paciente_nombre', paciente.nombre)
   if (paciente.tipoDocumento) form.append('tipo_documento', paciente.tipoDocumento)
   if (templateKey) form.append('template_key', templateKey)
+  // Tipo de historia: 'ingreso' o 'control'. El numero de control solo aplica
+  // a las historias de control y se omite cuando viene vacio.
+  if (tipoHistoria) form.append('tipo_historia', tipoHistoria)
+  if (tipoHistoria === 'control' && controlNumero !== null && controlNumero !== undefined && String(controlNumero).trim() !== '') {
+    form.append('control_numero', String(controlNumero))
+  }
   const resp = await fetch(`${API_BASE}/historias`, {
     method: 'POST',
     headers: authHeaders(),
@@ -900,6 +906,16 @@ export async function fetchHistorias(q = '', templateKey = '') {
   const qs = params.toString()
   const data = await apiFetch(`${API_BASE}/historias${qs ? `?${qs}` : ''}`)
   return data.historias || []
+}
+
+// Historias requeridas/subidas/faltantes de una gestante segun su plantilla.
+// Devuelve { requeridas: {ingreso, controles}, subidas: {ingreso, controles},
+// faltantes: {ingreso, controles}, ok }.
+export async function fetchHistoriasRequeridas(documento, templateKey = 'gestante') {
+  const params = new URLSearchParams()
+  if (documento) params.set('documento', documento)
+  if (templateKey) params.set('template_key', templateKey)
+  return apiFetch(`${API_BASE}/historias/requeridas?${params.toString()}`)
 }
 
 export async function fetchHistoriasAlertas() {
