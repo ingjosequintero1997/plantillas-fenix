@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { fetchIps, uploadHistoria, deleteHistoria, downloadHistoriaPdf, fetchHistorias, HISTORIA_URL, fetchGestanteTemplate } from '../api'
+import React, { useState, useEffect, useRef } from 'react'
+import { fetchIps, uploadHistoria, deleteHistoria, downloadHistoriaPdf, fetchHistorias, HISTORIA_URL, fetchGestanteTemplate, fetchSiguienteNo, verificarAfiliado } from '../api'
 import { useAuth } from '../AuthContext'
 
 const SECCIONES = [
@@ -7,7 +7,7 @@ const SECCIONES = [
     titulo: 'Datos personales',
     icono: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
     fields: [
-      { key: 'NO', label: 'No.', type: 'text' },
+      { key: 'CONSECUTIVO', label: 'No.', type: 'text' },
       { key: 'TIPO_DE_DOCUMENTO_DE_IDENTIDAD', label: 'Tipo de documento', type: 'select', options: ['CC', 'TI', 'RC', 'PT', 'CE', 'PA', 'MS', 'AS', 'CD'] },
       { key: 'NO_DE_IDENTIFICACION', label: 'No. Identificacion', type: 'text' },
       { key: 'APELLIDO_1', label: 'Apellido 1', type: 'text' },
@@ -399,6 +399,85 @@ function sanitizeFieldValue(v) {
   if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(s)) return s.split(' ')[0]
   return s
 }
+
+// ── INICIO reglas puras de autocompletado (af_afiliado -> formulario) ──
+// Estas funciones no dependen de React ni del DOM: mapean los datos de la
+// base de afiliados a las claves del formulario. El probe de verificacion las
+// extrae por los marcadores y las prueba en Node.
+const TIPOS_DOCUMENTO_FORM = ['CC', 'TI', 'RC', 'PT', 'CE', 'PA', 'MS', 'AS', 'CD']
+
+// Normaliza una fecha del afiliado a AAAA-MM-DD. Acepta AAAA-MM-DD,
+// DD/MM/AAAA, DD-MM-AAAA, AAAA/MM/DD y serial de Excel. Devuelve '' cuando no
+// se puede normalizar, para no pisar lo que ya escribio la usuaria.
+function normalizarFechaAfiliado(valor) {
+  const s = String(valor === null || valor === undefined ? '' : valor).trim()
+  if (!s) return ''
+  // Serial de Excel (dias desde 1899-12-30); solo 5 digitos en rango razonable.
+  if (/^\d{5}(\.\d+)?$/.test(s)) {
+    const serial = parseFloat(s)
+    if (serial >= 1 && serial <= 60000) {
+      const fecha = new Date(Date.UTC(1899, 11, 30) + serial * 86400000)
+      const pad = (n) => String(n).padStart(2, '0')
+      return `${fecha.getUTCFullYear()}-${pad(fecha.getUTCMonth() + 1)}-${pad(fecha.getUTCDate())}`
+    }
+  }
+  // AAAA-MM-DD o AAAA/MM/DD (con o sin hora).
+  let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T].*)?$/)
+  if (m) return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`
+  // DD/MM/AAAA o DD-MM-AAAA (con o sin hora).
+  m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[ T].*)?$/)
+  if (m) return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`
+  return ''
+}
+
+// 'Femenino' cuando el sexo del afiliado refiere a femenino; '' en otro caso.
+function normalizarSexoAfiliado(valor) {
+  const s = String(valor === null || valor === undefined ? '' : valor).trim().toLowerCase()
+  if (!s) return ''
+  if (s.startsWith('f') || s.includes('femen')) return 'Femenino'
+  return ''
+}
+
+// 'S'/'C' cuando la categoria del afiliado lo indica; '' en otro caso.
+function normalizarRegimenAfiliado(valor) {
+  const s = String(valor === null || valor === undefined ? '' : valor).trim()
+  if (!s) return ''
+  const c = s[0].toUpperCase()
+  return c === 'S' || c === 'C' ? c : ''
+}
+
+// Tipo de documento solo si coincide con uno admitido por el formulario.
+function normalizarTipoDocumentoAfiliado(valor) {
+  const s = String(valor === null || valor === undefined ? '' : valor).trim().toUpperCase().replace(/[.\s-]/g, '')
+  return TIPOS_DOCUMENTO_FORM.includes(s) ? s : ''
+}
+
+// Mapea el afiliado a las claves del formulario. Devuelve solo las claves con
+// valor no vacio; nunca incluye una clave vacia, asi no borra lo ya escrito.
+function mapAfiliadoToForm(afiliado) {
+  const cambios = {}
+  if (!afiliado || typeof afiliado !== 'object') return cambios
+  const txt = (v) => (v === null || v === undefined ? '' : String(v).trim())
+  const set = (clave, valor) => {
+    if (valor !== '' && valor !== null && valor !== undefined) cambios[clave] = valor
+  }
+  set('APELLIDO_1', txt(afiliado.primer_apellido))
+  set('APELLIDO_2', txt(afiliado.segundo_apellido))
+  set('NOMBRE_1', txt(afiliado.primer_nombre))
+  set('NOMBRE_2', txt(afiliado.segundo_nombre))
+  set('FECHA_DE_NACIMIENTO', normalizarFechaAfiliado(afiliado.fecha_nacimiento))
+  set('SEXO', normalizarSexoAfiliado(afiliado.sexo))
+  set('DIRECCION', txt(afiliado.direccion))
+  set('TELEFONO_USUARIA', txt(afiliado.telefono))
+  set('DISCAPACIDAD', txt(afiliado.discapacidad))
+  set('MUNICIPIO_DE_RESIDENCIA', txt(afiliado.municipio_afiliacion))
+  set('DEPARTAMENTO_RESIDENCIA', txt(afiliado.departamento_afiliacion))
+  set('NOMBRE_DE_LA_IPS_PRIMARIA', txt(afiliado.ips_primaria))
+  set('REGIMEN_AFILIACION', normalizarRegimenAfiliado(afiliado.categoria))
+  set('TIPO_DE_DOCUMENTO_DE_IDENTIDAD', normalizarTipoDocumentoAfiliado(afiliado.tipo_documento))
+  return cambios
+}
+// ── FIN reglas puras de autocompletado ──
 
 // ---------------------------------------------------------------------------
 // Reglas cruzadas del backend (gestante_config.validate_gestante_payload).
@@ -795,6 +874,13 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   const [existingPdfs, setExistingPdfs] = useState([])
   const [deletingId, setDeletingId] = useState(null)
   const [templateMeta, setTemplateMeta] = useState({})
+  // Avisos del autocompletado desde la base de afiliados (informativos, no bloquean).
+  const [afiliadoMsg, setAfiliadoMsg] = useState('')
+  const [afiliadoMsgWarn, setAfiliadoMsgWarn] = useState(false)
+  // Timer del debounce del documento y documento ya cargado al abrir en edicion
+  // (para no pisar los datos del registro al cargar).
+  const docAutofillTimer = useRef(null)
+  const loadedDocRef = useRef('')
 
   // El bloqueo por historias aplica solo cuando el modulo historias_pdf esta
   // habilitado. Se puede forzar con la prop `historiasPdf`; cuando no se pasa,
@@ -824,9 +910,13 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       // Recalcula las derivadas desde la FUM cargada; sin FUM valida se
       // conservan los valores almacenados del registro.
       const conFum = /^\d{4}-\d{2}-\d{2}$/.test(String(cleaned.FUM || ''))
+      // Guarda el documento ya cargado: el autocompletado no debe reaccionar a
+      // la carga inicial en edicion, solo a ediciones del documento por la usuaria.
+      loadedDocRef.current = cleaned.NO_DE_IDENTIFICACION || ''
       setForm(conFum ? { ...cleaned, ...deriveFromFum(cleaned.FUM) } : cleaned)
     } else {
       setForm({
+        CONSECUTIVO: '',
         TIPO_DE_DOCUMENTO_DE_IDENTIDAD: 'CC',
         NO_DE_IDENTIFICACION: '',
         APELLIDO_1: '',
@@ -890,6 +980,75 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       .catch(() => {})
     return () => { alive = false }
   }, [])
+
+  // En modo crear, prellena el "No." (consecutivo) con el proximo numero
+  // disponible en la tabla gestantes. Best-effort: si falla, el campo queda
+  // vacio y el backend lo asigna al guardar. No pisa un valor ya presente.
+  useEffect(() => {
+    if (mode !== 'create') return undefined
+    let alive = true
+    fetchSiguienteNo()
+      .then((siguiente) => {
+        if (!alive || siguiente === null || siguiente === undefined || siguiente === '') return
+        setForm((f) => (sanitizeFieldValue(f.CONSECUTIVO) ? f : { ...f, CONSECUTIVO: String(siguiente) }))
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [mode])
+
+  // Al desmontar, cancela el debounce pendiente del documento.
+  useEffect(() => () => {
+    if (docAutofillTimer.current) clearTimeout(docAutofillTimer.current)
+  }, [])
+
+  // Consulta la base de afiliados y completa solo los campos con dato. Nunca
+  // borra lo que ya escribio la usuaria; los avisos son informativos.
+  const autocompletarDesdeAfiliado = async (docRaw) => {
+    const doc = String(docRaw || '').trim()
+    if (!doc) return
+    // No pisar los datos de un registro ya cargado al abrir en edicion.
+    if (mode === 'edit' && doc === loadedDocRef.current) return
+    setAfiliadoMsg('')
+    setAfiliadoMsgWarn(false)
+    let data
+    try {
+      data = await verificarAfiliado(doc)
+    } catch {
+      return
+    }
+    if (!data || !data.encontrado) {
+      setAfiliadoMsg('No se encontró la usuaria en la base de afiliados.')
+      setAfiliadoMsgWarn(true)
+      return
+    }
+    const cambios = mapAfiliadoToForm(data.afiliado)
+    const nCampos = Object.keys(cambios).length
+    if (nCampos > 0) {
+      setForm((f) => {
+        const next = { ...f, ...cambios }
+        // Recalcula la edad desde la fecha de nacimiento recien cargada.
+        next.EDAD_ANOS = computeAgeFromBirthDate(next.FECHA_DE_NACIMIENTO)
+        return next
+      })
+    }
+    const partes = []
+    if (nCampos > 0) partes.push('Datos cargados desde la base de afiliados.')
+    if (data.restriction === 'ips_no_coincide') {
+      partes.push(data.message || 'La usuaria pertenece a otra IPS.')
+    }
+    if (partes.length > 0) {
+      setAfiliadoMsg(partes.join(' '))
+      setAfiliadoMsgWarn(data.restriction === 'ips_no_coincide')
+    }
+  }
+
+  // Programa (o reinicia) el autocompletado con debounce al editar el documento.
+  const programarAutofill = (docVal) => {
+    if (docAutofillTimer.current) clearTimeout(docAutofillTimer.current)
+    const doc = String(docVal || '').trim()
+    if (!doc) { setAfiliadoMsg(''); setAfiliadoMsgWarn(false); return }
+    docAutofillTimer.current = setTimeout(() => { autocompletarDesdeAfiliado(doc) }, 600)
+  }
 
   // La edad NO se edita: siempre se deriva de la fecha de nacimiento.
   useEffect(() => {
@@ -994,6 +1153,9 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return next
     })
     setMsg('')
+    // Al editar el documento, programa el autocompletado desde af_afiliado
+    // (debounce ~600ms). No se dispara en la carga inicial de un registro.
+    if (key === 'NO_DE_IDENTIFICACION') programarAutofill(val)
   }
 
   // Enforce the instructivo on submit: SET within allowed, dates parseable,
@@ -1189,6 +1351,16 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     setActiveSection(i)
   }
 
+  // Al salir del campo documento, dispara el autocompletado de inmediato.
+  const docBlurHandler = (key) => (
+    key === 'NO_DE_IDENTIFICACION'
+      ? () => {
+          if (docAutofillTimer.current) clearTimeout(docAutofillTimer.current)
+          autocompletarDesdeAfiliado(form[key])
+        }
+      : undefined
+  )
+
   const renderField = (fieldDef) => {
     const val = sanitizeFieldValue(form[fieldDef.key])
     const meta = templateMeta[fieldDef.key]
@@ -1336,6 +1508,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
             step={resolved === 'decimal' ? 'any' : '1'}
             value={val}
             onChange={(e) => handleChange(fieldDef.key, e.target.value)}
+            onBlur={docBlurHandler(fieldDef.key)}
             className="input text-sm"
           />
         </div>
@@ -1383,6 +1556,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
         <input
           value={val}
           onChange={(e) => handleChange(fieldDef.key, e.target.value)}
+          onBlur={docBlurHandler(fieldDef.key)}
           className="input text-sm"
         />
       </div>
@@ -1436,6 +1610,12 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
           <div className="mx-5 mt-4 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             {msg}
+          </div>
+        )}
+        {afiliadoMsg && (
+          <div className="mx-5 mt-4 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style={{ color: afiliadoMsgWarn ? '#92400e' : 'var(--success)', backgroundColor: afiliadoMsgWarn ? '#fef3c7' : 'var(--success-bg)', border: `1px solid ${afiliadoMsgWarn ? '#d97706' : 'var(--success)'}` }}>
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {afiliadoMsg}
           </div>
         )}
 

@@ -357,6 +357,12 @@ export async function fetchGestanteDiagnostico() {
   return apiFetch(`${API_BASE}/data/gestantes/diagnostico`)
 }
 
+// Proximo numero consecutivo (campo "No.") de la tabla gestantes.
+export async function fetchSiguienteNo() {
+  const data = await apiFetch(`${API_BASE}/data/gestantes/siguiente-numero`)
+  return data.siguiente
+}
+
 export async function fetchGestantes(page = 1, pageSize = 50, search = '', ips = '', mes = '') {
   const params = new URLSearchParams({ page, page_size: pageSize })
   if (search) params.set('search', search)
