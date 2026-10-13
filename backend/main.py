@@ -4824,6 +4824,26 @@ def _constantes_gestantes(db):
     return _FILAS_CACHE.get("constantes") or frozenset()
 
 
+def _gestante_es_de_ips(row, ips_nombre) -> bool:
+    """True si la fila pertenece a la IPS del usuario (o la gestante no tiene IPS).
+
+    Misma regla que _check_gestante_ips: una gestante sin IPS o con "NA" no se
+    considera de otra IPS."""
+    if ips_nombre is None:
+        return True
+    ips_gestante = str(row.get("Nombre de la IPS Primaria", "") or "").strip().upper()
+    return (not ips_gestante) or ips_gestante == "NA" or ips_gestante == ips_nombre
+
+
+def _filas_gestantes_visibles(db, current_user):
+    """Filas de gestantes visibles para el usuario: todas para admin, sólo las de
+    su IPS para un usuario IPS (misma regla que _check_gestante_ips)."""
+    ips_nombre = _get_prestador_ips_name(db, current_user)
+    if ips_nombre is None:
+        return _filas_gestantes_validadas(db)
+    return [r for r in _filas_gestantes_validadas(db) if _gestante_es_de_ips(r, ips_nombre)]
+
+
 def _sin_acentos(v) -> str:
     """Mayusculas sin diacriticos (comparaciones de texto de reportes)."""
     s = str(v or "").strip().upper()
@@ -4901,7 +4921,7 @@ async def listar_alertas(current_user: User = Depends(get_current_user), departa
         urgs = _docs_urgencias(db)
         counts = {a["key"]: 0 for a in ALERTAS}
         total_gestantes = 0
-        for row in _filas_gestantes_validadas(db):
+        for row in _filas_gestantes_visibles(db, current_user):
             if not _pasa_filtros(row, departamento, municipio, regimen):
                 continue
             doc = str(row.get("No. De Identificación", "")).strip()
@@ -4976,6 +4996,8 @@ async def atenciones_gestante(numero_id: str, current_user: User = Depends(get_c
         row = _buscar_fila_gestante(db, numero_id)
         if not row:
             return {"atenciones": [], "encontrada": False}
+        if not _gestante_es_de_ips(row, _get_prestador_ips_name(db, current_user)):
+            raise HTTPException(status_code=403, detail="No autorizado: esta gestante pertenece a otra IPS")
         atenciones = []
         for fecha_k, prof_k, label in _ATENCIONES_CONTROLES:
             f = _fecha_valida_str(row.get(fecha_k))
@@ -5077,7 +5099,7 @@ async def bandeja_alertas(current_user: User = Depends(get_current_user), q: str
         meds = _medicamentos_por_doc(db)
         urgs = _docs_urgencias(db)
         out = []
-        for r in _filas_gestantes_validadas(db):
+        for r in _filas_gestantes_visibles(db, current_user):
             doc = str(r.get("No. De Identificación", "")).strip()
             nombre = _nombre_completo(r)
             if ql and ql not in doc.upper() and ql not in nombre.upper():
@@ -5125,6 +5147,8 @@ async def ficha_gestante(numero_id: str, current_user: User = Depends(get_curren
         row = _buscar_fila_gestante(db, numero_id)
         if not row:
             raise HTTPException(status_code=404, detail="Gestante no encontrada")
+        if not _gestante_es_de_ips(row, _get_prestador_ips_name(db, current_user)):
+            raise HTTPException(status_code=403, detail="No autorizado: esta gestante pertenece a otra IPS")
         doc = str(row.get("No. De Identificación", "")).strip()
 
         segs = (db.query(Seguimiento)
@@ -5242,7 +5266,7 @@ async def filtros_alertas(current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
         deptos, municipios, regimenes = set(), set(), set()
-        for r in _filas_gestantes_validadas(db):
+        for r in _filas_gestantes_visibles(db, current_user):
             d = str(r.get("Departamento Residencia", "")).strip()
             m = str(r.get("Municipio de Residencia", "")).strip()
             g = str(r.get("Regimen Afiliacion", "")).strip()
@@ -5274,7 +5298,7 @@ async def exportar_alertas(current_user: User = Depends(get_current_user), depar
         import corporate_db as _cdb
 
         const = _constantes_gestantes(db)
-        rows = _filas_gestantes_validadas(db)
+        rows = _filas_gestantes_visibles(db, current_user)
         meds = _medicamentos_por_doc(db)
         urgs = _docs_urgencias(db)
         docs = [str(r.get("No. De Identificación", "")).strip() for r in rows]
@@ -5331,7 +5355,7 @@ async def detalle_alerta(key: str, current_user: User = Depends(get_current_user
         _meds = _medicamentos_por_doc(db)
         _urgs = _docs_urgencias(db)
         matches = []
-        for r in _filas_gestantes_validadas(db):
+        for r in _filas_gestantes_visibles(db, current_user):
             _d = str(r.get("No. De Identificación", "")).strip()
             _motivos = {}
             if key in evaluar(r, _const, medicamentos=_meds.get(_d), urgencias=(_d in _urgs), motivos=_motivos):
