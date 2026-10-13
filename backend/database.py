@@ -193,6 +193,10 @@ class HistoriaClinica(Base):
     pdf_path = Column(String(500), nullable=True)
     hash_original = Column(String(64), nullable=True)
     hash_actual = Column(String(64), nullable=True)
+    # Tipo de historia: "ingreso" | "control" (NULL = historia heredada sin tipo)
+    tipo_historia = Column(String(20), nullable=True)
+    # Numero de control prenatal (1..N) cuando tipo_historia = "control"
+    control_numero = Column(Integer, nullable=True)
     created_at = Column(DateTime, nullable=False, default=_utcnow)
 
     prestador = relationship("Prestador", back_populates="historias")
@@ -314,6 +318,18 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN tipo_documento VARCHAR(20)"))
+    except Exception:
+        pass
+    # Migracion: agregar tipo_historia a historias_clinicas (ingreso | control)
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN tipo_historia VARCHAR(20)"))
+    except Exception:
+        pass
+    # Migracion: agregar control_numero a historias_clinicas
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE historias_clinicas ADD COLUMN control_numero INTEGER"))
     except Exception:
         pass
     # Migracion: corregir ips_name en historias existentes

@@ -2399,6 +2399,94 @@ async def download_cargue_excel(cargue_id: int, current_user: User = Depends(get
 
 MAX_PDF_MB = 20
 
+# Claves UPPER_SNAKE de las fechas de control prenatal. Coinciden con las
+# columnas reales de la tabla gestantes y con las claves del payload unitario.
+CONTROL_DATE_KEYS = (
+    "FECHA_1ER_CONTROL", "FECHA_2DO_CONTROL", "FECHA_3ER_CONTROL",
+    "FECHA_4TO_CONTROL", "FECHA_5TO_CONTROL", "FECHA_6TO_CONTROL",
+    "FECHA_7MO_CONTROL", "FECHA_8VO_CONTROL", "FECHA_9NO_CONTROL",
+)
+
+
+def _contar_controles_payload(payload: dict) -> int:
+    """Cuenta las fechas de control prenatal REALES de un payload/dict.
+
+    Una fecha cuenta solo si parsea a una fecha valida y no es comodin
+    (anio <= 1900). Vacio/SIN DATO/comodin no cuentan.
+    """
+    try:
+        from .gestante_config import _parse_date, _es_comodin
+    except ImportError:
+        from gestante_config import _parse_date, _es_comodin
+    total = 0
+    for key in CONTROL_DATE_KEYS:
+        fecha = _parse_date((payload or {}).get(key))
+        if fecha is not None and not _es_comodin(fecha):
+            total += 1
+    return total
+
+
+def _contar_controles_gestante(db, documento: str) -> int:
+    """Cuenta los controles reales guardados para una gestante por documento."""
+    doc = (documento or "").strip()
+    if not doc:
+        return 0
+    try:
+        from sqlalchemy import text as _t
+        cols = ", ".join(f'"{k}"' for k in CONTROL_DATE_KEYS)
+        row = db.execute(
+            _t(f'SELECT {cols} FROM gestantes WHERE "NO_DE_IDENTIFICACION" = :d LIMIT 1'),
+            {"d": doc},
+        ).fetchone()
+    except Exception:
+        return 0
+    if not row:
+        return 0
+    valores = [str(v) if v is not None else "" for v in list(row)]
+    return _contar_controles_payload(dict(zip(CONTROL_DATE_KEYS, valores)))
+
+
+def _historias_faltantes(db, documento: str, template_key: str, payload: dict) -> dict:
+    """Calcula que historias clinicas faltan para un documento.
+
+    Requiere 1 historia de ingreso + N controles, con N = cantidad de fechas de
+    control reales en el payload. Devuelve {"ingreso": bool, "controles": [n...],
+    "ok": bool}, con la misma forma que el faltantes del endpoint /historias/requeridas.
+    """
+    n_controles = _contar_controles_payload(payload or {})
+    doc = (documento or "").strip()
+    ingreso_subido = False
+    controles_subidos = set()
+    if doc:
+        q = db.query(HistoriaClinica).filter(HistoriaClinica.paciente_documento == doc)
+        if template_key:
+            q = q.filter(HistoriaClinica.template_key == template_key)
+        for h in q.all():
+            tipo = (h.tipo_historia or "").strip().lower()
+            if tipo == "ingreso":
+                ingreso_subido = True
+            elif tipo == "control" and h.control_numero is not None:
+                controles_subidos.add(int(h.control_numero))
+    faltan_controles = [n for n in range(1, n_controles + 1) if n not in controles_subidos]
+    return {
+        "ingreso": not ingreso_subido,
+        "controles": faltan_controles,
+        "ok": ingreso_subido and not faltan_controles,
+    }
+
+
+def _mensaje_historias_faltantes(faltantes: dict) -> str:
+    """Construye el mensaje en espanol que lista las historias faltantes."""
+    partes = []
+    if (faltantes or {}).get("ingreso"):
+        partes.append("la historia de ingreso")
+    controles = (faltantes or {}).get("controles") or []
+    if controles:
+        nums = ", ".join(str(n) for n in controles)
+        partes.append(f"las historias de control {nums}")
+    detalle = " y ".join(partes) if partes else "las historias clínicas requeridas"
+    return f"Debes subir {detalle}. No se puede guardar el registro sin las historias clínicas requeridas."
+
 
 @app.post("/historias")
 async def upload_historia(
@@ -2408,6 +2496,8 @@ async def upload_historia(
     paciente_nombre: str = Form(""),
     tipo_documento: str = Form(""),
     template_key: str = Form("gestante"),
+    tipo_historia: str = Form(""),
+    control_numero: str = Form(""),
     current_user: User = Depends(get_current_user),
 ):
     ensure_db_ready()
@@ -2417,6 +2507,17 @@ async def upload_historia(
         if historias_pdf != "true":
             raise HTTPException(status_code=403, detail="El modulo de historias clinicas PDF no esta habilitado. Contacta al administrador.")
     filename = (file.filename or "historia.pdf").strip()
+    # Normalizar el tipo de historia: solo "ingreso" o "control" son validos.
+    tipo = tipo_historia.strip().lower()
+    if tipo not in ("ingreso", "control"):
+        tipo = ""
+    # Numero de control prenatal (solo aplica al tipo "control").
+    nro = None
+    if tipo == "control":
+        try:
+            nro = int(str(control_numero).strip())
+        except (TypeError, ValueError):
+            nro = None
     content = file.file.read()
     if len(content) == 0:
         raise HTTPException(status_code=400, detail="El archivo está vacío.")
@@ -2458,6 +2559,8 @@ async def upload_historia(
             file_size=len(content),
             hash_original=hashlib.md5(content).hexdigest(),
             hash_actual=hashlib.md5(content).hexdigest(),
+            tipo_historia=tipo or None,
+            control_numero=nro,
         )
         db.add(historia)
         # Determinar donde almacenar: OCI > GCS > DB (con fallback)
@@ -2467,7 +2570,14 @@ async def upload_historia(
             try:
                 now = datetime.now(timezone.utc)
                 doc = (paciente_documento or "sindoc").strip()
-                object_name = f"historias/{now.strftime('%Y-%m')}/{doc}/historia.pdf"
+                # Nombre unico por tipo para no sobrescribir otra historia del
+                # mismo paciente (ingreso vs control N).
+                if tipo == "ingreso":
+                    object_name = f"historias/{now.strftime('%Y-%m')}/{doc}/ingreso.pdf"
+                elif tipo == "control" and nro is not None:
+                    object_name = f"historias/{now.strftime('%Y-%m')}/{doc}/control_{nro}.pdf"
+                else:
+                    object_name = f"historias/{now.strftime('%Y-%m')}/{doc}/historia_{historia.id}.pdf"
                 oci_storage.upload_pdf(object_name, content, historia.content_type)
                 historia.pdf_path = object_name
                 storage_used = "oci"
@@ -2507,6 +2617,8 @@ async def upload_historia(
             "filename": historia.filename,
             "paciente_nombre": historia.paciente_nombre,
             "storage": storage_used,
+            "tipo_historia": historia.tipo_historia,
+            "control_numero": historia.control_numero,
         }
     except OperationalError:
         raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para guardar la historia clínica. Verifica la conexión al servidor PostgreSQL.")
@@ -2569,9 +2681,52 @@ async def list_historias(
                 "file_size": h.file_size,
                 "hash_original": h.hash_original,
                 "hash_actual": h.hash_actual,
+                "tipo_historia": h.tipo_historia,
+                "control_numero": h.control_numero,
                 "created_at": h.created_at.isoformat() if h.created_at else None,
             })
         return {"historias": result}
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para consultar las historias clínicas. Verifica la conexión al servidor PostgreSQL.")
+    finally:
+        db.close()
+
+
+@app.get("/historias/requeridas")
+async def historias_requeridas(
+    documento: str = Query(""),
+    template_key: str = Query(""),
+    current_user: User = Depends(get_current_user),
+):
+    """Historias clinicas requeridas vs subidas para un documento.
+
+    Requeridas = 1 de ingreso + N controles, con N = fechas de control reales
+    guardadas en la gestante. Declarada antes de /historias/{historia_id} para
+    que FastAPI no capture la ruta literal como un id.
+    """
+    ensure_db_ready()
+    db = SessionLocal()
+    try:
+        doc = documento.strip()
+        n_controles = _contar_controles_gestante(db, doc)
+        q = db.query(HistoriaClinica).filter(HistoriaClinica.paciente_documento == doc)
+        if template_key:
+            q = q.filter(HistoriaClinica.template_key == template_key)
+        ingreso_subido = False
+        controles_subidos = set()
+        for h in q.all():
+            tipo = (h.tipo_historia or "").strip().lower()
+            if tipo == "ingreso":
+                ingreso_subido = True
+            elif tipo == "control" and h.control_numero is not None:
+                controles_subidos.add(int(h.control_numero))
+        faltan_controles = [n for n in range(1, n_controles + 1) if n not in controles_subidos]
+        return {
+            "requeridas": {"ingreso": True, "controles": n_controles},
+            "subidas": {"ingreso": ingreso_subido, "controles": sorted(controles_subidos)},
+            "faltantes": {"ingreso": not ingreso_subido, "controles": faltan_controles},
+            "ok": ingreso_subido and not faltan_controles,
+        }
     except OperationalError:
         raise HTTPException(status_code=503, detail="No se pudo conectar a la base de datos para consultar las historias clínicas. Verifica la conexión al servidor PostgreSQL.")
     finally:
@@ -6730,6 +6885,20 @@ async def actualizar_gestante(registro_id: int, payload: dict, current_user: Use
 		if errores:
 			raise HTTPException(status_code=400, detail="; ".join(errores[:10]))
 
+		# Bloqueo: no guardar el registro unitario sin las historias clinicas
+		# requeridas (solo cuando el modulo esta activo y el usuario no es admin).
+		try:
+			if current_user.role != "admin" and _get_system_config("historias_pdf", "true") == "true":
+				_doc_hist = str(payload.get("NO_DE_IDENTIFICACION", "")).strip()
+				_faltantes = _historias_faltantes(db, _doc_hist, "gestante", payload)
+				if not _faltantes.get("ok"):
+					raise HTTPException(status_code=400, detail=_mensaje_historias_faltantes(_faltantes))
+		except HTTPException:
+			raise
+		except Exception:
+			# El chequeo no debe bloquear el guardado ante un error interno.
+			pass
+
 		# La edad se deriva de la fecha de nacimiento; reflejarla en la columna
 		# real (EDAD) para persistirla sin confiar en el valor enviado.
 		if "EDAD" in columnas:
@@ -6841,6 +7010,20 @@ async def crear_gestante(payload: dict, current_user: User = Depends(get_current
 		errores, payload = validate_gestante_payload(payload)
 		if errores:
 			raise HTTPException(status_code=400, detail="; ".join(errores[:10]))
+
+		# Bloqueo: no guardar el registro unitario sin las historias clinicas
+		# requeridas (solo cuando el modulo esta activo y el usuario no es admin).
+		try:
+			if current_user.role != "admin" and _get_system_config("historias_pdf", "true") == "true":
+				_doc_hist = str(payload.get("NO_DE_IDENTIFICACION", "")).strip()
+				_faltantes = _historias_faltantes(db, _doc_hist, "gestante", payload)
+				if not _faltantes.get("ok"):
+					raise HTTPException(status_code=400, detail=_mensaje_historias_faltantes(_faltantes))
+		except HTTPException:
+			raise
+		except Exception:
+			# El chequeo no debe bloquear el guardado ante un error interno.
+			pass
 
 		from sqlalchemy import text
 		columnas = [c.name for c in db.execute(text('SELECT * FROM gestantes WHERE 1=0')).cursor.description]
