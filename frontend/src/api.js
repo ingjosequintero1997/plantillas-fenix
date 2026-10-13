@@ -746,14 +746,16 @@ export function generarReporteErroresLocal(rawText, templateNames, logs, filenam
     return s
   }
 
-  // Errores agrupados por fila (normalizando fechas en original/corrected)
+  // Errores agrupados por fila (normalizando fechas en el mensaje)
   const erroresPorFila = {}
   ;(logs || []).forEach((l) => {
     if (l.status === 'error') {
       if (!erroresPorFila[l.row]) erroresPorFila[l.row] = []
-      const orig = normalizarFecha(l.original)
+      // Alineado con el TXT del backend (row_errors): [variable] mensaje.
+      // El mensaje ya nombra el valor invalido, asi que no se repite "original -> corrected".
+      const variable = String(l.column ?? 'Sin variable')
       const corr = normalizarFecha(l.corrected)
-      erroresPorFila[l.row].push(`[${l.column}] ${orig} -> ${corr}`)
+      erroresPorFila[l.row].push(`[${variable}] ${corr}`)
     }
   })
 

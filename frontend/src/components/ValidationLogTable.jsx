@@ -1,33 +1,53 @@
 import React, { useMemo, useState } from 'react'
 
 const PER_PAGE = 12
+const MAX_CHIPS = 6
 
 // Recorta fechas con hora (AAAA-MM-DD HH:MM:SS) a solo la fecha.
+// Cuando el valor viene vacio (obligatorio o error cruzado) muestra un placeholder claro.
 function mostrarValor(v) {
   const s = String(v ?? '').trim()
-  if (!s) return '\u2014'
+  if (!s) return '(vacío)'
   const m = s.match(/^(\d{4}-\d{2}-\d{2})\s+\d{2}:\d{2}/)
   return m ? m[1] : s
 }
 
-// Convierte el mensaje "Debe ser uno de: X, Y, Z" en chips de opciones.
+// El backend pone el marcador en medio del mensaje (ej: "El valor 'X' no es valido.
+// Debe ser uno de: Femenino"). Extrae las opciones que vienen despues del marcador.
+// Devuelve null cuando el mensaje no lista opciones (fecha, entero, obligatorio, etc.).
+function extraerOpciones(mensaje) {
+  const marcador = 'Debe ser uno de:'
+  const s = String(mensaje ?? '')
+  const idx = s.indexOf(marcador)
+  if (idx === -1) return null
+  return s
+    .slice(idx + marcador.length)
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+}
+
+// Muestra el mensaje de error y, si lista valores validos, los renderiza como chips.
 function CorreccionCelda({ value }) {
   const s = String(value ?? '').trim()
   if (!s) return <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Revisa el valor</span>
-  if (s.startsWith('Debe ser uno de:')) {
-    const opciones = s.replace('Debe ser uno de:', '').split(',').map((o) => o.trim()).filter(Boolean)
+  const opciones = extraerOpciones(s)
+  if (opciones && opciones.length > 0) {
     return (
-      <div className="flex flex-wrap gap-1">
-        {opciones.slice(0, 4).map((op, i) => (
-          <span key={i} className="text-[0.7rem] font-medium px-2 py-0.5 rounded-md" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
-            {op}
-          </span>
-        ))}
-        {opciones.length > 4 && (
-          <span className="text-[0.7rem] font-medium px-2 py-0.5 rounded-md" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)' }}>
-            +{opciones.length - 4}
-          </span>
-        )}
+      <div className="flex flex-col gap-1">
+        <span className="text-xs leading-snug" style={{ color: 'var(--text-secondary)' }}>{s}</span>
+        <div className="flex flex-wrap gap-1">
+          {opciones.slice(0, MAX_CHIPS).map((op, i) => (
+            <span key={i} className="text-[0.7rem] font-medium px-2 py-0.5 rounded-md" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
+              {op}
+            </span>
+          ))}
+          {opciones.length > MAX_CHIPS && (
+            <span className="text-[0.7rem] font-medium px-2 py-0.5 rounded-md" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)' }}>
+              +{opciones.length - MAX_CHIPS}
+            </span>
+          )}
+        </div>
       </div>
     )
   }
@@ -87,7 +107,7 @@ export default function ValidationLogTable({ logs }) {
               {errors.length} celda{errors.length !== 1 ? 's' : ''}
             </span>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)' }}>
-              {new Set(errors.map((l) => l.column)).size} variables
+              {new Set(errors.map((l) => String(l.column ?? 'Sin variable'))).size} variables
             </span>
           </div>
         </div>
@@ -110,7 +130,7 @@ export default function ValidationLogTable({ logs }) {
               <th className="px-4 py-2.5 font-semibold w-14">Fila</th>
               <th className="px-4 py-2.5 font-semibold">Variable</th>
               <th className="px-4 py-2.5 font-semibold">Valor actual</th>
-              <th className="px-4 py-2.5 font-semibold">Cómo corregirlo</th>
+              <th className="px-4 py-2.5 font-semibold">Error / cómo corregirlo</th>
             </tr>
           </thead>
           <tbody>
@@ -129,12 +149,18 @@ export default function ValidationLogTable({ logs }) {
                   </span>
                 </td>
                 <td className="px-4 py-2.5">
-                  <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{l.column}</div>
+                  <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{String(l.column ?? 'Sin variable')}</div>
                 </td>
                 <td className="px-4 py-2.5">
-                  <span className="inline-block text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}>
-                    {mostrarValor(l.original)}
-                  </span>
+                  {String(l.original ?? '').trim() === '' ? (
+                    <span className="inline-block text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-subtle)' }}>
+                      {mostrarValor(l.original)}
+                    </span>
+                  ) : (
+                    <span className="inline-block text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)' }}>
+                      {mostrarValor(l.original)}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-2.5">
                   <CorreccionCelda value={l.corrected} />
