@@ -420,6 +420,11 @@ function PorAlertaView({ onOpenFicha }) {
             <div>
               <div className="page-title" style={{ fontSize: '1.1rem' }}>{selected.label}</div>
               <div className="page-subtitle">{loadingDetalle ? 'Cargando...' : `${filtradas.length} usuaria${filtradas.length !== 1 ? 's' : ''}`}</div>
+              {selected.criterio && (
+                <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)', maxWidth: 760 }}>
+                  <span style={{ fontWeight: 600 }}>Justificación de la alerta: </span>{selected.criterio}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -435,7 +440,7 @@ function PorAlertaView({ onOpenFicha }) {
           <div>
             <div className="table-wrap">
               <table className="table">
-                <thead><tr><th className="text-center">Ficha</th><th>Nombre y apellido</th><th>Documento</th><th>Departamento</th><th>Municipio</th><th>IPS</th><th>Aseguradora</th><th>Edad</th><th>Edad gest.</th></tr></thead>
+                <thead><tr><th className="text-center">Ficha</th><th>Nombre y apellido</th><th>Documento</th><th>Justificación</th><th>Departamento</th><th>Municipio</th><th>IPS</th><th>Aseguradora</th><th>Edad</th><th>Edad gest.</th></tr></thead>
                 <tbody>
                   {pageRows.map((r, i) => (
                     <tr key={`${r.numero_id}-${i}`}>
@@ -444,6 +449,7 @@ function PorAlertaView({ onOpenFicha }) {
                       </td>
                       <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{r.nombre || '—'}</td>
                       <td>{r.tipo_id} {r.numero_id}</td>
+                      <td style={{ maxWidth: 360, whiteSpace: 'normal' }} title={r.justificacion || ''}>{r.justificacion || '—'}</td>
                       <td>{r.departamento || '—'}</td>
                       <td>{r.municipio || '—'}</td>
                       <td>{r.nombre_ips || '—'}</td>

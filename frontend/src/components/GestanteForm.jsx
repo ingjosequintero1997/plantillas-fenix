@@ -356,6 +356,8 @@ function computeAgeFromBirthDate(value) {
   const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (!m) return ''
   const y = Number(m[1]); const mo = Number(m[2]); const d = Number(m[3])
+  // Comodin (anio <= 1900) no es una fecha real: no se calcula la edad.
+  if (y <= 1900) return ''
   const today = new Date()
   let age = today.getFullYear() - y
   if (today.getMonth() + 1 < mo || (today.getMonth() + 1 === mo && today.getDate() < d)) age -= 1
@@ -369,8 +371,10 @@ const CAMPOS_CALCULADOS = ['FPP', 'DIAS_PARA_EL_PARTO', 'ALARMA']
 // Deriva FPP (FUM + 280 dias), DIAS_PARA_EL_PARTO y ALARMA desde la FUM
 // (AAAA-MM-DD), igual que backend/formulas.py::aplicar_formulas. Si la FUM
 // esta vacia o no es valida, los tres campos quedan vacios.
-function deriveFromFum(fum) {
-  const m = String(fum || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+function deriveFromFum(fumRaw) {
+  // Comodin (anio <= 1900) no es una fecha real: no genera FPP/dias/alarma.
+  const fum = fechaReal(fumRaw)
+  const m = fum.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!m) return { FPP: '', DIAS_PARA_EL_PARTO: '', ALARMA: '' }
   const fpp = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
   fpp.setDate(fpp.getDate() + 280)
@@ -760,6 +764,115 @@ function deriveImc(pesoRaw, tallaRaw) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Derivadas adicionales del backend (formulas.py::aplicar_formulas) que el
+// formulario muestra en vivo: numero/ultimo control, edad gestacional actual,
+// trimestres de los tamizajes y la relacion anemia vs tratamiento. Toda la
+// logica espeja backend/formulas.py para que la vista previa coincida con lo
+// que el backend calcula y guarda.
+// ---------------------------------------------------------------------------
+
+// Numero total de controles prenatales + ultimo control: cantidad y maximo de
+// las fechas de control REALES (comodin/vacio no cuentan), igual que formulas.py.
+function deriveControles(form) {
+  const validas = CONTROLES.map((k) => fechaReal(form[k])).filter(Boolean).sort()
+  return {
+    NUMERO_TOTAL_DE_CONTROLES_PRENATALES: validas.length ? String(validas.length) : '',
+    ULTIMO_CONTROL_PRENATAL: validas.length ? validas[validas.length - 1] : '',
+  }
+}
+
+// Edad gestacional actual = (ultimo control - FUM) en semanas, redondeada.
+function deriveEdadGestActual(form, ultimoControl) {
+  const fum = fechaReal(form.FUM)
+  const ultimo = fechaReal(ultimoControl || form.ULTIMO_CONTROL_PRENATAL)
+  if (!fum || !ultimo) return { EDAD_GESTACIONAL_ACTUAL: '' }
+  return { EDAD_GESTACIONAL_ACTUAL: String(Math.round(semanasEntreIso(fum, ultimo))) }
+}
+
+// Trimestre (1/2/3) segun semanas; 0 cuando no hay semanas (formulas.py::_trimestre).
+function trimestreDe(semanas) {
+  if (semanas === null || semanas === undefined) return 0
+  return semanas < 14 ? 1 : semanas < 28 ? 2 : 3
+}
+
+// Confirmatoria: limites propios (1er Trim <13, 2do <=26) (formulas.py::_trimestre_confirmatorio).
+function trimestreConfirmatorio(semanas) {
+  if (semanas === null || semanas === undefined) return 0
+  return semanas < 13 ? 1 : semanas <= 26 ? 2 : 3
+}
+
+// (trimestre calculado, fecha de la prueba) por cada tamizaje VIH/Sifilis.
+const TRIMESTRE_POR_FECHA = [
+  ['TRIMESTRE_ASESORIA_VIH', 'ASESORIA_PRUEBA_VIH'],
+  ['TRIMESTRE_TOMA_PRUEBA_VIH_PRIMER_TAMIZAJE', 'FECHA_TOMA_PRUEBA_VIH_PRIMER_TAMIZAJE'],
+  ['TRIMESTRE_TOMA_PRUEBA_VIH_SEGUNDO_TAMIZAJE', 'FECHA_TOMA_PRUEBA_VIH_SEGUNDO_TAMIZAJE'],
+  ['TRIMESTRE_TOMA_PRUEBA_VIH_TERCER_TAMIZAJE', 'FECHA_TOMA_PRUEBA_VIH_TERCER_TAMIZAJE'],
+  ['TRIMESTRE_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'FECHA_PRIMERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS'],
+  ['TRIMESTRE_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'FECHA_SEGUNDA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS'],
+  ['TRIMESTRE_TERCERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS', 'FECHA_TERCERA_PRUEBA_TREPONEMICA_RAPIDA_SIFILIS'],
+  ['TRIMESTRE_TOMA_SEGUNDA_PRUEBA_VIH', 'FECHA_TOMA_SEGUNDA_PRUEBA_VIH'],
+]
+
+// Trimestres de tamizajes = FUM + fecha de la prueba; '0' cuando no hay fecha.
+function deriveTrimestres(form) {
+  const fum = fechaReal(form.FUM)
+  const out = {}
+  for (const [claveTri, claveFecha] of TRIMESTRE_POR_FECHA) {
+    const fp = fechaReal(form[claveFecha])
+    out[claveTri] = fp ? String(trimestreDe(semanasEntreIso(fum, fp))) : '0'
+  }
+  // Confirmatoria: base = fecha de INGRESO, con limites propios; '0' sin fecha.
+  const fc = fechaReal(form.FECHA_PRUEBA_CONFIRMATORIA_SEGUN_ALGORITMO)
+  const ingreso = fechaReal(form.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL)
+  out.TRIMESTRE_PRUEBA_CONFIRMATORIA_SEGUN_ALGORITMO = fc
+    ? String(trimestreConfirmatorio(semanasEntreIso(ingreso, fc)))
+    : '0'
+  return out
+}
+
+// Relacion anemia vs tratamiento (formulas.py::_relacion_anemia): hemoglobina
+// del tamizaje mas reciente vs tratamiento (1=oral, 2=parenteral, 3=transfusion).
+function deriveRelacionAnemia(form) {
+  const documento = String(sanitizeFieldValue(form.NO_DE_IDENTIFICACION) || '').trim()
+  if (!documento) return { RELACION_ENTRE_ANEMIA_VS_TRATAMIENTO: '' }
+  const num = (x) => {
+    const s = String(x === null || x === undefined ? '' : x).trim().replace(',', '.')
+    if (!s || ['SIN DATO', 'NO APLICA', 'N/A', 'NONE'].includes(s.toUpperCase())) return null
+    const n = Number(s)
+    return Number.isFinite(n) ? n : null
+  }
+  const pares = [
+    [fechaReal(form.FECHA_3RA_REALIZACION_HEMOGLOBINA), num(form.RESULTADO_3RA_HEMOGLOBINA)],
+    [fechaReal(form.FECHA_2DA_REALIZACION_HEMOGLOBINA), num(form.RESULTADO_2DA_HEMOGLOBINA)],
+    [fechaReal(form.FECHA_1RA_REALIZACION_HEMOGLOBINA), num(form.RESULTADO_1RA_HEMOGLOBINA)],
+  ]
+  const validos = pares.filter(([f]) => f)
+  if (!validos.length) return { RELACION_ENTRE_ANEMIA_VS_TRATAMIENTO: '🟡 SIN TAMIZAJE' }
+  const latest = validos.map(([f]) => f).sort().pop()
+  const hv = (validos.find(([f]) => f === latest) || [])[1]
+  if (hv === null || hv === undefined) return { RELACION_ENTRE_ANEMIA_VS_TRATAMIENTO: '🟡 SIN TAMIZAJE' }
+  const requerido = hv < 7 ? 3 : hv < 10 ? 2 : 1
+  const tratRaw = String(form.TIPO_DE_TRATAMIENTO_SUMINITRADO_PARA_ANEMIA || '').trim()
+  const trat = tratRaw && /\d/.test(tratRaw[0]) ? Number(tratRaw[0]) : 0
+  return { RELACION_ENTRE_ANEMIA_VS_TRATAMIENTO: trat === requerido ? '🟢 ADECUADO' : '🔴 NO ADECUADO' }
+}
+
+// Todas las derivadas de formulas.py que el formulario puede mostrar en vivo.
+function deriveFormulas(form) {
+  const controles = deriveControles(form)
+  return {
+    ...deriveFromFum(form.FUM),
+    ...deriveInicioControl(form.FUM, form.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL),
+    ...deriveImc(form.PESO_INICIAL_KG, form.TALLA_METROS),
+    ...deriveImcActual(form.PESO_ACTUAL, form.TALLA_ACTUAL, form.FUM, controles.ULTIMO_CONTROL_PRENATAL),
+    ...controles,
+    ...deriveEdadGestActual(form, controles.ULTIMO_CONTROL_PRENATAL),
+    ...deriveTrimestres(form),
+    ...deriveRelacionAnemia(form),
+  }
+}
+
 // Devuelve el mensaje exacto del backend para la regla cruzada que aplica a
 // `key` ('' si no aplica). Se reutiliza en el error en vivo (fieldErrorFor),
 // en el bloqueo de navegacion (sectionFieldErrors) y en el envio (validateForm).
@@ -1023,14 +1136,21 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
     const cambios = mapAfiliadoToForm(data.afiliado)
     const nCampos = Object.keys(cambios).length
-    if (nCampos > 0) {
-      setForm((f) => {
-        const next = { ...f, ...cambios }
-        // Recalcula la edad desde la fecha de nacimiento recien cargada.
-        next.EDAD_ANOS = computeAgeFromBirthDate(next.FECHA_DE_NACIMIENTO)
-        return next
-      })
-    }
+    // El instructivo exige NONE en Apellido_2 / Nombre_2 cuando no existen: se
+    // asigna solo si el afiliado no los trae y la usuaria no escribio ya un
+    // valor (nunca se pisa lo que la usuaria escribio).
+    setForm((f) => {
+      const next = { ...f, ...cambios }
+      if (!sanitizeFieldValue(next.APELLIDO_2)) next.APELLIDO_2 = 'NONE'
+      if (!sanitizeFieldValue(next.NOMBRE_2)) next.NOMBRE_2 = 'NONE'
+      // Recalcula la edad desde la fecha de nacimiento recien cargada.
+      next.EDAD_ANOS = computeAgeFromBirthDate(next.FECHA_DE_NACIMIENTO)
+      return next
+    })
+    // Un autocompletado limpia el error de un submit anterior: evita el falso
+    // "El primer apellido es obligatorio" de un envio que corrio antes de que
+    // el autocompletado (async) terminara de cargar el dato.
+    setError('')
     const partes = []
     if (nCampos > 0) partes.push('Datos cargados desde la base de afiliados.')
     if (data.restriction === 'ips_no_coincide') {
@@ -1067,6 +1187,13 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     if (!file) return
     const doc = form.NO_DE_IDENTIFICACION
     if (!doc) { setPdfMsg('Ingresa el numero de documento antes de subir la historia.'); return }
+    // Restriccion: el archivo debe identificar a la usuaria con {TIPO}_{NUMERO}.
+    const tipo = String(form.TIPO_DE_DOCUMENTO_DE_IDENTIDAD || '').trim()
+    const esperado = (tipo ? `${tipo}_${doc}` : String(doc)).toLowerCase()
+    if (!String(file.name || '').toLowerCase().includes(esperado)) {
+      setPdfMsg(`El nombre del archivo debe incluir la identificacion de la usuaria con el separador '_' (por ejemplo: ${tipo ? `${tipo}_${doc}` : doc}.pdf).`)
+      return
+    }
     setUploadingSlot(slotKey(slot)); setPdfMsg('')
     try {
       await uploadHistoria(
@@ -1129,30 +1256,18 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   }, [form.NO_DE_IDENTIFICACION])
 
   const handleChange = (key, val) => {
-    // Al cambiar la FUM se recalculan en el mismo update FPP, dias para el
-    // parto, alarma, edad gestacional al inicio del control y el IMC actual;
-    // al cambiar peso/talla (inicial o actual) o el ultimo control se recalcula
-    // el IMC correspondiente con la misma formula que el backend. El resto de
-    // los campos no toca derivadas.
+    // Al cambiar cualquier campo se recalculan en el mismo update TODAS las
+    // derivadas de backend/formulas.py (FUM -> FPP/dias/alarma/edad gest inicio
+    // control; IMC inicial y actual; numero y ultimo control; edad gestacional
+    // actual; trimestres de tamizaje; relacion anemia), igual que al guardar.
+    // El resto de los campos no toca derivadas.
     setForm((f) => {
       const next = { ...f, [key]: val }
-      if (key === 'FUM') {
-        Object.assign(next, deriveFromFum(val))
-        Object.assign(next, deriveInicioControl(next.FUM, next.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL))
-        Object.assign(next, deriveImcActual(next.PESO_ACTUAL, next.TALLA_ACTUAL, next.FUM, next.ULTIMO_CONTROL_PRENATAL))
-      }
-      if (key === 'FECHA_DE_INGRESO_AL_CONTROL_PRENATAL') {
-        Object.assign(next, deriveInicioControl(next.FUM, next.FECHA_DE_INGRESO_AL_CONTROL_PRENATAL))
-      }
-      if (key === 'PESO_INICIAL_KG' || key === 'TALLA_METROS') {
-        Object.assign(next, deriveImc(next.PESO_INICIAL_KG, next.TALLA_METROS))
-      }
-      if (key === 'PESO_ACTUAL' || key === 'TALLA_ACTUAL' || key === 'ULTIMO_CONTROL_PRENATAL') {
-        Object.assign(next, deriveImcActual(next.PESO_ACTUAL, next.TALLA_ACTUAL, next.FUM, next.ULTIMO_CONTROL_PRENATAL))
-      }
+      Object.assign(next, deriveFormulas(next))
       return next
     })
     setMsg('')
+    setError('')
     // Al editar el documento, programa el autocompletado desde af_afiliado
     // (debounce ~600ms). No se dispara en la carga inicial de un registro.
     if (key === 'NO_DE_IDENTIFICACION') programarAutofill(val)
@@ -1278,6 +1393,10 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     try {
       // La edad siempre se envia calculada, nunca la que haya escrito el usuario.
       const payload = { ...form, EDAD_ANOS: computeAgeFromBirthDate(form.FECHA_DE_NACIMIENTO) }
+      // Instructivo: si no hay segundo apellido/nombre, la columna debe ir en NONE.
+      // Cubre tambien la entrada manual (sin autocompletado).
+      if (!sanitizeFieldValue(payload.APELLIDO_2)) payload.APELLIDO_2 = 'NONE'
+      if (!sanitizeFieldValue(payload.NOMBRE_2)) payload.NOMBRE_2 = 'NONE'
       await onSave(payload)
       setMsg(mode === 'create' ? 'Registro creado correctamente' : 'Registro actualizado correctamente')
     } catch (err) {

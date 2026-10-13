@@ -239,6 +239,14 @@ export default function HistoriasView({ templateKey = 'gestante' }) {
 
   const handleUploadSlot = async (slot, file) => {
     if (!file || !selectedPatient) return
+    // Restriccion: el archivo debe identificar a la usuaria con {TIPO}_{NUMERO}.
+    const doc = String(selectedPatient.documento || '').trim()
+    const tipo = String(selectedPatient.tipo_documento || '').trim()
+    const esperado = (tipo ? `${tipo}_${doc}` : doc).toLowerCase()
+    if (doc && !String(file.name || '').toLowerCase().includes(esperado)) {
+      setError(`El nombre del archivo debe incluir la identificacion de la usuaria con el separador '_' (por ejemplo: ${tipo ? `${tipo}_${doc}` : doc}.pdf).`)
+      return
+    }
     setUploadingSlot(slotKeySlot(slot)); setError(''); setMessage(null)
     try {
       await uploadHistoria(

@@ -374,7 +374,7 @@ def compute_edad(fecha_nacimiento) -> str:
     Returns "" when the birth date is missing or unparseable.
     """
     born = _parse_date(fecha_nacimiento)
-    if born is None:
+    if born is None or _es_comodin(born):
         return ""
     today = date.today()
     years = today.year - born.year
@@ -750,7 +750,7 @@ def validate_gestante_payload(payload: dict) -> tuple[list[str], dict]:
     # days, days left until the due date and the resulting alert. A missing or
     # unparseable FUM leaves FPP/DIAS_PARA_EL_PARTO/ALARMA with whatever the
     # formula pass above derived (incoming values pass through untouched).
-    if fum:
+    if fum and not _es_comodin(fum):
         fpp = fum + timedelta(days=280)
         dias = (fpp - date.today()).days
         cleaned["FPP"] = fpp.strftime("%Y-%m-%d")

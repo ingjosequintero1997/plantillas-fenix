@@ -22,23 +22,39 @@ except ImportError:
 #   AMARILLO (3): vigilancia, laboratorios y logistica.
 ALERTAS = [
     # ── ROJO ── morbilidad / riesgo clinico extremo
-    {"key": "mme", "label": "Morbilidad materna extrema", "criticidad": 1},
-    {"key": "urgencias", "label": "Atenciones en urgencias", "criticidad": 1},
-    {"key": "preeclampsia", "label": "Alto riesgo de preeclampsia", "criticidad": 2},
-    {"key": "preeclampsia_sin_asa", "label": "Alto riesgo de preeclampsia sin ASA", "criticidad": 2},
-    {"key": "tromboembolismo", "label": "Riesgo de tromboembolismo", "criticidad": 2},
-    {"key": "sifilis", "label": "Sífilis gestacional", "criticidad": 2},
-    {"key": "menor_15", "label": "Menor de 15 años", "criticidad": 2},
-    {"key": "mayor_40", "label": "Mayor de 40 años", "criticidad": 2},
+    {"key": "mme", "label": "Morbilidad materna extrema", "criticidad": 1,
+     "criterio": "Complicaciones durante el parto = SI, o UCI materna = SI."},
+    {"key": "urgencias", "label": "Atenciones en urgencias", "criticidad": 1,
+     "criterio": "La usuaria tiene atenciones registradas en urgencias."},
+    {"key": "preeclampsia", "label": "Alto riesgo de preeclampsia", "criticidad": 2,
+     "criterio": "Clasificación del riesgo de preeclampsia = Alto riesgo."},
+    {"key": "preeclampsia_sin_asa", "label": "Alto riesgo de preeclampsia sin ASA", "criticidad": 2,
+     "criterio": "Alto riesgo de preeclampsia y sin suministro de ASA (no suministrado / no indicado / ausente en medicamentos)."},
+    {"key": "tromboembolismo", "label": "Riesgo de tromboembolismo", "criticidad": 2,
+     "criterio": "Clasificación del riesgo tromboembólico = Alto riesgo."},
+    {"key": "sifilis", "label": "Sífilis gestacional", "criticidad": 2,
+     "criterio": "Alguna prueba treponémica rápida de sífilis = POSITIVO."},
+    {"key": "menor_15", "label": "Menor de 15 años", "criticidad": 2,
+     "criterio": "Edad menor de 15 años."},
+    {"key": "mayor_40", "label": "Mayor de 40 años", "criticidad": 2,
+     "criterio": "Edad mayor o igual a 40 años."},
     # ── AMARILLO ── vigilancia / laboratorios / logistica
-    {"key": "chagas", "label": "Chagas", "criticidad": 3},
-    {"key": "labs", "label": "Resultados de laboratorios alterados", "criticidad": 3},
-    {"key": "sin_control_45", "label": "Sin control prenatal en los últimos 45 días", "criticidad": 3},
-    {"key": "alto_riesgo_gestacional", "label": "Alto riesgo gestacional", "criticidad": 3},
-    {"key": "insuficiente_control", "label": "Insuficiente control prenatal", "criticidad": 3},
-    {"key": "nutricional", "label": "Alteraciones nutricionales", "criticidad": 3},
-    {"key": "mayor_35", "label": "Mayor de 35 años", "criticidad": 3},
-    {"key": "puerperio_sin_control", "label": "En puerperio sin control posparto", "criticidad": 3},
+    {"key": "chagas", "label": "Chagas", "criticidad": 3,
+     "criterio": "Resultado de Chagas = POSITIVO."},
+    {"key": "labs", "label": "Resultados de laboratorios alterados", "criticidad": 3,
+     "criterio": "Algún resultado de laboratorio alterado: hemoglobina baja (<11), urocultivo positivo, glicemia/TTOG fuera de 70-140, o tamizaje positivo/alterado."},
+    {"key": "sin_control_45", "label": "Sin control prenatal en los últimos 45 días", "criticidad": 3,
+     "criterio": "Más de 45 días desde el último control prenatal."},
+    {"key": "alto_riesgo_gestacional", "label": "Alto riesgo gestacional", "criticidad": 3,
+     "criterio": "Clasificación del riesgo obstétrico = Alto riesgo."},
+    {"key": "insuficiente_control", "label": "Insuficiente control prenatal", "criticidad": 3,
+     "criterio": "Menos controles prenatales de los esperados para la edad gestacional (~1 cada 4 semanas)."},
+    {"key": "nutricional", "label": "Alteraciones nutricionales", "criticidad": 3,
+     "criterio": "Clasificación del IMC fuera de Peso normal / IMC adecuado para la edad gestacional."},
+    {"key": "mayor_35", "label": "Mayor de 35 años", "criticidad": 3,
+     "criterio": "Edad mayor de 35 años."},
+    {"key": "puerperio_sin_control", "label": "En puerperio sin control posparto", "criticidad": 3,
+     "criterio": "En puerperio (parto hace 42 días o menos) sin control posparto."},
 ]
 
 ALERTAS_BY_KEY = {a["key"]: a for a in ALERTAS}
@@ -100,7 +116,7 @@ def campos_constantes(rows: list, min_filas: int = 30) -> set:
     return constantes
 
 
-def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=False) -> set:
+def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=False, motivos=None) -> set:
     """Devuelve el conjunto de keys de alertas que aplican a la fila.
 
     `constantes`: campos con valor de relleno (mismo valor en todas las filas);
@@ -108,48 +124,58 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
     `medicamentos`: coleccion de ATC/nombres de medicamentos del documento (o None
     si no hay data de medicamentos para esa gestante).
     `urgencias`: True si el documento tiene atenciones de urgencias (lo calcula el
-    llamador desde reporte_consultas; no viene en la fila del cargue)."""
+    llamador desde reporte_consultas; no viene en la fila del cargue).
+    `motivos`: dict opcional que, si se pasa, se rellena con key -> justificacion
+    legible (por que la usuaria entra en esa alerta)."""
     out = set()
 
     def _skip(*fields):
         return any(f in constantes for f in fields)
 
+    def _add(key, reason):
+        out.add(key)
+        if motivos is not None:
+            prev = motivos.get(key)
+            motivos[key] = f"{prev}; {reason}" if prev else reason
+
     # Urgencias (evidencia cross-table derivada por el llamador)
     if urgencias:
-        out.add("urgencias")
+        _add("urgencias", "Atención(es) registrada(s) en urgencias")
 
     # Edad (menor de 15, mayor de 35, mayor/igual de 40)
     edad = _edad(row)
     if edad is not None and not _skip("Fecha de Nacimiento", "Edad (años)"):
         if edad < 15:
-            out.add("menor_15")
+            _add("menor_15", f"Edad {int(edad)} años (< 15)")
         if edad > 35:
-            out.add("mayor_35")
+            _add("mayor_35", f"Edad {int(edad)} años (> 35)")
         if edad >= 40:
-            out.add("mayor_40")
+            _add("mayor_40", f"Edad {int(edad)} años (>= 40)")
 
     # Preeclampsia (la data real usa "Alto riesgo de preeclampsia")
     pre = _up(row.get("Clacificacion del riesgo de preeclampsia"))
     es_alto_pre = pre.startswith("ALTO RIESGO") and not _skip("Clacificacion del riesgo de preeclampsia")
     if es_alto_pre:
-        out.add("preeclampsia")
+        _add("preeclampsia", f"Riesgo de preeclampsia = {pre}")
     asa = _up(row.get("Condicion del suministro del ASA"))
     asa_vacia = asa in _PLACEHOLDERS
     if es_alto_pre and not _skip("Condicion del suministro del ASA") and ("NO SUMINISTRAD" in asa or "NO INDICADA" in asa):
-        out.add("preeclampsia_sin_asa")
-    elif es_alto_pre and medicamentos is not None and asa_vacia and not _asa_en_medicamentos(medicamentos):
         # Sin ASA en la data de medicamentos del documento: cuenta como no
         # suministrado aunque el campo del cargue sea relleno/vacio. El guard
         # _skip aplica solo al campo; esta evidencia cross-table es real.
-        out.add("preeclampsia_sin_asa")
+        _add("preeclampsia_sin_asa", f"Alto riesgo de preeclampsia y ASA = {asa}")
+    elif es_alto_pre and medicamentos is not None and asa_vacia and not _asa_en_medicamentos(medicamentos):
+        _add("preeclampsia_sin_asa", "Alto riesgo de preeclampsia y sin ASA en los medicamentos del documento")
 
     # Tromboembolico (la data real usa "Alto riesgo")
-    if not _skip("Clacificacion del riesgo tromboembolico") and _up(row.get("Clacificacion del riesgo tromboembolico")).startswith("ALTO RIESGO"):
-        out.add("tromboembolismo")
+    _trombo = _up(row.get("Clacificacion del riesgo tromboembolico"))
+    if not _skip("Clacificacion del riesgo tromboembolico") and _trombo.startswith("ALTO RIESGO"):
+        _add("tromboembolismo", f"Riesgo tromboembólico = {_trombo}")
 
     # Riesgo obstetrico (la data real usa "Alto riesgo")
-    if not _skip("Clasificación del riesgo obstetrico") and _up(row.get("Clasificación del riesgo obstetrico")).startswith("ALTO RIESGO"):
-        out.add("alto_riesgo_gestacional")
+    _obs = _up(row.get("Clasificación del riesgo obstetrico"))
+    if not _skip("Clasificación del riesgo obstetrico") and _obs.startswith("ALTO RIESGO"):
+        _add("alto_riesgo_gestacional", f"Riesgo obstétrico = {_obs}")
 
     # Sifilis gestacional (cualquier treponemica positiva)
     _sif = (
@@ -160,24 +186,25 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
     if not _skip(*_sif):
         for k in _sif:
             if _up(row.get(k)) == "POSITIVO":
-                out.add("sifilis")
+                _add("sifilis", f"{k} = POSITIVO")
                 break
 
     # Chagas
     if not _skip("Resultado Chagas") and _up(row.get("Resultado Chagas")) == "POSITIVO":
-        out.add("chagas")
+        _add("chagas", "Resultado Chagas = POSITIVO")
 
     # Laboratorios alterados (excluye VIH y Sifilis, que tienen alerta propia).
     # Anemia: hemoglobina baja.
     _hb = ("Resultado 1ra Hemoglobina", "Resultado 2da Hemoglobina", "Resultado 3ra Hemoglobina")
     if not _skip(*_hb):
-        hbs = [h for h in (_num(row.get(k)) for k in _hb) if h is not None]
-        if any(0 < h < 11 for h in hbs):  # 0 = sin dato
-            out.add("labs")
+        for k in _hb:
+            h = _num(row.get(k))
+            if h is not None and 0 < h < 11:  # 0 = sin dato
+                _add("labs", f"{k} = {h} (< 11)")
 
     # Urocultivo positivo.
     if not _skip("Resultado Urocultivo") and _up(row.get("Resultado Urocultivo")) == "POSITIVO":
-        out.add("labs")
+        _add("labs", "Resultado Urocultivo = POSITIVO")
 
     # Glicemia / tolerancia oral a la glucosa fuera de 70-140 (solo valor real > 0).
     _gluc = ("Resultado Glicemia", "Resultado Prueba de Tolerancia Oral Glucosa")
@@ -185,8 +212,7 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
         for k in _gluc:
             g = _num(row.get(k))
             if g is not None and g > 0 and (g < 70 or g > 140):
-                out.add("labs")
-                break
+                _add("labs", f"{k} = {g} (fuera de 70-140)")
 
     # Tamizajes con resultado alterado. El tamizaje de cuello uterino usa el
     # nuevo catalogo (ALTERADO/NORMAL) y mantiene el legado POSITIVO; el resto
@@ -204,16 +230,16 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
             valor = _up(row.get(k))
             if k == "Resultado Tamizaje de cuello uterino":
                 if valor in {"ALTERADO", "POSITIVO"}:
-                    out.add("labs")
-                    break
+                    _add("labs", f"{k} = {valor}")
             elif valor == "POSITIVO":
-                out.add("labs")
-                break
+                _add("labs", f"{k} = POSITIVO")
 
     # Morbilidad materna extrema (proxies disponibles)
     if not _skip("Complicaciones durante el parto", "UCI Materna"):
-        if _up(row.get("Complicaciones durante el parto")) == "SI" or _up(row.get("UCI Materna")) == "SI":
-            out.add("mme")
+        if _up(row.get("Complicaciones durante el parto")) == "SI":
+            _add("mme", "Complicaciones durante el parto = SI")
+        if _up(row.get("UCI Materna")) == "SI":
+            _add("mme", "UCI materna = SI")
 
     # Nutricional (Atalah IMC): normal incluye PESO NORMAL (corte adulto) y
     # "IMC Adecuado para la Edad Gestacional"; alerta ante cualquier otra
@@ -223,20 +249,20 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
     if not _skip(*_imc):
         clasif = _up(row.get("Clasificación del IMC ACTUAL")) or _up(row.get("Clasificación del IMC"))
         if clasif and clasif not in _PLACEHOLDERS and clasif not in _imc_normal:
-            out.add("nutricional")
+            _add("nutricional", f"Clasificación IMC = {clasif}")
 
     # Sin control en los ultimos 45 dias
     if not _skip("Ultimo Control Prenatal"):
         uc = _fecha(row.get("Ultimo Control Prenatal"))
         if uc and (date.today() - uc).days > 45:
-            out.add("sin_control_45")
+            _add("sin_control_45", f"Último control {uc.isoformat()} ({(date.today() - uc).days} días sin control)")
 
     # Insuficiente control prenatal (~1 control cada 4 semanas)
     if not _skip("Número Total de Controles Prenatales", "edad gestacional actual"):
         nc = _num(row.get("Número Total de Controles Prenatales"))
         eg = _num(row.get("edad gestacional actual"))
         if nc is not None and eg is not None and eg > 0 and nc < int(eg // 4):
-            out.add("insuficiente_control")
+            _add("insuficiente_control", f"{int(nc)} controles para {int(eg)} semanas de gestación (esperado >= {int(eg // 4)})")
 
     # Puerperio sin control posparto (Fecha de parto dentro de los 42 dias)
     if not _skip("Fecha de Parto"):
@@ -244,7 +270,7 @@ def evaluar(row: dict, constantes=frozenset(), medicamentos=None, urgencias=Fals
         if fp:
             dias = (date.today() - fp).days
             if 0 <= dias <= 42:
-                out.add("puerperio_sin_control")
+                _add("puerperio_sin_control", f"Parto {fp.isoformat()} ({dias} días) sin control posparto")
 
     return out
 

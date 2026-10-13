@@ -2536,6 +2536,19 @@ async def upload_historia(
             status_code=400,
             detail=f"El archivo supera {MAX_PDF_MB} MB. En el entorno desplegado el límite de subida es de ~4.5 MB; divide la historia en partes menores.",
         )
+    # Restriccion de nombre: el archivo debe identificar a la usuaria asociada
+    # con {TIPO}_{NUMERO} (separador "_"), ej. "CC_1001234567.pdf" o
+    # "CC_1001234567_ingreso.pdf". Si la gestante no tiene tipo de documento
+    # cargado, se valida solo el numero.
+    _tipo_doc = (tipo_documento or "").strip()
+    _doc_num = (paciente_documento or "").strip()
+    if _doc_num:
+        _patron = f"{_tipo_doc}_{_doc_num}" if _tipo_doc else _doc_num
+        if _patron.lower() not in filename.lower():
+            raise HTTPException(
+                status_code=400,
+                detail=f"El nombre del archivo debe incluir la identificacion de la usuaria con el separador '_' (por ejemplo: {_patron}.pdf).",
+            )
     oidc_token = request.headers.get("x-vercel-oidc-token", "")
     db = SessionLocal()
     try:
@@ -5320,14 +5333,15 @@ async def detalle_alerta(key: str, current_user: User = Depends(get_current_user
         matches = []
         for r in _filas_gestantes_validadas(db):
             _d = str(r.get("No. De Identificación", "")).strip()
-            if key in evaluar(r, _const, medicamentos=_meds.get(_d), urgencias=(_d in _urgs)):
-                matches.append(r)
+            _motivos = {}
+            if key in evaluar(r, _const, medicamentos=_meds.get(_d), urgencias=(_d in _urgs), motivos=_motivos):
+                matches.append((r, _motivos.get(key, "")))
 
         try:
             import corporate_db as _cdb
         except ImportError:
             from . import corporate_db as _cdb
-        docs = [str(r.get("No. De Identificación", "")).strip() for r in matches]
+        docs = [str(r.get("No. De Identificación", "")).strip() for r, _ in matches]
         try:
             afi = _cdb.datos_afiliados_lote(docs)
             ips_names = _cdb.obtener_nombres_ips([v.get("ips") for v in afi.values() if v.get("ips")])
@@ -5341,7 +5355,7 @@ async def detalle_alerta(key: str, current_user: User = Depends(get_current_user
             from .alertas import _edad as _calc_edad
 
         out = []
-        for r in matches:
+        for r, justificacion in matches:
             doc = str(r.get("No. De Identificación", "")).strip()
             a = afi.get(doc, {})
             ips_code = a.get("ips", "")
@@ -5368,8 +5382,9 @@ async def detalle_alerta(key: str, current_user: User = Depends(get_current_user
                 "aseguradora": eps_names.get(eps_code, ""),
                 "edad": edad_val,
                 "edad_gestacional": r.get("edad gestacional actual", ""),
+                "justificacion": justificacion,
             })
-        return {"key": key, "label": alerta["label"], "criticidad": alerta["criticidad"], "total": len(out), "usuarias": out}
+        return {"key": key, "label": alerta["label"], "criticidad": alerta["criticidad"], "criterio": alerta.get("criterio", ""), "total": len(out), "usuarias": out}
     finally:
         db.close()
 
