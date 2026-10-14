@@ -2073,6 +2073,47 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 	# NUNCA inventar valores: si la celda quedo sin valor, se deja vacia.
 	out_df = out_df.fillna("")
 
+	# ── Recálculo de las FORMULAS del instructivo ──
+	# No inventa nada: limpia los campos FORMULA y los recalcula desde las
+	# entradas (FUM, peso/talla, controles, pruebas...) con las mismas formulas
+	# que usa el app al guardar, para que FPP, IMC, edad gestacional, trimestres
+	# y relacion anemia queden coherentes (y no con el valor viejo del archivo).
+	try:
+		from .formulas import aplicar_formulas
+	except ImportError:
+		from formulas import aplicar_formulas
+	_formula_names = [t["name"] for t in template if str(t.get("type", "")).upper() == "FORMULA"]
+	if _formula_names:
+		_rows = out_df.to_dict(orient="records")
+		for _fila in _rows:
+			for _fn in _formula_names:
+				if _fn in _fila:
+					_fila[_fn] = ""
+			_fila = aplicar_formulas(_fila)
+		out_df = pd.DataFrame(_rows, columns=template_cols).fillna("")
+
+	# ── Regla comodin ↔ resultado de laboratorio ──
+	# Si la fecha de la prueba es un comodin, el resultado debe ser NA (texto/SET)
+	# o 0 (numerico); si la fecha es real, no puede ser el "sin dato". Se corrige
+	# el resultado para cumplir el instructivo (no se inventa un valor clinico).
+	_tmap_final = {t["name"]: t for t in template}
+	for _fecha_name, _res_name in _LAB_RESULT_PAIRS:
+		if _fecha_name not in out_df.columns or _res_name not in out_df.columns:
+			continue
+		_tipo_res = str((_tmap_final.get(_res_name) or {}).get("type", "")).upper()
+		_sin_dato = "0" if _tipo_res in ("INT", "DECIMAL", "NUMERIC") else "NA"
+		for i in range(len(out_df)):
+			_f = _fecha_o_comodin(out_df.at[i, _fecha_name])
+			if _f is None:
+				continue
+			_r = str(out_df.at[i, _res_name]).strip()
+			if _es_comodin_fecha(_f):
+				if _r and _r.upper() not in ("NA", "N/A", "0", "0.0"):
+					out_df.at[i, _res_name] = _sin_dato
+			else:
+				if _r.upper() in ("NA", "N/A"):
+					out_df.at[i, _res_name] = _sin_dato
+
 	# Bitácora en orden fila-mayor (igual que antes), limitada a 1000 registros
 	logs = []
 	MAX_LOGS = 1000
