@@ -639,6 +639,20 @@ function coincide(valor, esperado) {
   return limpio(valor) === limpio(esperado)
 }
 
+// Normaliza el valor de un campo con opciones (SET) al valor canonico del
+// instructivo, sin distinguir mayusculas/minusculas, acentos ni espacios
+// repetidos. Si no coincide con ninguna opcion, devuelve el valor tal cual
+// (asi solo se marca error cuando de verdad no es una opcion valida).
+function normalizarOpcion(valor, allowed) {
+  const s = String(valor === null || valor === undefined ? '' : valor).trim()
+  if (!s) return s
+  const limpio = (x) =>
+    String(x === null || x === undefined ? '' : x).trim().replace(/\s+/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+  const sn = limpio(s)
+  const hit = (allowed || []).find((a) => limpio(a) === sn)
+  return hit === undefined ? s : hit
+}
+
 // "NA" sin importar mayusculas ni espacios (backend::_es_na).
 function esNa(valor) {
   return String(valor === null || valor === undefined ? '' : valor).trim().replace(/\s+/g, ' ').toLowerCase() === 'na'
@@ -1170,6 +1184,11 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       const next = { ...f, ...cambios }
       if (!sanitizeFieldValue(next.APELLIDO_2)) next.APELLIDO_2 = 'NONE'
       if (!sanitizeFieldValue(next.NOMBRE_2)) next.NOMBRE_2 = 'NONE'
+      // Campos con opciones traidos del afiliado: normaliza al canonico.
+      for (const k of ['SEXO', 'REGIMEN_AFILIACION', 'TIPO_DE_DOCUMENTO_DE_IDENTIDAD']) {
+        const m = templateMeta[k]
+        if (m && m.types && m.types.has('SET') && next[k]) next[k] = normalizarOpcion(next[k], m.allowed)
+      }
       // Recalcula la edad desde la fecha de nacimiento recien cargada.
       next.EDAD_ANOS = computeAgeFromBirthDate(next.FECHA_DE_NACIMIENTO)
       return next
@@ -1288,8 +1307,12 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     // control; IMC inicial y actual; numero y ultimo control; edad gestacional
     // actual; trimestres de tamizaje; relacion anemia), igual que al guardar.
     // El resto de los campos no toca derivadas.
+    // Campos con opciones (SET): normaliza al valor canonico del instructivo
+    // (sin distinguir mayusculas/minusculas/acentos) para no marcarlo como error.
+    const _meta = templateMeta[key]
+    const valor = (_meta && _meta.types && _meta.types.has('SET')) ? normalizarOpcion(val, _meta.allowed) : val
     setForm((f) => {
-      const next = { ...f, [key]: val }
+      const next = { ...f, [key]: valor }
       Object.assign(next, deriveFormulas(next))
       return next
     })
@@ -1538,7 +1561,9 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       const key = templateOrder[i]
       if (!key) continue
       if (esAuto(key)) { omitidas++; continue }
-      const v = String(cols[i] == null ? '' : cols[i]).trim()
+      const _m = templateMeta[key]
+      let v = String(cols[i] == null ? '' : cols[i]).trim()
+      if (_m && _m.types && _m.types.has('SET')) v = normalizarOpcion(v, _m.allowed)
       if (v !== '' && v !== 'None' && v !== 'null') cambios[key] = v
     }
     setForm((f) => {
@@ -1550,6 +1575,11 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     setError('')
     setMsg(`Fila aplicada: ${Object.keys(cambios).length} variables cargadas, ${omitidas} automáticas calculadas.`)
     setPasteMsg(`Fila aplicada: ${Object.keys(cambios).length} variables cargadas (${omitidas} automáticas omitidas y calculadas).`)
+    // Al pegar la fila, el documento no pasa por onChange/blur, asi que el
+    // autocompletado desde af_afiliado no se disparaba. Se dispara aca con el
+    // documento de la fila (trae nombres, Depto/Municipio, IPS, etc.).
+    const docPegado = String(cambios.NO_DE_IDENTIFICACION || '').trim()
+    if (docPegado) programarAutofill(docPegado)
   }
 
   const renderField = (fieldDef) => {
