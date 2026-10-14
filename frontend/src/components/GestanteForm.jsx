@@ -987,6 +987,11 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   const [existingPdfs, setExistingPdfs] = useState([])
   const [deletingId, setDeletingId] = useState(null)
   const [templateMeta, setTemplateMeta] = useState({})
+  // Orden de columnas de la plantilla (para mapear la fila pegada desde Excel)
+  // y estado del textarea de pegado.
+  const [templateOrder, setTemplateOrder] = useState([])
+  const [pasteText, setPasteText] = useState('')
+  const [pasteMsg, setPasteMsg] = useState('')
   // Avisos del autocompletado desde la base de afiliados (informativos, no bloquean).
   const [afiliadoMsg, setAfiliadoMsg] = useState('')
   const [afiliadoMsgWarn, setAfiliadoMsgWarn] = useState(false)
@@ -1108,6 +1113,9 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       .then((data) => {
         if (!alive) return
         setTemplateMeta(buildTemplateMeta(data && data.template))
+        // Conserva el ORDEN de las columnas de la plantilla: la fila pegada
+        // desde Excel se mapea por indice a este orden.
+        setTemplateOrder(((data && data.template) || []).map((t) => normalizeFieldKey(t.name)))
       })
       .catch(() => {})
     return () => { alive = false }
@@ -1499,6 +1507,41 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       : undefined
   )
 
+  // Automatiza el cargue unitario: pega UNA fila copiada de Excel (columnas
+  // separadas por TAB) o del cargue (separadas por "|") y llena el formulario
+  // mapeando por indice al orden de la plantilla. Asi no se llena variable por
+  // variable.
+  const aplicarFilaPegada = () => {
+    const raw = String(pasteText || '').replace(/\r/g, '')
+    if (!raw.trim()) { setPasteMsg('Pega una fila primero.'); return }
+    // Se toma la primera linea no vacia (una sola fila).
+    const linea = raw.split('\n').map((l) => l.replace(/\s+$/, '')).find((l) => l.trim() !== '') || ''
+    const sep = linea.includes('\t') ? '\t' : (linea.includes('|') ? '|' : null)
+    if (!sep) { setPasteMsg('No se detectó separador. Copiá la fila completa en Excel y pegala acá.'); return }
+    if (!templateOrder.length) { setPasteMsg('La plantilla aún no cargó; reintentá en un momento.'); return }
+    const cols = linea.split(sep)
+    const cambios = {}
+    const n = Math.min(templateOrder.length, cols.length)
+    for (let i = 0; i < n; i++) {
+      const key = templateOrder[i]
+      if (!key) continue
+      const v = String(cols[i] == null ? '' : cols[i]).trim()
+      if (v !== '' && v !== 'None' && v !== 'null') cambios[key] = v
+    }
+    setForm((f) => {
+      const next = { ...f, ...cambios }
+      Object.assign(next, deriveFormulas(next))
+      next.EDAD_ANOS = computeAgeFromBirthDate(next.FECHA_DE_NACIMIENTO)
+      return next
+    })
+    setError('')
+    setMsg(`Fila aplicada: ${Object.keys(cambios).length} variables cargadas.`)
+    const faltan = templateOrder.length - cols.length
+    setPasteMsg(faltan > 0
+      ? `Fila aplicada (${Object.keys(cambios).length} variables). Faltaron ${faltan} columnas.`
+      : `Fila aplicada (${Object.keys(cambios).length} variables).`)
+  }
+
   const renderField = (fieldDef) => {
     const val = sanitizeFieldValue(form[fieldDef.key])
     const meta = templateMeta[fieldDef.key]
@@ -1757,6 +1800,25 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
           </div>
         )}
 
+        {/* Pegar fila desde Excel: automatiza el cargue unitario */}
+        <div className="mx-5 mt-4 px-3 py-3 rounded-lg" style={{ border: '1px dashed var(--border-subtle)', backgroundColor: 'var(--bg-subtle)' }}>
+          <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Cargar pegando la fila desde Excel</div>
+          <div className="text-[0.7rem] mb-2" style={{ color: 'var(--text-muted)' }}>
+            Copiá en Excel toda la fila de la usuaria y pegala acá (columnas separadas por tabulación). Se llenan las variables automáticamente.
+          </div>
+          <textarea value={pasteText} onChange={(e) => setPasteText(e.target.value)} rows={2}
+            placeholder="Pegá la fila aquí (Ctrl+V)"
+            className="input text-xs w-full" style={{ fontFamily: 'monospace' }} />
+          <div className="flex items-center gap-2 mt-2">
+            <button type="button" onClick={aplicarFilaPegada} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ color: '#fff', backgroundColor: 'var(--green-500)' }}>
+              Aplicar fila
+            </button>
+            {pasteMsg && (
+              <span className="text-[0.7rem]" style={{ color: /error|no se|pega|falt/i.test(pasteMsg) ? 'var(--danger)' : 'var(--success)' }}>{pasteMsg}</span>
+            )}
+          </div>
+        </div>
+
         {/* Navegacion de secciones */}
         <div className="px-5 pt-4">
           <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
@@ -1775,6 +1837,9 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
                 onMouseLeave={(e) => { if (activeSection !== i) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}>
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d={sec.icono} /></svg>
                 {sec.titulo}
+                {sectionFieldErrors(i).length > 0 && (
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--danger)' }} title="Esta sección tiene errores" />
+                )}
               </button>
             ))}
           </div>
@@ -1904,7 +1969,12 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {SECCIONES[activeSection].fields.map((fieldDef) => renderField(fieldDef))}
+              {SECCIONES[activeSection].fields.map((fieldDef) => (
+                <div key={fieldDef.key}
+                  style={fieldErrorFor(fieldDef.key) ? { border: '1px solid var(--danger)', borderRadius: 'var(--radius-lg)', padding: '6px', backgroundColor: 'var(--danger-bg)' } : undefined}>
+                  {renderField(fieldDef)}
+                </div>
+              ))}
             </div>
           )}
         </div>
