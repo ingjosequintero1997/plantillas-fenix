@@ -1370,10 +1370,36 @@ async def upload_file(
 					cross_field_errors = validate_cross_fields(df_safe)
 				except Exception:
 					pass
+			# Restriccion de afiliacion (igual que el unitario): cada usuaria debe
+			# existir en administrativo.af_afiliado con el tipo de documento
+			# correcto. Si no existe, se reporta como error y bloquea el cargue.
+			if template_key == "gestante":
+				try:
+					afiliado_lookup = _build_afiliado_lookup(df_safe)
+					if afiliado_lookup:
+						try:
+							from .validators import validate_afiliado
+						except ImportError:
+							from validators import validate_afiliado
+						cross_field_errors.extend(validate_afiliado(df_safe, afiliado_lookup))
+				except Exception:
+					pass
 			all_logs = logs_sample + [
 				{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
 				for e in cross_field_errors
 			]
+			# Dedup por (fila, columna): una misma celda no debe repetirse (un
+			# error de tipo + una regla cruzada caian como dos mensajes). Asi el
+			# conteo por variable NUNCA supera la cantidad de filas validadas.
+			_vistos = set()
+			_dedup = []
+			for _lr in all_logs:
+				_k = (_lr.get("row"), _lr.get("column"))
+				if _k in _vistos:
+					continue
+				_vistos.add(_k)
+				_dedup.append(_lr)
+			all_logs = _dedup
 			n = len(df_safe)
 			n_errors = len(set(lr["row"] for lr in all_logs if lr["status"] == "error"))
 			n_ok = n - n_errors

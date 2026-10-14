@@ -234,8 +234,8 @@ FIELD_SET_ALIASES = {
 	},
 	"RESULTADO TAMIZAJE DE CUELLO UTERINO": {
 		"NA": {"NA", "N/A", "SIN DATO", "NO APLICA"},
-		"ALTERADO": {"ALTERADO", "ALTERADA", "ANORMAL", "ANORMALIDAD", "ALTERACION"},
-		"NORMAL": {"NORMAL", "NORMALIDAD", "SIN ALTERACION", "SIN ALTERACIONES"},
+		"ALTERADO": {"ALTERADO", "ALTERADA", "ANORMAL", "ANORMALIDAD", "ALTERACION", "POSITIVO", "POSITIVA", "REACTIVO", "NO NORMAL"},
+		"NORMAL": {"NORMAL", "NORMALIDAD", "SIN ALTERACION", "SIN ALTERACIONES", "NEGATIVO", "NEGATIVA", "NO REACTIVO", "NO REACTIVA", "SIN NOVIDAD", "SIN NOVEDAD"},
 	},
 	"RESULTADO RUBEOLA": {
 		"POSITIVO": {"POSITIVO", "POSITIVA", "REACTIVO", "12.5"},
@@ -1769,7 +1769,7 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				es_muni = ser_raw.str.fullmatch(r"[+-]?\d+").fillna(False)
 
 			# Aceptar "SIN DATO" como valido (el instructivo lo permite como comodin)
-			es_sindato = ser_raw.str.upper().str.strip().isin(["SIN DATO", "SIN DATOS", "S/D"])
+			es_sindato = ser_raw.str.upper().str.strip().isin(["SIN DATO", "SIN DATOS", "S/D", "NO TIENE", "NO APLICA", "NONE"])
 			# Aceptar NA solo si el campo lo permite
 			es_na_perm = ser_raw.str.upper().str.strip().isin(["NA", "N/A", "N.A."]) & NA_FIELDS_COL_SERIES
 
@@ -1798,10 +1798,10 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 				if to_date_iso(ser_raw.iloc[ridx]) is not None:
 					ok_lento.iloc[ridx] = True
 			es_fecha = ok_fast | ok_lento
-			# Detectar componente de hora (HH:MM o HH:MM:SS) tras la fecha
-			tiene_hora = no_vacio & ser_raw.str.contains(r"\d{1,2}:\d{2}", regex=True)
-			# Solo error si hay un valor NO vacio que NO es fecha, o si trae hora
-			error_mask = (no_vacio & (~es_fecha)) | tiene_hora
+			# Solo error si hay un valor NO vacio que NO es fecha. Se ACEPTAN las
+			# fechas con componente de hora (YYYY-MM-DD 00:00:00): `to_date_iso` ya
+			# extrae solo la fecha (YYYY-MM-DD), asi que no se marcan como error.
+			error_mask = no_vacio & (~es_fecha)
 
 		elif tipo == "TEXT":
 			# TEXT es campo libre: acepta cualquier cosa incluyendo vacios,
@@ -1811,13 +1811,12 @@ def validate_only(df: pd.DataFrame, mapping: dict, template: list):
 			error_mask = pd.Series(False, index=ser_raw.index)
 
 		elif tipo == "NUMERIC":
-			# NUMERIC: acepta SOLO numeros (enteros o decimales).
-			# NO acepta "Sin dato", texto, fechas, ni vacios.
-			# Estos campos son sumatorias (HISTORIA REPRODUCTIVA, EMBARAZO ACTUAL,
-			# RIESGO PSICOSOCIAL, PUNTAJE TOTAL): siempre deben tener un numero.
+			# NUMERIC: acepta numeros (enteros o decimales) y el comodin
+			# "SIN DATO"/"Sin dato" (el instructivo lo permite como valor valido).
 			s = ser_raw.str.replace(" ", "", regex=False).str.replace(",", ".", regex=False)
 			es_numero = s.str.fullmatch(r"[+-]?\d+(\.\d+)?").fillna(False)
-			error_mask = ~es_numero
+			_es_sd = ser_raw.str.strip().str.upper().isin(["SIN DATO", "SIN DATOS", "S/D", "N/A", "NONE", "NA", "NO TIENE", "NO APLICA"])
+			error_mask = ~es_numero & ~_es_sd
 
 		else:
 			error_mask = pd.Series(False, index=ser_raw.index)
