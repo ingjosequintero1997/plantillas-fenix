@@ -1007,65 +1007,84 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
   const controlesRequeridos = controlesRequeridosDe(form)
   const slots = slotsHistorias(controlesRequeridos)
 
+  // Inicializacion del formulario, en DOS efectos:
+  //  - CREAR: corre UNA sola vez (depende solo de `mode`). Antes dependia de
+  //    `initialData`, y como el padre pasa un objeto nuevo en cada render, el
+  //    efecto se re-ejecutaba y reseteaba el form, borrando lo autocompletado
+  //    (nombres, IPS, Depto/Municipio, etc.).
+  //  - EDITAR: corre cuando cambia el registro (`initialData`).
   useEffect(() => {
-    if (mode === 'edit' && initialData && Object.keys(initialData).length > 0) {
-      const cleaned = {}
-      for (const [k, v] of Object.entries(initialData)) {
-        if (k === '_key' || k === 'id' || k === 'created_at' || k === '_from_gestantes') continue
-        let val = v
-        if (val !== null && val !== undefined) {
-          val = String(val).trim()
-          if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(val)) val = val.split(' ')[0]
-          if (val === 'None' || val === 'null') val = ''
-        } else { val = '' }
-        cleaned[k] = val
-      }
-      // Recalcula las derivadas desde la FUM cargada; sin FUM valida se
-      // conservan los valores almacenados del registro.
-      const conFum = /^\d{4}-\d{2}-\d{2}$/.test(String(cleaned.FUM || ''))
-      // Guarda el documento ya cargado: el autocompletado no debe reaccionar a
-      // la carga inicial en edicion, solo a ediciones del documento por la usuaria.
-      loadedDocRef.current = cleaned.NO_DE_IDENTIFICACION || ''
-      setForm(conFum ? { ...cleaned, ...deriveFromFum(cleaned.FUM) } : cleaned)
-    } else {
-      setForm({
-        CONSECUTIVO: '',
-        TIPO_DE_DOCUMENTO_DE_IDENTIDAD: 'CC',
-        NO_DE_IDENTIFICACION: '',
-        APELLIDO_1: '',
-        APELLIDO_2: '',
-        NOMBRE_1: '',
-        NOMBRE_2: '',
-        FECHA_DE_NACIMIENTO: '',
-        EDAD_ANOS: '',
-        SEXO: 'Femenino',
-        REGIMEN_AFILIACION: '',
-        PERTENECIA_ETNICA: '',
-        GRUPO_POBLACIONAL: 'Mujer Embarazada',
-        DEPARTAMENTO_RESIDENCIA: '',
-        MUNICIPIO_DE_RESIDENCIA: '',
-        ZONA: '',
-        ETNIA: '',
-        ASENTAMIENTO_RANCHERIA_COMUNIDAD: '',
-        TELEFONO_USUARIA: '',
-        DIRECCION: '',
-        NIVEL_EDUCATIVO: '',
-        DISCAPACIDAD: '',
-        MUJER_CABEZA_DE_HOGAR: '',
-        OCUPACION: '',
-        ESTADO_CIVIL: '',
-        CONTROL_TRADICIONAL: '',
-        GESTANTE_RENUENTE: '',
-        INASISTENTE: '',
-        NOMBRE_DE_LA_IPS_PRIMARIA: '',
-        FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO: '',
-        FECHA_DE_INGRESO_AL_CONTROL_PRENATAL: '',
-        FUM: '',
-        FPP: '',
-        DIAS_PARA_EL_PARTO: '',
-        ALARMA: '',
-      })
+    if (mode !== 'create') return
+    const base = {
+      CONSECUTIVO: '',
+      TIPO_DE_DOCUMENTO_DE_IDENTIDAD: 'CC',
+      NO_DE_IDENTIFICACION: '',
+      APELLIDO_1: '',
+      APELLIDO_2: '',
+      NOMBRE_1: '',
+      NOMBRE_2: '',
+      FECHA_DE_NACIMIENTO: '',
+      EDAD_ANOS: '',
+      SEXO: 'Femenino',
+      REGIMEN_AFILIACION: '',
+      PERTENECIA_ETNICA: '',
+      GRUPO_POBLACIONAL: 'Mujer Embarazada',
+      DEPARTAMENTO_RESIDENCIA: '',
+      MUNICIPIO_DE_RESIDENCIA: '',
+      ZONA: '',
+      ETNIA: '',
+      ASENTAMIENTO_RANCHERIA_COMUNIDAD: '',
+      TELEFONO_USUARIA: '',
+      DIRECCION: '',
+      NIVEL_EDUCATIVO: '',
+      DISCAPACIDAD: '',
+      MUJER_CABEZA_DE_HOGAR: '',
+      OCUPACION: '',
+      ESTADO_CIVIL: '',
+      CONTROL_TRADICIONAL: '',
+      GESTANTE_RENUENTE: '',
+      INASISTENTE: '',
+      NOMBRE_DE_LA_IPS_PRIMARIA: '',
+      FECHA_DE_DIAGNOSTICO_DEL_EMBARAZO: '',
+      FECHA_DE_INGRESO_AL_CONTROL_PRENATAL: '',
+      FUM: '',
+      FPP: '',
+      DIAS_PARA_EL_PARTO: '',
+      ALARMA: '',
     }
+    // El initialData de crear solo aporta valores de prellenado (p.ej. la IPS
+    // del usuario). Se aplican sobre la base vacia.
+    const pre = {}
+    if (initialData && typeof initialData === 'object') {
+      for (const [k, v] of Object.entries(initialData)) {
+        if (v !== null && v !== undefined && String(v).trim() !== '') pre[k] = String(v).trim()
+      }
+    }
+    setForm({ ...base, ...pre })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode])
+
+  useEffect(() => {
+    if (mode !== 'edit') return
+    if (!initialData || Object.keys(initialData).length === 0) return
+    const cleaned = {}
+    for (const [k, v] of Object.entries(initialData)) {
+      if (k === '_key' || k === 'id' || k === 'created_at' || k === '_from_gestantes') continue
+      let val = v
+      if (val !== null && val !== undefined) {
+        val = String(val).trim()
+        if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(val)) val = val.split(' ')[0]
+        if (val === 'None' || val === 'null') val = ''
+      } else { val = '' }
+      cleaned[k] = val
+    }
+    // Recalcula las derivadas desde la FUM cargada; sin FUM valida se
+    // conservan los valores almacenados del registro.
+    const conFum = /^\d{4}-\d{2}-\d{2}$/.test(String(cleaned.FUM || ''))
+    // Guarda el documento ya cargado: el autocompletado no debe reaccionar a
+    // la carga inicial en edicion, solo a ediciones del documento por la usuaria.
+    loadedDocRef.current = cleaned.NO_DE_IDENTIFICACION || ''
+    setForm(conFum ? { ...cleaned, ...deriveFromFum(cleaned.FUM) } : cleaned)
   }, [mode, initialData])
 
   useEffect(() => {

@@ -4547,9 +4547,10 @@ def _buscar_afiliado(documento: str):
 		doc = str(documento).strip()
 		doc_limpio = doc.replace(" ", "").replace("-", "")
 		query = f'''
-			SELECT a.*, i."razon_social" as ips_nombre
+			SELECT a.*, i."razon_social" as ips_nombre, m."descripcion" as municipio_nombre
 			FROM "{AFILIADO_ESQUEMA}"."{AFILIADO_TABLA}" a
 			LEFT JOIN "{AFILIADO_ESQUEMA}"."ct_ips" i ON a."ips" = i."ips"
+			LEFT JOIN "{AFILIADO_ESQUEMA}"."tb_municipio" m ON a."municipio" = m."municipio"
 			WHERE a."{doc_col}" = :doc
 			LIMIT 1
 		'''
@@ -4616,7 +4617,7 @@ def _serializar_afiliado(data: dict, mapping: dict) -> dict:
 		"tipo_afiliado": get("tipo_afiliado"),
 		"tipo_documento": get_tipo_documento(),
 		"fecha_inicio_cobertura": get("fecha_inicio_cobertura"),
-		"municipio_afiliacion": resolver_municipio(get("municipio_afiliacion")),
+		"municipio_afiliacion": data.get("municipio_nombre") or resolver_municipio(get("municipio_afiliacion")),
 		"departamento_afiliacion": resolver_departamento(get("departamento_afiliacion")),
 		"discapacidad": get("discapacidad"),
 		"telefono": get("telefono", extra_cols=(mapping.get("telefono_2"), mapping.get("celular"), mapping.get("celular_2"))),
