@@ -890,7 +890,7 @@ function deriveFormulas(form) {
 // Devuelve el mensaje exacto del backend para la regla cruzada que aplica a
 // `key` ('' si no aplica). Se reutiliza en el error en vivo (fieldErrorFor),
 // en el bloqueo de navegacion (sectionFieldErrors) y en el envio (validateForm).
-function errorReglaCruzada(key, form) {
+function errorReglaCruzada(key, form, tmeta = {}) {
   const val = (k) => sanitizeFieldValue(form[k])
   const ingreso = fechaReal(val('FECHA_DE_INGRESO_AL_CONTROL_PRENATAL'))
 
@@ -941,7 +941,7 @@ function errorReglaCruzada(key, form) {
     const fecha = fechaIso(val(campoFecha.key))
     const resultado = val(campoRes.key)
     if (fecha && resultado) {
-      const metaRes = templateMeta[campoRes.key]
+      const metaRes = tmeta[campoRes.key]
       const esNumerico = !!metaRes && (metaRes.types.has('INT') || metaRes.types.has('DECIMAL') || metaRes.types.has('NUMERIC'))
       const sinDato = esNumerico ? Number(resultado) === 0 : esNa(resultado)
       const valorSinDato = esNumerico ? '0' : 'NA'
@@ -1386,7 +1386,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       for (const fieldDef of sec.fields) {
         if (clavesReglas.has(fieldDef.key)) continue
         clavesReglas.add(fieldDef.key)
-        const msg = errorReglaCruzada(fieldDef.key, form)
+        const msg = errorReglaCruzada(fieldDef.key, form, templateMeta)
         if (!msg) continue
         // Solo R7 lleva la etiqueta adelante; el resto ya son frases completas.
         const completo = CLAVES_CONTEO.includes(fieldDef.key) ? `${fieldDef.label}: ${msg}` : msg
@@ -1499,7 +1499,7 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     }
     // Reglas cruzadas del backend (R7, R9-R13, R15, R17): el mismo error se
     // muestra en vivo, bloquea el avance de seccion y detiene el envio.
-    return errorReglaCruzada(key, form)
+    return errorReglaCruzada(key, form, templateMeta)
   }
 
   const sectionFieldErrors = (i) => {
