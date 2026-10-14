@@ -2141,6 +2141,38 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 			if statuses[ridx] == "error":
 				filas_error.add(ridx + 1)
 				break
+
+	# ── Congruencia limpiador ↔ validador ──
+	# El limpiador TAMBIEN corre las REGLAS CRUZADAS sobre su propia salida y
+	# reporta los errores que quedan, para que su log coincida con el del
+	# validador (antes decia "todo OK" y al revalidar saltaban errores).
+	try:
+		_cross = validate_cross_fields(out_df.fillna("SIN DATO").astype(str))
+	except Exception:
+		_cross = []
+	for _e in _cross:
+		try:
+			_ri = int(_e.get("row", 0))
+		except (TypeError, ValueError):
+			continue
+		if _ri <= 0 or _ri > n:
+			continue
+		filas_error.add(_ri)
+		if len(logs) < MAX_LOGS:
+			_col = _e.get("column", "")
+			_orig = ""
+			if _col in template_cols:
+				_orig = str(out_df.iat[_ri - 1, template_cols.index(_col)])
+			logs.append({
+				"row": _ri,
+				"column": _col,
+				"original": _orig,
+				"corrected": _e.get("message", ""),
+				"status": "error",
+			})
+	stats["errors"] += len(_cross)
+	stats["cross_errors"] = len(_cross)
+
 	stats["rows_with_errors"] = len(filas_error)
 	stats["rows_ok"] = max(0, stats["total"] - len(filas_error))
 	stats["error_cells"] = stats["errors"]

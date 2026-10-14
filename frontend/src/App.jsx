@@ -317,7 +317,7 @@ export default function App() {
     })
     const data = maybeDecompress(raw)
     const summary = data.summary || {}
-    // Regla "todo o nada": solo se valida/guarda la data si no tiene errores.
+    // Regla "todo o nada": solo se marca/guarda la data si no tiene errores reales.
     const tieneErrores = (summary.rows_with_errors ?? summary.errors ?? 0) > 0
     const item = {
       fileName: file.name, templateKey: selectedTemplate,
@@ -327,9 +327,10 @@ export default function App() {
       templateNames: data.template_names || [],
       valido: !tieneErrores,
     }
-    // Regla "todo o nada": solo se guarda en la BD la data validada sin errores.
-    // En modo limpiador, SIEMPRE guardar porque los errores ya fueron corregidos.
-    const shouldSave = processingMode === 'limpiador' || !tieneErrores
+    // Regla "todo o nada": solo se guarda en la BD la data sin errores reales.
+    // El limpiador ya NO persiste automaticamente: si quedan errores, no guarda
+    // (el usuario descarga el Excel limpio, corrige y lo vuelve a subir).
+    const shouldSave = !tieneErrores
     if (shouldSave) {
       try {
         const saved = await saveCargue({
@@ -669,14 +670,22 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Log de validación: errores visibles para el prestador */}
-                    {processingMode === 'validador' && logs.length > 0 && (
+                    {/* Log de resultados: en limpiador muestra lo que limpio vs los
+                        errores; en validador los errores visibles para el prestador. */}
+                    {logs.length > 0 && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" style={{ stroke: 'var(--danger)' }} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                          <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Detalle de errores</div>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" style={{ stroke: processingMode === 'limpiador' ? 'var(--success)' : 'var(--danger)' }} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                          <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                            {processingMode === 'limpiador' ? 'Detalle de resultados' : 'Detalle de errores'}
+                          </div>
+                          {processingMode === 'limpiador' && (
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)' }}>
+                              {summary.corrected ?? 0} celdas corregidas
+                            </span>
+                          )}
                         </div>
-                        <ValidationLogTable logs={logs} />
+                        <ValidationLogTable logs={logs} showCorrected={processingMode === 'limpiador'} />
                       </div>
                     )}
 
@@ -696,7 +705,7 @@ export default function App() {
                           </button>
                           <button onClick={handleDownloadReport} disabled={!correctedText} className="btn-primary">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Descargar errores (Excel)
+                            {processingMode === 'limpiador' ? 'Descargar archivo limpio (Excel)' : 'Descargar errores (Excel)'}
                           </button>
                         </div>
                       </div>

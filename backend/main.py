@@ -1168,7 +1168,7 @@ def _correccion_excel(tipo, tdef, val_str):
 
 
 def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, template_key: str, active_template: list[dict]):
-	corrected_df, _corrector_logs, stats = validate_and_correct(df, mapping, active_template)
+	corrected_df, corrector_logs, stats = validate_and_correct(df, mapping, active_template)
 	try:
 		from .validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
 	except ImportError:
@@ -1204,10 +1204,18 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 			cross_field_errors = validate_cross_fields(corrected_df)
 		except Exception:
 			pass
+	# Muestra acotada de las celdas que el limpiador CORRIGIO (status "corrected"),
+	# para que el frontend pueda mostrar "lo que limpio vs los errores". Los
+	# errores reales (status "error") se conservan completos; las correcciones se
+	# acotan a un maximo para no inflar la respuesta.
+	MAX_CORRECTED_LOGS = 2000
+	corrected_sample = [
+		log for log in (corrector_logs or []) if log.get("status") == "corrected"
+	][:MAX_CORRECTED_LOGS]
 	all_logs = logs_sample + [
 		{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
 		for e in cross_field_errors
-	]
+	] + corrected_sample
 	stats["cross_field_errors"] = len(cross_field_errors)
 	preview_rows = corrected_df.head(30).to_dict(orient='records')
 	return {

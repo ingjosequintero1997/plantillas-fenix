@@ -54,7 +54,7 @@ function CorreccionCelda({ value }) {
   return <span className="text-sm" style={{ color: 'var(--success)' }}>{s}</span>
 }
 
-export default function ValidationLogTable({ logs }) {
+export default function ValidationLogTable({ logs, showCorrected = false }) {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
 
@@ -63,24 +63,39 @@ export default function ValidationLogTable({ logs }) {
     return logs.filter((l) => l.status === 'error')
   }, [logs])
 
+  // Celdas que el limpiador CORRIGIO (solo se listan en modo limpiador).
+  const corrected = useMemo(() => {
+    if (!Array.isArray(logs) || !showCorrected) return []
+    return logs.filter((l) => l.status === 'corrected')
+  }, [logs, showCorrected])
+
+  // En limpiador se listan las celdas corregidas + los errores que quedan
+  // (que el usuario vea "lo que limpio vs lo que hay que arreglar").
+  const entries = useMemo(() => {
+    if (corrected.length === 0) return errors
+    return [...errors, ...corrected].sort(
+      (a, b) => (Number(a.row) - Number(b.row)) || String(a.column ?? '').localeCompare(String(b.column ?? ''))
+    )
+  }, [errors, corrected])
+
   const filasConError = useMemo(() => new Set(errors.map((l) => l.row)).size, [errors])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return errors
-    return errors.filter((l) =>
+    if (!q) return entries
+    return entries.filter((l) =>
       String(l.row).includes(q) ||
       String(l.column ?? '').toLowerCase().includes(q) ||
       String(l.original ?? '').toLowerCase().includes(q) ||
       String(l.corrected ?? '').toLowerCase().includes(q)
     )
-  }, [errors, query])
+  }, [entries, query])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const safePage = Math.min(page, totalPages)
   const pageItems = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE)
 
-  if (errors.length === 0) {
+  if (entries.length === 0) {
     return (
       <div className="panel flex items-center gap-3">
         <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--success-bg)' }}>
@@ -104,8 +119,13 @@ export default function ValidationLogTable({ logs }) {
               {filasConError} fila{filasConError !== 1 ? 's' : ''} con error
             </span>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--warning)', backgroundColor: 'var(--warning-bg)' }}>
-              {errors.length} celda{errors.length !== 1 ? 's' : ''}
+              {errors.length} celda{errors.length !== 1 ? 's' : ''} con error
             </span>
+            {corrected.length > 0 && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)' }}>
+                {corrected.length} corregida{corrected.length !== 1 ? 's' : ''}
+              </span>
+            )}
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)' }}>
               {new Set(errors.map((l) => String(l.column ?? 'Sin variable'))).size} variables
             </span>
@@ -129,12 +149,14 @@ export default function ValidationLogTable({ logs }) {
             <tr className="text-left text-[0.7rem] uppercase tracking-wide" style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-subtle)' }}>
               <th className="px-4 py-2.5 font-semibold w-14">Fila</th>
               <th className="px-4 py-2.5 font-semibold">Variable</th>
-              <th className="px-4 py-2.5 font-semibold">Valor actual</th>
-              <th className="px-4 py-2.5 font-semibold">Error / cómo corregirlo</th>
+              <th className="px-4 py-2.5 font-semibold">{showCorrected ? 'Valor previo' : 'Valor actual'}</th>
+              <th className="px-4 py-2.5 font-semibold">{showCorrected ? 'Valor corregido / error' : 'Error / cómo corregirlo'}</th>
             </tr>
           </thead>
           <tbody>
-            {pageItems.map((l, i) => (
+            {pageItems.map((l, i) => {
+              const esCorregida = l.status === 'corrected'
+              return (
               <tr
                 key={`${l.row}-${l.column}-${i}`}
                 className="align-top"
@@ -144,7 +166,7 @@ export default function ValidationLogTable({ logs }) {
                 }}
               >
                 <td className="px-4 py-2.5">
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold" style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-bg)' }}>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold" style={{ color: esCorregida ? 'var(--success)' : 'var(--danger)', backgroundColor: esCorregida ? 'var(--success-bg)' : 'var(--danger-bg)' }}>
                     {l.row}
                   </span>
                 </td>
@@ -152,7 +174,11 @@ export default function ValidationLogTable({ logs }) {
                   <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{String(l.column ?? 'Sin variable')}</div>
                 </td>
                 <td className="px-4 py-2.5">
-                  {String(l.original ?? '').trim() === '' ? (
+                  {esCorregida ? (
+                    <span className="inline-block text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)' }}>
+                      {mostrarValor(l.original)}
+                    </span>
+                  ) : String(l.original ?? '').trim() === '' ? (
                     <span className="inline-block text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-subtle)' }}>
                       {mostrarValor(l.original)}
                     </span>
@@ -163,10 +189,17 @@ export default function ValidationLogTable({ logs }) {
                   )}
                 </td>
                 <td className="px-4 py-2.5">
-                  <CorreccionCelda value={l.corrected} />
+                  {esCorregida ? (
+                    <span className="inline-block text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
+                      {mostrarValor(l.corrected)}
+                    </span>
+                  ) : (
+                    <CorreccionCelda value={l.corrected} />
+                  )}
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -174,7 +207,7 @@ export default function ValidationLogTable({ logs }) {
       {/* Pie: paginación */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
         <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          Mostrando {pageItems.length} de {filtered.length} celdas con error
+          Mostrando {pageItems.length} de {filtered.length} {showCorrected ? 'celdas (corregidas y errores)' : 'celdas con error'}
         </span>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">
