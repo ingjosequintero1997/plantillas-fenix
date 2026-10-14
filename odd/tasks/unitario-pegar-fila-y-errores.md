@@ -5,7 +5,7 @@ Automatizar el cargue unitario: permitir **pegar la fila completa desde Excel** 
 
 ## Checklist
 - [x] T1 `GestanteForm.jsx`: conservar el **orden** de columnas de la plantilla (`templateOrder`, desde `/template`, que hoy se descartaba al construir `templateMeta`).
-- [x] T2 Pegado: textarea + botón **"Aplicar fila"** → detecta separador (TAB de Excel o `|` del cargue), mapea por **índice** al orden de la plantilla y hace `setForm` + recalcula fórmulas.
+- [x] T2 Pegado: textarea + botón **"Aplicar fila"** → detecta separador (TAB de Excel o `|` del cargue), mapea por **índice** al orden de la plantilla y hace `setForm` + recalcula fórmulas. **TODO O NADA**: si la fila trae menos columnas que la plantilla, se rechaza. **Omite** las variables de cálculo automático (FORMULA, derivadas de FUM, Edad) — las calcula el app.
 - [x] T3 Marca roja: recuadro rojo en el **campo** con error (`fieldErrorFor`) + **punto rojo** en la pestaña de la **sección** con errores (`sectionFieldErrors`). (Ya existía el texto rojo por campo y el banner.)
 - [x] T4 Verificación: `npm run build` OK (10.53s). Spot check manual pendiente (usuario).
 

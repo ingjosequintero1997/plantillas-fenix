@@ -1520,11 +1520,24 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
     if (!sep) { setPasteMsg('No se detectó separador. Copiá la fila completa en Excel y pegala acá.'); return }
     if (!templateOrder.length) { setPasteMsg('La plantilla aún no cargó; reintentá en un momento.'); return }
     const cols = linea.split(sep)
+    // TODO O NADA: la fila debe traer TODAS las columnas de la plantilla.
+    if (cols.length < templateOrder.length) {
+      setPasteMsg(`La fila trae ${cols.length} columnas y la plantilla ${templateOrder.length}. Debe traer TODAS (todo o nada).`)
+      return
+    }
+    // Se OMITEN las variables que el aplicativo calcula automaticamente
+    // (FORMULA, derivadas de FUM y Edad): no se cargan de la fila; las calcula
+    // `deriveFormulas`.
+    const esAuto = (key) => {
+      const t = templateMeta[key]
+      return (t && t.types && t.types.has('FORMULA')) || CAMPOS_CALCULADOS.includes(key) || key === 'EDAD_ANOS'
+    }
     const cambios = {}
-    const n = Math.min(templateOrder.length, cols.length)
-    for (let i = 0; i < n; i++) {
+    let omitidas = 0
+    for (let i = 0; i < templateOrder.length; i++) {
       const key = templateOrder[i]
       if (!key) continue
+      if (esAuto(key)) { omitidas++; continue }
       const v = String(cols[i] == null ? '' : cols[i]).trim()
       if (v !== '' && v !== 'None' && v !== 'null') cambios[key] = v
     }
@@ -1535,11 +1548,8 @@ export default function GestanteForm({ mode = 'create', initialData = {}, onSave
       return next
     })
     setError('')
-    setMsg(`Fila aplicada: ${Object.keys(cambios).length} variables cargadas.`)
-    const faltan = templateOrder.length - cols.length
-    setPasteMsg(faltan > 0
-      ? `Fila aplicada (${Object.keys(cambios).length} variables). Faltaron ${faltan} columnas.`
-      : `Fila aplicada (${Object.keys(cambios).length} variables).`)
+    setMsg(`Fila aplicada: ${Object.keys(cambios).length} variables cargadas, ${omitidas} automáticas calculadas.`)
+    setPasteMsg(`Fila aplicada: ${Object.keys(cambios).length} variables cargadas (${omitidas} automáticas omitidas y calculadas).`)
   }
 
   const renderField = (fieldDef) => {
