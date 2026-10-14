@@ -1030,6 +1030,14 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
     for _i, _c in enumerate(df.columns):
         col_pos.setdefault(_norm_col(_c), []).append(_i)
 
+    # Tipos de campo (para saber si un resultado de laboratorio es numerico: en
+    # ese caso el "sin dato" es 0, no NA).
+    try:
+        from .gestante_config import get_gestante_template
+    except ImportError:
+        from gestante_config import get_gestante_template
+    _tmap = {_norm_col(t["name"]): t.get("type") for t in get_gestante_template()}
+
     for ridx, row in df.iterrows():
         row_num = ridx + 1  # 1-indexed
 
@@ -1225,9 +1233,10 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                     "severity": "error",
                 })
 
-        # R12: a real lab date cannot pair with an "NA" result, and a comodin
-        # date only makes sense with an "NA" result (empty fields are skipped;
-        # malformed dates are already reported by the type validator).
+        # R12: a real lab date cannot pair with a "sin dato" result, and a comodin
+        # date only makes sense with that "sin dato" value. El "sin dato" es NA
+        # para resultados de texto/SET y 0 para resultados numericos (empty se
+        # saltea; malformed dates are already reported by the type validator).
         for fecha_name, resultado_name in _LAB_RESULT_PAIRS:
             raw_fecha = _cell_exact(row, col_pos, fecha_name)
             raw_res = _cell_exact(row, col_pos, resultado_name)
@@ -1236,17 +1245,24 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
             lab_fecha = _fecha_o_comodin(raw_fecha)
             if lab_fecha is None:
                 continue
+            _numerico = _tmap.get(_norm_col(resultado_name)) in ("INT", "DECIMAL", "NUMERIC")
+            if _numerico:
+                _sin_dato = _safe_float(raw_res) == 0
+                _valor = "0"
+            else:
+                _sin_dato = _es_na_valor(raw_res)
+                _valor = "NA"
             if _es_comodin_fecha(lab_fecha):
-                if not _es_na_valor(raw_res):
+                if not _sin_dato:
                     errors.append({
                         "row": row_num, "column": fecha_name,
-                        "message": f"Si {fecha_name} es una fecha comodin, {resultado_name} debe ser NA",
+                        "message": f"Si {fecha_name} es una fecha comodin, {resultado_name} debe ser {_valor}",
                         "severity": "error",
                     })
-            elif _es_na_valor(raw_res):
+            elif _sin_dato:
                 errors.append({
                     "row": row_num, "column": fecha_name,
-                    "message": f"Si {fecha_name} tiene una fecha real, {resultado_name} no puede ser NA",
+                    "message": f"Si {fecha_name} tiene una fecha real, {resultado_name} no puede ser {_valor}",
                     "severity": "error",
                 })
 

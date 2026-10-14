@@ -933,17 +933,22 @@ function errorReglaCruzada(key, form) {
     }
   }
 
-  // R12: una fecha real no convive con resultado NA, y un comodin exige NA.
+  // R12: una fecha real no convive con un resultado "sin dato" (NA en texto,
+  // 0 en numerico); y una fecha comodin exige ese valor sin dato (NA o 0).
   const par = PARES_LAB.find(([, res]) => res.key === key)
   if (par) {
     const [campoFecha, campoRes] = par
     const fecha = fechaIso(val(campoFecha.key))
     const resultado = val(campoRes.key)
     if (fecha && resultado) {
+      const metaRes = templateMeta[campoRes.key]
+      const esNumerico = !!metaRes && (metaRes.types.has('INT') || metaRes.types.has('DECIMAL') || metaRes.types.has('NUMERIC'))
+      const sinDato = esNumerico ? Number(resultado) === 0 : esNa(resultado)
+      const valorSinDato = esNumerico ? '0' : 'NA'
       if (esComodin(fecha)) {
-        if (!esNa(resultado)) return `Si ${campoFecha.label} es una fecha comodin, ${campoRes.label} debe ser NA`
-      } else if (esNa(resultado)) {
-        return `Si ${campoFecha.label} tiene una fecha real, ${campoRes.label} no puede ser NA`
+        if (!sinDato) return `Si ${campoFecha.label} es una fecha comodin, ${campoRes.label} debe ser ${valorSinDato}`
+      } else if (sinDato) {
+        return `Si ${campoFecha.label} tiene una fecha real, ${campoRes.label} no puede ser ${valorSinDato}`
       }
     }
   }

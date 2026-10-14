@@ -660,8 +660,9 @@ def validate_gestante_payload(payload: dict) -> tuple[list[str], dict]:
                 "Si el riesgo de preeclampsia es Alto, la fecha de suministro no puede ser una fecha comodin"
             )
 
-    # R12: a real lab date cannot pair with an "NA" result, and a comodin
-    # date only makes sense with an "NA" result (empty fields are skipped).
+    # R12: a real lab date cannot pair with a "sin dato" result, and a comodin
+    # date only makes sense with that "sin dato" value. El "sin dato" es NA para
+    # resultados de texto/SET y 0 para resultados numericos (empty se saltea).
     for fecha_name, resultado_name in _lab_result_pairs():
         k_fecha = normalize_field_key(fecha_name)
         k_res = normalize_field_key(resultado_name)
@@ -675,14 +676,25 @@ def validate_gestante_payload(payload: dict) -> tuple[list[str], dict]:
         if fecha is None:
             # Malformed dates are already reported by the type pass above.
             continue
+        _res_types = set(meta.get(k_res, {}).get("types", set()) or set())
+        _numerico = bool({"INT", "DECIMAL", "NUMERIC"} & _res_types)
+        if _numerico:
+            try:
+                _sin_dato = float(str(raw_res).replace(",", ".")) == 0
+            except (TypeError, ValueError):
+                _sin_dato = False
+            _valor_sin_dato = "0"
+        else:
+            _sin_dato = _es_na(raw_res)
+            _valor_sin_dato = "NA"
         if _es_comodin(fecha):
-            if not _es_na(raw_res):
+            if not _sin_dato:
                 errors.append(
-                    f"Si {fecha_name} es una fecha comodin, {resultado_name} debe ser NA"
+                    f"Si {fecha_name} es una fecha comodin, {resultado_name} debe ser {_valor_sin_dato}"
                 )
-        elif _es_na(raw_res):
+        elif _sin_dato:
             errors.append(
-                f"Si {fecha_name} tiene una fecha real, {resultado_name} no puede ser NA"
+                f"Si {fecha_name} tiene una fecha real, {resultado_name} no puede ser {_valor_sin_dato}"
             )
 
     # R13: lab/tamizaje/vacunacion dates cannot predate the entry date
