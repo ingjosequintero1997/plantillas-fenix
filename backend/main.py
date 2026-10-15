@@ -1230,7 +1230,7 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 		if row_idx < len(corrected_df) and col_name in corrected_df.columns:
 			val = str(corrected_df.iloc[row_idx][col_name]) if col_name in corrected_df.columns else ""
 		logs_sample.append({
-			"row": row_idx + 1,
+			"row": row_idx + 2,
 			"column": col_name,
 			"original": val,
 			"corrected": msg,
@@ -1252,7 +1252,7 @@ def build_response_payload(df: pd.DataFrame, mapping: dict, raw_text: str, templ
 		log for log in (corrector_logs or []) if log.get("status") == "corrected"
 	][:MAX_CORRECTED_LOGS]
 	all_logs = logs_sample + [
-		{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
+		{"row": e["row"] + 1 if e["row"] else 0, "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
 		for e in cross_field_errors
 	] + corrected_sample
 	stats["cross_field_errors"] = len(cross_field_errors)
@@ -1405,7 +1405,7 @@ async def upload_file(
 				if row_idx < len(df_safe) and col_name in df_safe.columns:
 					val = str(df_safe.iloc[row_idx][col_name])
 				logs_sample.append({
-					"row": row_idx + 1,
+					"row": row_idx + 2,
 					"column": col_name,
 					"original": val,
 					"corrected": msg,
@@ -1432,7 +1432,7 @@ async def upload_file(
 				except Exception:
 					pass
 			all_logs = logs_sample + [
-				{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
+				{"row": e["row"] + 1 if e["row"] else 0, "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
 				for e in cross_field_errors
 			]
 			# Dedup por (fila, columna): una misma celda no debe repetirse (un
@@ -1448,7 +1448,9 @@ async def upload_file(
 				_dedup.append(_lr)
 			all_logs = _dedup
 			n = len(df_safe)
-			n_errors = len(set(lr["row"] for lr in all_logs if lr["status"] == "error"))
+			# La entrada de columna de relleno usa row 0 (aplica a TODA la columna,
+			# no a una fila concreta): no debe contar como una fila con error.
+			n_errors = len({lr["row"] for lr in all_logs if lr["status"] == "error" and (lr.get("row") or 0) > 0})
 			n_ok = n - n_errors
 			stats = {
 				"total": n,
@@ -1633,9 +1635,16 @@ async def revalidate(payload: RevalidatePayload, current_user: User = Depends(ge
 					cross_field_errors = validate_cross_fields(df_ordered)
 				except Exception:
 					pass
-			# Merge cross-field errors into logs
-			all_logs = validation_result["logs"] + [
-				{"row": e["row"], "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
+			# Merge cross-field errors into logs. La data del validador llega SIN
+			# encabezado, asi que la fila del Excel es la de datos + 1 (el archivo
+			# del usuario si trae encabezado). Se aplica a los DOS grupos para que
+			# los errores de tipo y las reglas cruzadas reporten la misma fila.
+			_type_logs = [
+				{**lr, "row": (lr["row"] + 1) if lr.get("row") else 0}
+				for lr in validation_result["logs"]
+			]
+			all_logs = _type_logs + [
+				{"row": e["row"] + 1 if e["row"] else 0, "column": e["column"], "original": "", "corrected": e["message"], "status": e["severity"]}
 				for e in cross_field_errors
 			]
 			# Update stats
@@ -3807,7 +3816,7 @@ async def validate_data(payload: dict, current_user: User = Depends(get_current_
 				val = ""
 		# Empty-value errors (required cells) are real and are kept with original "".
 		logs_sample.append({
-			"row": r + 1,
+			"row": r + 2,
 			"column": c,
 			"original": val,
 			"corrected": msg,

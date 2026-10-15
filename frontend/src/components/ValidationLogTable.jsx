@@ -166,8 +166,8 @@ export default function ValidationLogTable({ logs, showCorrected = false }) {
                 }}
               >
                 <td className="px-4 py-2.5">
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold" style={{ color: esCorregida ? 'var(--success)' : 'var(--danger)', backgroundColor: esCorregida ? 'var(--success-bg)' : 'var(--danger-bg)' }}>
-                    {l.row}
+                  <span className="inline-flex items-center justify-center min-w-7 h-7 px-1.5 rounded-md text-xs font-bold" style={{ color: esCorregida ? 'var(--success)' : 'var(--danger)', backgroundColor: esCorregida ? 'var(--success-bg)' : 'var(--danger-bg)' }}>
+                    {Number(l.row) === 0 ? 'Todas' : l.row}
                   </span>
                 </td>
                 <td className="px-4 py-2.5">

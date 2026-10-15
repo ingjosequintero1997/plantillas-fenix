@@ -1009,6 +1009,27 @@ _LAB_EXTRA_DATE_NAMES = (
 )
 
 
+def _columnas_constantes(df: pd.DataFrame) -> dict:
+    """Devuelve {columna: valor} de las columnas que tienen el MISMO valor no
+    vacio en TODAS las filas. Son rellenos del formato, no dato real: sus
+    errores no se pueden corregir fila por fila."""
+    out = {}
+    try:
+        if df is None or len(df) == 0:
+            return out
+        for col in df.columns:
+            try:
+                vals = {str(v).strip() for v in df[col].tolist()}
+            except Exception:
+                continue
+            vals.discard("")
+            if len(vals) == 1:
+                out[str(col)] = next(iter(vals))
+    except Exception:
+        return out
+    return out
+
+
 def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
     """
     Validate cross-field relationships for gestante data.
@@ -1439,6 +1460,35 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
                     "message": "Campo requerido vacío o sin dato",
                     "severity": "error",
                 })
+
+    # ── Columnas de relleno ──────────────────────────────────────────────
+    # Si una columna tiene el MISMO valor en todas las filas, es un relleno del
+    # formato: reportarlo una vez por columna en lugar de N veces por fila. El
+    # usuario no puede corregir un relleno fila por fila, y esos errores
+    # "volvian" siempre aunque corrigiera los datos reales.
+    constantes = _columnas_constantes(df) if len(df) >= 30 else {}
+    if constantes:
+        columnas_afectadas = {}
+        restantes = []
+        for e in errors:
+            col = str(e.get("column", ""))
+            if col in constantes:
+                columnas_afectadas[col] = constantes[col]
+            else:
+                restantes.append(e)
+        for col, val in columnas_afectadas.items():
+            restantes.append({
+                "row": 0,
+                "column": col,
+                "message": (
+                    f"Toda la columna tiene el mismo valor ('{val[:40]}'), asi que "
+                    "parece un relleno del formato y no dato real. Revisa el archivo "
+                    "de origen: mientras el relleno siga ahi, este error no se puede "
+                    "corregir fila por fila."
+                ),
+                "severity": "error",
+            })
+        errors = restantes
 
     return errors
 
