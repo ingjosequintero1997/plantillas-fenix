@@ -2298,7 +2298,7 @@ async def get_cargue(cargue_id: int, current_user: User = Depends(get_current_us
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+		if current_user.role in ("prestador", "ips_user") and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
 		if current_user.role == "lider":
 			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
@@ -2385,7 +2385,7 @@ async def download_cargue_txt(cargue_id: int, current_user: User = Depends(get_c
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+		if current_user.role in ("prestador", "ips_user") and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
 		if current_user.role == "lider":
 			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
@@ -2419,7 +2419,7 @@ async def download_cargue_excel(cargue_id: int, current_user: User = Depends(get
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+		if current_user.role in ("prestador", "ips_user") and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
 		if current_user.role == "lider":
 			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
@@ -2907,7 +2907,7 @@ async def get_historia(request: Request, historia_id: int, current_user: User = 
         h = db.get(HistoriaClinica, historia_id)
         if h is None:
             raise HTTPException(status_code=404, detail="Historia clínica no encontrada")
-        if current_user.role == "prestador" and h.user_id != current_user.id:
+        if current_user.role in ("prestador", "ips_user") and h.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="No autorizado")
         if current_user.role == "lider":
             _prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
@@ -2956,7 +2956,7 @@ async def delete_historia(request: Request, historia_id: int, current_user: User
         h = db.get(HistoriaClinica, historia_id)
         if h is None:
             raise HTTPException(status_code=404, detail="Historia clínica no encontrada")
-        if current_user.role == "prestador" and h.user_id != current_user.id:
+        if current_user.role in ("prestador", "ips_user") and h.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="No autorizado")
         if current_user.role == "lider":
             _prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
@@ -3554,7 +3554,7 @@ async def delete_cargue(cargue_id: int, current_user: User = Depends(get_current
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+		if current_user.role in ("prestador", "ips_user") and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
 		if current_user.role == "lider":
 			_prest = db.query(Prestador).filter(Prestador.user_id == current_user.id).first()
@@ -3950,7 +3950,7 @@ async def indicadores_de_cargue(cargue_id: int, body: dict = Body(default={}), c
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+		if current_user.role in ("prestador", "ips_user") and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
 		text = cargue.corrected_text or cargue.raw_text or ""
 		if cargue.compressed and text:
@@ -3992,7 +3992,7 @@ async def indicadores_excel(cargue_id: int, body: dict = Body(default={}), curre
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+		if current_user.role in ("prestador", "ips_user") and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
 		text = cargue.corrected_text or cargue.raw_text or ""
 		if cargue.compressed and text:
@@ -4047,7 +4047,7 @@ async def descargar_reporte_errores(cargue_id: int, current_user: User = Depends
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+		if current_user.role in ("prestador", "ips_user") and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
 		text = cargue.corrected_text or cargue.raw_text or ""
 		if cargue.compressed and text:
@@ -4087,7 +4087,7 @@ async def descargar_reporte_errores_excel(cargue_id: int, current_user: User = D
 		cargue = db.get(Cargue, cargue_id)
 		if cargue is None:
 			raise HTTPException(status_code=404, detail="Cargue no encontrado")
-		if current_user.role == "prestador" and cargue.user_id != current_user.id:
+		if current_user.role in ("prestador", "ips_user") and cargue.user_id != current_user.id:
 			raise HTTPException(status_code=403, detail="No autorizado")
 		text = cargue.corrected_text or cargue.raw_text or ""
 		if cargue.compressed and text:
@@ -5758,7 +5758,7 @@ async def listar_ips(current_user: User = Depends(get_current_user)):
 
 
 @app.get("/admin/config")
-async def get_admin_config(current_user: User = Depends(get_current_user)):
+async def get_admin_config(current_user: User = Depends(require_admin)):
 	"""Devuelve la configuracion global del sistema."""
 	if current_user.role != "admin":
 		raise HTTPException(status_code=403, detail="Solo admin")
@@ -5776,7 +5776,7 @@ async def get_admin_config(current_user: User = Depends(get_current_user)):
 
 
 @app.post("/admin/config")
-async def set_admin_config(payload: dict, current_user: User = Depends(get_current_user)):
+async def set_admin_config(payload: dict, current_user: User = Depends(require_admin)):
 	"""Guarda un valor de configuracion global."""
 	if current_user.role != "admin":
 		raise HTTPException(status_code=403, detail="Solo admin")
@@ -5822,7 +5822,7 @@ async def admin_list_ips(current_user: User = Depends(get_current_user)):
 
 
 @app.post("/admin/ips-toggle")
-async def admin_toggle_ips(payload: dict, current_user: User = Depends(get_current_user)):
+async def admin_toggle_ips(payload: dict, current_user: User = Depends(require_admin)):
 	"""Habilita o deshabilita una IPS."""
 	if current_user.role != "admin":
 		raise HTTPException(status_code=403, detail="Solo admin")
@@ -5846,7 +5846,7 @@ async def admin_toggle_ips(payload: dict, current_user: User = Depends(get_curre
 
 
 @app.get("/admin/ips-list")
-async def admin_ips_list(current_user: User = Depends(get_current_user)):
+async def admin_ips_list(current_user: User = Depends(require_admin)):
 	"""Lista todas las IPS registradas con su estado (solo admin)."""
 	if current_user.role != "admin":
 		raise HTTPException(status_code=403, detail="Solo admin")
@@ -5927,8 +5927,12 @@ async def diagnosticar_gestantes(current_user: User = Depends(get_current_user))
 
 
 @app.delete("/data/gestantes/clean")
-async def clean_gestantes(current_user: User = Depends(get_current_user)):
-	"""Elimina todos los registros de la tabla gestantes."""
+async def clean_gestantes(current_user: User = Depends(require_admin)):
+	"""Elimina TODOS los registros de la tabla gestantes (solo admin).
+
+	Antes pedia solo estar logueado: cualquier usuario, incluso de otra IPS,
+	podia vaciar la tabla completa. Se alinea con populate/clean-repopulate,
+	que ya exigen admin."""
 	ensure_db_ready()
 	db = SessionLocal()
 	try:
