@@ -57,6 +57,33 @@ else:
         "http://localhost:5173",
         "http://localhost:3000",
     ]
+# ─── Cortafuegos de autenticacion (default-deny) ─────────────────────────
+# Toda peticion exige un token valido, salvo una lista blanca minima y
+# justificada. Los endpoints nuevos quedan protegidos por defecto.
+RUTAS_PUBLICAS = {
+    "/auth/login",      # necesario para poder iniciar sesion
+    "/auth/ips-login",  # necesario para poder iniciar sesion como IPS
+    "/health",          # lo consulta el HEALTHCHECK de Docker; no expone datos
+}
+
+
+@app.middleware("http")
+async def exigir_autenticacion(request: Request, call_next):
+    """Rechaza con 401 toda peticion sin token valido (salvo la lista blanca)."""
+    # El preflight de CORS viaja sin credenciales: no se le puede exigir token.
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    path = request.url.path.rstrip("/") or "/"
+    if path in RUTAS_PUBLICAS:
+        return await call_next(request)
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return JSONResponse(status_code=401, content={"detail": "No autorizado"})
+    if verify_token(auth[7:].strip()) is None:
+        return JSONResponse(status_code=401, content={"detail": "Token inválido o expirado"})
+    return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allow_origins,

@@ -18,7 +18,9 @@ function getApiBase() {
 async function fetchSystemConfig(retries = 2) {
   for (let i = 0; i <= retries; i++) {
     try {
-      const r = await fetch(`${getApiBase()}/config/public?_=${Date.now()}`, { cache: 'no-store' })
+      const stored = getStored()
+      const headers = stored?.token ? { Authorization: `Bearer ${stored.token}` } : {}
+      const r = await fetch(`${getApiBase()}/config/public?_=${Date.now()}`, { cache: 'no-store', headers })
       if (r.status === 502 || r.status === 504) {
         if (i < retries) { await new Promise((res) => setTimeout(res, 2000 * (i + 1))); continue }
       }
@@ -93,6 +95,13 @@ export function AuthProvider({ children }) {
         })
     }
   }, [])
+
+  // Recargar las flags del sistema cuando hay sesion: al montar el provider
+  // todavia no hay token, asi que el primer intento puede devolver 401.
+  useEffect(() => {
+    if (!user) return
+    fetchSystemConfig().then((cfg) => setSystemConfig(cfg)).catch(() => {})
+  }, [user])
 
   // Sesion caducada: apiFetch dispara este evento ante un 401 definitivo.
   useEffect(() => {
