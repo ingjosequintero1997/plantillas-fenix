@@ -1,0 +1,42 @@
+# Docker Compose para el backend en PRODUCCION.
+#
+# Las credenciales NO van aca: viven en `deploy/.env` (ignorado por git).
+# Compose carga `./.env` para interpolar ${BACKEND_IMAGE} y ademas se lo pasa
+# al contenedor via `env_file`.
+#
+# Uso en el servidor:
+#   cd deploy
+#   cp .env.example .env     # completar con los valores reales (NO commitear)
+#   docker compose up -d
+
+name: fenix-backend
+
+services:
+  backend:
+    image: ${BACKEND_IMAGE}
+    container_name: fenix-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "9500:9500"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9500/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Auto-actualiza el contenedor cuando hay una imagen nueva en el registro.
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup

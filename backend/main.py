@@ -668,7 +668,19 @@ def _health_module(name: str) -> bool:
 
 
 @app.get("/health")
-async def health():
+async def health(request: Request):
+	# El detalle tecnico de la base (IP:puerto, nombre, conteos de filas) NO se
+	# expone a terceros: se devuelve solo desde el propio host (loopback, que es
+	# por donde entra el HEALTHCHECK de Docker) o presentando el header
+	# `X-Health-Token` con el valor de la variable de entorno HEALTH_TOKEN.
+	# Para cualquier otro origen, un health minimo sin filtrar infraestructura.
+	_client = request.client.host if request.client else ""
+	_es_local = _client in ("127.0.0.1", "::1", "localhost")
+	_token = (os.environ.get("HEALTH_TOKEN") or "").strip()
+	_enviado = (request.headers.get("x-health-token") or "").strip()
+	if not (_es_local or (_token and _enviado == _token)):
+		return {"status": "ok"}
+
 	info = {"status": "ok"}
 	db_info: dict = {}
 	try:

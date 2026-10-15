@@ -16,6 +16,8 @@ env/
 *.xls
 ~$*.xlsx
 af_afiliado_*.csv
+*.log
+*.bak
 .git/
 .gitignore
 README.md
