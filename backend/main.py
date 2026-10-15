@@ -930,7 +930,7 @@ async def debug_oidc(request: Request, current_user: User = Depends(require_admi
 	}
 
 @app.get("/template")
-async def get_template(template_key: str = Query(default="gestante")):
+async def get_template(template_key: str = Query(default="gestante"), current_user: User = Depends(get_current_user)):
 	meta = get_template_by_key(template_key)
 	return {
 		"template_key": meta["key"],
@@ -3423,7 +3423,7 @@ async def evaluate_endpoint(payload: dict, format: str = Query(default="json"), 
 	}
 
 @app.get("/download-template/{template_key}")
-async def download_template(template_key: str):
+async def download_template(template_key: str, current_user: User = Depends(get_current_user)):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.worksheet.datavalidation import DataValidation
@@ -4116,11 +4116,13 @@ async def descargar_reporte_errores_excel(cargue_id: int, current_user: User = D
 
 
 @app.post("/reporte-errores-excel-data")
-async def reporte_errores_excel_data(payload: dict):
+async def reporte_errores_excel_data(payload: dict, current_user: User = Depends(get_current_user)):
 	"""Genera el Excel de errores directamente desde un texto (sin cargue en BD).
 	Usado desde la pantalla de validacion."""
 	template_key = payload.get("template_key", "gestante")
 	corrected_text = payload.get("corrected_text", "")
+	if len(corrected_text or "") > 25_000_000:
+		raise HTTPException(status_code=413, detail="El archivo es demasiado grande para generar el reporte.")
 	if not corrected_text or not corrected_text.strip():
 		raise HTTPException(status_code=400, detail="No hay datos para validar")
 	errors_by_cell = _errores_rapidos_con_crossfield(corrected_text, template_key)

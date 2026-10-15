@@ -856,6 +856,25 @@ export async function descargarReporteErroresExcelData(correctedText, templateKe
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
 }
 
+export async function descargarPlantillaExcel(templateKey, filename = `plantilla_${templateKey}.xlsx`) {
+  const resp = await fetch(`${API_BASE}/download-template/${encodeURIComponent(templateKey)}`, {
+    headers: { ...authHeaders() },
+  })
+  if (!resp.ok) {
+    let msg = 'Error al descargar la plantilla'
+    try { msg = (await resp.json()).detail || msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 200)
+}
+
 export async function uploadHistoria(file, paciente, templateKey = 'gestante', tipoHistoria = '', controlNumero = null) {
   const form = new FormData()
   form.append('file', file)
