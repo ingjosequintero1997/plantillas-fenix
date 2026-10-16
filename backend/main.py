@@ -1390,12 +1390,31 @@ async def upload_file(
 			# En modo validador, normalizar y limpiar la data ANTES de validar,
 			# para que el log de errores y el Excel usen la misma data canonicalizada.
 			try:
-				from .validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
+				from .validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields, normalizar_comodin_resultados
 			except ImportError:
-				from validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields
+				from validators import normalizar_fechas_df, limpiar_celdas_export, validate_cross_fields, normalizar_comodin_resultados
 			df = normalizar_fechas_df(df, active_template)
 			df = limpiar_celdas_export(df)
 			df_safe = df.fillna("SIN DATO").astype(str)
+			# Los campos de formula (FPP, Edad Gest Inicio Control, etc.) son
+			# CALCULADOS: el archivo trae el valor viejo y compararlo genera errores
+			# falsos que el usuario no puede corregir. Se vacian y se recalculan
+			# antes de validar, igual que hace el limpiador. El vaciado es necesario
+			# porque aplicar_formulas respeta el valor entrante si ya hay fecha.
+			try:
+				from .formulas import aplicar_formulas
+			except ImportError:
+				from formulas import aplicar_formulas
+			_formula_names = [t["name"] for t in active_template if str(t.get("type", "")).upper() == "FORMULA"]
+			_recalc_rows = []
+			for _r in df_safe.to_dict(orient='records'):
+				_fila = {**_r, **{_fn: "" for _fn in _formula_names if _fn in _r}}
+				_recalc_rows.append(aplicar_formulas(_fila))
+			df_safe = pd.DataFrame(_recalc_rows, columns=list(df_safe.columns)).fillna("SIN DATO").astype(str)
+			# Misma regla comodin↔resultado que aplica el limpiador: normalizar el
+			# resultado antes de validar para no marcar como error algo que la app
+			# corrige sola.
+			df_safe = normalizar_comodin_resultados(df_safe, active_template)
 			canonical_raw_text = df_safe.to_csv(sep='|', index=False, header=False)
 			# Usar _errores_rapidos: misma fuente que el Excel de errores
 			errors_by_cell = _errores_rapidos(canonical_raw_text, template_key)
@@ -1623,16 +1642,33 @@ async def revalidate(payload: RevalidatePayload, current_user: User = Depends(ge
 			if len(df) == 0:
 				raise HTTPException(status_code=400, detail="Archivo vacío")
 			try:
-				from .validators import validate_only, validate_cross_fields, reordenar_a_template
+				from .validators import validate_only, validate_cross_fields, reordenar_a_template, normalizar_comodin_resultados
 			except ImportError:
-				from validators import validate_only, validate_cross_fields, reordenar_a_template
+				from validators import validate_only, validate_cross_fields, reordenar_a_template, normalizar_comodin_resultados
+			# Los campos de formula son CALCULADOS: la data trae el valor viejo y
+			# compararlo produce errores falsos que el usuario no puede corregir.
+			# Se reordena al template, se vacian esos campos y se recalculan ANTES
+			# de validar; el texto devuelto sale de este df recalculado.
+			try:
+				from .formulas import aplicar_formulas
+			except ImportError:
+				from formulas import aplicar_formulas
+			df = reordenar_a_template(df, payload.mapping, active_template).fillna('').astype(str)
+			_formula_names = [t["name"] for t in active_template if str(t.get("type", "")).upper() == "FORMULA"]
+			_recalc_rows = []
+			for _r in df.to_dict(orient='records'):
+				_fila = {**_r, **{_fn: "" for _fn in _formula_names if _fn in _r}}
+				_recalc_rows.append(aplicar_formulas(_fila))
+			df = pd.DataFrame(_recalc_rows, columns=list(df.columns)).fillna('SIN DATO').astype(str)
+			# Misma regla comodin↔resultado que aplica el limpiador: el texto que
+			# se devuelve como corrected_text sale de este df ya normalizado.
+			df = normalizar_comodin_resultados(df, active_template)
 			validation_result = validate_only(df, payload.mapping, active_template)
 			# Cross-field validation for gestante template
 			cross_field_errors = []
 			if template_key == "gestante":
 				try:
-					df_ordered = reordenar_a_template(df, payload.mapping, active_template)
-					cross_field_errors = validate_cross_fields(df_ordered)
+					cross_field_errors = validate_cross_fields(df)
 				except Exception:
 					pass
 			# Merge cross-field errors into logs. La data del validador llega SIN
@@ -1650,7 +1686,7 @@ async def revalidate(payload: RevalidatePayload, current_user: User = Depends(ge
 			# Update stats
 			validation_result["stats"]["cross_field_errors"] = len(cross_field_errors)
 			validation_result["stats"]["errors"] += len(cross_field_errors)
-			raw_text_compressed = _gz_compress(payload.raw_text)
+			raw_text_compressed = _gz_compress(df.to_csv(sep='|', index=False, header=False))
 			return JSONResponse({
 				"success": True,
 				"template_key": template_key,
@@ -3683,12 +3719,30 @@ async def validate_data(payload: dict, current_user: User = Depends(get_current_
 		if len(df.columns) == len(tmpl_names):
 			df.columns = tmpl_names
 
+	# Los campos de formula (FPP, Edad Gest Inicio Control, etc.) son CALCULADOS:
+	# la data trae el valor viejo y compararlo produce errores falsos que el
+	# usuario no puede corregir. Se vacian y se recalculan antes de validar (aqui
+	# llega sin encabezado, ya en orden de plantilla).
+	try:
+		from .formulas import aplicar_formulas
+	except ImportError:
+		from formulas import aplicar_formulas
+	_formula_names = [t["name"] for t in tmpl if str(t.get("type", "")).upper() == "FORMULA"]
+	_recalc_rows = []
+	for _r in df.to_dict(orient='records'):
+		_fila = {**_r, **{_fn: "" for _fn in _formula_names if _fn in _r}}
+		_recalc_rows.append(aplicar_formulas(_fila))
+	df = pd.DataFrame(_recalc_rows, columns=list(df.columns)).fillna("SIN DATO").astype(str)
+
 	# Usar validate_only() de validators.py — UN SOLO validador para todo
 	try:
-		from .validators import validate_only, normalize_text
+		from .validators import validate_only, normalize_text, normalizar_comodin_resultados
 	except ImportError:
-		from validators import validate_only, normalize_text
+		from validators import validate_only, normalize_text, normalizar_comodin_resultados
 
+	# Misma regla comodin↔resultado que aplica el limpiador: normalizar antes de
+	# validar para no marcar como error algo que la app corrige sola.
+	df = normalizar_comodin_resultados(df, tmpl)
 	mapping = {c: c for c in df.columns if c in [t['name'] for t in tmpl]}
 	validation_result = validate_only(df, mapping, tmpl)
 

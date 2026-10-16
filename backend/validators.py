@@ -1009,6 +1009,38 @@ _LAB_EXTRA_DATE_NAMES = (
 )
 
 
+def normalizar_comodin_resultados(df, template):
+	"""Regla comodin <-> resultado de laboratorio.
+
+	Si la fecha de la prueba es un comodin, el resultado debe ser NA (texto/SET)
+	o 0 (numerico); si la fecha es real, no puede ser el 'sin dato'. Es la misma
+	regla que aplica el limpiador, expuesta para que el validador no marque como
+	error algo que la app normaliza sola.
+
+	Devuelve el DataFrame modificado.
+	"""
+	if df is None:
+		return df
+	_tmap = {t["name"]: t for t in template}
+	for _fecha_name, _res_name in _LAB_RESULT_PAIRS:
+		if _fecha_name not in df.columns or _res_name not in df.columns:
+			continue
+		_tipo_res = str((_tmap.get(_res_name) or {}).get("type", "")).upper()
+		_sin_dato = "0" if _tipo_res in ("INT", "DECIMAL", "NUMERIC") else "NA"
+		for i in range(len(df)):
+			_f = _fecha_o_comodin(df.at[i, _fecha_name])
+			if _f is None:
+				continue
+			_r = str(df.at[i, _res_name]).strip()
+			if _es_comodin_fecha(_f):
+				if _r and _r.upper() not in ("NA", "N/A", "0", "0.0"):
+					df.at[i, _res_name] = _sin_dato
+			else:
+				if _r.upper() in ("NA", "N/A"):
+					df.at[i, _res_name] = _sin_dato
+	return df
+
+
 def _columnas_constantes(df: pd.DataFrame) -> dict:
     """Devuelve {columna: valor} de las columnas que tienen el MISMO valor no
     vacio en TODAS las filas. Son rellenos del formato, no dato real: sus
@@ -1062,10 +1094,16 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
     for ridx, row in df.iterrows():
         row_num = ridx + 1  # 1-indexed
 
-        # ── 1. G,P,C,A,M,V relationships ──
-        # Exact lookup: _get_col's substring match made "G" win the earlier
-        # column "Regimen Afiliacion" (and "P"/"C"/"A"/"M"/"V" win unrelated
-        # columns), so the relational checks read the wrong cells.
+        # ── 1. G,P,C,A,M,V relationships (instructivo campos 38-43) ──
+        # Instructivo: G es el numero de embarazos contando el actual, obligatorio
+        # y NO DEBE SER CERO; P son los partos VAGINALES (no el total), C las
+        # cesareas, A los abortos, M los mortinatos y V los hijos vivos, todos
+        # obligatorios y cada uno MENOR que G. No se exige P >= C ni P >= V (P es
+        # solo vaginales: una mujer con 2 cesareas y 0 partos vaginales es valida)
+        # ni G >= P+A+M (esa suma omitiria C): esas relaciones no estan en el
+        # instructivo. Exact lookup: los patrones de una letra de _get_col
+        # colisionan con columnas previas ("Regimen Afiliacion" gana "G"; "P"/"C"/
+        # "A"/"M"/"V" ganan columnas no relacionadas).
         g = _safe_int(_cell_exact(row, col_pos, "G"))
         p = _safe_int(_cell_exact(row, col_pos, "P"))
         c = _safe_int(_cell_exact(row, col_pos, "C"))
@@ -1073,37 +1111,36 @@ def validate_cross_fields(df: pd.DataFrame) -> list[dict]:
         m = _safe_int(_cell_exact(row, col_pos, "M"))
         v = _safe_int(_cell_exact(row, col_pos, "V"))
 
-        if g is not None and p is not None and a is not None and m is not None:
-            if g < p + a + m:
+        # G NO DEBE SER CERO (instructivo campo 38): la gestante esta embarazada,
+        # asi que G < 1 es imposible.
+        if g is not None and g < 1:
+            errors.append({
+                "row": row_num, "column": "G",
+                "message": f"G({g}) debe ser mayor o igual a 1",
+                "severity": "error",
+            })
+
+        # Cota del instructivo (campos 39-43): P, C, A, M y V deben ser MENORES
+        # que G. El 0 es valido (primera gestacion normal: G=1, P=C=A=M=V=0).
+        for _name, _val in (("P", p), ("C", c), ("A", a), ("M", m), ("V", v)):
+            if _val is not None and g is not None and _val >= g:
                 errors.append({
-                    "row": row_num, "column": "G",
-                    "message": f"G({g}) debe ser >= P({p})+A({a})+M({m})={p+a+m}",
-                    "severity": "error",
-                })
-        if p is not None and c is not None:
-            if p < c:
-                errors.append({
-                    "row": row_num, "column": "P",
-                    "message": f"P({p}) debe ser >= C({c})",
-                    "severity": "error",
-                })
-        if p is not None and v is not None:
-            if p < v:
-                errors.append({
-                    "row": row_num, "column": "V",
-                    "message": f"P({p}) debe ser >= V({v}) (hijos vivos no puede exceder partos)",
+                    "row": row_num, "column": _name,
+                    "message": f"{_name}({_val}) debe ser menor que G({g})",
                     "severity": "error",
                 })
 
-        # R7: G,P,C,A,M,V cannot be less than 1 (parity with the unitary
-        # validator; exact lookup because single-letter _get_col patterns
-        # collide with earlier columns such as "Regimen Afiliacion").
+        # R7: un conteo obstetrico no puede ser NEGATIVO. El 0 SI es valido (una
+        # primera gestacion normal es G=1, P=C=A=M=V=0): no se exige >= 1. La
+        # coherencia real (cota de P/C/A/M/V contra G) se valida arriba. Lookup
+        # exacto porque los patrones de una letra de _get_col colisionan con
+        # columnas previas ("Regimen Afiliacion").
         for _name in ("G", "P", "C", "A", "M", "V"):
             _num = _safe_int(_cell_exact(row, col_pos, _name))
-            if _num is not None and _num < 1:
+            if _num is not None and _num < 0:
                 errors.append({
                     "row": row_num, "column": _name,
-                    "message": f"{_name}({_num}) debe ser un numero mayor o igual a 1",
+                    "message": f"{_name}({_num}) no puede ser negativo",
                     "severity": "error",
                 })
 
@@ -2146,23 +2183,8 @@ def validate_and_correct(df: pd.DataFrame, mapping: dict, template: list):
 	# Si la fecha de la prueba es un comodin, el resultado debe ser NA (texto/SET)
 	# o 0 (numerico); si la fecha es real, no puede ser el "sin dato". Se corrige
 	# el resultado para cumplir el instructivo (no se inventa un valor clinico).
-	_tmap_final = {t["name"]: t for t in template}
-	for _fecha_name, _res_name in _LAB_RESULT_PAIRS:
-		if _fecha_name not in out_df.columns or _res_name not in out_df.columns:
-			continue
-		_tipo_res = str((_tmap_final.get(_res_name) or {}).get("type", "")).upper()
-		_sin_dato = "0" if _tipo_res in ("INT", "DECIMAL", "NUMERIC") else "NA"
-		for i in range(len(out_df)):
-			_f = _fecha_o_comodin(out_df.at[i, _fecha_name])
-			if _f is None:
-				continue
-			_r = str(out_df.at[i, _res_name]).strip()
-			if _es_comodin_fecha(_f):
-				if _r and _r.upper() not in ("NA", "N/A", "0", "0.0"):
-					out_df.at[i, _res_name] = _sin_dato
-			else:
-				if _r.upper() in ("NA", "N/A"):
-					out_df.at[i, _res_name] = _sin_dato
+	# Una sola implementacion de la regla: normalizar_comodin_resultados.
+	out_df = normalizar_comodin_resultados(out_df, template)
 
 	# Bitácora en orden fila-mayor (igual que antes), limitada a 1000 registros
 	logs = []

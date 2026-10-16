@@ -601,25 +601,29 @@ def validate_gestante_payload(payload: dict) -> tuple[list[str], dict]:
     if fum and f_dx and fum >= f_dx:
         errors.append("La FUM debe ser anterior a la Fecha de Diagnostico del Embarazo")
 
-    # Cross-field: obstetric counts, checked only when every involved value
-    # parses as a number (G >= P+A+M, P >= C, P >= V).
+    # Cross-field: obstetric counts (instructivo campos 38-43). G es obligatorio
+    # y NO DEBE SER CERO; P son los partos VAGINALES (no el total), C las
+    # cesareas, A los abortos, M los mortinatos y V los hijos vivos, cada uno
+    # obligatorio y MENOR que G. No se exige P >= C ni P >= V (P es solo
+    # vaginales) ni G >= P+A+M (esa suma omitiria C): no estan en el instructivo.
     g = _parse_int(cleaned.get("G"))
     p = _parse_int(cleaned.get("P"))
     c = _parse_int(cleaned.get("C"))
     a = _parse_int(cleaned.get("A"))
     m = _parse_int(cleaned.get("M"))
     v = _parse_int(cleaned.get("V"))
-    if g is not None and p is not None and a is not None and m is not None and g < p + a + m:
-        errors.append(f"G({g}) debe ser >= P({p})+A({a})+M({m})={p + a + m}")
-    if p is not None and c is not None and p < c:
-        errors.append(f"P({p}) debe ser >= C({c})")
-    if p is not None and v is not None and p < v:
-        errors.append(f"P({p}) debe ser >= V({v}) (hijos vivos no puede exceder partos)")
+    if g is not None and g < 1:
+        errors.append(f"G({g}) debe ser mayor o igual a 1")
+    for _name, _val in (("P", p), ("C", c), ("A", a), ("M", m), ("V", v)):
+        if _val is not None and g is not None and _val >= g:
+            errors.append(f"{_name}({_val}) debe ser menor que G({g})")
 
-    # R7: obstetric counts cannot be zero (0 would mean "never recorded").
+    # R7: un conteo obstetrico no puede ser NEGATIVO. El 0 SI es valido (una
+    # primera gestacion normal es G=1, P=C=A=M=V=0): no se exige >= 1. La
+    # coherencia real (cota de P/C/A/M/V contra G) se valida arriba.
     for _name, _count in (("G", g), ("P", p), ("C", c), ("A", a), ("M", m), ("V", v)):
-        if _count is not None and _count < 1:
-            errors.append(f"{_name}: debe ser un numero mayor o igual a 1")
+        if _count is not None and _count < 0:
+            errors.append(f"{_name}: no puede ser negativo")
 
     # Real prenatal-care entry date for the rules below: parsed AND not a
     # placeholder comodin (same < 1900 criterion as main._fecha_real_caso).
